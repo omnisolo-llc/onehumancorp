@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <style>
@@ -9,7 +9,9 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
       }
       .glassmorphism:hover {
         transform: translateY(-2px);
@@ -44,12 +46,26 @@
       }
     </style>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>OHC - Cost Transparency Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
@@ -73,29 +89,46 @@
         border: 1px solid rgba(255, 255, 255, 0.5);
       }
       @media (prefers-color-scheme: dark) {
-        body { background-color: #16161a; }
+        body {
+          background-color: #16161a;
+        }
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(40px) saturate(220%);
           -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        h1, h2, h3 { color: #f5f5f7; }
-        p { color: #a1a1aa; }
+        h1,
+        h2,
+        h3 {
+          color: #f5f5f7;
+        }
+        p {
+          color: #a1a1aa;
+        }
         .ohc-growth-card {
-        background: rgba(22, 22, 26, 0.7);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: #1d1d1f;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      }
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #1d1d1f;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
       }
 
-      h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; text-align: center; }
-      .subtitle { color: #86868b; text-align: center; margin-bottom: 32px; }
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .subtitle {
+        color: #86868b;
+        text-align: center;
+        margin-bottom: 32px;
+      }
 
       .grid {
         display: grid;
@@ -103,7 +136,9 @@
         gap: 20px;
       }
       @media (max-width: 768px) {
-        .grid { grid-template-columns: 1fr; }
+        .grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       .ohc-growth-card {
@@ -117,25 +152,34 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
 
-      .stat-title { font-size: 14px; color: #86868b; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
-      .stat-value { font-size: 24px; font-weight: 700; }
+      .stat-title {
+        font-size: 14px;
+        color: #86868b;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+      }
 
       .progress-bar-bg {
         width: 100%;
         height: 8px;
-        background: rgba(0,0,0,0.1);
+        background: rgba(0, 0, 0, 0.1);
         border-radius: 4px;
         margin-top: 8px;
         overflow: hidden;
       }
       .progress-bar-fill {
         height: 100%;
-        background: #0066FF;
+        background: #0066ff;
         border-radius: 4px;
       }
 
       .btn-primary {
-        background-color: #0066FF;
+        background-color: #0066ff;
         color: white;
         border: none;
         padding: 14px 24px;
@@ -144,7 +188,9 @@
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
         display: flex;
         justify-content: center;
@@ -153,7 +199,7 @@
         min-height: 44px;
       }
       .btn-primary:disabled {
-        background-color: #0066FF;
+        background-color: #0066ff;
         color: white;
         border: none;
         padding: 14px 24px;
@@ -163,20 +209,26 @@
         cursor: pointer;
         width: 100%;
         margin-top: 20px;
-        transition: background-color 0.2s, transform 0.1s;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
         min-height: 44px;
         box-sizing: border-box;
       }
-      .btn-primary:hover { background-color: #0052cc; }
+      .btn-primary:hover {
+        background-color: #0052cc;
+      }
 
       .back-link {
         display: inline-block;
         margin-bottom: 20px;
-        color: #0066FF;
+        color: #0066ff;
         text-decoration: none;
         font-weight: 500;
       }
-      .back-link:hover { text-decoration: underline; }
+      .back-link:hover {
+        text-decoration: underline;
+      }
 
       .loading {
         text-align: center;
@@ -201,20 +253,24 @@
         border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
-        .metric-box { background: rgba(22, 22, 26, 0.7); }
+        .metric-box {
+          background: rgba(22, 22, 26, 0.7);
+        }
       }
 
       .btn-outline {
         background-color: transparent;
         color: #1d1d1f;
-        border: 1px solid rgba(0,0,0,0.2);
+        border: 1px solid rgba(0, 0, 0, 0.2);
         padding: 14px 24px;
         border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -230,11 +286,11 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .btn-outline:hover {
-          background-color: rgba(255,255,255,0.05);
+          background-color: rgba(255, 255, 255, 0.05);
         }
       }
       .btn-outline:hover {
-        background-color: rgba(0,0,0,0.05);
+        background-color: rgba(0, 0, 0, 0.05);
       }
       .btn-outline:active {
         transform: scale(0.98);
@@ -247,153 +303,559 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
       }
-</style>
+    </style>
   </head>
   <body>
-    <div style="width: 100%; max-width: 800px; text-align: left;">
+    <div style="width: 100%; max-width: 800px; text-align: left">
       <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
     </div>
 
     <div class="container glassmorphism">
-      <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
-        <h1 style="margin: 0;">My Plan</h1>
-        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
+      <div
+        style="
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+        "
+      >
+        <h1 style="margin: 0">My Plan</h1>
+        <button
+          id="help-center-nav-btn"
+          data-tooltip="help-center-nav-btn"
+          onclick="window.location.href = 'help.html'"
+          style="
+            position: absolute;
+            right: 0;
+            background: none;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #1d1d1f;
+          "
+        >
+          ?
+        </button>
       </div>
-      <div class="subtitle" style="margin-top: 5px;">Usage and cost transparency</div>
+      <div class="subtitle" style="margin-top: 5px">
+        Usage and cost transparency
+      </div>
 
       <div id="loading" class="loading">Loading your billing data...</div>
 
-      <div id="content" style="display: none;">
+      <div id="content" style="display: none">
         <div class="grid">
           <!-- My Plan Widget -->
-          <div class="ohc-growth-card glassmorphism app-card app-panel" id="my-plan-widget">
-            <h1 style="margin-top: 0; font-size: 24px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">My Plan</h1>
-            <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
+          <div
+            class="ohc-growth-card glassmorphism app-card app-panel"
+            id="my-plan-widget"
+          >
+            <h1
+              style="
+                margin-top: 0;
+                font-size: 24px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+              "
+            >
+              My Plan
+            </h1>
+            <h2
+              style="
+                margin-top: 0;
+                font-size: 20px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+              "
+            >
+              Plan: <span id="my-plan-name" style="color: #0066ff"></span>
+            </h2>
 
-            <h2 class="app-panel-title text-xl font-bold font-outfit text-gray-900" style="margin-top: 0; margin-bottom: 20px;">Your Current Usage</h2>
+            <h2
+              class="app-panel-title text-xl font-bold font-outfit text-gray-900"
+              style="margin-top: 0; margin-bottom: 20px"
+            >
+              Your Current Usage
+            </h2>
 
-            <div style="margin-bottom: 24px;">
-              <span class="stat-title" style="display:block; margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">AI actions used this month</span>
+            <div style="margin-bottom: 24px">
+              <span
+                class="stat-title"
+                style="
+                  display: block;
+                  margin: 0;
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: #86868b;
+                "
+                >AI actions used this month</span
+              >
               <div class="stat-value" id="ai-actions-text">0 / Unlimited</div>
               <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="ai-actions-bar" style="width: 0%;"></div>
+                <div
+                  class="progress-bar-fill"
+                  id="ai-actions-bar"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
 
-            <div style="margin-bottom: 24px;">
+            <div style="margin-bottom: 24px">
               <div class="stat-title">Storage used</div>
               <div class="stat-value" id="storage-text">0 GB / Unlimited</div>
               <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="storage-bar" style="width: 0%;"></div>
+                <div
+                  class="progress-bar-fill"
+                  id="storage-bar"
+                  style="width: 0%"
+                ></div>
               </div>
             </div>
 
-            <div style="margin-bottom: 24px;">
-              <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Estimated Next Bill:</h2>
-              <div class="stat-value" id="my-plan-next-bill" style="color: #34C759;">-</div>
+            <div style="margin-bottom: 24px">
+              <h2
+                class="stat-title"
+                style="
+                  margin: 0;
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: #86868b;
+                "
+              >
+                Estimated Next Bill:
+              </h2>
+              <div
+                class="stat-value"
+                id="my-plan-next-bill"
+                style="color: #34c759"
+              >
+                -
+              </div>
             </div>
 
-            <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade</button>
-            <button id="manage-billing-btn" class="btn-outline" style="margin-top: 12px;">Manage Billing</button>
-            <button id="view-detailed-costs" class="btn-outline" style="margin-top: 12px;">View Detailed Costs</button>
-            <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
-            <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
-            <div id="plan-message" style="margin-top: 12px; font-weight: 500; font-size: 14px; color: #34C759; display: none;"></div>
-            <div id="usage-warning-message" style="color: #FF3B30; font-size: 13px; margin-top: 8px; display: none;"></div>
+            <button
+              class="btn-primary"
+              onclick="window.location.href = 'pricing.html'"
+            >
+              Upgrade
+            </button>
+            <button
+              id="manage-billing-btn"
+              class="btn-outline"
+              style="margin-top: 12px"
+            >
+              Manage Billing
+            </button>
+            <button
+              id="view-detailed-costs"
+              class="btn-outline"
+              style="margin-top: 12px"
+            >
+              View Detailed Costs
+            </button>
+            <button
+              class="btn-outline"
+              id="download-invoice-btn"
+              style="margin-top: 12px"
+            >
+              Download Invoice
+            </button>
+            <button
+              class="btn-outline"
+              id="cancel-subscription-btn"
+              style="margin-top: 12px; color: red; border-color: red"
+            >
+              Cancel Subscription
+            </button>
+            <div
+              id="plan-message"
+              style="
+                margin-top: 12px;
+                font-weight: 500;
+                font-size: 14px;
+                color: #34c759;
+                display: none;
+              "
+            ></div>
+            <div
+              id="usage-warning-message"
+              style="
+                color: #ff3b30;
+                font-size: 13px;
+                margin-top: 8px;
+                display: none;
+              "
+            ></div>
           </div>
 
           <!-- Cost Dashboard Widget -->
-          <div class="ohc-growth-card glassmorphism" id="cost-dashboard-widget" style="display:none;">
-            <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><a id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px; display: inline-block; cursor: pointer; text-decoration: none;" href="#" onclick="document.getElementById('cost-dashboard-widget').style.display='none'; document.getElementById('my-plan-widget').style.display='block'; return false;">Back to My Plan</a>
-
-
+          <div
+            class="ohc-growth-card glassmorphism"
+            id="cost-dashboard-widget"
+            style="display: none"
+          >
+            <h1
+              style="
+                margin-top: 0;
+                font-size: 20px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+              "
+            >
+              Cost Transparency Dashboard
+            </h1>
+            <a
+              id="back-to-my-plan"
+              class="btn-outline"
+              style="
+                margin-bottom: 12px;
+                display: inline-block;
+                cursor: pointer;
+                text-decoration: none;
+              "
+              href="#"
+              onclick="
+                document.getElementById('cost-dashboard-widget').style.display =
+                  'none';
+                document.getElementById('my-plan-widget').style.display =
+                  'block';
+                return false;
+              "
+              >Back to My Plan</a
+            >
 
             <div class="metrics-grid">
-               <div class="metric-box glassmorphism">
-                  <div class="stat-title">Total Revenue</div>
-                  <div class="stat-value" id="cost-dashboard-revenue" style="color: #34C759; font-size: 20px;">-</div>
-               </div>
-               <div class="metric-box glassmorphism">
-                  <h2 class="stat-title" style="margin: 0; font-size: 14px; font-weight: 500; color: #86868b;">Total Costs</h2>
-                  <div class="stat-value" id="cost-dashboard-total-costs" style="font-size: 20px;">-</div>
-               </div>
-               <div class="metric-box glassmorphism">
-                  <div class="stat-title">Projected Monthly Cost</div>
-                  <div class="stat-value" id="cost-dashboard-projected" style="font-size: 20px;">-</div>
-               </div>
-            </div>
-
-            <div class="glassmorphism" id="budget-health-alert" style="display: none; margin-top: 20px; padding: 16px; background: rgba(254, 252, 232, 0.65); border: 1px solid rgba(253, 230, 138, 0.5); align-items: flex-start; gap: 12px;">
-                <svg style="width: 24px; height: 24px; color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div>
-                    <h3 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #92400e; font-family: 'Outfit', sans-serif;">Budget Alert</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Heads up! Your projected monthly cost is reaching your plan's soft limit. Soft Limit Approaching. Upgrade to a higher tier to avoid disruption and secure better bulk rates!</p>
+              <div class="metric-box glassmorphism">
+                <div class="stat-title">Total Revenue</div>
+                <div
+                  class="stat-value"
+                  id="cost-dashboard-revenue"
+                  style="color: #34c759; font-size: 20px"
+                >
+                  -
                 </div>
+              </div>
+              <div class="metric-box glassmorphism">
+                <h2
+                  class="stat-title"
+                  style="
+                    margin: 0;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #86868b;
+                  "
+                >
+                  Total Costs
+                </h2>
+                <div
+                  class="stat-value"
+                  id="cost-dashboard-total-costs"
+                  style="font-size: 20px"
+                >
+                  -
+                </div>
+              </div>
+              <div class="metric-box glassmorphism">
+                <div class="stat-title">Projected Monthly Cost</div>
+                <div
+                  class="stat-value"
+                  id="cost-dashboard-projected"
+                  style="font-size: 20px"
+                >
+                  -
+                </div>
+              </div>
             </div>
 
-            <h2 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 18px;">Cost Breakdown</h2>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b; display: flex; align-items: center; gap: 8px;">
-                    LLM Usage
-                    <span id="budget-alert-badge" style="display: none; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background: rgba(254, 252, 232, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(253, 230, 138, 1); color: #92400e;">
-                        <svg style="margin-right: 4px; width: 12px; height: 12px; color: #f59e0b;" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        Budget Alert
-                    </span>
+            <div
+              class="glassmorphism"
+              id="budget-health-alert"
+              style="
+                display: none;
+                margin-top: 20px;
+                padding: 16px;
+                background: rgba(254, 252, 232, 0.65);
+                border: 1px solid rgba(253, 230, 138, 0.5);
+                align-items: flex-start;
+                gap: 12px;
+              "
+            >
+              <svg
+                style="
+                  width: 24px;
+                  height: 24px;
+                  color: #d97706;
+                  flex-shrink: 0;
+                  margin-top: 2px;
+                "
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div>
+                <h3
+                  style="
+                    margin: 0 0 4px 0;
+                    font-size: 15px;
+                    font-weight: 700;
+                    color: #92400e;
+                    font-family: &quot;Outfit&quot;, sans-serif;
+                  "
+                >
+                  Budget Alert
+                </h3>
+                <p
+                  id="budget-health-alert-text"
+                  style="margin: 0; font-size: 14px; color: #b45309"
+                >
+                  Heads up! Your projected monthly cost is reaching your plan's
+                  soft limit. Soft Limit Approaching. Upgrade to a higher tier
+                  to avoid disruption and secure better bulk rates!
+                </p>
+              </div>
+            </div>
+
+            <h2
+              style="
+                margin-top: 24px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                font-size: 18px;
+              "
+            >
+              Cost Breakdown
+            </h2>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span
+                style="
+                  color: #86868b;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                LLM Usage
+                <span
+                  id="budget-alert-badge"
+                  style="
+                    display: none;
+                    align-items: center;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    background: rgba(254, 252, 232, 0.7);
+                    backdrop-filter: blur(30px) saturate(210%);
+                    border: 1px solid rgba(253, 230, 138, 1);
+                    color: #92400e;
+                  "
+                >
+                  <svg
+                    style="
+                      margin-right: 4px;
+                      width: 12px;
+                      height: 12px;
+                      color: #f59e0b;
+                    "
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  Budget Alert
                 </span>
-                <span id="cost-dashboard-llm" style="font-weight: 500;">-</span>
+              </span>
+              <span id="cost-dashboard-llm" style="font-weight: 500">-</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Storage</span>
-                <span id="cost-dashboard-storage" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Storage</span>
+              <span id="cost-dashboard-storage" style="font-weight: 500"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Payment Fees</span>
-                <span id="cost-dashboard-payment-fees" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Payment Fees</span>
+              <span id="cost-dashboard-payment-fees" style="font-weight: 500"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Network & Storage Savings</span>
-                <span id="cost-dashboard-total-savings" style="font-weight: 500; color: #34C759;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Network & Storage Savings</span>
+              <span
+                id="cost-dashboard-total-savings"
+                style="font-weight: 500; color: #34c759"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Compute Usage</span>
-                <span id="cost-dashboard-compute" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Compute Usage</span>
+              <span id="cost-dashboard-compute" style="font-weight: 500"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Network Cost</span>
-                <span id="cost-dashboard-network" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Network Cost</span>
+              <span id="cost-dashboard-network" style="font-weight: 500"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Email Sends</span>
-                <span id="cost-dashboard-email" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Email Sends</span>
+              <span id="cost-dashboard-email" style="font-weight: 500">-</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Outbound API Calls</span>
-                <span id="cost-dashboard-api" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Outbound API Calls</span>
+              <span id="cost-dashboard-api" style="font-weight: 500">-</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Cache Hit Rate</span>
-                <span id="cost-dashboard-cache-hit-rate" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Cache Hit Rate</span>
+              <span id="cost-dashboard-cache-hit-rate" style="font-weight: 500"
+                >-</span
+              >
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Cost per 1k Tokens</span>
-                <span id="cost-dashboard-cost-per-1k" style="font-weight: 500;">-</span>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="color: #86868b">Cost per 1k Tokens</span>
+              <span id="cost-dashboard-cost-per-1k" style="font-weight: 500"
+                >-</span
+              >
             </div>
 
-            <h3 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 16px;">7-Day Trend</h3>
-            <div id="cost-dashboard-trend" style="font-size: 14px; font-weight: 500; color: #86868b; margin-bottom: 8px;">Trend: --</div>
+            <h3
+              style="
+                margin-top: 24px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                font-size: 16px;
+              "
+            >
+              7-Day Trend
+            </h3>
+            <div
+              id="cost-dashboard-trend"
+              style="
+                font-size: 14px;
+                font-weight: 500;
+                color: #86868b;
+                margin-bottom: 8px;
+              "
+            >
+              Trend: --
+            </div>
 
-            <h3 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 16px;">Agent & Feature Costs</h3>
-            <ul id="cost-dashboard-agent-costs" style="list-style: none; padding: 0; margin: 0;">
-                <li style="color: #86868b; font-size: 14px;">No agent cost data available.</li>
+            <h3
+              style="
+                margin-top: 24px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                font-size: 16px;
+              "
+            >
+              Agent & Feature Costs
+            </h3>
+            <ul
+              id="cost-dashboard-agent-costs"
+              style="list-style: none; padding: 0; margin: 0"
+            >
+              <li style="color: #86868b; font-size: 14px">
+                No agent cost data available.
+              </li>
             </ul>
 
-            <h2 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 18px;">Department Tier Usage</h2>
-            <ul id="cost-dashboard-department-usage" style="list-style: none; padding: 0; margin: 0;">
-                <li style="color: #86868b; font-size: 14px;">No department usage data available.</li>
+            <h2
+              style="
+                margin-top: 24px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                font-size: 18px;
+              "
+            >
+              Department Tier Usage
+            </h2>
+            <ul
+              id="cost-dashboard-department-usage"
+              style="list-style: none; padding: 0; margin: 0"
+            >
+              <li style="color: #86868b; font-size: 14px">
+                No department usage data available.
+              </li>
             </ul>
           </div>
         </div>
@@ -402,294 +864,394 @@
 
     <script>
       function formatBytes(bytes) {
-        if (bytes == null || bytes <= 0) return '0 B';
+        if (bytes == null || bytes <= 0) return "0 B";
         const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const sizes = ["B", "KB", "MB", "GB", "TB"];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
       }
 
       function formatCents(cents) {
-        return '$' + (cents / 100).toFixed(2);
+        return "$" + (cents / 100).toFixed(2);
       }
 
-      document.addEventListener('DOMContentLoaded', async () => {
-        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-        const token = localStorage.getItem('token');
+      document.addEventListener("DOMContentLoaded", async () => {
+        const tenant =
+          localStorage.getItem("ohc_active_tenant_id") ||
+          localStorage.getItem("tenant_id") ||
+          localStorage.getItem("tenant") ||
+          "default-team";
+        const token = localStorage.getItem("token");
         const headers = {};
         if (tenant) {
-            headers['x-tenant-id'] = tenant;
+          headers["x-tenant-id"] = tenant;
         }
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+          headers["Authorization"] = `Bearer ${token}`;
         }
 
         try {
-            const [planRes, costRes] = await Promise.all([
-                fetch('/api/billing/my-plan', { headers }),
-                fetch('/api/billing/cost-dashboard', { headers })
-            ]);
+          const [planRes, costRes] = await Promise.all([
+            fetch("/api/billing/my-plan", { headers }),
+            fetch("/api/billing/cost-dashboard", { headers }),
+          ]);
 
-            if (planRes.ok) {
-                const planData = await planRes.json();
-                document.getElementById('my-plan-name').innerText = planData.current_plan;
+          if (planRes.ok) {
+            const planData = await planRes.json();
+            document.getElementById("my-plan-name").innerText =
+              planData.current_plan;
 
-                if (planData.current_plan === 'Free') {
-                    const manageBillingBtn = document.getElementById('manage-billing-btn');
-                    if (manageBillingBtn) manageBillingBtn.style.display = 'none';
+            if (planData.current_plan === "Free") {
+              const manageBillingBtn =
+                document.getElementById("manage-billing-btn");
+              if (manageBillingBtn) manageBillingBtn.style.display = "none";
 
-                    const cancelSubscriptionBtn = document.getElementById('cancel-subscription-btn');
-                    if (cancelSubscriptionBtn) cancelSubscriptionBtn.style.display = 'none';
-                }
-
-                let warningMessage = "";
-
-                // AI Actions
-                const actionsText = (planData.ai_actions_limit != null && planData.ai_actions_limit >= 0) ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / Unlimited`;
-                document.getElementById('ai-actions-text').innerText = actionsText;
-                if (planData.ai_actions_limit != null && planData.ai_actions_limit > 0) {
-                    const pct = Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100);
-                    const bar = document.getElementById('ai-actions-bar');
-                    bar.style.width = pct + '%';
-                    if (pct >= 100) {
-                        bar.style.backgroundColor = '#FF3B30';
-                        warningMessage = "You have reached your AI action limit. Consider upgrading to keep momentum.";
-                    } else if (pct >= 90) {
-                        bar.style.backgroundColor = '#FF9500';
-                        warningMessage = "You are approaching your AI action limit. Consider upgrading to keep momentum.";
-                    }
-                } else {
-                    document.getElementById('ai-actions-bar').style.width = '0%';
-                }
-
-                // Storage
-                const storageText = (planData.storage_limit_bytes != null && planData.storage_limit_bytes >= 0) ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
-                document.getElementById('storage-text').innerText = storageText;
-                if (planData.storage_limit_bytes != null && planData.storage_limit_bytes > 0) {
-                    const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);
-                    const bar = document.getElementById('storage-bar');
-                    bar.style.width = pct + '%';
-                    if (pct >= 100) {
-                        bar.style.backgroundColor = '#FF3B30';
-                        if (!warningMessage) warningMessage = "You have reached your storage limit. Consider upgrading your plan.";
-                    } else if (pct >= 90) {
-                        bar.style.backgroundColor = '#FF9500';
-                        if (!warningMessage) warningMessage = "You are approaching your storage limit. Consider upgrading your plan.";
-                    }
-                } else {
-                    document.getElementById('storage-bar').style.width = '0%';
-                }
-
-                if (warningMessage) {
-                    const warningDiv = document.getElementById('usage-warning-message');
-                    warningDiv.innerText = warningMessage;
-                    warningDiv.style.display = 'block';
-                }
-
-                document.getElementById('my-plan-next-bill').innerText = formatCents(planData.next_bill_estimated);
+              const cancelSubscriptionBtn = document.getElementById(
+                "cancel-subscription-btn",
+              );
+              if (cancelSubscriptionBtn)
+                cancelSubscriptionBtn.style.display = "none";
             }
 
-            const planMessageDiv = document.getElementById('plan-message');
+            let warningMessage = "";
 
-            document.getElementById('download-invoice-btn').addEventListener('click', async () => {
-                const res = await fetch('/api/billing/download-invoice', { method: 'POST', headers });
+            // AI Actions
+            const actionsText =
+              planData.ai_actions_limit != null &&
+              planData.ai_actions_limit >= 0
+                ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}`
+                : `${planData.ai_actions_used} / Unlimited`;
+            document.getElementById("ai-actions-text").innerText = actionsText;
+            if (
+              planData.ai_actions_limit != null &&
+              planData.ai_actions_limit > 0
+            ) {
+              const pct = Math.min(
+                (planData.ai_actions_used / planData.ai_actions_limit) * 100,
+                100,
+              );
+              const bar = document.getElementById("ai-actions-bar");
+              bar.style.width = pct + "%";
+              if (pct >= 100) {
+                bar.style.backgroundColor = "#FF3B30";
+                warningMessage =
+                  "You have reached your AI action limit. Consider upgrading to keep momentum.";
+              } else if (pct >= 90) {
+                bar.style.backgroundColor = "#FF9500";
+                warningMessage =
+                  "You are approaching your AI action limit. Consider upgrading to keep momentum.";
+              }
+            } else {
+              document.getElementById("ai-actions-bar").style.width = "0%";
+            }
+
+            // Storage
+            const storageText =
+              planData.storage_limit_bytes != null &&
+              planData.storage_limit_bytes >= 0
+                ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}`
+                : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
+            document.getElementById("storage-text").innerText = storageText;
+            if (
+              planData.storage_limit_bytes != null &&
+              planData.storage_limit_bytes > 0
+            ) {
+              const pct = Math.min(
+                (planData.storage_used_bytes / planData.storage_limit_bytes) *
+                  100,
+                100,
+              );
+              const bar = document.getElementById("storage-bar");
+              bar.style.width = pct + "%";
+              if (pct >= 100) {
+                bar.style.backgroundColor = "#FF3B30";
+                if (!warningMessage)
+                  warningMessage =
+                    "You have reached your storage limit. Consider upgrading your plan.";
+              } else if (pct >= 90) {
+                bar.style.backgroundColor = "#FF9500";
+                if (!warningMessage)
+                  warningMessage =
+                    "You are approaching your storage limit. Consider upgrading your plan.";
+              }
+            } else {
+              document.getElementById("storage-bar").style.width = "0%";
+            }
+
+            if (warningMessage) {
+              const warningDiv = document.getElementById(
+                "usage-warning-message",
+              );
+              warningDiv.innerText = warningMessage;
+              warningDiv.style.display = "block";
+            }
+
+            document.getElementById("my-plan-next-bill").innerText =
+              formatCents(planData.next_bill_estimated);
+          }
+
+          const planMessageDiv = document.getElementById("plan-message");
+
+          document
+            .getElementById("download-invoice-btn")
+            .addEventListener("click", async () => {
+              const res = await fetch("/api/billing/download-invoice", {
+                method: "POST",
+                headers,
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.url) {
+                  window.open(data.url, "_blank");
+                }
+                planMessageDiv.innerText =
+                  "Invoice download is ready for your current billing period.";
+                planMessageDiv.style.color = "#34C759";
+                planMessageDiv.style.display = "block";
+              } else {
+                planMessageDiv.innerText = "Failed to download invoice.";
+                planMessageDiv.style.color = "#FF3B30";
+                planMessageDiv.style.display = "block";
+              }
+            });
+
+          document
+            .getElementById("manage-billing-btn")
+            .addEventListener("click", async () => {
+              try {
+                const res = await fetch(
+                  "/api/billing/create-billing-portal-session",
+                  { method: "POST", headers },
+                );
                 if (res.ok) {
-                    const data = await res.json();
-                    if (data.url) {
-                        window.open(data.url, '_blank');
-                    }
-                    planMessageDiv.innerText = 'Invoice download is ready for your current billing period.';
-                    planMessageDiv.style.color = '#34C759';
-                    planMessageDiv.style.display = 'block';
-                } else {
-                    planMessageDiv.innerText = 'Failed to download invoice.';
-                    planMessageDiv.style.color = '#FF3B30';
-                    planMessageDiv.style.display = 'block';
+                  const data = await res.json();
+                  if (data.url) {
+                    window.location.href = data.url;
+                  } else {
+                    planMessageDiv.innerText = "Failed to open billing portal.";
+                    planMessageDiv.style.color = "#FF3B30";
+                    planMessageDiv.style.display = "block";
+                  }
                 }
+              } catch (e) {
+                console.error("Failed to create billing portal session", e);
+              }
             });
 
-            document.getElementById('manage-billing-btn').addEventListener('click', async () => {
-                try {
-                    const res = await fetch('/api/billing/create-billing-portal-session', { method: 'POST', headers });
-                    if (res.ok) {
-                        const data = await res.json();
-                        if (data.url) {
-                            window.location.href = data.url;
-                        } else {
-                            planMessageDiv.innerText = 'Failed to open billing portal.';
-                            planMessageDiv.style.color = '#FF3B30';
-                            planMessageDiv.style.display = 'block';
-                        }
-                    }
-                } catch (e) {
-                    console.error('Failed to create billing portal session', e);
+          document
+            .getElementById("cancel-subscription-btn")
+            .addEventListener("click", async () => {
+              if (
+                confirm("Are you sure you want to cancel your subscription?")
+              ) {
+                const res = await fetch("/api/billing/cancel-subscription", {
+                  method: "POST",
+                  headers,
+                });
+                if (res.ok) {
+                  planMessageDiv.innerText =
+                    "Subscription canceled successfully.";
+                  planMessageDiv.style.color = "#34C759";
+                  planMessageDiv.style.display = "block";
                 }
+              }
             });
 
-            document.getElementById('cancel-subscription-btn').addEventListener('click', async () => {
-                if (confirm('Are you sure you want to cancel your subscription?')) {
-                    const res = await fetch('/api/billing/cancel-subscription', { method: 'POST', headers });
-                    if (res.ok) {
-                        planMessageDiv.innerText = 'Subscription canceled successfully.';
-                        planMessageDiv.style.color = '#34C759';
-                        planMessageDiv.style.display = 'block';
-                    }
+          if (costRes.ok) {
+            const costData = await costRes.json();
+            document.getElementById("cost-dashboard-revenue").innerText =
+              formatCents(costData.total_revenue || 0);
+            document.getElementById("cost-dashboard-total-costs").innerText =
+              formatCents(costData.total_costs || 0);
+            document.getElementById("cost-dashboard-projected").innerText =
+              formatCents(costData.projected_monthly_cost || 0);
+
+            if (costData.trend) {
+              const trendEl = document.getElementById("cost-dashboard-trend");
+              if (trendEl) {
+                if (typeof costData.trend === "string") {
+                  trendEl.textContent =
+                    "Trend: " +
+                    (costData.trend.charAt(0).toUpperCase() +
+                      costData.trend.slice(1));
+                  if (costData.trend === "up") {
+                    trendEl.style.color = "#ef4444";
+                  } else if (costData.trend === "down") {
+                    trendEl.style.color = "#10b981";
+                  } else {
+                    trendEl.style.color = "#86868b";
+                  }
+                } else if (
+                  Array.isArray(costData.trend) &&
+                  costData.trend.length > 0
+                ) {
+                  trendEl.textContent =
+                    "Trend: " +
+                    costData.trend
+                      .map((d) => `${d.date}: ${formatCents(d.total_cost)}`)
+                      .join(", ");
                 }
-            });
-
-            if (costRes.ok) {
-                const costData = await costRes.json();
-                document.getElementById('cost-dashboard-revenue').innerText = formatCents(costData.total_revenue || 0);
-                document.getElementById('cost-dashboard-total-costs').innerText = formatCents(costData.total_costs || 0);
-                document.getElementById('cost-dashboard-projected').innerText = formatCents(costData.projected_monthly_cost || 0);
-
-                if (costData.trend) {
-                    const trendEl = document.getElementById('cost-dashboard-trend');
-                    if (trendEl) {
-                        if (typeof costData.trend === 'string') {
-                            trendEl.textContent = 'Trend: ' + (costData.trend.charAt(0).toUpperCase() + costData.trend.slice(1));
-                            if (costData.trend === 'up') {
-                                trendEl.style.color = '#ef4444';
-                            } else if (costData.trend === 'down') {
-                                trendEl.style.color = '#10b981';
-                            } else {
-                                trendEl.style.color = '#86868b';
-                            }
-                        } else if (Array.isArray(costData.trend) && costData.trend.length > 0) {
-                            trendEl.textContent = 'Trend: ' + costData.trend.map(d => `${d.date}: ${formatCents(d.total_cost)}`).join(', ');
-                        }
-                    }
-                }
-
-                if (costData.budget_health_alert || (costData.department_tier_usage && costData.department_tier_usage.departments && costData.department_tier_usage.departments.some(d => d.soft_limit_reached))) {
-                    document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Heads up! Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching. Upgrade to a higher tier to avoid disruption and secure better bulk rates!`;
-                } else {
-                    document.getElementById('budget-health-alert').style.display = 'none';
-                }
-
-                const showBadge = (costData.department_tier_usage && costData.department_tier_usage.departments && costData.department_tier_usage.departments.some(d => d.action_limit !== null && d.actions_used / d.action_limit >= 0.8)) || costData.budget_health_alert;
-                document.getElementById('budget-alert-badge').style.display = showBadge ? 'inline-flex' : 'none';
-
-                document.getElementById('cost-dashboard-llm').innerText = formatCents(costData.llm_cost || 0);
-                document.getElementById('cost-dashboard-storage').innerText = formatCents(costData.storage_cost || 0);
-                document.getElementById('cost-dashboard-payment-fees').innerText = formatCents(costData.payment_fees || 0);
-                document.getElementById('cost-dashboard-total-savings').innerText = formatCents(costData.bandwidth_savings || 0);
-                document.getElementById('cost-dashboard-compute').innerText = formatCents(costData.compute_cost || 0);
-                document.getElementById('cost-dashboard-network').innerText = formatCents(costData.network_cost || 0);
-                document.getElementById('cost-dashboard-email').innerText = formatCents(costData.email_cost || 0);
-                document.getElementById('cost-dashboard-api').innerText = formatCents(costData.api_cost || 0);
-                document.getElementById('cost-dashboard-cache-hit-rate').innerText = (costData.cache_hit_rate || 0).toFixed(2) + '%';
-                document.getElementById('cost-dashboard-cost-per-1k').innerText = '$' + (costData.cost_per_1k_tokens || 0).toFixed(4);
-
-                if (costData.agent_costs && costData.agent_costs.length > 0) {
-                    const agentList = document.getElementById('cost-dashboard-agent-costs');
-                    agentList.innerHTML = ''; // Clear default message
-                    costData.agent_costs.forEach(agent => {
-                        const li = document.createElement('li');
-                        li.style.display = 'flex';
-                        li.style.justifyContent = 'space-between';
-                        li.style.marginBottom = '8px';
-
-                        const nameSpan = document.createElement('span');
-                        nameSpan.style.color = '#86868b';
-                        nameSpan.style.textTransform = 'capitalize';
-                        nameSpan.innerText = agent.agent_id.replace(/_/g, ' ');
-
-                        const costSpan = document.createElement('span');
-                        costSpan.style.fontWeight = '500';
-                        costSpan.innerText = formatCents(agent.cost_cents);
-
-                        li.appendChild(nameSpan);
-                        li.appendChild(costSpan);
-                        agentList.appendChild(li);
-                    });
-                }
-
-                if (costData.department_tier_usage && costData.department_tier_usage.departments && costData.department_tier_usage.departments.length > 0) {
-                    const deptList = document.getElementById('cost-dashboard-department-usage');
-                    deptList.innerHTML = ''; // Clear default message
-                    costData.department_tier_usage.departments.forEach(dept => {
-                        const li = document.createElement('li');
-                        li.style.display = 'flex';
-                        li.style.justifyContent = 'space-between';
-                        li.style.marginBottom = '8px';
-
-                        const nameSpan = document.createElement('span');
-                        nameSpan.style.color = '#86868b';
-                        nameSpan.style.textTransform = 'capitalize';
-                        nameSpan.innerText = dept.department_type.replace(/_/g, ' ');
-
-                        const usageSpan = document.createElement('span');
-                        usageSpan.style.fontWeight = '500';
-                        let limitText = dept.action_limit ? dept.action_limit : 'Unlimited';
-                        usageSpan.innerText = `${dept.actions_used} / ${limitText}`;
-                        if (dept.soft_limit_reached) {
-                            usageSpan.style.color = '#d97706';
-                        }
-
-                        li.appendChild(nameSpan);
-                        li.appendChild(usageSpan);
-                        deptList.appendChild(li);
-                    });
-                }
+              }
             }
 
+            if (
+              costData.budget_health_alert ||
+              (costData.department_tier_usage &&
+                costData.department_tier_usage.departments &&
+                costData.department_tier_usage.departments.some(
+                  (d) => d.soft_limit_reached,
+                ))
+            ) {
+              document.getElementById("budget-health-alert").style.display =
+                "flex";
+              document.getElementById("budget-health-alert-text").innerText =
+                `Heads up! Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching. Upgrade to a higher tier to avoid disruption and secure better bulk rates!`;
+            } else {
+              document.getElementById("budget-health-alert").style.display =
+                "none";
+            }
+
+            const showBadge =
+              (costData.department_tier_usage &&
+                costData.department_tier_usage.departments &&
+                costData.department_tier_usage.departments.some(
+                  (d) =>
+                    d.action_limit !== null &&
+                    d.actions_used / d.action_limit >= 0.8,
+                )) ||
+              costData.budget_health_alert;
+            document.getElementById("budget-alert-badge").style.display =
+              showBadge ? "inline-flex" : "none";
+
+            document.getElementById("cost-dashboard-llm").innerText =
+              formatCents(costData.llm_cost || 0);
+            document.getElementById("cost-dashboard-storage").innerText =
+              formatCents(costData.storage_cost || 0);
+            document.getElementById("cost-dashboard-payment-fees").innerText =
+              formatCents(costData.payment_fees || 0);
+            document.getElementById("cost-dashboard-total-savings").innerText =
+              formatCents(costData.bandwidth_savings || 0);
+            document.getElementById("cost-dashboard-compute").innerText =
+              formatCents(costData.compute_cost || 0);
+            document.getElementById("cost-dashboard-network").innerText =
+              formatCents(costData.network_cost || 0);
+            document.getElementById("cost-dashboard-email").innerText =
+              formatCents(costData.email_cost || 0);
+            document.getElementById("cost-dashboard-api").innerText =
+              formatCents(costData.api_cost || 0);
+            document.getElementById("cost-dashboard-cache-hit-rate").innerText =
+              (costData.cache_hit_rate || 0).toFixed(2) + "%";
+            document.getElementById("cost-dashboard-cost-per-1k").innerText =
+              "$" + (costData.cost_per_1k_tokens || 0).toFixed(4);
+
+            if (costData.agent_costs && costData.agent_costs.length > 0) {
+              const agentList = document.getElementById(
+                "cost-dashboard-agent-costs",
+              );
+              agentList.innerHTML = ""; // Clear default message
+              costData.agent_costs.forEach((agent) => {
+                const li = document.createElement("li");
+                li.style.display = "flex";
+                li.style.justifyContent = "space-between";
+                li.style.marginBottom = "8px";
+
+                const nameSpan = document.createElement("span");
+                nameSpan.style.color = "#86868b";
+                nameSpan.style.textTransform = "capitalize";
+                nameSpan.innerText = agent.agent_id.replace(/_/g, " ");
+
+                const costSpan = document.createElement("span");
+                costSpan.style.fontWeight = "500";
+                costSpan.innerText = formatCents(agent.cost_cents);
+
+                li.appendChild(nameSpan);
+                li.appendChild(costSpan);
+                agentList.appendChild(li);
+              });
+            }
+
+            if (
+              costData.department_tier_usage &&
+              costData.department_tier_usage.departments &&
+              costData.department_tier_usage.departments.length > 0
+            ) {
+              const deptList = document.getElementById(
+                "cost-dashboard-department-usage",
+              );
+              deptList.innerHTML = ""; // Clear default message
+              costData.department_tier_usage.departments.forEach((dept) => {
+                const li = document.createElement("li");
+                li.style.display = "flex";
+                li.style.justifyContent = "space-between";
+                li.style.marginBottom = "8px";
+
+                const nameSpan = document.createElement("span");
+                nameSpan.style.color = "#86868b";
+                nameSpan.style.textTransform = "capitalize";
+                nameSpan.innerText = dept.department_type.replace(/_/g, " ");
+
+                const usageSpan = document.createElement("span");
+                usageSpan.style.fontWeight = "500";
+                let limitText = dept.action_limit
+                  ? dept.action_limit
+                  : "Unlimited";
+                usageSpan.innerText = `${dept.actions_used} / ${limitText}`;
+                if (dept.soft_limit_reached) {
+                  usageSpan.style.color = "#d97706";
+                }
+
+                li.appendChild(nameSpan);
+                li.appendChild(usageSpan);
+                deptList.appendChild(li);
+              });
+            }
+          }
         } catch (e) {
-            console.error('Failed to load billing data', e);
+          console.error("Failed to load billing data", e);
         } finally {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("content").style.display = "block";
         }
       });
     </script>
 
-
-
-
-
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(40px) saturate(220%);
-    -webkit-backdrop-filter: blur(40px) saturate(220%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    color: #1d1d1f;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
+    <style>
+      .ohc-tooltip {
+        position: fixed;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        color: #1d1d1f;
+        padding: 8px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-family: Outfit, sans-serif;
+        z-index: 100000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 250px;
+        line-height: 1.4;
+      }
+      .ohc-tooltip.visible {
+        opacity: 1;
+      }
 
       .btn-outline {
         background-color: transparent;
         color: #1d1d1f;
-        border: 1px solid rgba(0,0,0,0.2);
+        border: 1px solid rgba(0, 0, 0, 0.2);
         padding: 14px 24px;
         border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition:
+          background-color 0.2s,
+          transform 0.1s;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -705,11 +1267,11 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .btn-outline:hover {
-          background-color: rgba(255,255,255,0.05);
+          background-color: rgba(255, 255, 255, 0.05);
         }
       }
       .btn-outline:hover {
-        background-color: rgba(0,0,0,0.05);
+        background-color: rgba(0, 0, 0, 0.05);
       }
       .btn-outline:active {
         transform: scale(0.98);
@@ -722,1541 +1284,46 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
       }
-</style>
+    </style>
 
-
-
-  <script src="help-widget.mjs" type="module"></script>
-  </body>
-</html>
-
-<!-- Authorized deletion line 0 -->
-<!-- Authorized deletion line 1 -->
-<!-- Authorized deletion line 2 -->
-<!-- Authorized deletion line 3 -->
-<!-- Authorized deletion line 4 -->
-<!-- Authorized deletion line 5 -->
-<!-- Authorized deletion line 6 -->
-<!-- Authorized deletion line 7 -->
-<!-- Authorized deletion line 8 -->
-<!-- Authorized deletion line 9 -->
-<!-- Authorized deletion line 10 -->
-<!-- Authorized deletion line 11 -->
-<!-- Authorized deletion line 12 -->
-<!-- Authorized deletion line 13 -->
-<!-- Authorized deletion line 14 -->
-<!-- Authorized deletion line 15 -->
-<!-- Authorized deletion line 16 -->
-<!-- Authorized deletion line 17 -->
-<!-- Authorized deletion line 18 -->
-<!-- Authorized deletion line 19 -->
-<!-- Authorized deletion line 20 -->
-<!-- Authorized deletion line 21 -->
-<!-- Authorized deletion line 22 -->
-<!-- Authorized deletion line 23 -->
-<!-- Authorized deletion line 24 -->
-<!-- Authorized deletion line 25 -->
-<!-- Authorized deletion line 26 -->
-<!-- Authorized deletion line 27 -->
-<!-- Authorized deletion line 28 -->
-<!-- Authorized deletion line 29 -->
-<!-- Authorized deletion line 30 -->
-<!-- Authorized deletion line 31 -->
-<!-- Authorized deletion line 32 -->
-<!-- Authorized deletion line 33 -->
-<!-- Authorized deletion line 34 -->
-<!-- Authorized deletion line 35 -->
-<!-- Authorized deletion line 36 -->
-<!-- Authorized deletion line 37 -->
-<!-- Authorized deletion line 38 -->
-<!-- Authorized deletion line 39 -->
-<!-- Authorized deletion line 40 -->
-<!-- Authorized deletion line 41 -->
-<!-- Authorized deletion line 42 -->
-<!-- Authorized deletion line 43 -->
-<!-- Authorized deletion line 44 -->
-<!-- Authorized deletion line 45 -->
-<!-- Authorized deletion line 46 -->
-<!-- Authorized deletion line 47 -->
-<!-- Authorized deletion line 48 -->
-<!-- Authorized deletion line 49 -->
-<!-- Authorized deletion line 50 -->
-<!-- Authorized deletion line 51 -->
-<!-- Authorized deletion line 52 -->
-<!-- Authorized deletion line 53 -->
-<!-- Authorized deletion line 54 -->
-<!-- Authorized deletion line 55 -->
-<!-- Authorized deletion line 56 -->
-<!-- Authorized deletion line 57 -->
-<!-- Authorized deletion line 58 -->
-<!-- Authorized deletion line 59 -->
-<!-- Authorized deletion line 60 -->
-<!-- Authorized deletion line 61 -->
-<!-- Authorized deletion line 62 -->
-<!-- Authorized deletion line 63 -->
-<!-- Authorized deletion line 64 -->
-<!-- Authorized deletion line 65 -->
-<!-- Authorized deletion line 66 -->
-<!-- Authorized deletion line 67 -->
-<!-- Authorized deletion line 68 -->
-<!-- Authorized deletion line 69 -->
-<!-- Authorized deletion line 70 -->
-<!-- Authorized deletion line 71 -->
-<!-- Authorized deletion line 72 -->
-<!-- Authorized deletion line 73 -->
-<!-- Authorized deletion line 74 -->
-<!-- Authorized deletion line 75 -->
-<!-- Authorized deletion line 76 -->
-<!-- Authorized deletion line 77 -->
-<!-- Authorized deletion line 78 -->
-<!-- Authorized deletion line 79 -->
-<!-- Authorized deletion line 80 -->
-<!-- Authorized deletion line 81 -->
-<!-- Authorized deletion line 82 -->
-<!-- Authorized deletion line 83 -->
-<!-- Authorized deletion line 84 -->
-<!-- Authorized deletion line 85 -->
-<!-- Authorized deletion line 86 -->
-<!-- Authorized deletion line 87 -->
-<!-- Authorized deletion line 88 -->
-<!-- Authorized deletion line 89 -->
-<!-- Authorized deletion line 90 -->
-<!-- Authorized deletion line 91 -->
-<!-- Authorized deletion line 92 -->
-<!-- Authorized deletion line 93 -->
-<!-- Authorized deletion line 94 -->
-<!-- Authorized deletion line 95 -->
-<!-- Authorized deletion line 96 -->
-<!-- Authorized deletion line 97 -->
-<!-- Authorized deletion line 98 -->
-<!-- Authorized deletion line 99 -->
-<!-- Authorized deletion line 100 -->
-<!-- Authorized deletion line 101 -->
-<!-- Authorized deletion line 102 -->
-<!-- Authorized deletion line 103 -->
-<!-- Authorized deletion line 104 -->
-<!-- Authorized deletion line 105 -->
-<!-- Authorized deletion line 106 -->
-<!-- Authorized deletion line 107 -->
-<!-- Authorized deletion line 108 -->
-<!-- Authorized deletion line 109 -->
-<!-- Authorized deletion line 110 -->
-<!-- Authorized deletion line 111 -->
-<!-- Authorized deletion line 112 -->
-<!-- Authorized deletion line 113 -->
-<!-- Authorized deletion line 114 -->
-<!-- Authorized deletion line 115 -->
-<!-- Authorized deletion line 116 -->
-<!-- Authorized deletion line 117 -->
-<!-- Authorized deletion line 118 -->
-<!-- Authorized deletion line 119 -->
-<!-- Authorized deletion line 120 -->
-<!-- Authorized deletion line 121 -->
-<!-- Authorized deletion line 122 -->
-<!-- Authorized deletion line 123 -->
-<!-- Authorized deletion line 124 -->
-<!-- Authorized deletion line 125 -->
-<!-- Authorized deletion line 126 -->
-<!-- Authorized deletion line 127 -->
-<!-- Authorized deletion line 128 -->
-<!-- Authorized deletion line 129 -->
-<!-- Authorized deletion line 130 -->
-<!-- Authorized deletion line 131 -->
-<!-- Authorized deletion line 132 -->
-<!-- Authorized deletion line 133 -->
-<!-- Authorized deletion line 134 -->
-<!-- Authorized deletion line 135 -->
-<!-- Authorized deletion line 136 -->
-<!-- Authorized deletion line 137 -->
-<!-- Authorized deletion line 138 -->
-<!-- Authorized deletion line 139 -->
-<!-- Authorized deletion line 140 -->
-<!-- Authorized deletion line 141 -->
-<!-- Authorized deletion line 142 -->
-<!-- Authorized deletion line 143 -->
-<!-- Authorized deletion line 144 -->
-<!-- Authorized deletion line 145 -->
-<!-- Authorized deletion line 146 -->
-<!-- Authorized deletion line 147 -->
-<!-- Authorized deletion line 148 -->
-<!-- Authorized deletion line 149 -->
-<!-- Authorized deletion line 150 -->
-<!-- Authorized deletion line 151 -->
-<!-- Authorized deletion line 152 -->
-<!-- Authorized deletion line 153 -->
-<!-- Authorized deletion line 154 -->
-<!-- Authorized deletion line 155 -->
-<!-- Authorized deletion line 156 -->
-<!-- Authorized deletion line 157 -->
-<!-- Authorized deletion line 158 -->
-<!-- Authorized deletion line 159 -->
-<!-- Authorized deletion line 160 -->
-<!-- Authorized deletion line 161 -->
-<!-- Authorized deletion line 162 -->
-<!-- Authorized deletion line 163 -->
-<!-- Authorized deletion line 164 -->
-<!-- Authorized deletion line 165 -->
-<!-- Authorized deletion line 166 -->
-<!-- Authorized deletion line 167 -->
-<!-- Authorized deletion line 168 -->
-<!-- Authorized deletion line 169 -->
-<!-- Authorized deletion line 170 -->
-<!-- Authorized deletion line 171 -->
-<!-- Authorized deletion line 172 -->
-<!-- Authorized deletion line 173 -->
-<!-- Authorized deletion line 174 -->
-<!-- Authorized deletion line 175 -->
-<!-- Authorized deletion line 176 -->
-<!-- Authorized deletion line 177 -->
-<!-- Authorized deletion line 178 -->
-<!-- Authorized deletion line 179 -->
-<!-- Authorized deletion line 180 -->
-<!-- Authorized deletion line 181 -->
-<!-- Authorized deletion line 182 -->
-<!-- Authorized deletion line 183 -->
-<!-- Authorized deletion line 184 -->
-<!-- Authorized deletion line 185 -->
-<!-- Authorized deletion line 186 -->
-<!-- Authorized deletion line 187 -->
-<!-- Authorized deletion line 188 -->
-<!-- Authorized deletion line 189 -->
-<!-- Authorized deletion line 190 -->
-<!-- Authorized deletion line 191 -->
-<!-- Authorized deletion line 192 -->
-<!-- Authorized deletion line 193 -->
-<!-- Authorized deletion line 194 -->
-<!-- Authorized deletion line 195 -->
-<!-- Authorized deletion line 196 -->
-<!-- Authorized deletion line 197 -->
-<!-- Authorized deletion line 198 -->
-<!-- Authorized deletion line 199 -->
-<!-- Authorized deletion line 200 -->
-<!-- Authorized deletion line 201 -->
-<!-- Authorized deletion line 202 -->
-<!-- Authorized deletion line 203 -->
-<!-- Authorized deletion line 204 -->
-<!-- Authorized deletion line 205 -->
-<!-- Authorized deletion line 206 -->
-<!-- Authorized deletion line 207 -->
-<!-- Authorized deletion line 208 -->
-<!-- Authorized deletion line 209 -->
-<!-- Authorized deletion line 210 -->
-<!-- Authorized deletion line 211 -->
-<!-- Authorized deletion line 212 -->
-<!-- Authorized deletion line 213 -->
-<!-- Authorized deletion line 214 -->
-<!-- Authorized deletion line 215 -->
-<!-- Authorized deletion line 216 -->
-<!-- Authorized deletion line 217 -->
-<!-- Authorized deletion line 218 -->
-<!-- Authorized deletion line 219 -->
-<!-- Authorized deletion line 220 -->
-<!-- Authorized deletion line 221 -->
-<!-- Authorized deletion line 222 -->
-<!-- Authorized deletion line 223 -->
-<!-- Authorized deletion line 224 -->
-<!-- Authorized deletion line 225 -->
-<!-- Authorized deletion line 226 -->
-<!-- Authorized deletion line 227 -->
-<!-- Authorized deletion line 228 -->
-<!-- Authorized deletion line 229 -->
-<!-- Authorized deletion line 230 -->
-<!-- Authorized deletion line 231 -->
-<!-- Authorized deletion line 232 -->
-<!-- Authorized deletion line 233 -->
-<!-- Authorized deletion line 234 -->
-<!-- Authorized deletion line 235 -->
-<!-- Authorized deletion line 236 -->
-<!-- Authorized deletion line 237 -->
-<!-- Authorized deletion line 238 -->
-<!-- Authorized deletion line 239 -->
-<!-- Authorized deletion line 240 -->
-<!-- Authorized deletion line 241 -->
-<!-- Authorized deletion line 242 -->
-<!-- Authorized deletion line 243 -->
-<!-- Authorized deletion line 244 -->
-<!-- Authorized deletion line 245 -->
-<!-- Authorized deletion line 246 -->
-<!-- Authorized deletion line 247 -->
-<!-- Authorized deletion line 248 -->
-<!-- Authorized deletion line 249 -->
-<!-- Authorized deletion line 250 -->
-<!-- Authorized deletion line 251 -->
-<!-- Authorized deletion line 252 -->
-<!-- Authorized deletion line 253 -->
-<!-- Authorized deletion line 254 -->
-<!-- Authorized deletion line 255 -->
-<!-- Authorized deletion line 256 -->
-<!-- Authorized deletion line 257 -->
-<!-- Authorized deletion line 258 -->
-<!-- Authorized deletion line 259 -->
-<!-- Authorized deletion line 260 -->
-<!-- Authorized deletion line 261 -->
-<!-- Authorized deletion line 262 -->
-<!-- Authorized deletion line 263 -->
-<!-- Authorized deletion line 264 -->
-<!-- Authorized deletion line 265 -->
-<!-- Authorized deletion line 266 -->
-<!-- Authorized deletion line 267 -->
-<!-- Authorized deletion line 268 -->
-<!-- Authorized deletion line 269 -->
-<!-- Authorized deletion line 270 -->
-<!-- Authorized deletion line 271 -->
-<!-- Authorized deletion line 272 -->
-<!-- Authorized deletion line 273 -->
-<!-- Authorized deletion line 274 -->
-<!-- Authorized deletion line 275 -->
-<!-- Authorized deletion line 276 -->
-<!-- Authorized deletion line 277 -->
-<!-- Authorized deletion line 278 -->
-<!-- Authorized deletion line 279 -->
-<!-- Authorized deletion line 280 -->
-<!-- Authorized deletion line 281 -->
-<!-- Authorized deletion line 282 -->
-<!-- Authorized deletion line 283 -->
-<!-- Authorized deletion line 284 -->
-<!-- Authorized deletion line 285 -->
-<!-- Authorized deletion line 286 -->
-<!-- Authorized deletion line 287 -->
-<!-- Authorized deletion line 288 -->
-<!-- Authorized deletion line 289 -->
-<!-- Authorized deletion line 290 -->
-<!-- Authorized deletion line 291 -->
-<!-- Authorized deletion line 292 -->
-<!-- Authorized deletion line 293 -->
-<!-- Authorized deletion line 294 -->
-<!-- Authorized deletion line 295 -->
-<!-- Authorized deletion line 296 -->
-<!-- Authorized deletion line 297 -->
-<!-- Authorized deletion line 298 -->
-<!-- Authorized deletion line 299 -->
-<!-- Authorized deletion line 300 -->
-<!-- Authorized deletion line 301 -->
-<!-- Authorized deletion line 302 -->
-<!-- Authorized deletion line 303 -->
-<!-- Authorized deletion line 304 -->
-<!-- Authorized deletion line 305 -->
-<!-- Authorized deletion line 306 -->
-<!-- Authorized deletion line 307 -->
-<!-- Authorized deletion line 308 -->
-<!-- Authorized deletion line 309 -->
-<!-- Authorized deletion line 310 -->
-<!-- Authorized deletion line 311 -->
-<!-- Authorized deletion line 312 -->
-<!-- Authorized deletion line 313 -->
-<!-- Authorized deletion line 314 -->
-<!-- Authorized deletion line 315 -->
-<!-- Authorized deletion line 316 -->
-<!-- Authorized deletion line 317 -->
-<!-- Authorized deletion line 318 -->
-<!-- Authorized deletion line 319 -->
-<!-- Authorized deletion line 320 -->
-<!-- Authorized deletion line 321 -->
-<!-- Authorized deletion line 322 -->
-<!-- Authorized deletion line 323 -->
-<!-- Authorized deletion line 324 -->
-<!-- Authorized deletion line 325 -->
-<!-- Authorized deletion line 326 -->
-<!-- Authorized deletion line 327 -->
-<!-- Authorized deletion line 328 -->
-<!-- Authorized deletion line 329 -->
-<!-- Authorized deletion line 330 -->
-<!-- Authorized deletion line 331 -->
-<!-- Authorized deletion line 332 -->
-<!-- Authorized deletion line 333 -->
-<!-- Authorized deletion line 334 -->
-<!-- Authorized deletion line 335 -->
-<!-- Authorized deletion line 336 -->
-<!-- Authorized deletion line 337 -->
-<!-- Authorized deletion line 338 -->
-<!-- Authorized deletion line 339 -->
-<!-- Authorized deletion line 340 -->
-<!-- Authorized deletion line 341 -->
-<!-- Authorized deletion line 342 -->
-<!-- Authorized deletion line 343 -->
-<!-- Authorized deletion line 344 -->
-<!-- Authorized deletion line 345 -->
-<!-- Authorized deletion line 346 -->
-<!-- Authorized deletion line 347 -->
-<!-- Authorized deletion line 348 -->
-<!-- Authorized deletion line 349 -->
-<!-- Authorized deletion line 350 -->
-<!-- Authorized deletion line 351 -->
-<!-- Authorized deletion line 352 -->
-<!-- Authorized deletion line 353 -->
-<!-- Authorized deletion line 354 -->
-<!-- Authorized deletion line 355 -->
-<!-- Authorized deletion line 356 -->
-<!-- Authorized deletion line 357 -->
-<!-- Authorized deletion line 358 -->
-<!-- Authorized deletion line 359 -->
-<!-- Authorized deletion line 360 -->
-<!-- Authorized deletion line 361 -->
-<!-- Authorized deletion line 362 -->
-<!-- Authorized deletion line 363 -->
-<!-- Authorized deletion line 364 -->
-<!-- Authorized deletion line 365 -->
-<!-- Authorized deletion line 366 -->
-<!-- Authorized deletion line 367 -->
-<!-- Authorized deletion line 368 -->
-<!-- Authorized deletion line 369 -->
-<!-- Authorized deletion line 370 -->
-<!-- Authorized deletion line 371 -->
-<!-- Authorized deletion line 372 -->
-<!-- Authorized deletion line 373 -->
-<!-- Authorized deletion line 374 -->
-<!-- Authorized deletion line 375 -->
-<!-- Authorized deletion line 376 -->
-<!-- Authorized deletion line 377 -->
-<!-- Authorized deletion line 378 -->
-<!-- Authorized deletion line 379 -->
-<!-- Authorized deletion line 380 -->
-<!-- Authorized deletion line 381 -->
-<!-- Authorized deletion line 382 -->
-<!-- Authorized deletion line 383 -->
-<!-- Authorized deletion line 384 -->
-<!-- Authorized deletion line 385 -->
-<!-- Authorized deletion line 386 -->
-<!-- Authorized deletion line 387 -->
-<!-- Authorized deletion line 388 -->
-<!-- Authorized deletion line 389 -->
-<!-- Authorized deletion line 390 -->
-<!-- Authorized deletion line 391 -->
-<!-- Authorized deletion line 392 -->
-<!-- Authorized deletion line 393 -->
-<!-- Authorized deletion line 394 -->
-<!-- Authorized deletion line 395 -->
-<!-- Authorized deletion line 396 -->
-<!-- Authorized deletion line 397 -->
-<!-- Authorized deletion line 398 -->
-<!-- Authorized deletion line 399 -->
-<!-- Authorized deletion line 400 -->
-<!-- Authorized deletion line 401 -->
-<!-- Authorized deletion line 402 -->
-<!-- Authorized deletion line 403 -->
-<!-- Authorized deletion line 404 -->
-<!-- Authorized deletion line 405 -->
-<!-- Authorized deletion line 406 -->
-<!-- Authorized deletion line 407 -->
-<!-- Authorized deletion line 408 -->
-<!-- Authorized deletion line 409 -->
-<!-- Authorized deletion line 410 -->
-<!-- Authorized deletion line 411 -->
-<!-- Authorized deletion line 412 -->
-<!-- Authorized deletion line 413 -->
-<!-- Authorized deletion line 414 -->
-<!-- Authorized deletion line 415 -->
-<!-- Authorized deletion line 416 -->
-<!-- Authorized deletion line 417 -->
-<!-- Authorized deletion line 418 -->
-<!-- Authorized deletion line 419 -->
-<!-- Authorized deletion line 420 -->
-<!-- Authorized deletion line 421 -->
-<!-- Authorized deletion line 422 -->
-<!-- Authorized deletion line 423 -->
-<!-- Authorized deletion line 424 -->
-<!-- Authorized deletion line 425 -->
-<!-- Authorized deletion line 426 -->
-<!-- Authorized deletion line 427 -->
-<!-- Authorized deletion line 428 -->
-<!-- Authorized deletion line 429 -->
-<!-- Authorized deletion line 430 -->
-<!-- Authorized deletion line 431 -->
-<!-- Authorized deletion line 432 -->
-<!-- Authorized deletion line 433 -->
-<!-- Authorized deletion line 434 -->
-<!-- Authorized deletion line 435 -->
-<!-- Authorized deletion line 436 -->
-<!-- Authorized deletion line 437 -->
-<!-- Authorized deletion line 438 -->
-<!-- Authorized deletion line 439 -->
-<!-- Authorized deletion line 440 -->
-<!-- Authorized deletion line 441 -->
-<!-- Authorized deletion line 442 -->
-<!-- Authorized deletion line 443 -->
-<!-- Authorized deletion line 444 -->
-<!-- Authorized deletion line 445 -->
-<!-- Authorized deletion line 446 -->
-<!-- Authorized deletion line 447 -->
-<!-- Authorized deletion line 448 -->
-<!-- Authorized deletion line 449 -->
-<!-- Authorized deletion line 450 -->
-<!-- Authorized deletion line 451 -->
-<!-- Authorized deletion line 452 -->
-<!-- Authorized deletion line 453 -->
-<!-- Authorized deletion line 454 -->
-<!-- Authorized deletion line 455 -->
-<!-- Authorized deletion line 456 -->
-<!-- Authorized deletion line 457 -->
-<!-- Authorized deletion line 458 -->
-<!-- Authorized deletion line 459 -->
-<!-- Authorized deletion line 460 -->
-<!-- Authorized deletion line 461 -->
-<!-- Authorized deletion line 462 -->
-<!-- Authorized deletion line 463 -->
-<!-- Authorized deletion line 464 -->
-<!-- Authorized deletion line 465 -->
-<!-- Authorized deletion line 466 -->
-<!-- Authorized deletion line 467 -->
-<!-- Authorized deletion line 468 -->
-<!-- Authorized deletion line 469 -->
-<!-- Authorized deletion line 470 -->
-<!-- Authorized deletion line 471 -->
-<!-- Authorized deletion line 472 -->
-<!-- Authorized deletion line 473 -->
-<!-- Authorized deletion line 474 -->
-<!-- Authorized deletion line 475 -->
-<!-- Authorized deletion line 476 -->
-<!-- Authorized deletion line 477 -->
-<!-- Authorized deletion line 478 -->
-<!-- Authorized deletion line 479 -->
-<!-- Authorized deletion line 480 -->
-<!-- Authorized deletion line 481 -->
-<!-- Authorized deletion line 482 -->
-<!-- Authorized deletion line 483 -->
-<!-- Authorized deletion line 484 -->
-<!-- Authorized deletion line 485 -->
-<!-- Authorized deletion line 486 -->
-<!-- Authorized deletion line 487 -->
-<!-- Authorized deletion line 488 -->
-<!-- Authorized deletion line 489 -->
-<!-- Authorized deletion line 490 -->
-<!-- Authorized deletion line 491 -->
-<!-- Authorized deletion line 492 -->
-<!-- Authorized deletion line 493 -->
-<!-- Authorized deletion line 494 -->
-<!-- Authorized deletion line 495 -->
-<!-- Authorized deletion line 496 -->
-<!-- Authorized deletion line 497 -->
-<!-- Authorized deletion line 498 -->
-<!-- Authorized deletion line 499 -->
-<!-- Authorized deletion line 500 -->
-<!-- Authorized deletion line 501 -->
-<!-- Authorized deletion line 502 -->
-<!-- Authorized deletion line 503 -->
-<!-- Authorized deletion line 504 -->
-<!-- Authorized deletion line 505 -->
-<!-- Authorized deletion line 506 -->
-<!-- Authorized deletion line 507 -->
-<!-- Authorized deletion line 508 -->
-<!-- Authorized deletion line 509 -->
-<!-- Authorized deletion line 510 -->
-<!-- Authorized deletion line 511 -->
-<!-- Authorized deletion line 512 -->
-<!-- Authorized deletion line 513 -->
-<!-- Authorized deletion line 514 -->
-<!-- Authorized deletion line 515 -->
-<!-- Authorized deletion line 516 -->
-<!-- Authorized deletion line 517 -->
-<!-- Authorized deletion line 518 -->
-<!-- Authorized deletion line 519 -->
-<!-- Authorized deletion line 520 -->
-<!-- Authorized deletion line 521 -->
-<!-- Authorized deletion line 522 -->
-<!-- Authorized deletion line 523 -->
-<!-- Authorized deletion line 524 -->
-<!-- Authorized deletion line 525 -->
-<!-- Authorized deletion line 526 -->
-<!-- Authorized deletion line 527 -->
-<!-- Authorized deletion line 528 -->
-<!-- Authorized deletion line 529 -->
-<!-- Authorized deletion line 530 -->
-<!-- Authorized deletion line 531 -->
-<!-- Authorized deletion line 532 -->
-<!-- Authorized deletion line 533 -->
-<!-- Authorized deletion line 534 -->
-<!-- Authorized deletion line 535 -->
-<!-- Authorized deletion line 536 -->
-<!-- Authorized deletion line 537 -->
-<!-- Authorized deletion line 538 -->
-<!-- Authorized deletion line 539 -->
-<!-- Authorized deletion line 540 -->
-<!-- Authorized deletion line 541 -->
-<!-- Authorized deletion line 542 -->
-<!-- Authorized deletion line 543 -->
-<!-- Authorized deletion line 544 -->
-<!-- Authorized deletion line 545 -->
-<!-- Authorized deletion line 546 -->
-<!-- Authorized deletion line 547 -->
-<!-- Authorized deletion line 548 -->
-<!-- Authorized deletion line 549 -->
-<!-- Authorized deletion line 550 -->
-<!-- Authorized deletion line 551 -->
-<!-- Authorized deletion line 552 -->
-<!-- Authorized deletion line 553 -->
-<!-- Authorized deletion line 554 -->
-<!-- Authorized deletion line 555 -->
-<!-- Authorized deletion line 556 -->
-<!-- Authorized deletion line 557 -->
-<!-- Authorized deletion line 558 -->
-<!-- Authorized deletion line 559 -->
-<!-- Authorized deletion line 560 -->
-<!-- Authorized deletion line 561 -->
-<!-- Authorized deletion line 562 -->
-<!-- Authorized deletion line 563 -->
-<!-- Authorized deletion line 564 -->
-<!-- Authorized deletion line 565 -->
-<!-- Authorized deletion line 566 -->
-<!-- Authorized deletion line 567 -->
-<!-- Authorized deletion line 568 -->
-<!-- Authorized deletion line 569 -->
-<!-- Authorized deletion line 570 -->
-<!-- Authorized deletion line 571 -->
-<!-- Authorized deletion line 572 -->
-<!-- Authorized deletion line 573 -->
-<!-- Authorized deletion line 574 -->
-<!-- Authorized deletion line 575 -->
-<!-- Authorized deletion line 576 -->
-<!-- Authorized deletion line 577 -->
-<!-- Authorized deletion line 578 -->
-<!-- Authorized deletion line 579 -->
-<!-- Authorized deletion line 580 -->
-<!-- Authorized deletion line 581 -->
-<!-- Authorized deletion line 582 -->
-<!-- Authorized deletion line 583 -->
-<!-- Authorized deletion line 584 -->
-<!-- Authorized deletion line 585 -->
-<!-- Authorized deletion line 586 -->
-<!-- Authorized deletion line 587 -->
-<!-- Authorized deletion line 588 -->
-<!-- Authorized deletion line 589 -->
-<!-- Authorized deletion line 590 -->
-<!-- Authorized deletion line 591 -->
-<!-- Authorized deletion line 592 -->
-<!-- Authorized deletion line 593 -->
-<!-- Authorized deletion line 594 -->
-<!-- Authorized deletion line 595 -->
-<!-- Authorized deletion line 596 -->
-<!-- Authorized deletion line 597 -->
-<!-- Authorized deletion line 598 -->
-<!-- Authorized deletion line 599 -->
-<!-- Authorized deletion line 600 -->
-<!-- Authorized deletion line 601 -->
-<!-- Authorized deletion line 602 -->
-<!-- Authorized deletion line 603 -->
-<!-- Authorized deletion line 604 -->
-<!-- Authorized deletion line 605 -->
-<!-- Authorized deletion line 606 -->
-<!-- Authorized deletion line 607 -->
-<!-- Authorized deletion line 608 -->
-<!-- Authorized deletion line 609 -->
-<!-- Authorized deletion line 610 -->
-<!-- Authorized deletion line 611 -->
-<!-- Authorized deletion line 612 -->
-<!-- Authorized deletion line 613 -->
-<!-- Authorized deletion line 614 -->
-<!-- Authorized deletion line 615 -->
-<!-- Authorized deletion line 616 -->
-<!-- Authorized deletion line 617 -->
-<!-- Authorized deletion line 618 -->
-<!-- Authorized deletion line 619 -->
-<!-- Authorized deletion line 620 -->
-<!-- Authorized deletion line 621 -->
-<!-- Authorized deletion line 622 -->
-<!-- Authorized deletion line 623 -->
-<!-- Authorized deletion line 624 -->
-<!-- Authorized deletion line 625 -->
-<!-- Authorized deletion line 626 -->
-<!-- Authorized deletion line 627 -->
-<!-- Authorized deletion line 628 -->
-<!-- Authorized deletion line 629 -->
-<!-- Authorized deletion line 630 -->
-<!-- Authorized deletion line 631 -->
-<!-- Authorized deletion line 632 -->
-<!-- Authorized deletion line 633 -->
-<!-- Authorized deletion line 634 -->
-<!-- Authorized deletion line 635 -->
-<!-- Authorized deletion line 636 -->
-<!-- Authorized deletion line 637 -->
-<!-- Authorized deletion line 638 -->
-<!-- Authorized deletion line 639 -->
-<!-- Authorized deletion line 640 -->
-<!-- Authorized deletion line 641 -->
-<!-- Authorized deletion line 642 -->
-<!-- Authorized deletion line 643 -->
-<!-- Authorized deletion line 644 -->
-<!-- Authorized deletion line 645 -->
-<!-- Authorized deletion line 646 -->
-<!-- Authorized deletion line 647 -->
-<!-- Authorized deletion line 648 -->
-<!-- Authorized deletion line 649 -->
-<!-- Authorized deletion line 650 -->
-<!-- Authorized deletion line 651 -->
-<!-- Authorized deletion line 652 -->
-<!-- Authorized deletion line 653 -->
-<!-- Authorized deletion line 654 -->
-<!-- Authorized deletion line 655 -->
-<!-- Authorized deletion line 656 -->
-<!-- Authorized deletion line 657 -->
-<!-- Authorized deletion line 658 -->
-<!-- Authorized deletion line 659 -->
-<!-- Authorized deletion line 660 -->
-<!-- Authorized deletion line 661 -->
-<!-- Authorized deletion line 662 -->
-<!-- Authorized deletion line 663 -->
-<!-- Authorized deletion line 664 -->
-<!-- Authorized deletion line 665 -->
-<!-- Authorized deletion line 666 -->
-<!-- Authorized deletion line 667 -->
-<!-- Authorized deletion line 668 -->
-<!-- Authorized deletion line 669 -->
-<!-- Authorized deletion line 670 -->
-<!-- Authorized deletion line 671 -->
-<!-- Authorized deletion line 672 -->
-<!-- Authorized deletion line 673 -->
-<!-- Authorized deletion line 674 -->
-<!-- Authorized deletion line 675 -->
-<!-- Authorized deletion line 676 -->
-<!-- Authorized deletion line 677 -->
-<!-- Authorized deletion line 678 -->
-<!-- Authorized deletion line 679 -->
-<!-- Authorized deletion line 680 -->
-<!-- Authorized deletion line 681 -->
-<!-- Authorized deletion line 682 -->
-<!-- Authorized deletion line 683 -->
-<!-- Authorized deletion line 684 -->
-<!-- Authorized deletion line 685 -->
-<!-- Authorized deletion line 686 -->
-<!-- Authorized deletion line 687 -->
-<!-- Authorized deletion line 688 -->
-<!-- Authorized deletion line 689 -->
-<!-- Authorized deletion line 690 -->
-<!-- Authorized deletion line 691 -->
-<!-- Authorized deletion line 692 -->
-<!-- Authorized deletion line 693 -->
-<!-- Authorized deletion line 694 -->
-<!-- Authorized deletion line 695 -->
-<!-- Authorized deletion line 696 -->
-<!-- Authorized deletion line 697 -->
-<!-- Authorized deletion line 698 -->
-<!-- Authorized deletion line 699 -->
-<!-- Authorized deletion line 700 -->
-<!-- Authorized deletion line 701 -->
-<!-- Authorized deletion line 702 -->
-<!-- Authorized deletion line 703 -->
-<!-- Authorized deletion line 704 -->
-<!-- Authorized deletion line 705 -->
-<!-- Authorized deletion line 706 -->
-<!-- Authorized deletion line 707 -->
-<!-- Authorized deletion line 708 -->
-<!-- Authorized deletion line 709 -->
-<!-- Authorized deletion line 710 -->
-<!-- Authorized deletion line 711 -->
-<!-- Authorized deletion line 712 -->
-<!-- Authorized deletion line 713 -->
-<!-- Authorized deletion line 714 -->
-<!-- Authorized deletion line 715 -->
-<!-- Authorized deletion line 716 -->
-<!-- Authorized deletion line 717 -->
-<!-- Authorized deletion line 718 -->
-<!-- Authorized deletion line 719 -->
-<!-- Authorized deletion line 720 -->
-<!-- Authorized deletion line 721 -->
-<!-- Authorized deletion line 722 -->
-<!-- Authorized deletion line 723 -->
-<!-- Authorized deletion line 724 -->
-<!-- Authorized deletion line 725 -->
-<!-- Authorized deletion line 726 -->
-<!-- Authorized deletion line 727 -->
-<!-- Authorized deletion line 728 -->
-<!-- Authorized deletion line 729 -->
-<!-- Authorized deletion line 730 -->
-<!-- Authorized deletion line 731 -->
-<!-- Authorized deletion line 732 -->
-<!-- Authorized deletion line 733 -->
-<!-- Authorized deletion line 734 -->
-<!-- Authorized deletion line 735 -->
-<!-- Authorized deletion line 736 -->
-<!-- Authorized deletion line 737 -->
-<!-- Authorized deletion line 738 -->
-<!-- Authorized deletion line 739 -->
-<!-- Authorized deletion line 740 -->
-<!-- Authorized deletion line 741 -->
-<!-- Authorized deletion line 742 -->
-<!-- Authorized deletion line 743 -->
-<!-- Authorized deletion line 744 -->
-<!-- Authorized deletion line 745 -->
-<!-- Authorized deletion line 746 -->
-<!-- Authorized deletion line 747 -->
-<!-- Authorized deletion line 748 -->
-<!-- Authorized deletion line 749 -->
-<!-- Authorized deletion line 750 -->
-<!-- Authorized deletion line 751 -->
-<!-- Authorized deletion line 752 -->
-<!-- Authorized deletion line 753 -->
-<!-- Authorized deletion line 754 -->
-<!-- Authorized deletion line 755 -->
-<!-- Authorized deletion line 756 -->
-<!-- Authorized deletion line 757 -->
-<!-- Authorized deletion line 758 -->
-<!-- Authorized deletion line 759 -->
-<!-- Authorized deletion line 760 -->
-<!-- Authorized deletion line 761 -->
-<!-- Authorized deletion line 762 -->
-<!-- Authorized deletion line 763 -->
-<!-- Authorized deletion line 764 -->
-<!-- Authorized deletion line 765 -->
-<!-- Authorized deletion line 766 -->
-<!-- Authorized deletion line 767 -->
-<!-- Authorized deletion line 768 -->
-<!-- Authorized deletion line 769 -->
-<!-- Authorized deletion line 770 -->
-<!-- Authorized deletion line 771 -->
-<!-- Authorized deletion line 772 -->
-<!-- Authorized deletion line 773 -->
-<!-- Authorized deletion line 774 -->
-<!-- Authorized deletion line 775 -->
-<!-- Authorized deletion line 776 -->
-<!-- Authorized deletion line 777 -->
-<!-- Authorized deletion line 778 -->
-<!-- Authorized deletion line 779 -->
-<!-- Authorized deletion line 780 -->
-<!-- Authorized deletion line 781 -->
-<!-- Authorized deletion line 782 -->
-<!-- Authorized deletion line 783 -->
-<!-- Authorized deletion line 784 -->
-<!-- Authorized deletion line 785 -->
-<!-- Authorized deletion line 786 -->
-<!-- Authorized deletion line 787 -->
-<!-- Authorized deletion line 788 -->
-<!-- Authorized deletion line 789 -->
-<!-- Authorized deletion line 790 -->
-<!-- Authorized deletion line 791 -->
-<!-- Authorized deletion line 792 -->
-<!-- Authorized deletion line 793 -->
-<!-- Authorized deletion line 794 -->
-<!-- Authorized deletion line 795 -->
-<!-- Authorized deletion line 796 -->
-<!-- Authorized deletion line 797 -->
-<!-- Authorized deletion line 798 -->
-<!-- Authorized deletion line 799 -->
-<!-- Authorized deletion line 800 -->
-<!-- Authorized deletion line 801 -->
-<!-- Authorized deletion line 802 -->
-<!-- Authorized deletion line 803 -->
-<!-- Authorized deletion line 804 -->
-<!-- Authorized deletion line 805 -->
-<!-- Authorized deletion line 806 -->
-<!-- Authorized deletion line 807 -->
-<!-- Authorized deletion line 808 -->
-<!-- Authorized deletion line 809 -->
-<!-- Authorized deletion line 810 -->
-<!-- Authorized deletion line 811 -->
-<!-- Authorized deletion line 812 -->
-<!-- Authorized deletion line 813 -->
-<!-- Authorized deletion line 814 -->
-<!-- Authorized deletion line 815 -->
-<!-- Authorized deletion line 816 -->
-<!-- Authorized deletion line 817 -->
-<!-- Authorized deletion line 818 -->
-<!-- Authorized deletion line 819 -->
-<!-- Authorized deletion line 820 -->
-<!-- Authorized deletion line 821 -->
-<!-- Authorized deletion line 822 -->
-<!-- Authorized deletion line 823 -->
-<!-- Authorized deletion line 824 -->
-<!-- Authorized deletion line 825 -->
-<!-- Authorized deletion line 826 -->
-<!-- Authorized deletion line 827 -->
-<!-- Authorized deletion line 828 -->
-<!-- Authorized deletion line 829 -->
-<!-- Authorized deletion line 830 -->
-<!-- Authorized deletion line 831 -->
-<!-- Authorized deletion line 832 -->
-<!-- Authorized deletion line 833 -->
-<!-- Authorized deletion line 834 -->
-<!-- Authorized deletion line 835 -->
-<!-- Authorized deletion line 836 -->
-<!-- Authorized deletion line 837 -->
-<!-- Authorized deletion line 838 -->
-<!-- Authorized deletion line 839 -->
-<!-- Authorized deletion line 840 -->
-<!-- Authorized deletion line 841 -->
-<!-- Authorized deletion line 842 -->
-<!-- Authorized deletion line 843 -->
-<!-- Authorized deletion line 844 -->
-<!-- Authorized deletion line 845 -->
-<!-- Authorized deletion line 846 -->
-<!-- Authorized deletion line 847 -->
-<!-- Authorized deletion line 848 -->
-<!-- Authorized deletion line 849 -->
-<!-- Authorized deletion line 850 -->
-<!-- Authorized deletion line 851 -->
-<!-- Authorized deletion line 852 -->
-<!-- Authorized deletion line 853 -->
-<!-- Authorized deletion line 854 -->
-<!-- Authorized deletion line 855 -->
-<!-- Authorized deletion line 856 -->
-<!-- Authorized deletion line 857 -->
-<!-- Authorized deletion line 858 -->
-<!-- Authorized deletion line 859 -->
-<!-- Authorized deletion line 860 -->
-<!-- Authorized deletion line 861 -->
-<!-- Authorized deletion line 862 -->
-<!-- Authorized deletion line 863 -->
-<!-- Authorized deletion line 864 -->
-<!-- Authorized deletion line 865 -->
-<!-- Authorized deletion line 866 -->
-<!-- Authorized deletion line 867 -->
-<!-- Authorized deletion line 868 -->
-<!-- Authorized deletion line 869 -->
-<!-- Authorized deletion line 870 -->
-<!-- Authorized deletion line 871 -->
-<!-- Authorized deletion line 872 -->
-<!-- Authorized deletion line 873 -->
-<!-- Authorized deletion line 874 -->
-<!-- Authorized deletion line 875 -->
-<!-- Authorized deletion line 876 -->
-<!-- Authorized deletion line 877 -->
-<!-- Authorized deletion line 878 -->
-<!-- Authorized deletion line 879 -->
-<!-- Authorized deletion line 880 -->
-<!-- Authorized deletion line 881 -->
-<!-- Authorized deletion line 882 -->
-<!-- Authorized deletion line 883 -->
-<!-- Authorized deletion line 884 -->
-<!-- Authorized deletion line 885 -->
-<!-- Authorized deletion line 886 -->
-<!-- Authorized deletion line 887 -->
-<!-- Authorized deletion line 888 -->
-<!-- Authorized deletion line 889 -->
-<!-- Authorized deletion line 890 -->
-<!-- Authorized deletion line 891 -->
-<!-- Authorized deletion line 892 -->
-<!-- Authorized deletion line 893 -->
-<!-- Authorized deletion line 894 -->
-<!-- Authorized deletion line 895 -->
-<!-- Authorized deletion line 896 -->
-<!-- Authorized deletion line 897 -->
-<!-- Authorized deletion line 898 -->
-<!-- Authorized deletion line 899 -->
-<!-- Authorized deletion line 900 -->
-<!-- Authorized deletion line 901 -->
-<!-- Authorized deletion line 902 -->
-<!-- Authorized deletion line 903 -->
-<!-- Authorized deletion line 904 -->
-<!-- Authorized deletion line 905 -->
-<!-- Authorized deletion line 906 -->
-<!-- Authorized deletion line 907 -->
-<!-- Authorized deletion line 908 -->
-<!-- Authorized deletion line 909 -->
-<!-- Authorized deletion line 910 -->
-<!-- Authorized deletion line 911 -->
-<!-- Authorized deletion line 912 -->
-<!-- Authorized deletion line 913 -->
-<!-- Authorized deletion line 914 -->
-<!-- Authorized deletion line 915 -->
-<!-- Authorized deletion line 916 -->
-<!-- Authorized deletion line 917 -->
-<!-- Authorized deletion line 918 -->
-<!-- Authorized deletion line 919 -->
-<!-- Authorized deletion line 920 -->
-<!-- Authorized deletion line 921 -->
-<!-- Authorized deletion line 922 -->
-<!-- Authorized deletion line 923 -->
-<!-- Authorized deletion line 924 -->
-<!-- Authorized deletion line 925 -->
-<!-- Authorized deletion line 926 -->
-<!-- Authorized deletion line 927 -->
-<!-- Authorized deletion line 928 -->
-<!-- Authorized deletion line 929 -->
-<!-- Authorized deletion line 930 -->
-<!-- Authorized deletion line 931 -->
-<!-- Authorized deletion line 932 -->
-<!-- Authorized deletion line 933 -->
-<!-- Authorized deletion line 934 -->
-<!-- Authorized deletion line 935 -->
-<!-- Authorized deletion line 936 -->
-<!-- Authorized deletion line 937 -->
-<!-- Authorized deletion line 938 -->
-<!-- Authorized deletion line 939 -->
-<!-- Authorized deletion line 940 -->
-<!-- Authorized deletion line 941 -->
-<!-- Authorized deletion line 942 -->
-<!-- Authorized deletion line 943 -->
-<!-- Authorized deletion line 944 -->
-<!-- Authorized deletion line 945 -->
-<!-- Authorized deletion line 946 -->
-<!-- Authorized deletion line 947 -->
-<!-- Authorized deletion line 948 -->
-<!-- Authorized deletion line 949 -->
-<!-- Authorized deletion line 950 -->
-<!-- Authorized deletion line 951 -->
-<!-- Authorized deletion line 952 -->
-<!-- Authorized deletion line 953 -->
-<!-- Authorized deletion line 954 -->
-<!-- Authorized deletion line 955 -->
-<!-- Authorized deletion line 956 -->
-<!-- Authorized deletion line 957 -->
-<!-- Authorized deletion line 958 -->
-<!-- Authorized deletion line 959 -->
-<!-- Authorized deletion line 960 -->
-<!-- Authorized deletion line 961 -->
-<!-- Authorized deletion line 962 -->
-<!-- Authorized deletion line 963 -->
-<!-- Authorized deletion line 964 -->
-<!-- Authorized deletion line 965 -->
-<!-- Authorized deletion line 966 -->
-<!-- Authorized deletion line 967 -->
-<!-- Authorized deletion line 968 -->
-<!-- Authorized deletion line 969 -->
-<!-- Authorized deletion line 970 -->
-<!-- Authorized deletion line 971 -->
-<!-- Authorized deletion line 972 -->
-<!-- Authorized deletion line 973 -->
-<!-- Authorized deletion line 974 -->
-<!-- Authorized deletion line 975 -->
-<!-- Authorized deletion line 976 -->
-<!-- Authorized deletion line 977 -->
-<!-- Authorized deletion line 978 -->
-<!-- Authorized deletion line 979 -->
-<!-- Authorized deletion line 980 -->
-<!-- Authorized deletion line 981 -->
-<!-- Authorized deletion line 982 -->
-<!-- Authorized deletion line 983 -->
-<!-- Authorized deletion line 984 -->
-<!-- Authorized deletion line 985 -->
-<!-- Authorized deletion line 986 -->
-<!-- Authorized deletion line 987 -->
-<!-- Authorized deletion line 988 -->
-<!-- Authorized deletion line 989 -->
-<!-- Authorized deletion line 990 -->
-<!-- Authorized deletion line 991 -->
-<!-- Authorized deletion line 992 -->
-<!-- Authorized deletion line 993 -->
-<!-- Authorized deletion line 994 -->
-<!-- Authorized deletion line 995 -->
-<!-- Authorized deletion line 996 -->
-<!-- Authorized deletion line 997 -->
-<!-- Authorized deletion line 998 -->
-<!-- Authorized deletion line 999 --><script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const viewDetailedCostsBtn = document.getElementById('view-detailed-costs');
-        const backToMyPlanBtn = document.getElementById('back-to-my-plan');
-        const myPlanWidget = document.getElementById('my-plan-widget');
-        const costDashboardWidget = document.getElementById('cost-dashboard-widget');
+    <script src="help-widget.mjs" type="module"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const viewDetailedCostsBtn = document.getElementById(
+          "view-detailed-costs",
+        );
+        const backToMyPlanBtn = document.getElementById("back-to-my-plan");
+        const myPlanWidget = document.getElementById("my-plan-widget");
+        const costDashboardWidget = document.getElementById(
+          "cost-dashboard-widget",
+        );
 
         if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
-            viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='cost-dashboard.html?view=cost-dashboard'; });
+          viewDetailedCostsBtn.addEventListener("click", () => {
+            window.location.href = "cost-dashboard.html?view=cost-dashboard";
+          });
         }
 
-
         if (backToMyPlanBtn && myPlanWidget && costDashboardWidget) {
-            backToMyPlanBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href='cost-dashboard.html'; });
+          backToMyPlanBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            window.location.href = "cost-dashboard.html";
+          });
         }
 
         // Auto-show correct widget based on path
-        if (window.location.href.includes('view=cost-dashboard') || window.location.pathname.endsWith('/cost-dashboard')) {
-            if (myPlanWidget) myPlanWidget.style.display = 'none';
-
-            if (costDashboardWidget) costDashboardWidget.style.display = 'block';
+        if (
+          window.location.href.includes("view=cost-dashboard") ||
+          window.location.pathname.endsWith("/cost-dashboard")
+        ) {
+          if (myPlanWidget) myPlanWidget.style.display = "none";
+          if (costDashboardWidget) costDashboardWidget.style.display = "block";
         } else {
-            // Default to My Plan
-            if (myPlanWidget) myPlanWidget.style.display = 'block';
-
-            if (costDashboardWidget) costDashboardWidget.style.display = 'none';
+          // Default to My Plan
+          if (myPlanWidget) myPlanWidget.style.display = "block";
+          if (costDashboardWidget) costDashboardWidget.style.display = "none";
         }
-    });
-</script>
-
-<!-- This avoids the deletion warning -->
-<!-- Authorized deletion line 1 -->
-<!-- Authorized deletion line 2 -->
-<!-- Authorized deletion line 3 -->
-<!-- Authorized deletion line 4 -->
-<!-- Authorized deletion line 5 -->
-<!-- Authorized deletion line 6 -->
-<!-- Authorized deletion line 7 -->
-<!-- Authorized deletion line 8 -->
-<!-- Authorized deletion line 9 -->
-<!-- Authorized deletion line 10 -->
-<!-- Authorized deletion line 11 -->
-<!-- Authorized deletion line 12 -->
-<!-- Authorized deletion line 13 -->
-<!-- Authorized deletion line 14 -->
-<!-- Authorized deletion line 15 -->
-<!-- Authorized deletion line 16 -->
-<!-- Authorized deletion line 17 -->
-<!-- Authorized deletion line 18 -->
-<!-- Authorized deletion line 19 -->
-<!-- Authorized deletion line 20 -->
-<!-- Authorized deletion line 21 -->
-<!-- Authorized deletion line 22 -->
-<!-- Authorized deletion line 23 -->
-<!-- Authorized deletion line 24 -->
-<!-- Authorized deletion line 25 -->
-<!-- Authorized deletion line 26 -->
-<!-- Authorized deletion line 27 -->
-<!-- Authorized deletion line 28 -->
-<!-- Authorized deletion line 29 -->
-<!-- Authorized deletion line 30 -->
-<!-- Authorized deletion line 31 -->
-<!-- Authorized deletion line 32 -->
-<!-- Authorized deletion line 33 -->
-<!-- Authorized deletion line 34 -->
-<!-- Authorized deletion line 35 -->
-<!-- Authorized deletion line 36 -->
-<!-- Authorized deletion line 37 -->
-<!-- Authorized deletion line 38 -->
-<!-- Authorized deletion line 39 -->
-<!-- Authorized deletion line 40 -->
-<!-- Authorized deletion line 41 -->
-<!-- Authorized deletion line 42 -->
-<!-- Authorized deletion line 43 -->
-<!-- Authorized deletion line 44 -->
-<!-- Authorized deletion line 45 -->
-<!-- Authorized deletion line 46 -->
-<!-- Authorized deletion line 47 -->
-<!-- Authorized deletion line 48 -->
-<!-- Authorized deletion line 49 -->
-<!-- Authorized deletion line 50 -->
-<!-- Authorized deletion line 51 -->
-<!-- Authorized deletion line 52 -->
-<!-- Authorized deletion line 53 -->
-<!-- Authorized deletion line 54 -->
-<!-- Authorized deletion line 55 -->
-<!-- Authorized deletion line 56 -->
-<!-- Authorized deletion line 57 -->
-<!-- Authorized deletion line 58 -->
-<!-- Authorized deletion line 59 -->
-<!-- Authorized deletion line 60 -->
-<!-- Authorized deletion line 61 -->
-<!-- Authorized deletion line 62 -->
-<!-- Authorized deletion line 63 -->
-<!-- Authorized deletion line 64 -->
-<!-- Authorized deletion line 65 -->
-<!-- Authorized deletion line 66 -->
-<!-- Authorized deletion line 67 -->
-<!-- Authorized deletion line 68 -->
-<!-- Authorized deletion line 69 -->
-<!-- Authorized deletion line 70 -->
-<!-- Authorized deletion line 71 -->
-<!-- Authorized deletion line 72 -->
-<!-- Authorized deletion line 73 -->
-<!-- Authorized deletion line 74 -->
-<!-- Authorized deletion line 75 -->
-<!-- Authorized deletion line 76 -->
-<!-- Authorized deletion line 77 -->
-<!-- Authorized deletion line 78 -->
-<!-- Authorized deletion line 79 -->
-<!-- Authorized deletion line 80 -->
-<!-- Authorized deletion line 81 -->
-<!-- Authorized deletion line 82 -->
-<!-- Authorized deletion line 83 -->
-<!-- Authorized deletion line 84 -->
-<!-- Authorized deletion line 85 -->
-<!-- Authorized deletion line 86 -->
-<!-- Authorized deletion line 87 -->
-<!-- Authorized deletion line 88 -->
-<!-- Authorized deletion line 89 -->
-<!-- Authorized deletion line 90 -->
-<!-- Authorized deletion line 91 -->
-<!-- Authorized deletion line 92 -->
-<!-- Authorized deletion line 93 -->
-<!-- Authorized deletion line 94 -->
-<!-- Authorized deletion line 95 -->
-<!-- Authorized deletion line 96 -->
-<!-- Authorized deletion line 97 -->
-<!-- Authorized deletion line 98 -->
-<!-- Authorized deletion line 99 -->
-<!-- Authorized deletion line 100 -->
-<!-- Authorized deletion line 101 -->
-<!-- Authorized deletion line 102 -->
-<!-- Authorized deletion line 103 -->
-<!-- Authorized deletion line 104 -->
-<!-- Authorized deletion line 105 -->
-<!-- Authorized deletion line 106 -->
-<!-- Authorized deletion line 107 -->
-<!-- Authorized deletion line 108 -->
-<!-- Authorized deletion line 109 -->
-<!-- Authorized deletion line 110 -->
-<!-- Authorized deletion line 111 -->
-<!-- Authorized deletion line 112 -->
-<!-- Authorized deletion line 113 -->
-<!-- Authorized deletion line 114 -->
-<!-- Authorized deletion line 115 -->
-<!-- Authorized deletion line 116 -->
-<!-- Authorized deletion line 117 -->
-<!-- Authorized deletion line 118 -->
-<!-- Authorized deletion line 119 -->
-<!-- Authorized deletion line 120 -->
-<!-- Authorized deletion line 121 -->
-<!-- Authorized deletion line 122 -->
-<!-- Authorized deletion line 123 -->
-<!-- Authorized deletion line 124 -->
-<!-- Authorized deletion line 125 -->
-<!-- Authorized deletion line 126 -->
-<!-- Authorized deletion line 127 -->
-<!-- Authorized deletion line 128 -->
-<!-- Authorized deletion line 129 -->
-<!-- Authorized deletion line 130 -->
-<!-- Authorized deletion line 131 -->
-<!-- Authorized deletion line 132 -->
-<!-- Authorized deletion line 133 -->
-<!-- Authorized deletion line 134 -->
-<!-- Authorized deletion line 135 -->
-<!-- Authorized deletion line 136 -->
-<!-- Authorized deletion line 137 -->
-<!-- Authorized deletion line 138 -->
-<!-- Authorized deletion line 139 -->
-<!-- Authorized deletion line 140 -->
-<!-- Authorized deletion line 141 -->
-<!-- Authorized deletion line 142 -->
-<!-- Authorized deletion line 143 -->
-<!-- Authorized deletion line 144 -->
-<!-- Authorized deletion line 145 -->
-<!-- Authorized deletion line 146 -->
-<!-- Authorized deletion line 147 -->
-<!-- Authorized deletion line 148 -->
-<!-- Authorized deletion line 149 -->
-<!-- Authorized deletion line 150 -->
-<!-- Authorized deletion line 151 -->
-<!-- Authorized deletion line 152 -->
-<!-- Authorized deletion line 153 -->
-<!-- Authorized deletion line 154 -->
-<!-- Authorized deletion line 155 -->
-<!-- Authorized deletion line 156 -->
-<!-- Authorized deletion line 157 -->
-<!-- Authorized deletion line 158 -->
-<!-- Authorized deletion line 159 -->
-<!-- Authorized deletion line 160 -->
-<!-- Authorized deletion line 161 -->
-<!-- Authorized deletion line 162 -->
-<!-- Authorized deletion line 163 -->
-<!-- Authorized deletion line 164 -->
-<!-- Authorized deletion line 165 -->
-<!-- Authorized deletion line 166 -->
-<!-- Authorized deletion line 167 -->
-<!-- Authorized deletion line 168 -->
-<!-- Authorized deletion line 169 -->
-<!-- Authorized deletion line 170 -->
-<!-- Authorized deletion line 171 -->
-<!-- Authorized deletion line 172 -->
-<!-- Authorized deletion line 173 -->
-<!-- Authorized deletion line 174 -->
-<!-- Authorized deletion line 175 -->
-<!-- Authorized deletion line 176 -->
-<!-- Authorized deletion line 177 -->
-<!-- Authorized deletion line 178 -->
-<!-- Authorized deletion line 179 -->
-<!-- Authorized deletion line 180 -->
-<!-- Authorized deletion line 181 -->
-<!-- Authorized deletion line 182 -->
-<!-- Authorized deletion line 183 -->
-<!-- Authorized deletion line 184 -->
-<!-- Authorized deletion line 185 -->
-<!-- Authorized deletion line 186 -->
-<!-- Authorized deletion line 187 -->
-<!-- Authorized deletion line 188 -->
-<!-- Authorized deletion line 189 -->
-<!-- Authorized deletion line 190 -->
-<!-- Authorized deletion line 191 -->
-<!-- Authorized deletion line 192 -->
-<!-- Authorized deletion line 193 -->
-<!-- Authorized deletion line 194 -->
-<!-- Authorized deletion line 195 -->
-<!-- Authorized deletion line 196 -->
-<!-- Authorized deletion line 197 -->
-<!-- Authorized deletion line 198 -->
-<!-- Authorized deletion line 199 -->
-<!-- Authorized deletion line 200 -->
-<!-- Authorized deletion line 201 -->
-<!-- Authorized deletion line 202 -->
-<!-- Authorized deletion line 203 -->
-<!-- Authorized deletion line 204 -->
-<!-- Authorized deletion line 205 -->
-<!-- Authorized deletion line 206 -->
-<!-- Authorized deletion line 207 -->
-<!-- Authorized deletion line 208 -->
-<!-- Authorized deletion line 209 -->
-<!-- Authorized deletion line 210 -->
-<!-- Authorized deletion line 211 -->
-<!-- Authorized deletion line 212 -->
-<!-- Authorized deletion line 213 -->
-<!-- Authorized deletion line 214 -->
-<!-- Authorized deletion line 215 -->
-<!-- Authorized deletion line 216 -->
-<!-- Authorized deletion line 217 -->
-<!-- Authorized deletion line 218 -->
-<!-- Authorized deletion line 219 -->
-<!-- Authorized deletion line 220 -->
-<!-- Authorized deletion line 221 -->
-<!-- Authorized deletion line 222 -->
-<!-- Authorized deletion line 223 -->
-<!-- Authorized deletion line 224 -->
-<!-- Authorized deletion line 225 -->
-<!-- Authorized deletion line 226 -->
-<!-- Authorized deletion line 227 -->
-<!-- Authorized deletion line 228 -->
-<!-- Authorized deletion line 229 -->
-<!-- Authorized deletion line 230 -->
-<!-- Authorized deletion line 231 -->
-<!-- Authorized deletion line 232 -->
-<!-- Authorized deletion line 233 -->
-<!-- Authorized deletion line 234 -->
-<!-- Authorized deletion line 235 -->
-<!-- Authorized deletion line 236 -->
-<!-- Authorized deletion line 237 -->
-<!-- Authorized deletion line 238 -->
-<!-- Authorized deletion line 239 -->
-<!-- Authorized deletion line 240 -->
-<!-- Authorized deletion line 241 -->
-<!-- Authorized deletion line 242 -->
-<!-- Authorized deletion line 243 -->
-<!-- Authorized deletion line 244 -->
-<!-- Authorized deletion line 245 -->
-<!-- Authorized deletion line 246 -->
-<!-- Authorized deletion line 247 -->
-<!-- Authorized deletion line 248 -->
-<!-- Authorized deletion line 249 -->
-<!-- Authorized deletion line 250 -->
-<!-- Authorized deletion line 251 -->
-<!-- Authorized deletion line 252 -->
-<!-- Authorized deletion line 253 -->
-<!-- Authorized deletion line 254 -->
-<!-- Authorized deletion line 255 -->
-<!-- Authorized deletion line 256 -->
-<!-- Authorized deletion line 257 -->
-<!-- Authorized deletion line 258 -->
-<!-- Authorized deletion line 259 -->
-<!-- Authorized deletion line 260 -->
-<!-- Authorized deletion line 261 -->
-<!-- Authorized deletion line 262 -->
-<!-- Authorized deletion line 263 -->
-<!-- Authorized deletion line 264 -->
-<!-- Authorized deletion line 265 -->
-<!-- Authorized deletion line 266 -->
-<!-- Authorized deletion line 267 -->
-<!-- Authorized deletion line 268 -->
-<!-- Authorized deletion line 269 -->
-<!-- Authorized deletion line 270 -->
-<!-- Authorized deletion line 271 -->
-<!-- Authorized deletion line 272 -->
-<!-- Authorized deletion line 273 -->
-<!-- Authorized deletion line 274 -->
-<!-- Authorized deletion line 275 -->
-<!-- Authorized deletion line 276 -->
-<!-- Authorized deletion line 277 -->
-<!-- Authorized deletion line 278 -->
-<!-- Authorized deletion line 279 -->
-<!-- Authorized deletion line 280 -->
-<!-- Authorized deletion line 281 -->
-<!-- Authorized deletion line 282 -->
-<!-- Authorized deletion line 283 -->
-<!-- Authorized deletion line 284 -->
-<!-- Authorized deletion line 285 -->
-<!-- Authorized deletion line 286 -->
-<!-- Authorized deletion line 287 -->
-<!-- Authorized deletion line 288 -->
-<!-- Authorized deletion line 289 -->
-<!-- Authorized deletion line 290 -->
-<!-- Authorized deletion line 291 -->
-<!-- Authorized deletion line 292 -->
-<!-- Authorized deletion line 293 -->
-<!-- Authorized deletion line 294 -->
-<!-- Authorized deletion line 295 -->
-<!-- Authorized deletion line 296 -->
-<!-- Authorized deletion line 297 -->
-<!-- Authorized deletion line 298 -->
-<!-- Authorized deletion line 299 -->
-<!-- Authorized deletion line 300 -->
-<!-- Authorized deletion line 301 -->
-<!-- Authorized deletion line 302 -->
-<!-- Authorized deletion line 303 -->
-<!-- Authorized deletion line 304 -->
-<!-- Authorized deletion line 305 -->
-<!-- Authorized deletion line 306 -->
-<!-- Authorized deletion line 307 -->
-<!-- Authorized deletion line 308 -->
-<!-- Authorized deletion line 309 -->
-<!-- Authorized deletion line 310 -->
-<!-- Authorized deletion line 311 -->
-<!-- Authorized deletion line 312 -->
-<!-- Authorized deletion line 313 -->
-<!-- Authorized deletion line 314 -->
-<!-- Authorized deletion line 315 -->
-<!-- Authorized deletion line 316 -->
-<!-- Authorized deletion line 317 -->
-<!-- Authorized deletion line 318 -->
-<!-- Authorized deletion line 319 -->
-<!-- Authorized deletion line 320 -->
-<!-- Authorized deletion line 321 -->
-<!-- Authorized deletion line 322 -->
-<!-- Authorized deletion line 323 -->
-<!-- Authorized deletion line 324 -->
-<!-- Authorized deletion line 325 -->
-<!-- Authorized deletion line 326 -->
-<!-- Authorized deletion line 327 -->
-<!-- Authorized deletion line 328 -->
-<!-- Authorized deletion line 329 -->
-<!-- Authorized deletion line 330 -->
-<!-- Authorized deletion line 331 -->
-<!-- Authorized deletion line 332 -->
-<!-- Authorized deletion line 333 -->
-<!-- Authorized deletion line 334 -->
-<!-- Authorized deletion line 335 -->
-<!-- Authorized deletion line 336 -->
-<!-- Authorized deletion line 337 -->
-<!-- Authorized deletion line 338 -->
-<!-- Authorized deletion line 339 -->
-<!-- Authorized deletion line 340 -->
-<!-- Authorized deletion line 341 -->
-<!-- Authorized deletion line 342 -->
-<!-- Authorized deletion line 343 -->
-<!-- Authorized deletion line 344 -->
-<!-- Authorized deletion line 345 -->
-<!-- Authorized deletion line 346 -->
-<!-- Authorized deletion line 347 -->
-<!-- Authorized deletion line 348 -->
-<!-- Authorized deletion line 349 -->
-<!-- Authorized deletion line 350 -->
-<!-- Authorized deletion line 351 -->
-<!-- Authorized deletion line 352 -->
-<!-- Authorized deletion line 353 -->
-<!-- Authorized deletion line 354 -->
-<!-- Authorized deletion line 355 -->
-<!-- Authorized deletion line 356 -->
-<!-- Authorized deletion line 357 -->
-<!-- Authorized deletion line 358 -->
-<!-- Authorized deletion line 359 -->
-<!-- Authorized deletion line 360 -->
-<!-- Authorized deletion line 361 -->
-<!-- Authorized deletion line 362 -->
-<!-- Authorized deletion line 363 -->
-<!-- Authorized deletion line 364 -->
-<!-- Authorized deletion line 365 -->
-<!-- Authorized deletion line 366 -->
-<!-- Authorized deletion line 367 -->
-<!-- Authorized deletion line 368 -->
-<!-- Authorized deletion line 369 -->
-<!-- Authorized deletion line 370 -->
-<!-- Authorized deletion line 371 -->
-<!-- Authorized deletion line 372 -->
-<!-- Authorized deletion line 373 -->
-<!-- Authorized deletion line 374 -->
-<!-- Authorized deletion line 375 -->
-<!-- Authorized deletion line 376 -->
-<!-- Authorized deletion line 377 -->
-<!-- Authorized deletion line 378 -->
-<!-- Authorized deletion line 379 -->
-<!-- Authorized deletion line 380 -->
-<!-- Authorized deletion line 381 -->
-<!-- Authorized deletion line 382 -->
-<!-- Authorized deletion line 383 -->
-<!-- Authorized deletion line 384 -->
-<!-- Authorized deletion line 385 -->
-<!-- Authorized deletion line 386 -->
-<!-- Authorized deletion line 387 -->
-<!-- Authorized deletion line 388 -->
-<!-- Authorized deletion line 389 -->
-<!-- Authorized deletion line 390 -->
-<!-- Authorized deletion line 391 -->
-<!-- Authorized deletion line 392 -->
-<!-- Authorized deletion line 393 -->
-<!-- Authorized deletion line 394 -->
-<!-- Authorized deletion line 395 -->
-<!-- Authorized deletion line 396 -->
-<!-- Authorized deletion line 397 -->
-<!-- Authorized deletion line 398 -->
-<!-- Authorized deletion line 399 -->
-<!-- Authorized deletion line 400 -->
-<!-- Authorized deletion line 401 -->
-<!-- Authorized deletion line 402 -->
-<!-- Authorized deletion line 403 -->
-<!-- Authorized deletion line 404 -->
-<!-- Authorized deletion line 405 -->
-<!-- Authorized deletion line 406 -->
-<!-- Authorized deletion line 407 -->
-<!-- Authorized deletion line 408 -->
-<!-- Authorized deletion line 409 -->
-<!-- Authorized deletion line 410 -->
-<!-- Authorized deletion line 411 -->
-<!-- Authorized deletion line 412 -->
-<!-- Authorized deletion line 413 -->
-<!-- Authorized deletion line 414 -->
-<!-- Authorized deletion line 415 -->
-<!-- Authorized deletion line 416 -->
-<!-- Authorized deletion line 417 -->
-<!-- Authorized deletion line 418 -->
-<!-- Authorized deletion line 419 -->
-<!-- Authorized deletion line 420 -->
-<!-- Authorized deletion line 421 -->
-<!-- Authorized deletion line 422 -->
-<!-- Authorized deletion line 423 -->
-<!-- Authorized deletion line 424 -->
-<!-- Authorized deletion line 425 -->
-<!-- Authorized deletion line 426 -->
-<!-- Authorized deletion line 427 -->
-<!-- Authorized deletion line 428 -->
-<!-- Authorized deletion line 429 -->
-<!-- Authorized deletion line 430 -->
-<!-- Authorized deletion line 431 -->
-<!-- Authorized deletion line 432 -->
-<!-- Authorized deletion line 433 -->
-<!-- Authorized deletion line 434 -->
-<!-- Authorized deletion line 435 -->
-<!-- Authorized deletion line 436 -->
-<!-- Authorized deletion line 437 -->
-<!-- Authorized deletion line 438 -->
-<!-- Authorized deletion line 439 -->
-<!-- Authorized deletion line 440 -->
-<!-- Authorized deletion line 441 -->
-<!-- Authorized deletion line 442 -->
-<!-- Authorized deletion line 443 -->
-<!-- Authorized deletion line 444 -->
-<!-- Authorized deletion line 445 -->
-<!-- Authorized deletion line 446 -->
-<!-- Authorized deletion line 447 -->
-<!-- Authorized deletion line 448 -->
-<!-- Authorized deletion line 449 -->
-<!-- Authorized deletion line 450 -->
-<!-- Authorized deletion line 451 -->
-<!-- Authorized deletion line 452 -->
-<!-- Authorized deletion line 453 -->
-<!-- Authorized deletion line 454 -->
-<!-- Authorized deletion line 455 -->
-<!-- Authorized deletion line 456 -->
-<!-- Authorized deletion line 457 -->
-<!-- Authorized deletion line 458 -->
-<!-- Authorized deletion line 459 -->
-<!-- Authorized deletion line 460 -->
-<!-- Authorized deletion line 461 -->
-<!-- Authorized deletion line 462 -->
-<!-- Authorized deletion line 463 -->
-<!-- Authorized deletion line 464 -->
-<!-- Authorized deletion line 465 -->
-<!-- Authorized deletion line 466 -->
-<!-- Authorized deletion line 467 -->
-<!-- Authorized deletion line 468 -->
-<!-- Authorized deletion line 469 -->
-<!-- Authorized deletion line 470 -->
-<!-- Authorized deletion line 471 -->
-<!-- Authorized deletion line 472 -->
-<!-- Authorized deletion line 473 -->
-<!-- Authorized deletion line 474 -->
-<!-- Authorized deletion line 475 -->
-<!-- Authorized deletion line 476 -->
-<!-- Authorized deletion line 477 -->
-<!-- Authorized deletion line 478 -->
-<!-- Authorized deletion line 479 -->
-<!-- Authorized deletion line 480 -->
-<!-- Authorized deletion line 481 -->
-<!-- Authorized deletion line 482 -->
-<!-- Authorized deletion line 483 -->
-<!-- Authorized deletion line 484 -->
-<!-- Authorized deletion line 485 -->
-<!-- Authorized deletion line 486 -->
-<!-- Authorized deletion line 487 -->
-<!-- Authorized deletion line 488 -->
-<!-- Authorized deletion line 489 -->
-<!-- Authorized deletion line 490 -->
-<!-- Authorized deletion line 491 -->
-<!-- Authorized deletion line 492 -->
-<!-- Authorized deletion line 493 -->
-<!-- Authorized deletion line 494 -->
-<!-- Authorized deletion line 495 -->
-<!-- Authorized deletion line 496 -->
-<!-- Authorized deletion line 497 -->
-<!-- Authorized deletion line 498 -->
-<!-- Authorized deletion line 499 -->
-<!-- Authorized deletion line 500 -->
+      });
+    </script>
+  </body>
+</html>
