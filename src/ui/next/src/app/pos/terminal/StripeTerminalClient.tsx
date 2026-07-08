@@ -271,8 +271,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    ))}
                  </ul>
                  <div className="flex flex-col gap-3">
-                   <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
-                     Cancel Pending Offline Orders
+                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                     Option A: Refund in-store customer
+                   </button>
+                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
+                     Option B: Cancel & refund online order
                    </button>
                    <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
                      Decide Later
