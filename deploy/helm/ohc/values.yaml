@@ -1,7 +1,7 @@
 backend:
   autoscaling:
     enabled: true
-    maxReplicas: 10
+    maxReplicas: 5
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
@@ -26,7 +26,7 @@ chatwoot:
   adminEmail: admin@ohc.local
   autoscaling:
     enabled: true
-    maxReplicas: 10
+    maxReplicas: 5
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
@@ -101,7 +101,7 @@ multiTenant:
 ohcCore:
   autoscaling:
     enabled: true
-    maxReplicas: 10
+    maxReplicas: 5
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
@@ -124,7 +124,7 @@ ohcCore:
 powersync:
   autoscaling:
     enabled: true
-    maxReplicas: 10
+    maxReplicas: 5
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85

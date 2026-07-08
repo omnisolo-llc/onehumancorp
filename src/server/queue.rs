@@ -425,7 +425,7 @@ impl TaskQueue for PostgresTaskQueue {
         // Clean up stagnant backlog items: QUEUED jobs stuck for > 24 hours
         sqlx::query(
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
+             SELECT gen_random_uuid()::text, tenant_id, 'cleanup', 'sub_agent_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
              FROM sub_agent_queue
              WHERE status = 'QUEUED' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )
@@ -1149,7 +1149,7 @@ impl TaskQueue for SqliteTaskQueue {
         // Clean up stagnant backlog items: QUEUED jobs stuck for > 24 hours
         let _ = sqlx::query(
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
+             SELECT lower(hex(randomblob(16))), tenant_id, 'cleanup', 'sub_agent_queue', COALESCE(payload, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
              FROM sub_agent_queue
              WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')"
         )

@@ -140,12 +140,12 @@ impl OHCJobQueue {
         // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
         let query_str = if is_standalone {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT lower(hex(randomblob(16))), tenant_id, 'cleanup', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND updated_at < datetime('now', '-24 hours')"
         } else {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT gen_random_uuid()::text, tenant_id, 'cleanup', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
@@ -195,7 +195,7 @@ impl OHCJobQueue {
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(job_id)
                     .bind(&tenant_id)
-                    .bind("job_failed")
+                    .bind("cleanup")
                     .bind("job_queue")
                     .bind(&payload_str)
                     .bind(reason)

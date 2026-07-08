@@ -193,7 +193,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(job_id)
                     .bind(&tenant_id)
-                    .bind("job_failed")
+                    .bind("cleanup")
                     .bind("job_queue")
                     .bind(&payload_str)
                     .bind(_reason)

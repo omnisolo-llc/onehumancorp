@@ -252,7 +252,7 @@ async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
     let dl_error_message: String = dl_row.get("error_message");
 
     assert_eq!(dl_tenant_id, tenant_id);
-    assert_eq!(dl_event_type, "job_failed");
+    assert_eq!(dl_event_type, "cleanup");
     assert_eq!(dl_department, "job_queue");
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "Max retries exceeded");
