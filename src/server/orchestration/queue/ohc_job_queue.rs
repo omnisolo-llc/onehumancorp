@@ -142,12 +142,12 @@ impl OHCJobQueue {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
              SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
-             WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
+             WHERE status = 'PENDING' AND updated_at < datetime('now', '-24 hours')"
         } else {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
              SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
-             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+             WHERE status = 'PENDING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
         sqlx::query(query_str)
@@ -157,10 +157,10 @@ impl OHCJobQueue {
 
         let query_str = if is_standalone {
             "DELETE FROM ohc_job_queue
-             WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
+             WHERE status = 'PENDING' AND updated_at < datetime('now', '-24 hours')"
         } else {
             "DELETE FROM ohc_job_queue
-             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+             WHERE status = 'PENDING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
         let stagnant_result = sqlx::query(query_str)
@@ -231,10 +231,10 @@ impl OHCJobQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_retry;
-                let new_run_after = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
+                let new_run_after = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64)).to_rfc3339();
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_retry)
-                    .bind(new_run_after)
+                    .bind(&new_run_after)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await
