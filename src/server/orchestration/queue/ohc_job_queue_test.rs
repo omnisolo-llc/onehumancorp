@@ -361,8 +361,8 @@ async fn test_cleanup_stagnant_pending_jobs() {
     // Insert a stagnant PENDING job
     let stagnant_job_id = "stagnant_job_123";
     sqlx::query(
-        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, created_at, next_retry_at)
-         VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP - INTERVAL '25 hours', CURRENT_TIMESTAMP)"
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, created_at, updated_at, next_retry_at)
+         VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP - INTERVAL '25 hours', CURRENT_TIMESTAMP - INTERVAL '25 hours', CURRENT_TIMESTAMP)"
     )
     .bind(stagnant_job_id)
     .bind(tenant_id)

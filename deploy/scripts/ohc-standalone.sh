@@ -91,6 +91,11 @@ echo -e "  ${GREEN}✓ Server started with PID $SERVER_PID${RESET}"
 echo -e "${DIM}  Waiting for backend to be ready...${RESET}"
 until curl -s http://localhost:8080/readyz > /dev/null 2>&1; do
   sleep 1
+  if ! kill -0 $SERVER_PID 2>/dev/null; then
+    echo -e "  ${PURPLE}✗ Server process died unexpectedly during startup.${RESET}"
+    kill -TERM $PRUNE_PID 2>/dev/null || true
+    exit 1
+  fi
 done
 
 ./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
@@ -114,12 +119,23 @@ if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
   fi
 fi
 
+# Periodic health checks
+(while true; do
+  sleep 30
+  if ! curl -s http://localhost:8080/readyz > /dev/null 2>&1; then
+    echo -e "  ${PURPLE}✗ Server health check failed. Restarting...${RESET}"
+    kill -TERM $(pgrep -f "src/server/server") 2>/dev/null || true
+    ./bazel-bin/src/server/server &
+  fi
+done) &
+HEALTH_PID=$!
+
 # Trap INT and EXIT signals to gracefully shutdown all local processes
 function cleanup {
   sync
   echo -e "\n${DIM}[Shutting down Standalone Desktop...]${RESET}"
   # Terminate child processes gracefully
-  kill -TERM $APP_PID $SERVER_PID $PRUNE_PID 2>/dev/null || true
+  kill -TERM $APP_PID $(pgrep -f "src/server/server") $PRUNE_PID $HEALTH_PID 2>/dev/null || true
 
   # Resource Cleanup: Clean additional temporary artifact directories
   echo -e "${DIM}  Cleaning temporary artifacts...${RESET}"
@@ -135,7 +151,7 @@ function cleanup {
 
   # Wait for processes to exit
   wait $APP_PID 2>/dev/null || true
-  wait $SERVER_PID 2>/dev/null || true
+  wait $(pgrep -f "src/server/server") 2>/dev/null || true
   wait $PRUNE_PID 2>/dev/null || true
 
   echo -e "${GREEN}✓ Local standalone processes terminated successfully.${RESET}"
