@@ -318,6 +318,7 @@ pub struct PosOfflineTransaction {
     pub payload: String,
     pub timestamp: Option<String>,
     pub device_signature: Option<String>,
+    pub terminal_id: Option<String>,
 }
 
 #[derive(serde::Deserialize)]

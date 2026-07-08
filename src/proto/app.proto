@@ -268,6 +268,7 @@ message PosOfflineTransaction {
   string payload = 6; // JSON detailing the items bought
   string status = 7; // PENDING, SYNCED, FAILED
   int64 created_at_unix = 8;
+  optional string terminal_id = 9;
 }
 
 message SyncOfflineTransactionsRequest {
