@@ -89,4 +89,18 @@ test.describe('Onboarding Wizard Optimization', () => {
 
     await expect(page.locator('#domain-error')).toBeVisible();
   });
+
+  test('validates domain error goes away dynamically', async ({ page }) => {
+    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.evaluate(() => { window.goToStep('step-domain'); });
+    const domainInput = page.locator('#domain-name');
+
+    await domainInput.fill('ab');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+
+    await domainInput.fill('valid-domain');
+    // We should not need to click next, the error should be hidden
+    await expect(page.locator('#domain-error')).toBeHidden();
+  });
 });
