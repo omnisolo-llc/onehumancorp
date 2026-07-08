@@ -1,15 +1,29 @@
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const backendUrl = process.env.API_BASE_URL || 'http://localhost:8080';
+
+    // Extract identity headers from incoming request, failing over to defaults
+    const authHeader = request.headers.get('Authorization') || request.headers.get('x-spiffe-id') || '';
+    const spiffeId = authHeader.includes('spiffe') ? authHeader : 'spiffe://ohc/org/e2e-tenant/agent/browser';
+
+    const tenantId = request.headers.get('x-tenant-id') || 'e2e-tenant';
+    const userId = request.headers.get('x-user-id');
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-spiffe-id': spiffeId,
+      'x-tenant-id': tenantId
+    };
+
+    if (userId) {
+      headers['x-user-id'] = userId;
+    }
+
     const response = await fetch(`${backendUrl}/api/staff/tasks`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-spiffe-id': 'spiffe://ohc/org/test_tenant/agent/test_agent', // Mocked identity for local testing
-        'x-tenant-id': 'e2e-tenant'
-      }
+      headers
     });
 
     if (response.ok) {

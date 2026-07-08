@@ -1,0 +1,55 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { POST } from "./route";
+
+describe("/api/staff/escalate", () => {
+  beforeEach(() => {
+    vi.stubEnv("API_BASE_URL", "http://backend.internal");
+    global.fetch = vi.fn();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("forwards staff escalate requests to the backend", async () => {
+    const backendResponse = { success: true };
+    (global.fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => backendResponse });
+
+    const body = { issueId: "issue-1" };
+    const req = new Request("http://localhost/api/staff/escalate", {
+      method: "POST",
+      headers: { "x-spiffe-id": "spiffe://ohc/org/test/agent/test", "x-tenant-id": "tenant-1", "x-user-id": "user-1" },
+      body: JSON.stringify(body)
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual(backendResponse);
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/staff/escalate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-spiffe-id": "spiffe://ohc/org/test/agent/test",
+        "x-tenant-id": "tenant-1",
+        "x-user-id": "user-1"
+      },
+      body: JSON.stringify(body)
+    });
+  });
+
+  it("handles backend failures", async () => {
+    (global.fetch as any).mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const req = new Request("http://localhost/api/staff/escalate", {
+      method: "POST",
+      body: JSON.stringify({ issueId: "issue-1" })
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'Failed to escalate issue' });
+  });
+});
