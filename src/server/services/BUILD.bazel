@@ -6,6 +6,7 @@ exports_files(
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
+
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
@@ -25,6 +26,7 @@ rust_library(
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
+
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
@@ -132,6 +134,8 @@ rust_library(
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
+
+
         "//src/proto:organization_prost",
         "//src/server:server_lib",
         "//src/server/auth:server_auth",
