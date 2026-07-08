@@ -70,6 +70,7 @@ pub struct QuoteLineItemReq {
     pub unit_price_cents: i64,
     pub quantity: i32,
     pub is_optional: bool,
+    pub service_item_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -195,14 +196,17 @@ async fn generate_proposal(
 
     let request_lower = request.message.to_lowercase();
 
-    // Find all services for the tenant
+    // Find all service items for the tenant
     #[derive(FromRow, serde::Serialize)]
-    struct Service {
-        title: String,
-        price_cents: i64,
+    struct ServiceItem {
+        id: Uuid,
+        name: String,
+        base_price_cents: i64,
     }
 
-    if let Ok(services) = sqlx::query_as::<_, Service>("SELECT title, price_cents FROM services WHERE tenant_id = $1")
+    let mut matched_service_item_id: Option<Uuid> = None;
+
+    if let Ok(services) = sqlx::query_as::<_, ServiceItem>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1")
         .bind(&claims.organization_id)
         .fetch_all(&pool)
         .await
@@ -254,6 +258,11 @@ Task: Extract the scope of work and identify the closest matching service from t
                     if let Some(title) = parsed.get("matched_service_title").and_then(|t| t.as_str()) {
                         matched_service_name = title.to_string();
                         llm_matched = true;
+
+                        // Try to find the matched service by title to get the ID
+                        if let Some(matched_service) = services.iter().find(|s| s.name.to_lowercase() == title.to_lowercase()) {
+                            matched_service_item_id = Some(matched_service.id);
+                        }
                     }
                     if let Some(price) = parsed.get("matched_price_cents").and_then(|p| p.as_i64()) {
                         mock_price = price;
@@ -266,9 +275,10 @@ Task: Extract the scope of work and identify the closest matching service from t
         if !llm_matched {
             // Fallback naive matching
             for service in services {
-                if request_lower.contains(&service.title.to_lowercase()) {
-                    mock_price = service.price_cents;
-                    matched_service_name = service.title.clone();
+                if request_lower.contains(&service.name.to_lowercase()) {
+                    mock_price = service.base_price_cents;
+                    matched_service_name = service.name.clone();
+                    matched_service_item_id = Some(service.id);
                     break;
                 }
             }
@@ -334,6 +344,7 @@ Task: Extract the scope of work and identify the closest matching service from t
                 unit_price_cents: mock_price,
                 quantity: 1,
                 is_optional: false,
+                service_item_id: matched_service_item_id,
             }
         ],
         proposed_slot_id,
@@ -373,6 +384,7 @@ async fn create_quote(
                         unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
                         quantity: 1,
                         is_optional: false,
+                        service_item_id: None,
                     });
                 }
             }
@@ -401,7 +413,7 @@ async fn create_quote(
 
     for item in line_items {
         sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, tenant_id, service_item_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(Uuid::new_v4())
         .bind(quote_id)
@@ -410,6 +422,7 @@ async fn create_quote(
         .bind(item.quantity)
         .bind(item.is_optional)
         .bind(tenant_id.clone())
+        .bind(item.service_item_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| {
