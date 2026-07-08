@@ -3,16 +3,21 @@ import { test, expect } from './fixtures';
 test.describe('Viral Before/After Slider Loop', () => {
     test.beforeEach(async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.goto('/viral-before-after-slider');
+        await page.goto('/ui/viral-before-after-slider.html');
         await page.waitForLoadState('networkidle');
     });
 
     test('Loads the builder and shows the live preview', async ({ page }) => {
         await expect(page.locator('h1', { hasText: 'Before & After Slider' })).toBeVisible();
-        await expect(page.locator('iframe[title="Live Preview"]')).toBeVisible();
+        await expect(page.locator('iframe#preview-iframe')).toBeVisible();
     });
 
     test('Shows paywall when trying to remove branding without pro', async ({ page }) => {
+        await page.evaluate(() => {
+            localStorage.setItem('has_pro', 'false');
+        });
+        await page.reload();
+
         await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
 
         await expect(page.locator('h2', { hasText: 'Upgrade to Remove Branding' })).toBeVisible();
@@ -29,8 +34,8 @@ test.describe('Viral Before/After Slider Loop', () => {
 
         await expect(page.locator('h2', { hasText: 'Embed Slider' })).toBeVisible();
 
-        const embedCodeTextarea = page.locator('textarea');
-        const embedCode = await embedCodeTextarea.inputValue();
+        const embedCodeTextarea = page.locator('#embed-code');
+        const embedCode = await embedCodeTextarea.innerText();
 
         expect(embedCode).toContain('/api/v1/growth/viral-before-after/embed');
         expect(embedCode).toContain('tenant=e2e-tenant');
@@ -42,7 +47,7 @@ test.describe('Viral Before/After Slider Loop', () => {
         await page.goto('/api/v1/growth/viral-before-after/embed?tenant=e2e-tenant&title=My%20Awesome%20Work&branding=true');
 
         // Verify title
-        await expect(page.locator('h2.title')).toHaveText('My Awesome Work');
+        await expect(page.locator('div.title-badge')).toHaveText('My Awesome Work');
 
         // Verify the images
         const beforeImg = page.locator('img#beforeImage');

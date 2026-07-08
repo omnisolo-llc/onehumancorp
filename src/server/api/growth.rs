@@ -379,6 +379,7 @@ where
 
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
+        .route("/viral-before-after/embed", get(handle_viral_before_after_embed))
         .route("/viral-widget/embed", get(handle_viral_widget_embed))
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
@@ -5720,6 +5721,254 @@ async fn handle_countdown_embed(
 </body>
 </html>"#,
         title, branding_html, time
+    );
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ViralBeforeAfterEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub before: Option<String>,
+    pub after: Option<String>,
+    pub branding: Option<bool>,
+}
+
+async fn handle_viral_before_after_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ViralBeforeAfterEmbedQuery>
+) -> impl IntoResponse {
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let title = escape_html(query.title.as_deref().unwrap_or("Before & After"));
+    let before_img = escape_html(query.before.as_deref().unwrap_or("https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800"));
+    let after_img = escape_html(query.after.as_deref().unwrap_or("https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=800"));
+    let show_branding = query.branding.unwrap_or(true);
+
+    let mut html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            overflow: hidden;
+        }}
+        .container {{
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            border-radius: 12px;
+            overflow: hidden;
+        }}
+        .image-container {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }}
+        .image-container img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }}
+        .before-container {{
+            z-index: 2;
+            width: 50%;
+            overflow: hidden;
+        }}
+        .after-container {{
+            z-index: 1;
+        }}
+        .slider-handle {{
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background-color: white;
+            z-index: 3;
+            cursor: ew-resize;
+            transform: translateX(-50%);
+        }}
+        .slider-button {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .slider-button::before, .slider-button::after {{
+            content: '';
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }}
+        .slider-button::before {{
+            border-right: 8px solid #333;
+            margin-right: 4px;
+        }}
+        .slider-button::after {{
+            border-left: 8px solid #333;
+            margin-left: 4px;
+        }}
+        .title-badge {{
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 4;
+            backdrop-filter: blur(4px);
+        }}
+        .branding {{
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            z-index: 4;
+        }}
+        .branding a {{
+            display: inline-block;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }}
+        .branding a:hover {{
+            background: rgba(0,0,0,0.8);
+        }}
+        .label {{
+            position: absolute;
+            bottom: 16px;
+            padding: 4px 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }}
+        .label.before {{ left: 16px; z-index: 3; }}
+        .label.after {{ right: 16px; z-index: 1; }}
+    </style>
+</head>
+<body>
+    <div class="container" id="slider-container">
+        <div class="title-badge">{title}</div>
+
+        <div class="image-container after-container">
+            <img src="{after_img}" alt="After" class="img-after">
+            <div class="label after">After</div>
+        </div>
+
+        <div class="image-container before-container" id="before-container">
+            <img src="{before_img}" alt="Before" id="beforeImage">
+            <div class="label before">Before</div>
+        </div>
+
+        <div class="slider-handle" id="slider-handle">
+            <div class="slider-button"></div>
+        </div>
+"#,
+        title = title,
+        before_img = before_img,
+        after_img = after_img
+    );
+
+    if show_branding {
+        html.push_str(&format!(
+            r#"        <div class="branding">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_before_after" target="_blank">⚡ Powered by OHC</a>
+        </div>"#
+        , tenant = tenant));
+    }
+
+    html.push_str(
+        r#"
+    </div>
+
+    <script>
+        const container = document.getElementById('slider-container');
+        const beforeContainer = document.getElementById('before-container');
+        const handle = document.getElementById('slider-handle');
+        const beforeImage = document.getElementById('beforeImage');
+
+        let isDragging = false;
+
+        // Ensure image stretches to container width
+        function resizeImage() {
+            const containerWidth = container.offsetWidth;
+            beforeImage.style.width = containerWidth + 'px';
+        }
+
+        window.addEventListener('resize', resizeImage);
+        // Call once to set initial width
+        // Wait for image to load or just set it
+        resizeImage();
+
+        function updateSlider(x) {
+            const rect = container.getBoundingClientRect();
+            let position = Math.max(0, Math.min(x - rect.left, rect.width));
+            let percentage = (position / rect.width) * 100;
+
+            beforeContainer.style.width = percentage + '%';
+            handle.style.left = percentage + '%';
+        }
+
+        handle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault(); // Prevent text selection
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            updateSlider(e.clientX);
+        });
+
+        // Touch support
+        handle.addEventListener('touchstart', (e) => {
+            isDragging = true;
+        });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            updateSlider(e.touches[0].clientX);
+        });
+    </script>
+</body>
+</html>"#
     );
 
     axum::response::Html(html)
