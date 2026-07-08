@@ -138,6 +138,7 @@ impl PosService for MyPosService {
             let client_id_clone = client_id.clone();
             let tx_id = if tx.id.is_empty() { Uuid::new_v4().to_string() } else { tx.id.clone() };
 
+            let terminal_id_clone = tx.terminal_id.clone();
             futures.push(tokio::spawn(async move {
                 let mut db_tx = match pool_clone.begin().await {
                     Ok(t) => t,
@@ -153,8 +154,8 @@ impl PosService for MyPosService {
                 }
 
                 let insert_res = sqlx::query(
-                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, terminal_id)
+                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', $7)"
                 )
                 .bind(&tx_id)
                 .bind(&tenant_id_clone)
@@ -162,6 +163,7 @@ impl PosService for MyPosService {
                 .bind(tx.amount_cents)
                 .bind(&tx.currency)
                 .bind(&tx.payload)
+                .bind(terminal_id_clone)
                 .execute(&mut *db_tx)
                 .await;
 
