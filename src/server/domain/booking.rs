@@ -14,6 +14,17 @@ pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPo
             .execute(pool)
             .await?;
 
+        // Schedule feedback request since booking was completed/approved
+        if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {
+            let query = format!(
+                r#"
+                INSERT INTO feedback_requests
+                (id, tenant_id, customer_id, reference_id, reference_type, status, scheduled_for)
+                VALUES ($1, $2, $3, $4, 'booking', 'scheduled', NOW() + interval '86400 seconds')
+                "#);
+            let _ = sqlx::query(&query).bind(uuid::Uuid::new_v4().to_string()).bind(tenant_id).bind(customer_id).bind(booking_id).execute(pool).await;
+        }
+
         // 2. Also send the reply via inbox
         if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
             let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")

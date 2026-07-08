@@ -55,3 +55,4 @@ pub mod unified_inbox_webhook;
 pub mod work_triage;
 pub mod tool_integrations;
 pub mod ohc_job_queue;
+pub mod reputation;
