@@ -106,7 +106,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        });
 
        setTimeout(() => {
-         setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
+         setStatus('Saved Offline - Will sync when connected');
          if (onSuccess) onSuccess();
        }, 1500);
        return;
@@ -180,7 +180,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             });
          });
          setTimeout(() => {
-           setStatus('Cash sale saved offline. Will sync when network is restored.');
+           setStatus('Saved Offline - Will sync when connected');
            if (onSuccess) onSuccess();
          }, 500);
          return;
