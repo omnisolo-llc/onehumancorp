@@ -18,6 +18,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
+import { UnlockProFeaturesWidget } from "./UnlockProFeaturesWidget";
 import { AIUsageLimitWidget } from "./AIUsageLimitWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
@@ -724,6 +725,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <ReferralMilestonesWidget />
             <DashboardViralInviteWidget />
+            <UnlockProFeaturesWidget />
           </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
