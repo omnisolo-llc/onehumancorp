@@ -496,7 +496,7 @@ mod tests {
         let task = "Test parallel execution Chart: Required. Analysis: Deep.";
         let mut trace = SkillTrace::new();
 
-        let summary = director.coordinate(task, experts, &mut trace).await.unwrap();
+        let _summary = director.coordinate(task, experts, &mut trace).await.unwrap();
         assert!(trace.skills_used.contains(&"industry_researcher_analysis".to_string()));
         assert!(trace.skills_used.contains(&"financial_analyst_analysis".to_string()));
     }

@@ -1174,22 +1174,17 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                // C. 4. Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&msg.content, &current_context)
+                    .run_guides_before_action(&msg.content, &current_context)
                     .await
                 {
                     messages.push(crate::types::Message::user(e));
                     continue;
                 }
+                // C. 4. Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
-                    .run_visual_verifiers(&msg.content)
-                    .await
-                {
-                    messages.push(crate::types::Message::user(e));
-                    continue;
-                }
-                if let Err(e) = verification_manager
-                    .run_inferential_sensors(&msg.content, initial_message)
+                    .run_sensors_after_action(&msg.content, initial_message, Some(&msg.content))
                     .await
                 {
                     messages.push(crate::types::Message::user(format!(
@@ -3994,8 +3989,9 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                // C. 4. Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&last_assistant_content, &current_context)
+                    .run_guides_before_action(&last_assistant_content, &current_context)
                     .await
                 {
                     let mut user_msg = Message::user(e);
@@ -4003,17 +3999,9 @@ impl Agent {
                     messages.push(user_msg);
                     continue;
                 }
+                // C. 4. Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
-                    .run_visual_verifiers(&last_assistant_content)
-                    .await
-                {
-                    let mut user_msg = Message::user(e);
-                    user_msg.previous_response_id = last_response_id.clone();
-                    messages.push(user_msg);
-                    continue;
-                }
-                if let Err(e) = verification_manager
-                    .run_inferential_sensors(&last_assistant_content, initial_message)
+                    .run_sensors_after_action(&last_assistant_content, initial_message, Some(&last_assistant_content))
                     .await
                 {
                     let mut user_msg = Message::user(format!(
