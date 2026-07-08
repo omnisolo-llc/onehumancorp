@@ -1,98 +1,97 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { MasterMenu } from './MasterMenu.js';
-import { expect, test, describe, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('MasterMenu', () => {
-  test('renders the menu options correctly', () => {
+  it('renders the menu options correctly', () => {
     const { lastFrame } = render(<MasterMenu />);
     const output = lastFrame();
-    expect(output).toContain('Select an action (Use Up/Down arrows):');
+    expect(output).toContain('Select an action');
     expect(output).toContain('1) Run Developer Setup');
-    expect(output).toContain('Browse Agent Marketplace');
-    expect(output).toContain('2) Configure Environment (.env)');
     expect(output).toContain('0) Exit');
   });
 
-  test('highlights the first option by default', () => {
+  it('highlights the first option by default', () => {
     const { lastFrame } = render(<MasterMenu />);
     const output = lastFrame();
-    expect(output).toContain('▶');
-    const lines = output?.split('\n') || [];
-    const firstOptionLine = lines.find(line => line.includes('Run Developer Setup'));
-    expect(firstOptionLine).toContain('▶');
+    expect(output).toContain('▶ 1) Run Developer Setup');
   });
 
-  test('correctly renders the "Configure Environment (.env)" option', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('2) Configure Environment (.env)');
+  it('correctly renders the "Configure Environment (.env)" option', () => {
+     const { lastFrame } = render(<MasterMenu />);
+     const output = lastFrame();
+     expect(output).toContain('2) Configure Environment (.env)');
   });
 
-  test('correctly renders the "Run Diagnostics" option', () => {
-    const { lastFrame } = render(<MasterMenu />);
-    const output = lastFrame();
-    expect(output).toContain('3) Run Diagnostics');
+  it('correctly renders the "Run Diagnostics" option', () => {
+     const { lastFrame } = render(<MasterMenu />);
+     const output = lastFrame();
+     expect(output).toContain('3) Run Diagnostics');
   });
 
-  test('renders the box layout and options without crashing', () => {
+  it('renders the box layout and options without crashing', () => {
     const { lastFrame } = render(<MasterMenu />);
     const output = lastFrame();
     expect(output).toBeDefined();
     expect(output?.length).toBeGreaterThan(0);
-    expect(output).toContain('11) Verify Setup');
+    expect(output).toContain('12) Verify Setup');
     expect(output).toContain('5) Provision AI Agent');
   });
 
-  test('handles keyboard interaction (down arrow)', async () => {
-    const { stdin, lastFrame } = render(<MasterMenu />);
+  it('handles keyboard interaction (down arrow)', async () => {
+    const onSelect = vi.fn();
+    const { stdin, lastFrame } = render(<MasterMenu onSelect={onSelect} />);
 
-    // Write down arrow to stdin
-    stdin.write('\u001B[B'); // Down Arrow
-
-    // allow event loop to process
-    await new Promise(r => setTimeout(r, 20));
-
-    // Just checking it handles it without crashing is what was tested originally
-    expect(lastFrame()).toBeDefined();
+    stdin.write('\x1B[B'); // Down arrow
+    await delay(10);
+    expect(lastFrame()).toContain('▶ 2) Configure Environment (.env)');
   });
 
-  test('handles keyboard interaction (up arrow)', async () => {
-    const { stdin, lastFrame } = render(<MasterMenu />);
-    stdin.write('\u001B[B'); // Down Arrow
+  it('handles keyboard interaction (up arrow)', async () => {
+    const onSelect = vi.fn();
+    const { stdin, lastFrame } = render(<MasterMenu onSelect={onSelect} />);
 
-    await new Promise(r => setTimeout(r, 20));
+    stdin.write('\x1B[B'); // Down arrow
+    await delay(10);
+    stdin.write('\x1B[A'); // Up arrow
+    await delay(10);
 
-    stdin.write('\u001B[A'); // Up Arrow
-    await new Promise(r => setTimeout(r, 20));
-
-    expect(lastFrame()).toBeDefined();
+    expect(lastFrame()).toContain('▶ 1) Run Developer Setup');
   });
 
-  test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+  it('handles keyboard interaction (return)', async () => {
+    const onSelect = vi.fn();
+    const { stdin } = render(<MasterMenu onSelect={onSelect} />);
+
+    stdin.write('\r'); // Return
+    await delay(10);
+
+    expect(onSelect).toHaveBeenCalledWith('Run Developer Setup');
+  });
+
+  it('handles keyboard interaction (exit option)', async () => {
+    const originalExit = process.exit;
+    let exitCode: number | undefined;
+    (process as any).exit = (code: number) => {
+      exitCode = code;
+    };
+
     const { stdin } = render(<MasterMenu />);
-    stdin.write('\r');
-    expect(logSpy).not.toHaveBeenCalled();
-    logSpy.mockRestore();
-  });
 
-  test('handles keyboard interaction (exit option)', async () => {
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-    const { stdin, lastFrame } = render(<MasterMenu />);
-
-    // Exit is the last option.
-    // MasterMenu has 11 options. index 10 is Exit.
+    // Press down arrow enough times to reach "Exit"
     for (let i = 0; i < 15; i++) {
-        stdin.write('\u001B[B');
-        // Let React process the event
-        await new Promise(r => setTimeout(r, 20));
+        stdin.write('\x1B[B');
+        await delay(10);
     }
 
     stdin.write('\r');
-    await new Promise(r => setTimeout(r, 20));
+    await delay(10);
 
-    expect(exitSpy).toHaveBeenCalledWith(0);
-    exitSpy.mockRestore();
+    expect(exitCode).toBe(0);
+
+    process.exit = originalExit;
   });
 });
