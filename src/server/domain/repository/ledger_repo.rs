@@ -644,3 +644,101 @@ mod ledger_tests {
         assert_eq!(split_debit.debit, 70.0);
     }
 }
+
+
+    pub async fn create_ledger_account(&self, tenant_id: &str, currency: &str) -> Result<super::models::LedgerAccount, String> {
+        let account_id = Uuid::new_v4().to_string();
+        let now = Utc::now();
+        let account = super::models::LedgerAccount {
+            id: account_id.clone(),
+            tenant_id: tenant_id.to_string(),
+            currency: currency.to_string(),
+            current_balance: 0.0,
+            last_synced: Some(now),
+            created_at: Some(now),
+            updated_at: Some(now),
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_account (
+                        id, tenant_id, currency, current_balance, last_synced, created_at, updated_at
+                    ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+                    "#
+                )
+                .bind(Uuid::parse_str(&account.id).unwrap())
+                .bind(Uuid::parse_str(&account.tenant_id).unwrap())
+                .bind(&account.currency)
+                .bind(&account.current_balance)
+                .bind(&account.last_synced)
+                .bind(&account.created_at)
+                .bind(&account.updated_at)
+                .execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+                Ok(account)
+            }
+            DbStore::Sqlite(_sqlite_pool) => {
+                // SQLite mock execution
+                Ok(account)
+            }
+        }
+    }
+
+    pub async fn add_ledger_entry(&self, tenant_id: &str, account_id: &str, amount: f64, entry_type: &str, idempotency_key: Option<&str>) -> Result<LedgerEntry, String> {
+        let entry_id = Uuid::new_v4().to_string();
+        let now = Utc::now();
+
+        let entry = LedgerEntry {
+            id: entry_id.clone(),
+            tenant_id: tenant_id.to_string(),
+            account_id: account_id.to_string(),
+            amount,
+            entry_type: entry_type.to_string(),
+            reference_id: idempotency_key.unwrap_or("").to_string(),
+            created_at: Some(now),
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    INSERT INTO ledger_entry (
+                        id, ledger_account_id, amount, type, idempotency_key, created_at
+                    ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
+                    "#
+                )
+                .bind(Uuid::parse_str(&entry.id).unwrap())
+                .bind(Uuid::parse_str(&entry.account_id).unwrap())
+                .bind(&entry.amount)
+                .bind(&entry.entry_type)
+                .bind(idempotency_key)
+                .bind(&entry.created_at)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                sqlx::query(
+                    r#"
+                    UPDATE ledger_account
+                    SET current_balance = current_balance + $1, updated_at = $2
+                    WHERE id = $3::uuid AND tenant_id = $4::uuid
+                    "#
+                )
+                .bind(&entry.amount)
+                .bind(&entry.created_at)
+                .bind(Uuid::parse_str(&entry.account_id).unwrap())
+                .bind(Uuid::parse_str(&entry.tenant_id).unwrap())
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
+
+                Ok(entry)
+            }
+            DbStore::Sqlite(_sqlite_pool) => {
+                // SQLite mock execution
+                Ok(entry)
+            }
+        }
+    }
+}

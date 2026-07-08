@@ -63,6 +63,8 @@ pub fn router() -> Router<AppState> {
         .route("/api/ledger/invoice/{id}/update", put(update_invoice_status))
         .route("/api/ledger/invoice/{id}/pay", post(apply_payment))
         .route("/api/ledger/entries/{tenant_id}", get(get_ledger_entries))
+        .route("/api/ledger/account", post(create_ledger_account))
+        .route("/api/ledger/account/entry", post(add_ledger_entry))
 }
 
 async fn get_invoice(
@@ -164,6 +166,50 @@ async fn get_ledger_entries(
     let repo = LedgerRepository::new(state.db);
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+
+#[derive(Deserialize)]
+pub struct CreateLedgerAccountRequest {
+    pub tenant_id: String,
+    pub currency: String,
+}
+
+#[derive(Deserialize)]
+pub struct AddLedgerEntryRequest {
+    pub tenant_id: String,
+    pub account_id: String,
+    pub amount: f64,
+    pub entry_type: String,
+    pub idempotency_key: Option<String>,
+}
+
+async fn create_ledger_account(
+    State(state): State<AppState>,
+    Json(payload): Json<CreateLedgerAccountRequest>,
+) -> impl IntoResponse {
+    let repo = LedgerRepository::new(state.db);
+    match repo.create_ledger_account(&payload.tenant_id, &payload.currency).await {
+        Ok(account) => (StatusCode::CREATED, Json(account)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+async fn add_ledger_entry(
+    State(state): State<AppState>,
+    Json(payload): Json<AddLedgerEntryRequest>,
+) -> impl IntoResponse {
+    let repo = LedgerRepository::new(state.db);
+    match repo.add_ledger_entry(
+        &payload.tenant_id,
+        &payload.account_id,
+        payload.amount,
+        &payload.entry_type,
+        payload.idempotency_key.as_deref()
+    ).await {
+        Ok(entry) => (StatusCode::CREATED, Json(entry)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }

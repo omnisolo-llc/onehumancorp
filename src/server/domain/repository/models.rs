@@ -471,3 +471,14 @@ pub struct ShiftSummary {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LedgerAccount {
+    pub id: String,
+    pub tenant_id: String,
+    pub currency: String,
+    pub current_balance: f64,
+    pub last_synced: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
