@@ -237,10 +237,10 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata, is_subscribable, subscription_frequency, subscription_discount_percent)
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, available_quantity, metadata, is_subscribable, subscription_frequency, subscription_discount_percent)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb, true, 'monthly', 10),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb, false, null, null)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, 12, '{"seeded_by":"e2e"}'::jsonb, true, 'monthly', 10),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, 8, '{"seeded_by":"e2e"}'::jsonb, false, null, null)
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
@@ -249,6 +249,7 @@ SET title = EXCLUDED.title,
     price_cents = EXCLUDED.price_cents,
     currency = EXCLUDED.currency,
     inventory_count = EXCLUDED.inventory_count,
+    available_quantity = EXCLUDED.available_quantity,
     metadata = EXCLUDED.metadata,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -600,22 +601,22 @@ ON CONFLICT DO NOTHING;
 INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174001', '823e4567-e89b-12d3-a456-426614174000', 'Fix leaking sink including labor and standard materials', 15000, 1, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
-INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, available_quantity, metadata)
 VALUES
-  ('e2e-product-cake-pos', 'e2e-tenant-pos', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb),
-  ('e2e-product-cake-pos-additional', 'e2e-tenant-pos-additional', 'POS Additional', 'POS Additional', 'physical', 10.00, 1000, 'USD', 5, '{"seeded_by":"e2e"}'::jsonb);
+  ('e2e-product-cake-pos', 'e2e-tenant-pos', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, 1, '{"seeded_by":"e2e"}'::jsonb),
+  ('e2e-product-cake-pos-additional', 'e2e-tenant-pos-additional', 'POS Additional', 'POS Additional', 'physical', 10.00, 1000, 'USD', 5, 5, '{"seeded_by":"e2e"}'::jsonb);
 
 INSERT INTO tenants (id, name, industry, status, skip_onboarding, default_currency)
 VALUES
   ('e2e-tenant-pos', 'OHC E2E Bakery POS', 'Food and beverage', 'active', true, 'USD'),
   ('e2e-tenant-pos-additional', 'OHC E2E Bakery POS Add', 'Food and beverage', 'active', true, 'USD');
-INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, available_quantity, metadata)
 VALUES
-  ('e2e-product-pos-sync', 'e2e-tenant', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb);
+  ('e2e-product-pos-sync', 'e2e-tenant', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, 1, '{"seeded_by":"e2e"}'::jsonb);
 -- Add a 40.02 product to pos e2e tenant
-INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, available_quantity, metadata)
 VALUES
-  ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb);
+  ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, 100, '{"seeded_by":"e2e"}'::jsonb);
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
 ('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
@@ -721,9 +722,9 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Now add products and sites
-INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, available_quantity, metadata)
 VALUES
-  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Edge Cached Product E2E', 'Edge Cached Product E2E', 'physical', 42.00, 4200, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb)
+  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Edge Cached Product E2E', 'Edge Cached Product E2E', 'physical', 42.00, 4200, 'USD', 100, 100, '{"seeded_by":"e2e"}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO builder_sites (id, tenant_id, domain, published_at)
