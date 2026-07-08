@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Affiliate Dashboard | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #F5F5F7;
+      color: #1d1d1f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-sizing: border-box;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .back-btn {
+      text-decoration: none;
+      color: #0066FF;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+    }
+    @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background: #111111;
+            color: #f5f5f7;
+        }
+        header {
+            background: rgba(22, 22, 26, 0.7);
+        }
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #86868b;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      font-size: 16px;
+      font-family: inherit;
+      box-sizing: border-box;
+      background: white;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #0066FF;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px;
+      background: #0066FF;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn:hover {
+      background: #005ce6;
+      transform: translateY(-1px);
+    }
+    .link-display {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 102, 255, 0.05);
+      border: 1px solid rgba(0, 102, 255, 0.2);
+      border-radius: 12px;
+      display: none;
+    }
+    .link-display p {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0066FF;
+    }
+    .link-display input {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 16px;
+      font-family: monospace;
+      color: #1d1d1f;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .link-display input:focus {
+        box-shadow: none;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 30px;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 20px;
+      border-radius: 16px;
+      text-align: center;
+    }
+    .stat-card h3 {
+      margin: 0 0 5px 0;
+      font-size: 24px;
+      color: #1d1d1f;
+    }
+    .stat-card p {
+      margin: 0;
+      font-size: 12px;
+      color: #86868b;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Affiliate Dashboard</h1>
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+  </header>
+
+  <div class="container">
+    <div class="glassmorphism" id="affiliate-dashboard">
+      <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px;">Generate Affiliate Link</h2>
+
+      <div class="form-group">
+        <label for="customerId">Customer ID / Name</label>
+        <input type="text" id="customerId" placeholder="e.g. Maya">
+      </div>
+
+      <div class="form-group">
+        <label for="discountPercentage">Discount for their friends (%)</label>
+        <input type="number" id="discountPercentage" value="10" min="0" max="100">
+      </div>
+
+      <div class="form-group">
+        <label for="commissionPercentage">Commission for them (%)</label>
+        <input type="number" id="commissionPercentage" value="10" min="0" max="100">
+      </div>
+
+      <button id="generate-affiliate" class="btn">Generate Link</button>
+
+      <div id="affiliate-link-container" class="link-display">
+        <p>Your unique affiliate link is ready!</p>
+        <input type="text" id="affiliate-link" readonly>
+        <button id="copy-btn" class="btn" style="padding: 10px; font-size: 14px;">Copy Link</button>
+      </div>
+    </div>
+
+    <div class="glassmorphism">
+        <h2 style="margin-top: 0; margin-bottom: 10px; font-size: 20px;">Affiliate Performance</h2>
+        <p style="color: #86868b; font-size: 14px; margin-top: 0;">Track the success of your affiliate links.</p>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="clicks-stat">0</h3>
+                <p>Total Clicks</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="conversions-stat">0</h3>
+                <p>Conversions</p>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const generateBtn = document.getElementById('generate-affiliate');
+      const linkContainer = document.getElementById('affiliate-link-container');
+      const linkInput = document.getElementById('affiliate-link');
+      const copyBtn = document.getElementById('copy-btn');
+
+      const customerIdInput = document.getElementById('customerId');
+      const discountInput = document.getElementById('discountPercentage');
+      const commissionInput = document.getElementById('commissionPercentage');
+
+      const clicksStat = document.getElementById('clicks-stat');
+      const conversionsStat = document.getElementById('conversions-stat');
+
+      const getAuthHeaders = () => {
+        const token = localStorage.getItem('ohc_token');
+        return token ? { 'authorization': `Bearer ${token}` } : {};
+      };
+
+      // Load initial stats
+      try {
+        const res = await fetch('/api/v1/growth/affiliate/stats', {
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            clicksStat.textContent = data.clicks || '0';
+            conversionsStat.textContent = data.conversions || '0';
+        }
+      } catch (e) {
+          console.error("Failed to load stats", e);
+      }
+
+      generateBtn.addEventListener('click', async () => {
+        generateBtn.textContent = 'Generating...';
+        generateBtn.disabled = true;
+
+        try {
+          const payload = {
+            customer_id: customerIdInput.value || 'guest',
+            discount_percentage: parseInt(discountInput.value) || 10,
+            commission_percentage: parseInt(commissionInput.value) || 10
+          };
+
+          const res = await fetch('/api/v1/growth/affiliate/generate-link', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            linkInput.value = data.affiliate_link;
+            linkContainer.style.display = 'block';
+          } else {
+              alert('Failed to generate link. Please try again.');
+          }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred.');
+        } finally {
+            generateBtn.textContent = 'Generate Link';
+            generateBtn.disabled = false;
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
+        linkInput.select();
+        navigator.clipboard.writeText(linkInput.value);
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.backgroundColor = '#34C759';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy Link';
+          copyBtn.style.backgroundColor = '#0066FF';
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
