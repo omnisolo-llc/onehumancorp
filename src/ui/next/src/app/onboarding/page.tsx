@@ -1088,7 +1088,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[40px] backdrop-saturate-[250%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] border border-white/20 p-4 rounded-2xl">
+            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism p-4">
               <button
                 onClick={() => {
                   updateState({ step: -2 });
