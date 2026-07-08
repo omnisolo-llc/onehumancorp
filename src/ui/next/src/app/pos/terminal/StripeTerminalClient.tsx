@@ -101,7 +101,9 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              type: 'tap_to_pay',
              product_id: item.product.id,
              quantity: item.quantity,
-             payload: { amount_cents: item.product.price_cents * item.quantity }
+             amount: item.product.price_cents * item.quantity,
+             currency: 'usd',
+             payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity }
           });
        });
 
