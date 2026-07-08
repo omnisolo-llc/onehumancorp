@@ -283,9 +283,12 @@ test.describe('OnboardingWizard CUJ', () => {
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
 
-    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+    // We use the ID to ensure exact targeting, as the Instant Build UI provides this specific button.
+    const generateBtn = page.locator('#generate-storefront-btn');
+    await expect(generateBtn).toBeVisible();
+    await generateBtn.click();
 
-    // Expect it to eventually reach "You're Live!" screen
+    // The current UI skips directly to the "You're Live!" success screen.
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   });
 });
