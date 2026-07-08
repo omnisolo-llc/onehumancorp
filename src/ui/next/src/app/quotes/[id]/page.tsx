@@ -6,6 +6,7 @@ import { AppShell } from '../../components/AppShell';
 
 interface LineItem {
   id: string;
+  service_item_id?: string;
   description: string;
   unit_price_cents: number;
   quantity: number;
@@ -14,7 +15,9 @@ interface LineItem {
 
 interface Quote {
   id: string;
+  service_item_id?: string;
   customer_id: string;
+  service_item_id?: string;
   status: string;
   total_amount_cents: number;
   required_deposit_cents: number;

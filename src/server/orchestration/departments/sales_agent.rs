@@ -458,9 +458,18 @@ impl Department for SalesAgent {
                     context_summary.push_str(" ");
                 }
 
+                let catalog = self.orchestrator.get_service_items(&event.tenant_id).await.unwrap_or_default();
+                let mut catalog_summary = String::new();
+                for item in catalog {
+                    catalog_summary.push_str(&format!("{}: ${}, ", item.name, (item.base_price as f64) / 100.0));
+                }
+                if catalog_summary.is_empty() {
+                    catalog_summary = "No specific catalog items configured. Use standard industry estimates.".to_string();
+                }
+
                 let prompt = format!(
-                    "You are a sales agent drafting a project proposal for a new inquiry. Inquiry: {}. Service: {}. Base Price: {}. Past context: {}. Output strict JSON with keys: scope, suggested_time, suggested_price, drafted_message. Do not use markdown.",
-                    intent.original_message, service_name, price, context_summary
+                    "You are a sales agent drafting a project proposal for a new inquiry. Inquiry: {}. Service: {}. Base Price: {}. Service Catalog Options: {}. Past context: {}. Output strict JSON with keys: scope, suggested_time, suggested_price, drafted_message. The suggested_price should ideally be composed of relevant items from the Service Catalog Options if applicable. Do not use markdown.",
+                    intent.original_message, service_name, price, catalog_summary, context_summary
                 );
 
                 let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")

@@ -2151,6 +2151,25 @@ pub async fn execute_action(
         }
     }
 
+    pub async fn get_service_items(&self, tenant_id: &str) -> Result<Vec<crate::domain::repository::models::ServiceItem>, String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query_as::<_, crate::domain::repository::models::ServiceItem>("SELECT * FROM service_items WHERE tenant_id = $1 LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e: sqlx::Error| e.to_string())
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_as::<_, crate::domain::repository::models::ServiceItem>("SELECT * FROM service_items WHERE tenant_id = $1 LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e: sqlx::Error| e.to_string())
+            }
+        }
+    }
+
     pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64, String)>, String> {
         let pattern = format!("%{}%", name);
         match &self.db.store {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface LineItem {
+  service_item_id?: string;
   description: string;
   unit_price_cents: number;
   quantity: number;

@@ -101,6 +101,7 @@ pub struct UpdateQuoteRequest {
 
 #[derive(Deserialize)]
 pub struct QuoteLineItemRequest {
+    pub service_item_id: Option<String>,
     pub description: String,
     pub unit_price_cents: i64,
     pub quantity: i32,
@@ -144,6 +145,7 @@ async fn create_quote(
         if let Ok(tax_rate) = provider.calculate_tax(total_pre_tax_usd, 0.0, "US", "90002", "CA", "US", "92093", "CA").await {
             if tax_rate.amount_to_collect > 0.0 {
                 line_items.push(QuoteLineItemRequest {
+                service_item_id: None,
                     description: "Automated Sales Tax (TaxJar)".to_string(),
                     unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
                     quantity: 1,
@@ -178,10 +180,11 @@ async fn create_quote(
     for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
+            "INSERT INTO quote_line_items (id, quote_id, service_item_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8)"
         )
         .bind(item_id)
         .bind(quote_id)
+        .bind(&item.service_item_id)
         .bind(&item.description)
         .bind(item.unit_price_cents)
         .bind(item.quantity)
@@ -351,10 +354,11 @@ async fn update_quote(
     for item in payload.line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
+            "INSERT INTO quote_line_items (id, quote_id, service_item_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8)"
         )
         .bind(item_id)
         .bind(quote_id)
+        .bind(&item.service_item_id)
         .bind(&item.description)
         .bind(item.unit_price_cents)
         .bind(item.quantity)
@@ -457,6 +461,7 @@ mod tests {
         let mut line_items = vec![QuoteLineItem {
             id: "li1".to_string(),
             quote_id: "q1".to_string(),
+            service_item_id: None,
             description: "item".to_string(),
             unit_price_cents: 100,
             quantity: 1,

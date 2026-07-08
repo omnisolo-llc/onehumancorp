@@ -2372,9 +2372,19 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS service_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        base_price INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS quote_line_items (
                         id TEXT PRIMARY KEY,
                         quote_id TEXT NOT NULL,
+                        service_item_id TEXT,
                         description TEXT NOT NULL,
                         unit_price_cents INTEGER NOT NULL,
                         quantity INTEGER NOT NULL DEFAULT 1,
