@@ -256,6 +256,7 @@ export default function POSTerminal() {
             currency: 'usd',
             product_id: 'quick_charge',
             quantity: 1,
+            payload: [{ product_id: 'quick_charge', quantity: 1, amount_cents: 5000 }],
             timestamp: new Date().toISOString()
          };
 
