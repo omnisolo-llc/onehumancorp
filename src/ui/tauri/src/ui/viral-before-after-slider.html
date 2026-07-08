@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Before & After Slider | OneHumanCorp</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f9fafb;
+      --card-bg: #ffffff;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --accent: #0066FF;
+      --accent-hover: #0052cc;
+      --border-color: #e5e7eb;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .main-container {
+      width: 100%;
+      max-width: 1000px;
+      margin: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    @media (min-width: 768px) {
+      .main-container {
+        flex-direction: row;
+      }
+    }
+    .panel {
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      padding: 32px;
+      flex: 1;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    }
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      margin: 0 0 24px 0;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+    }
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .pro-badge {
+      background: linear-gradient(to right, #fde68a, #fbbf24);
+      color: #78350f;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    button.primary {
+      background: #111827;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 24px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button.primary:hover {
+      background: #000;
+    }
+    button.primary:active {
+      transform: scale(0.98);
+    }
+
+    .preview-panel {
+      background: #f3f4f6;
+      border-radius: 20px;
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .preview-container {
+      flex: 1;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+      min-height: 400px;
+      position: relative;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Modal / Paywall Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .modal-close:hover {
+      color: var(--text-main);
+    }
+    .code-block {
+      background: #f3f4f6;
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-wrap: break-word;
+      margin-bottom: 24px;
+      color: #374151;
+      height: 100px;
+      overflow-y: auto;
+    }
+    .paywall-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      margin: 0 auto 24px auto;
+    }
+    .text-center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+    <div class="panel">
+      <h1>Before & After Slider</h1>
+      <p class="subtitle">Showcase your best work and drive leads with this interactive widget.</p>
+
+      <div class="form-group">
+        <label>Widget Title</label>
+        <input type="text" id="title-input" value="Our Work">
+      </div>
+
+      <div class="form-group">
+        <label>Before Image URL</label>
+        <input type="text" id="before-input" value="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800">
+      </div>
+
+      <div class="form-group">
+        <label>After Image URL</label>
+        <input type="text" id="after-input" value="https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=800">
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="remove-branding">
+        <label for="remove-branding" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          Remove "Powered by OHC" Badge
+          <span class="pro-badge" id="pro-badge">PRO</span>
+        </label>
+      </div>
+
+      <button class="primary" id="get-code-btn">Get Widget Embed Code</button>
+      <div style="margin-top: 16px; text-align: center;">
+        <a href="dashboard.html" style="color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500;">&larr; Back to Dashboard</a>
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="preview-header">Live Preview</div>
+      <div class="preview-container">
+        <iframe id="preview-iframe" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('embed-modal').style.display='none'">&times;</button>
+      <h2 style="margin-top: 0;">Embed Slider</h2>
+      <p style="color: var(--text-muted); font-size: 14px;">Copy and paste this HTML snippet into your website to embed the before & after slider.</p>
+
+      <div class="code-block" id="embed-code"></div>
+
+      <button class="primary" id="copy-btn" style="margin-top: 0; background: var(--accent);">Copy Code</button>
+    </div>
+  </div>
+
+  <!-- Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal text-center">
+      <button class="modal-close" onclick="document.getElementById('paywall-modal').style.display='none'; document.getElementById('remove-branding').checked = false;">&times;</button>
+      <div class="paywall-icon">PRO</div>
+      <h2 style="margin-top: 0;">Upgrade to Remove Branding</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Make the Before & After Slider 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+
+      <button class="primary" style="margin-top: 0; background: linear-gradient(135deg, #0066ff, #3b82f6);" onclick="window.location.href='pricing.html'">Upgrade to Pro</button>
+      <button style="background: none; border: none; color: var(--text-muted); margin-top: 16px; font-weight: 600; cursor: pointer;" onclick="document.getElementById('paywall-modal').style.display='none'; document.getElementById('remove-branding').checked = false;">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const titleInput = document.getElementById('title-input');
+      const beforeInput = document.getElementById('before-input');
+      const afterInput = document.getElementById('after-input');
+      const removeBrandingCheck = document.getElementById('remove-branding');
+      const previewIframe = document.getElementById('preview-iframe');
+      const hasPro = localStorage.getItem('has_pro') === 'true';
+      const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+      if (hasPro) {
+        document.getElementById('pro-badge').style.display = 'none';
+      }
+
+      function updatePreview() {
+        const title = encodeURIComponent(titleInput.value);
+        const before = encodeURIComponent(beforeInput.value);
+        const after = encodeURIComponent(afterInput.value);
+        const branding = !removeBrandingCheck.checked;
+
+        const url = `/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${title}&before=${before}&after=${after}&branding=${branding}`;
+        previewIframe.src = url;
+      }
+
+      // Update preview when inputs change
+      titleInput.addEventListener('input', updatePreview);
+      beforeInput.addEventListener('input', updatePreview);
+      afterInput.addEventListener('input', updatePreview);
+
+      removeBrandingCheck.addEventListener('change', (e) => {
+        if (e.target.checked && !hasPro) {
+          e.preventDefault();
+          document.getElementById('paywall-modal').style.display = 'flex';
+          return;
+        }
+        updatePreview();
+      });
+
+      document.getElementById('get-code-btn').addEventListener('click', () => {
+        const title = encodeURIComponent(titleInput.value);
+        const before = encodeURIComponent(beforeInput.value);
+        const after = encodeURIComponent(afterInput.value);
+        const branding = !removeBrandingCheck.checked;
+
+        const embedUrl = `https://ohc.network/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${title}&before=${before}&after=${after}&branding=${branding}`;
+        const code = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
+
+        document.getElementById('embed-code').textContent = code;
+        document.getElementById('embed-modal').style.display = 'flex';
+        document.getElementById('copy-btn').textContent = 'Copy Code';
+      });
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        const code = document.getElementById('embed-code').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          document.getElementById('copy-btn').textContent = 'Copied!';
+        }).catch(err => {
+          console.error('Failed to copy', err);
+        });
+      });
+
+      // Initial preview
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
