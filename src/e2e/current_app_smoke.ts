@@ -26,7 +26,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('span', { hasText: /The Ambassador/ }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });
@@ -41,7 +41,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     await page.goto('/storefront-builder');
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.builder-block').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.animate-fade-in').first()).toBeVisible({ timeout: 5000 });
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
@@ -103,12 +103,12 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     }
 
     // Verify Referral Leaderboard Generator
-    await page.goto('/ui/viral-before-after-slider.html');
+    await page.goto('/viral-before-after-slider');
     await page.waitForTimeout(1000);
     const sliderTitle = await page.locator('h1', { hasText: 'Before & After Slider' });
     await expect(sliderTitle).toBeVisible();
 
-    await page.goto('/referral-leaderboard-generator');
+    await page.goto('/viral-leaderboard-generator');
 
 
     // Check that there is either a leaderboard or an empty state loaded
