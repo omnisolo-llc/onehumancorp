@@ -38,8 +38,17 @@ test.describe('Zero-Click Onboarding Flow', () => {
     const submitBtn = page.locator('#generate-storefront-btn');
     await submitBtn.click();
 
-    // Verify provisioning UI
+    // Verify Approval UI and Deposit Policy
+    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#approval-details')).toBeVisible();
+    await expect(page.locator('#approval-details')).toContainText('Suggested Deposit Policy');
+    await expect(page.locator('#approval-details')).toContainText('Requires a 50% upfront deposit');
 
+    // Click Approve & Publish
+    const approveBtn = page.locator('#approve-publish-btn');
+    await approveBtn.click();
 
+    // Verify successful generation
+    await expect(page).toHaveURL(/.*success.html.*/, { timeout: 15000 });
   });
 });
