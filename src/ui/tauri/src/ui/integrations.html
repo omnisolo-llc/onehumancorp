@@ -69,7 +69,20 @@
       </div>
       <div class="form-group" style="margin-bottom: 15px; text-align: left;">
         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">Auth Token</label>
-        <input type="password" id="tw-token" placeholder="your_auth_token" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;">
+
+        <div style="position: relative; width: 100%; display: flex; align-items: center;">
+          <input type="password" class="tw-token-input" placeholder="your_auth_token" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; padding-right: 44px;">
+          <button type="button" class="toggle-tw-token-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 0; height: 100%; width: 44px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #555; box-shadow: none; z-index: 10;">
+            <svg class="tw-eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="tw-eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="form-group" style="margin-bottom: 15px; text-align: left;">
         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">WhatsApp Phone Number</label>
@@ -78,7 +91,7 @@
 
       <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
         <button onclick="document.getElementById('twilio-whatsapp-modal').style.display='none'" style="background: #e5e5ea; color: #1d1d1f; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
-        <button id="save-whatsapp-btn" onclick="connectTwilioWhatsApp()" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Save & Connect</button>
+        <button id="save-whatsapp-btn" aria-label="Save WhatsApp Settings" title="Save WhatsApp Settings" onclick="connectTwilioWhatsApp()" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Save & Connect</button>
       </div>
     </div>
   </div>
@@ -144,7 +157,7 @@
 
     async function connectTwilioWhatsApp() {
       const sid = document.getElementById('tw-sid').value;
-      const token = document.getElementById('tw-token').value;
+      const token = document.querySelector('.tw-token-input').value;
       const phone = document.getElementById('tw-phone').value;
       const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:18789' : window.location.origin;
 
@@ -218,7 +231,20 @@
       </div>
       <div class="form-group" style="margin-bottom: 15px; text-align: left;">
         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">Auth Token</label>
-        <input type="password" id="tw-token" placeholder="your_auth_token" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;">
+
+        <div style="position: relative; width: 100%; display: flex; align-items: center;">
+          <input type="password" class="tw-token-input" placeholder="your_auth_token" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; padding-right: 44px;">
+          <button type="button" class="toggle-tw-token-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 0; height: 100%; width: 44px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #555; box-shadow: none; z-index: 10;">
+            <svg class="tw-eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="tw-eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="form-group" style="margin-bottom: 15px; text-align: left;">
         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">WhatsApp Phone Number</label>
@@ -249,7 +275,7 @@
 
     async function connectTwilioWhatsApp() {
       const sid = document.getElementById('tw-sid').value;
-      const token = document.getElementById('tw-token').value;
+      const token = document.querySelector('.tw-token-input').value;
       const phone = document.getElementById('tw-phone').value;
       const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:18789' : window.location.origin;
 
@@ -307,4 +333,21 @@
        });
     });
 </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const toggleBtns = document.querySelectorAll(".toggle-tw-token-visibility");
+        toggleBtns.forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            const container = e.currentTarget.closest("div");
+            const tokenInput = container.querySelector(".tw-token-input");
+            if (!tokenInput) return;
+            const type = tokenInput.getAttribute("type") === "password" ? "text" : "password";
+            tokenInput.setAttribute("type", type);
+            container.querySelector(".tw-eye-icon-show").style.display = type === "password" ? "block" : "none";
+            container.querySelector(".tw-eye-icon-hide").style.display = type === "password" ? "none" : "block";
+          });
+        });
+      });
+    </script>
 </body></html>
