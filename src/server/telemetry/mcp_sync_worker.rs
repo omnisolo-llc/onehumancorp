@@ -1,4 +1,4 @@
-use tracing::{info, warn};
+use tracing::{debug, warn};
 use std::time::Duration;
 use sqlx::{SqlitePool, PgPool, Row};
 use chrono::Utc;
@@ -22,7 +22,7 @@ impl McpSyncWorker {
     }
 
     pub async fn run(&self) {
-        info!("Starting McpSyncWorker...");
+        debug!("Starting McpSyncWorker...");
         loop {
             if ::server_config::get().telemetry_enabled {
                 if let Err(e) = self.sync_metrics().await {
@@ -46,7 +46,7 @@ impl McpSyncWorker {
             return Ok(());
         }
 
-        info!("Simulating MCP upload for {} pending metrics...", rows.len());
+        debug!("Simulating MCP upload for {} pending metrics...", rows.len());
 
         let mut tx = self.pg_pool.begin().await?;
 

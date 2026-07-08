@@ -3,8 +3,8 @@ backend:
     enabled: true
     maxReplicas: 10
     minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   headless: false
   image: onehumancorp/server:latest
   multiTenant: true
@@ -13,11 +13,11 @@ backend:
   replicas: 2
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
   service:
     port: 8080
   vpa:
@@ -28,8 +28,8 @@ chatwoot:
     enabled: true
     maxReplicas: 10
     minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   databaseUrl: ''
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
@@ -39,11 +39,11 @@ chatwoot:
   replicas: 2
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
   service:
     port: 3000
   vpa:
@@ -62,11 +62,11 @@ fluentBit:
   logLevel: info
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
 kube-prometheus-stack:
   enabled: true
   grafana:
@@ -93,18 +93,18 @@ multiTenant:
   maxOrgs: 5000
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
 ohcCore:
   autoscaling:
     enabled: true
     maxReplicas: 10
     minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
@@ -112,11 +112,11 @@ ohcCore:
   replicas: 2
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
   service:
     port: 18789
   vpa:
@@ -126,8 +126,8 @@ powersync:
     enabled: true
     maxReplicas: 10
     minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   enabled: true
   image: journeyapps/powersync-service:latest
   networkPolicy:
@@ -135,11 +135,11 @@ powersync:
   replicas: 2
   resources:
     limits:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 10m
-      memory: 64Mi
+      cpu: 100m
+      memory: 128Mi
   service:
     port: 8081
     targetPort: 8080

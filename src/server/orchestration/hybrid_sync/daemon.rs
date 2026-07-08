@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
 use std::time::Instant;
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, debug};
 use uuid::Uuid;
 
 pub struct HybridSyncDaemon {
@@ -132,7 +132,7 @@ impl HybridSyncDaemon {
                 .await;
         }
 
-        info!("Successfully synced telemetry batch");
+        debug!("Successfully synced telemetry batch");
 
         Ok(())
     }
@@ -457,7 +457,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
+                debug!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
             }
         }
 
@@ -467,7 +467,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
+                debug!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
             }
         }
 
@@ -496,7 +496,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck RUNNING jobs from SQLite sub_agent_queue", res.rows_affected());
+                debug!("Pruned {} stuck RUNNING jobs from SQLite sub_agent_queue", res.rows_affected());
             }
         }
 
@@ -505,7 +505,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&sqlite_queued_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck QUEUED jobs from SQLite sub_agent_queue", res.rows_affected());
+                debug!("Pruned {} stuck QUEUED jobs from SQLite sub_agent_queue", res.rows_affected());
             }
         }
 
@@ -515,7 +515,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck RUNNING jobs from PostgreSQL sub_agent_queue", res.rows_affected());
+                debug!("Pruned {} stuck RUNNING jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
         }
 
@@ -524,7 +524,7 @@ impl HybridSyncDaemon {
         }
         if let Ok(res) = sqlx::query(&pg_queued_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck QUEUED jobs from PostgreSQL sub_agent_queue", res.rows_affected());
+                debug!("Pruned {} stuck QUEUED jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
         }
 
@@ -616,7 +616,7 @@ impl HybridSyncDaemon {
                 .await?;
 
             _success_count += 1;
-            info!("Successfully synced POS transaction {} to cloud", id);
+            debug!("Successfully synced POS transaction {} to cloud", id);
         }
 
         if batch_size > 0 {

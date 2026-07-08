@@ -29,12 +29,12 @@ impl WorkerPool {
             let handler_clone = handler.clone();
 
             let handle = tokio::spawn(async move {
-                tracing::info!("Worker {} started listening for {:?}", i, types_clone);
+                tracing::debug!("Worker {} started listening for {:?}", i, types_clone);
 
                 loop {
                     tokio::select! {
                         _ = shutdown_rx.recv() => {
-                            tracing::info!("Worker {} shutting down", i);
+                            tracing::debug!("Worker {} shutting down", i);
                             break;
                         }
 

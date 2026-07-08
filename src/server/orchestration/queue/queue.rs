@@ -52,4 +52,6 @@ pub trait TaskQueue: Send + Sync {
 
     /// Marks a job as failed and increments the retry counter, applying exponential backoff scheduling.
     async fn fail(&self, job_id: &str, reason: &str) -> Result<(), String>;
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String>;
+
 }

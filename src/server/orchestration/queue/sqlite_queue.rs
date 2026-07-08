@@ -205,6 +205,31 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         Ok(())
     }
 
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let query_str = "UPDATE ohc_job_queue SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP WHERE status = 'PROCESSING' AND updated_at < datetime('now', '-1 hours')";
+
+        let result = sqlx::query(query_str)
+        .execute(&*self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let query_str = "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours' FROM ohc_job_queue WHERE status = 'PENDING' AND updated_at < datetime('now', '-24 hours')";
+
+        sqlx::query(query_str)
+        .execute(&*self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let query_str = "DELETE FROM ohc_job_queue WHERE status = 'PENDING' AND updated_at < datetime('now', '-24 hours')";
+
+        let stagnant_result = sqlx::query(query_str)
+        .execute(&*self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(result.rows_affected() + stagnant_result.rows_affected())
+    }
+
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 

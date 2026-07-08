@@ -710,7 +710,7 @@ rust_sharded_test(
     size = "large",
     binary = ":server_lib_core_unit_test_bin",
     filters = SERVER_LIB_TEST_GROUPS["core"],
-    shard_count = 6,
+    shard_count = 10,
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
