@@ -625,8 +625,12 @@ pub async fn cost_dashboard_handler(
     let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
 
     // For free tier, base_price is 0, so any cost > 0 might trigger it, but let's say the budget is $10 for free, $50 for starter, $150 for pro, $500 for business
-    let budget_limit = tier.base_price();
-    let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
+    let budget_limit = match tier {
+        ::server_pricing::rate_limit::PlanTier::Free => 10.0,
+        ::server_pricing::rate_limit::PlanTier::Starter => 50.0,
+        ::server_pricing::rate_limit::PlanTier::Pro => 150.0,
+        ::server_pricing::rate_limit::PlanTier::Business => 500.0,
+    };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
