@@ -2912,6 +2912,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/offline-sync", axum::routing::post(api::pos_offline_sync::handle_offline_sync))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -7118,3 +7119,5 @@ mod health_test;
 // optimization done
 #[cfg(test)]
 pub mod chaos_network_test;
+
+// ADD TO END OF FILE
