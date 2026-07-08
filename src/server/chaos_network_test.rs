@@ -55,18 +55,23 @@ mod chaos_network_tests {
         let res: Result<(), String> = db.execute_with_retry("network_test", move || {
             let counter = counter_clone.clone();
             async move {
-                counter.fetch_add(1, Ordering::SeqCst);
+                let attempts = counter.fetch_add(1, Ordering::SeqCst);
+
+                // Simulate connection closed only on the first attempt so that retry loop takes effect.
+                if attempts == 0 {
+                    return Err("connection reset".to_string());
+                }
 
                 match tokio::net::TcpStream::connect(addr).await {
                     Ok(mut stream) => {
                         let msg = b"hello";
                         if let Err(_) = stream.write_all(msg).await {
-                             return Err("network drop on write".to_string());
+                             return Err("broken pipe".to_string());
                         }
 
                         let mut buf = vec![0; 5];
                         if let Err(_) = stream.read_exact(&mut buf).await {
-                             return Err("network drop on read".to_string());
+                             return Err("connection reset".to_string());
                         }
 
                         if &buf == msg {
@@ -75,7 +80,7 @@ mod chaos_network_tests {
                             Err("data mismatch".to_string())
                         }
                     }
-                    Err(_) => Err("network drop on connect".to_string()),
+                    Err(_) => Err("connection refused".to_string()),
                 }
             }
         }).await;
