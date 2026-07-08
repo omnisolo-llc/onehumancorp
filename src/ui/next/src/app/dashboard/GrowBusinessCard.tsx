@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export function GrowBusinessCard() {
   return (
-    <div className="glassmorphism bg-white dark:bg-gray-800 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mt-6 mb-6">
+    <div className="rounded-[24px] shadow-sm overflow-hidden mt-6 mb-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10">
       <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-1"></div>
       <div className="p-6">
         <div className="flex justify-between items-start">
