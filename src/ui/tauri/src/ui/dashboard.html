@@ -955,6 +955,7 @@
         <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
         <a href="/invoice-generator" id="invoice-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Invoice Generator</a>
         <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Flash Sale Generator ⚡</a>
+        <a href="viral-portfolio-generator.html" id="viral-portfolio-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Viral Portfolio Generator 🎨</a>
       </div>
 
 
@@ -2983,117 +2984,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(30px) saturate(210%);
-    -webkit-backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #1d1d1f;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                showTooltip(e, text);
-            }
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
-        if (target) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-});
-</script>
 
 
 <script>
@@ -4100,5 +3990,96 @@ document.addEventListener('DOMContentLoaded', () => {
     </style>
     <script src="help-widget.mjs" type="module"></script>
     <script src="voice-assistant.mjs" type="module"></script>
-  </body>
+
+<!-- Global Search Modal and Logic -->
+<div id="global-search-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('global-search-modal').classList.add('hidden')"></div>
+    <div class="relative w-full max-w-2xl bg-white shadow-2xl rounded-xl overflow-hidden border border-gray-200 m-4 transition-all">
+        <div class="flex items-center px-4 py-3 border-b border-gray-100">
+            <svg class="text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="global-search-input" class="flex-1 w-full px-4 py-2 text-lg bg-transparent border-none outline-none focus:ring-0" placeholder="Search customers, invoices, orders...">
+            <button onclick="document.getElementById('global-search-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto p-2" id="global-search-results">
+            <div class="p-8 text-center text-gray-400 text-sm">Type to start searching across your workspace.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('global-search-btn');
+    const modal = document.getElementById('global-search-modal');
+    const input = document.getElementById('global-search-input');
+    const resultsContainer = document.getElementById('global-search-results');
+
+    if (btn) {
+        btn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            input.focus();
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            modal.classList.remove('hidden');
+            input.focus();
+        }
+        if (e.key === 'Escape') {
+            modal.classList.add('hidden');
+        }
+    });
+
+    let timeoutId;
+    if (input) {
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            clearTimeout(timeoutId);
+
+            if (!query.trim()) {
+                resultsContainer.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">Type to start searching across your workspace.</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="p-8 text-center text-gray-500">Searching...</div>';
+
+            timeoutId = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const results = data.results || [];
+
+                        if (results.length > 0) {
+                            resultsContainer.innerHTML = '<ul class="space-y-1">' + results.map(r => `
+                                <li>
+                                    <a href="${r.link}" class="block px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors group">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="font-medium text-gray-900 group-hover:text-blue-600">${r.title}</div>
+                                                <div class="text-sm text-gray-500 mt-0.5">${r.snippet}</div>
+                                            </div>
+                                            <span class="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded">${r.domain}</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            `).join('') + '</ul>';
+                        } else {
+                            resultsContainer.innerHTML = `<div class="p-8 text-center text-gray-500">No results found for "${query}"</div>`;
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    resultsContainer.innerHTML = '<div class="p-8 text-center text-red-500">Error searching.</div>';
+                }
+            }, 300);
+        });
+    }
+});
+</script>
+
+</body>
 </html>
