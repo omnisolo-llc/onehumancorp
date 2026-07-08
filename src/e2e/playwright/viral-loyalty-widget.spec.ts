@@ -7,16 +7,7 @@ test.describe('Viral Loyalty Widget', () => {
     const path = require('path');
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
 
-    // Serve the HTML file directly through Playwright routing
-    await page.route('**/*viral-loyalty-widget.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'viral-loyalty-widget.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-    await page.route('**/api/v1/growth/referrals/generate', async route => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ referral_link: 'http://example.com/ref/12345' }) });
-    });
-
-    await page.goto('http://mock/viral-loyalty-widget.html');
+    await page.goto('http://localhost:8080/');
 
 
 
