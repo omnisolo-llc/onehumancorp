@@ -764,10 +764,24 @@ impl DB {
 
             match timeout_res {
                 Err(_) => {
-                    return Err(E::from(format!(
-                        "Database operation '{}' timed out",
-                        operation
-                    )));
+                    attempt += 1;
+                    if attempt > max_attempts {
+                        let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                            &self.pool, operation,
+                        )
+                        .await;
+                        return Err(E::from(format!(
+                            "Database operation '{}' timed out",
+                            operation
+                        )));
+                    }
+                    let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
+                    let jittered_backoff = std::time::Duration::from_secs_f64(
+                        backoff.as_secs_f64() * jitter_factor,
+                    );
+                    tokio::time::sleep(jittered_backoff).await;
+                    backoff *= 2;
+                    continue;
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
