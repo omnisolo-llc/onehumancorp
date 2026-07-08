@@ -57,7 +57,7 @@ export function ReviewFeedCard({ review, response, onApprove, onDismiss }: Revie
   };
 
   return (
-    <Card className="glassmorphism mb-4 shadow-md border-orange-200 bg-orange-50/30">
+    <Card className="rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 mb-4 shadow-sm">
       <CardHeader>
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
           <span className="flex items-center gap-2">

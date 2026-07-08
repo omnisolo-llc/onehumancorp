@@ -98,7 +98,7 @@ export function VoiceAssistantFAB() {
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 w-full max-w-[375px] px-4 pointer-events-none">
       {status !== "idle" && (
-        <div className="w-full p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto bg-white/65 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%]">
+        <div className="w-full p-4 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto bg-white/65 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%]">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
