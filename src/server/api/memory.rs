@@ -44,6 +44,20 @@ pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<(dyn crate::mesh_handler::Me
         .with_state(repo)
 }
 
+
+async fn get_assistant_memory(
+    axum::extract::State(repo): axum::extract::State<std::sync::Arc<VectorRepository>>,
+    axum::extract::Path(customer_id): axum::extract::Path<String>,
+    auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<axum::Json<Vec<ohc_builtin_agent::memory_store::AgentSessionSummary>>, (axum::http::StatusCode, String)> {
+    let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
+
+    let results = repo.get_customer_session_summaries(&tenant_id, &customer_id, 10).await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    Ok(axum::Json(results))
+}
+
 async fn list_memories(
     State(repo): State<Arc<VectorRepository>>,
     auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,

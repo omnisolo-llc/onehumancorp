@@ -131,6 +131,15 @@ impl LongTermMemory for NamespaceJsonStore {
         Ok(results)
     }
 
+        fn get_customer_session_summaries<'a>(
+        &'a self,
+        _tenant_id: &'a str,
+        _customer_id: &'a str,
+        _limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<crate::memory_store::AgentSessionSummary>, String>> {
+        Box::pin(async move { Ok(vec![]) })
+    }
+
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         let entry = JsonMemoryEntry {

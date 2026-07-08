@@ -3,6 +3,20 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AgentSessionSummary {
+    pub id: String,
+    pub tenant_id: String,
+    pub agent_id: String,
+    pub customer_id: String,
+    pub session_id: String,
+    pub turn_index: i32,
+    pub summary_embedding: Vec<f32>,
+    pub raw_state: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
     pub id: String,
     pub tenant_id: String,
@@ -62,6 +76,13 @@ impl VectorRepository {
             store: VectorMemoryStore::Sqlite(pool),
             has_sqlite_vec_extension: std::sync::atomic::AtomicBool::new(false),
             sqlite_vec_extension_checked: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+
+        pub fn get_store_pool(&self) -> &sqlx::SqlitePool {
+        match &self.store {
+            VectorMemoryStore::Sqlite(pool) => pool,
+            _ => panic!("Expected Sqlite pool"),
         }
     }
 
@@ -157,6 +178,75 @@ impl VectorRepository {
         }
 
         Ok(())
+    }
+
+        pub async fn upsert_session_summary(&self, summary: &AgentSessionSummary) -> Result<(), String> {
+        let emb_str = serde_json::to_string(&summary.summary_embedding)
+            .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
+
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let query_str = "INSERT INTO agent_session_summaries (id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at)                                  VALUES ($1, $2, $3, $4, $5, $6, $7::vector, $8, $9, $10)                                  ON CONFLICT(id) DO UPDATE SET summary_embedding = excluded.summary_embedding, raw_state = excluded.raw_state, updated_at = excluded.updated_at";
+                sqlx::query(query_str)
+                    .bind(&summary.id)
+                    .bind(&summary.tenant_id)
+                    .bind(&summary.agent_id)
+                    .bind(&summary.customer_id)
+                    .bind(&summary.session_id)
+                    .bind(summary.turn_index)
+                    .bind(&emb_str)
+                    .bind(&summary.raw_state)
+                    .bind(summary.created_at)
+                    .bind(summary.updated_at)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let query_str = "INSERT INTO agent_session_summaries (id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at)                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)                                  ON CONFLICT(id) DO UPDATE SET summary_embedding = excluded.summary_embedding, raw_state = excluded.raw_state, updated_at = excluded.updated_at";
+                sqlx::query(query_str)
+                    .bind(&summary.id)
+                    .bind(&summary.tenant_id)
+                    .bind(&summary.agent_id)
+                    .bind(&summary.customer_id)
+                    .bind(&summary.session_id)
+                    .bind(summary.turn_index)
+                    .bind(&emb_str)
+                    .bind(&summary.raw_state)
+                    .bind(summary.created_at)
+                    .bind(summary.updated_at)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_customer_session_summaries(&self, tenant_id: &str, customer_id: &str, limit: i64) -> Result<Vec<AgentSessionSummary>, String> {
+        let mut results = Vec::new();
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding::text, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = $1 AND customer_id = $2 ORDER BY updated_at DESC LIMIT $3")
+                    .bind(tenant_id).bind(customer_id).bind(limit).fetch_all(pool).await.map_err(|e| e.to_string())?;
+                for row in rows { use sqlx::Row; let emb_str: String = row.try_get("summary_embedding").unwrap_or_else(|_| "[]".to_string()); let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default(); results.push(AgentSessionSummary { id: row.get("id"), tenant_id: row.get("tenant_id"), agent_id: row.get("agent_id"), customer_id: row.get("customer_id"), session_id: row.get("session_id"), turn_index: row.get("turn_index"), summary_embedding: emb, raw_state: row.try_get("raw_state").unwrap_or(None), created_at: row.get("created_at"), updated_at: row.get("updated_at") }); }
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = ? AND customer_id = ? ORDER BY updated_at DESC LIMIT ?")
+                    .bind(tenant_id).bind(customer_id).bind(limit).fetch_all(pool).await.map_err(|e| e.to_string())?;
+                for row in rows {
+                    use sqlx::Row;
+                    let emb_str: String = match row.try_get("summary_embedding") {
+                        Ok(s) => s,
+                        Err(_) => "[]".to_string(),
+                    };
+                    let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                    let raw_state: Option<String> = row.try_get("raw_state").unwrap_or(None);
+                    results.push(AgentSessionSummary { id: row.get("id"), tenant_id: row.get("tenant_id"), agent_id: row.get("agent_id"), customer_id: row.get("customer_id"), session_id: row.get("session_id"), turn_index: row.get("turn_index"), summary_embedding: emb, raw_state, created_at: row.get("created_at"), updated_at: row.get("updated_at") });
+                }
+            }
+        }
+        Ok(results)
     }
 
     pub async fn cross_department_search(
@@ -1128,6 +1218,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Store a new piece of memory (e.g., an architectural decision or summary)
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String>;
 
+    fn get_customer_session_summaries<'a>(
+        &'a self,
+        _tenant_id: &'a str,
+        _customer_id: &'a str,
+        _limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<AgentSessionSummary>, String>> {
+        Box::pin(async move { Ok(vec![]) })
+    }
+
+
     /// 3-Tier: Get the lightweight index (always loaded in context)
     async fn get_lightweight_index(&self) -> Result<String, String> {
         Ok("".to_string())
@@ -1210,6 +1310,18 @@ impl LongTermMemory for PersistentMemoryStore {
             .semantic_search(&self.tenant_id, &embedding, limit as i64)
             .await?;
         Ok(records.into_iter().map(|r| r.content).collect())
+    }
+
+        fn get_customer_session_summaries<'a>(
+        &'a self,
+        tenant_id: &'a str,
+        customer_id: &'a str,
+        limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<AgentSessionSummary>, String>> {
+        let repo = self.repo.clone();
+        let t = tenant_id.to_string();
+        let c = customer_id.to_string();
+        Box::pin(async move { repo.get_customer_session_summaries(&t, &c, limit).await })
     }
 
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
@@ -1354,6 +1466,15 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
+        fn get_customer_session_summaries<'a>(
+        &'a self,
+        _tenant_id: &'a str,
+        _customer_id: &'a str,
+        _limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<AgentSessionSummary>, String>> {
+        Box::pin(async move { Ok(vec![]) })
+    }
+
     async fn store_session_message(
         &self,
         session_id: &str,
@@ -1491,6 +1612,15 @@ impl LongTermMemory for RedisMemoryStore {
             .map_err(|e| e.to_string())?;
 
         Ok(results)
+    }
+
+        fn get_customer_session_summaries<'a>(
+        &'a self,
+        _tenant_id: &'a str,
+        _customer_id: &'a str,
+        _limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<AgentSessionSummary>, String>> {
+        Box::pin(async move { Ok(vec![]) })
     }
 
     async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
