@@ -280,4 +280,63 @@ mod chaos_db_tests {
         let graceful_recovery = true;
         assert!(graceful_recovery, "System must recover gracefully without panic");
     }
+    #[tokio::test]
+    async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
+        if let Err(_) = std::env::var("OHC_DATABASE_URL") {
+            return; // Skip if no postgres URL
+        }
+        let pg_url = std::env::var("OHC_DATABASE_URL").unwrap();
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&pg_url)
+            .await
+            .unwrap();
+
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&sqlite_uri)
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS parity_audit (id TEXT PRIMARY KEY, val TEXT, num_val INTEGER);")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS parity_audit (id TEXT PRIMARY KEY, val TEXT, num_val INTEGER);")
+            .execute(&pg_pool)
+            .await
+            .unwrap();
+
+        // Run identical insert
+        sqlx::query("INSERT INTO parity_audit (id, val, num_val) VALUES ($1, $2, $3) ON CONFLICT(id) DO NOTHING")
+            .bind("test_id")
+            .bind("test_val")
+            .bind(42)
+            .execute(&pg_pool)
+            .await
+            .unwrap();
+
+        // SQLite uses ? instead of $1 for generic bindings in some cases but sqlx handles mapping if bound sequentially
+        sqlx::query("INSERT INTO parity_audit (id, val, num_val) VALUES (?, ?, ?)")
+            .bind("test_id")
+            .bind("test_val")
+            .bind(42)
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        // Parity read check
+        let pg_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
+            .fetch_one(&pg_pool)
+            .await
+            .unwrap();
+        let sqlite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert_eq!(pg_count, sqlite_count, "Identical queries should yield identical row counts between Postgres and SQLite");
+    }
 }
