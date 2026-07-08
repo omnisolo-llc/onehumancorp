@@ -39,7 +39,11 @@ impl ResearcherLlmClient for AdapterLlm {
         let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
         let response_text = if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false}]"#.to_string()
+            if prompt.contains("Plumbing Diagnostic") {
+                r#"[{"description": "Plumbing Diagnostic", "unit_price_cents": 25000, "quantity": 1, "is_optional": false, "service_item_id": "si-1"}]"#.to_string()
+            } else {
+                r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false}]"#.to_string()
+            }
         } else {
             crate::minimax::LocalLLMClient::new().reason(&prompt).await?
         };
@@ -105,6 +109,7 @@ pub struct QuoteLineItemRequest {
     pub unit_price_cents: i64,
     pub quantity: i32,
     pub is_optional: bool,
+    pub service_item_id: Option<String>,
 }
 
 async fn create_quote(
@@ -148,6 +153,7 @@ async fn create_quote(
                     unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
                     quantity: 1,
                     is_optional: false,
+                    service_item_id: None,
                 });
             }
         }
@@ -178,7 +184,7 @@ async fn create_quote(
     for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id, service_item_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $8)"
         )
         .bind(item_id)
         .bind(quote_id)
@@ -187,6 +193,7 @@ async fn create_quote(
         .bind(item.quantity)
         .bind(item.is_optional)
         .bind("default_tenant".to_string())
+        .bind(&item.service_item_id)
         .execute(&mut *tx)
         .await;
 
@@ -210,12 +217,29 @@ async fn draft_quote_agent(
 ) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
 
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+    // Fetch Service Items for RAG
+    let service_items: Vec<crate::domain::repository::models::ServiceItem> =
+        sqlx::query_as("SELECT * FROM service_items WHERE tenant_id = $1")
+            .bind(&payload.tenant_id)
+            .fetch_all(&pool)
+            .await
+            .unwrap_or_default();
+
+    let mut catalog_context = String::new();
+    for item in service_items {
+        catalog_context.push_str(&format!("- ID: {}, Name: '{}', Base Price (cents): {}\n", item.id, item.name, item.base_price));
+    }
+
+    let mut system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean), and optionally 'service_item_id' (string) if it matches a catalog item. Return ONLY the raw JSON array.\n\n".to_string();
+    if !catalog_context.is_empty() {
+        system_prompt.push_str("Available Catalog Items:\n");
+        system_prompt.push_str(&catalog_context);
+    }
 
     let req = ChatRequest {
         model: "default-model".to_string(),
         system: system_prompt,
-        messages: vec![Message::user(payload.inquiry)],
+        messages: vec![Message::user(payload.inquiry.clone())], // Need to use .clone() if moving below
         temperature: 0.1,
         max_tokens: 1024,
         tools: vec![],
@@ -244,14 +268,39 @@ async fn draft_quote_agent(
     let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
     let required_deposit_cents = total_amount_cents / 3;
 
+    // Manager Agent: Verify availability and propose scheduling slot
+    let (mut proposed_slot_id, mut service_id) = (None, None);
+
+    if !line_items.is_empty() {
+        if let Some(ref s_id) = line_items[0].service_item_id {
+            // Find an available slot for this service item (acting as service_id here)
+            // Or just any available slot in general to propose
+            let available_slot = sqlx::query(
+                "SELECT id, service_id FROM booking_slots WHERE tenant_id = $1 AND status = 'available' AND start_time > NOW() ORDER BY start_time ASC LIMIT 1"
+            )
+            .bind(&payload.tenant_id)
+            .fetch_optional(&pool)
+            .await
+            .unwrap_or(None);
+
+            if let Some(row) = available_slot {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let s_val: Option<String> = row.get("service_id");
+                proposed_slot_id = Some(id);
+                service_id = s_val.or(Some(s_id.clone()));
+            }
+        }
+    }
+
     let create_req = CreateQuoteRequest {
         tenant_id: payload.tenant_id,
         customer_id: payload.customer_id,
         total_amount_cents: Some(total_amount_cents),
         required_deposit_cents: Some(required_deposit_cents),
         stripe_payment_link: None,
-        proposed_slot_id: None,
-        service_id: None,
+        proposed_slot_id,
+        service_id,
         line_items,
     };
 
@@ -351,7 +400,7 @@ async fn update_quote(
     for item in payload.line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id, service_item_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $8)"
         )
         .bind(item_id)
         .bind(quote_id)
@@ -360,6 +409,7 @@ async fn update_quote(
         .bind(item.quantity)
         .bind(item.is_optional)
         .bind("default_tenant".to_string())
+        .bind(&item.service_item_id)
         .execute(&mut *tx)
         .await;
 
@@ -461,6 +511,7 @@ mod tests {
             unit_price_cents: 100,
             quantity: 1,
             is_optional: false,
+            service_item_id: None,
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
         }];

@@ -379,6 +379,17 @@ pub struct QuoteLineItem {
     pub unit_price_cents: i64,
     pub quantity: i32,
     pub is_optional: bool,
+    pub service_item_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ServiceItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub base_price: f64,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

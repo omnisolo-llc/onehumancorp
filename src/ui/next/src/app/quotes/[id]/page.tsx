@@ -19,6 +19,7 @@ interface Quote {
   total_amount_cents: number;
   required_deposit_cents: number;
   stripe_payment_link?: string;
+  proposed_slot_id?: string;
   line_items?: LineItem[];
 }
 
@@ -149,6 +150,12 @@ export default function QuoteReviewPage() {
               <span>Required Deposit</span>
               <span>${(quote.required_deposit_cents / 100).toFixed(2)}</span>
             </div>
+            {quote.proposed_slot_id && (
+              <div className="flex justify-between items-center text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                <span>Proposed Schedule</span>
+                <span>Slot Available</span>
+              </div>
+            )}
           </div>
 
           {quote.stripe_payment_link && (

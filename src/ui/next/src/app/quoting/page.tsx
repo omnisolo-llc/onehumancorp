@@ -135,6 +135,11 @@ function QuotingContent() {
           <div className="p-6 md:p-8 border-b border-gray-100">
             <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">Quote Summary</h2>
             <p className="text-gray-600">Review the scope and pricing below. You can adjust the quantity and price if needed.</p>
+            {quote.proposed_slot_id && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-full">
+                <span>🗓️ Available slot reserved for this service</span>
+              </div>
+            )}
           </div>
 
           <div className="p-6 md:p-8">
