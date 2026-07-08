@@ -2,7 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Loyalty Widget', () => {
   test('should load the widget and generate a loyalty program', async ({ page }) => {
-    await page.goto('/ui/viral-loyalty-widget.html');
+    await page.goto('/ui/dashboard.html');
+    await page.click('a#loyalty-link');
 
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
     const generateBtn = page.locator('#generate-btn');
@@ -28,7 +29,8 @@ test.describe('Viral Loyalty Widget', () => {
 
   test('should copy the share link to clipboard', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/ui/viral-loyalty-widget.html');
+    await page.goto('/ui/dashboard.html');
+    await page.click('a#loyalty-link');
 
     const generateBtn = page.locator('#generate-btn');
     await generateBtn.click();
@@ -54,7 +56,8 @@ test.describe('Viral Loyalty Widget', () => {
 
   test('should show responsive layout on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/ui/viral-loyalty-widget.html');
+    await page.goto('/ui/dashboard.html');
+    await page.click('a#loyalty-link');
     await page.waitForTimeout(100);
 
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
@@ -65,14 +68,16 @@ test.describe('Viral Loyalty Widget', () => {
   });
 
   test('should navigate back to the dashboard', async ({ page }) => {
-    await page.goto('/ui/viral-loyalty-widget.html');
+    await page.goto('/ui/dashboard.html');
+    await page.click('a#loyalty-link');
     const backLink = page.locator('.back-link');
     await expect(backLink).toBeVisible();
     await expect(backLink).toHaveAttribute('href', '/dashboard.html');
   });
 
   test('should display emojis in stamps', async ({ page }) => {
-    await page.goto('/ui/viral-loyalty-widget.html');
+    await page.goto('/ui/dashboard.html');
+    await page.click('a#loyalty-link');
 
     const generateBtn = page.locator('#generate-btn');
     await generateBtn.click();

@@ -7,9 +7,14 @@ test.describe('Viral Loyalty Widget', () => {
     const path = require('path');
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
 
-    await page.goto('http://localhost:8080/');
+    // First go to index and navigate to dashboard, then to the widget
 
 
+    // Simulate login / navigation to dashboard if needed, or go directly to dashboard if index redirects
+    await page.goto('http://localhost:8080/ui/dashboard.html');
+
+    // Click the widget link in the dashboard
+    await page.click('a#loyalty-link');
 
     // Wait for main elements
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
@@ -37,6 +42,6 @@ test.describe('Viral Loyalty Widget', () => {
 
     // Check share link generated correctly
     const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=12345/);
+    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=e2e-tenant/);
   });
 });
