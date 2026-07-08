@@ -3546,23 +3546,6 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for inputs
-      document.querySelectorAll("select, input").forEach((input) => {
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            if (e.target.id === "chat-input" || e.target.id === "chat-image-url") {
-              return;
-            }
-            e.preventDefault();
-            const step = e.target.closest(".step");
-            const nextBtn =
-              step.querySelector(".next-step-btn") ||
-              step.querySelector("#finish-btn");
-            if (nextBtn) nextBtn.click();
-          }
-        });
-      });
-
       document.querySelectorAll(".prev-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const prevStepId = e.target.getAttribute("data-prev");
@@ -4331,24 +4314,7 @@
         });
       }
 
-      // Enter key support for text, email, and password inputs
-      document
-        .querySelectorAll(
-          'input[type="text"], input[type="email"], input[type="password"]',
-        )
-        .forEach((input) => {
-          input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const step = e.target.closest(".step");
-              const nextBtn =
-                step.querySelector(".next-step-btn") ||
-                step.querySelector("#finish-btn");
-              if (nextBtn) nextBtn.click();
-            }
-          });
-        });
-    </script>
+      </script>
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {
