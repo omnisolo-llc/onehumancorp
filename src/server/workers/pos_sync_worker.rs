@@ -110,6 +110,73 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .await
             .unwrap();
 
+
+        // Handle tap_to_pay offline processing via Stripe
+        let mutation_type = payload.get("mutation_type").and_then(|v| v.as_str()).unwrap_or("");
+        if mutation_type == "tap_to_pay" {
+            // Securely create and capture Stripe intent since it's an offline tap-to-pay
+            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+            let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+            // Extract product id if available
+            let mut qty = None;
+            let mut p_id_owned = None;
+            if let Some(mutation) = payload.get("mutation") {
+                p_id_owned = mutation.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
+                qty = mutation.get("quantity_deducted").and_then(|v| v.as_i64()).map(|v| v as i32);
+            } else if let Some(items_str) = payload.get("payload").and_then(|v| v.as_str()) {
+                if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                    if let Some(first) = items_array.first() {
+                        p_id_owned = first.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        qty = first.get("quantity").and_then(|v| v.as_i64()).map(|v| v as i32);
+                    }
+                }
+            }
+            let p_id = p_id_owned.as_deref();
+
+            if client.require_api_key().is_ok() {
+                // Idempotency key uses the transaction_id to prevent double charges
+                match client.create_terminal_payment_intent(
+                    &job.tenant_id,
+                    amount_cents,
+                    "usd", // Assuming USD for now, or use payload.currency
+                    p_id,
+                    qty,
+                    None,
+                    &transaction_id,
+                ).await {
+                    Ok((intent_id, _)) => {
+                        // Capture it
+                        match client.capture_terminal_payment_intent(&intent_id).await {
+                            Ok(_) => {
+                                // Proceed to fulfill inventory below
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to capture Stripe intent for offline tap-to-pay: {}", e);
+                                sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
+                                    .bind(transaction_id)
+                                    .execute(&mut *tx)
+                                    .await
+                                    .unwrap();
+                                let _ = tx.commit().await;
+                                return Ok(());
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to create Stripe intent for offline tap-to-pay: {}", e);
+                        sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
+                            .bind(transaction_id)
+                            .execute(&mut *tx)
+                            .await
+                            .unwrap();
+                        let _ = tx.commit().await;
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
         let payload_amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
 
         if payload_amount_cents == 4002 {
