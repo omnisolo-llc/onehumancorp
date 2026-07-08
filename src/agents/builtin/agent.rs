@@ -387,6 +387,47 @@ impl crate::langgraph::Reducer<AgentState> for AgentStateReducer {
 }
 
 impl Agent {
+
+
+    fn build_verification_manager(&self, cfg: &AgentRunConfig) -> crate::verification_loops::VerificationManager {
+        let mut verification_manager = crate::verification_loops::VerificationManager::new();
+        if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
+            verification_manager.add_computational(std::sync::Arc::new(
+                crate::verification_loops::BashComputationalGuide {
+                    command: cfg.computational_guide_command.clone(),
+                    workspace_path: cfg.workspace_path.clone(),
+                },
+            ));
+        }
+        if cfg.enable_visual_verification {
+            if cfg.visual_verification_command == "playwright" {
+                verification_manager.add_visual(std::sync::Arc::new(
+                    crate::verification_loops::PlaywrightVisualVerifier,
+                ));
+            } else if !cfg.visual_verification_command.is_empty() {
+                verification_manager.add_visual(std::sync::Arc::new(
+                    crate::verification_loops::BashVisualVerifier {
+                        command: cfg.visual_verification_command.clone(),
+                        workspace_path: cfg.workspace_path.clone(),
+                    },
+                ));
+            }
+        }
+        if cfg.enable_llm_judge {
+            verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
+                llm: self.llm.clone(),
+                model: cfg.model.clone(),
+                criteria: Some(format!(
+                    "correctness, completeness, and strict adherence to these instructions: {}",
+                    cfg.developer_instructions
+                )),
+                confidence_threshold: cfg.confidence_threshold,
+            }));
+        }
+        verification_manager
+    }
+
+
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
@@ -942,6 +983,9 @@ impl Agent {
         }
 
         let mut messages = vec![crate::types::Message::user(processed_initial_message)];
+
+        let verification_manager = self.build_verification_manager(cfg);
+
         let mut turn_count = 0;
         let mut total_tokens = 0;
         let mut total_session_cost = 0.0;
@@ -1137,45 +1181,11 @@ impl Agent {
                         e
                     ))));
                 }
-                let mut verification_manager =
-                    crate::verification_loops::VerificationManager::new();
-                if cfg.enable_computational_guides && !cfg.computational_guide_command.is_empty() {
-                    verification_manager.add_computational(std::sync::Arc::new(
-                        crate::verification_loops::BashComputationalGuide {
-                            command: cfg.computational_guide_command.clone(),
-                            workspace_path: cfg.workspace_path.clone(),
-                        },
-                    ));
-                }
-                if cfg.enable_visual_verification {
-                    if cfg.visual_verification_command == "playwright" {
-                        verification_manager.add_visual(std::sync::Arc::new(
-                            crate::verification_loops::PlaywrightVisualVerifier,
-                        ));
-                    } else if !cfg.visual_verification_command.is_empty() {
-                        verification_manager.add_visual(std::sync::Arc::new(
-                            crate::verification_loops::BashVisualVerifier {
-                                command: cfg.visual_verification_command.clone(),
-                                workspace_path: cfg.workspace_path.clone(),
-                            },
-                        ));
-                    }
-                }
-                if cfg.enable_llm_judge {
-                    verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
-                        llm: self.llm.clone(),
-                        model: cfg.model.clone(),
-                        criteria: Some(format!(
-                            "correctness, completeness, and strict adherence to these instructions: {}",
-                            cfg.developer_instructions
-                        )),
-                        confidence_threshold: cfg.confidence_threshold,
-                    }));
-                }
+
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&msg.content, &current_context)
+                    .run_pre_action_guides(&msg.content, &current_context)
                     .await
                 {
                     messages.push(crate::types::Message::user(e));
@@ -1198,12 +1208,37 @@ impl Agent {
                     )));
                     continue;
                 }
+                if let Err(e) = verification_manager
+                    .run_post_action_sensors(&msg.content, initial_message)
+                    .await
+                {
+                    messages.push(crate::types::Message::user(format!(
+                        "[Verification Loop REJECTED the final output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
+                        e
+                    )));
+                    continue;
+                }
                 if let Some(store) = &self.memory_store {
                     let _ = store
                         .store_session_message(&cfg.agent_id, "assistant", &msg.content)
                         .await;
                 }
                 return Ok(msg.content);
+            }
+
+
+            // SOTA Harness Patterns (2025-2026): Guides (steer before action)
+            let current_context = serde_json::to_string(&messages).unwrap_or_default();
+            let tool_calls_json = serde_json::to_string(&msg.tool_calls).unwrap_or_default();
+            if let Err(e) = verification_manager
+                .run_pre_action_guides(&tool_calls_json, &current_context)
+                .await
+            {
+                messages.push(crate::types::Message::user(format!(
+                    "[Pre-Action Verification REJECTED the proposed tools]\n{}\n\nPlease self-correct.",
+                    e
+                )));
+                continue;
             }
 
             // 6. Execute tool calls and Format results back
@@ -3657,6 +3692,9 @@ impl Agent {
         // 1. The Orchestration Loop
         // Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
         // Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
+
+        let verification_manager = self.build_verification_manager(cfg);
+
         let mut turn_count = 0;
         while turn_count < max_iterations {
             let iteration = turn_count;
@@ -3995,7 +4033,7 @@ impl Agent {
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&last_assistant_content, &current_context)
+                    .run_pre_action_guides(&last_assistant_content, &current_context)
                     .await
                 {
                     let mut user_msg = Message::user(e);

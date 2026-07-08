@@ -175,7 +175,7 @@ impl VerificationManager {
         self.inferential.push(sensor);
     }
 
-    pub async fn run_computational_guides(&self, code: &str, context: &str) -> Result<(), String> {
+    pub async fn run_pre_action_guides(&self, code: &str, context: &str) -> Result<(), String> {
         let futures = self
             .computational
             .iter()
@@ -349,11 +349,11 @@ mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::Usage;
 
-    struct MockComputationalGuide {
-        should_pass: bool,
+    pub struct MockComputationalGuide {
+        pub should_pass: bool,
     }
     #[async_trait::async_trait]
-    impl ComputationalGuide for MockComputationalGuide {
+    impl ComputationalGuide for super::tests::MockComputationalGuide {
         async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
             if self.should_pass {
                 Ok(())
@@ -363,11 +363,11 @@ mod tests {
         }
     }
 
-    struct MockVisualVerifier {
-        should_pass: bool,
+    pub struct MockVisualVerifier {
+        pub should_pass: bool,
     }
     #[async_trait::async_trait]
-    impl VisualVerifier for MockVisualVerifier {
+    impl VisualVerifier for super::tests::MockVisualVerifier {
         async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
             if self.should_pass {
                 Ok(())
@@ -557,15 +557,15 @@ mod tests {
     async fn test_verification_manager() {
         let mut manager = VerificationManager::new();
 
-        manager.add_computational(Arc::new(MockComputationalGuide { should_pass: true }));
-        manager.add_visual(Arc::new(MockVisualVerifier { should_pass: true }));
+        manager.add_computational(Arc::new(super::tests::MockComputationalGuide { should_pass: true }));
+        manager.add_visual(Arc::new(super::tests::MockVisualVerifier { should_pass: true }));
 
-        assert!(manager.run_computational_guides("", "").await.is_ok());
+        assert!(manager.run_pre_action_guides("", "").await.is_ok());
         assert!(manager.run_visual_verifiers("").await.is_ok());
 
         let mut fail_manager = VerificationManager::new();
-        fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
-        assert!(fail_manager.run_computational_guides("", "").await.is_err());
+        fail_manager.add_computational(Arc::new(super::tests::MockComputationalGuide { should_pass: false }));
+        assert!(fail_manager.run_pre_action_guides("", "").await.is_err());
     }
 
     #[tokio::test]
@@ -637,5 +637,50 @@ mod tests {
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(err.contains("APPROVED the output, but confidence 0.40 was below threshold 0.80"));
+    }
+}
+
+#[cfg(test)]
+mod pre_post_action_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_verification_manager_pre_action() {
+        let mut manager = VerificationManager::new();
+        manager.add_computational(Arc::new(super::tests::MockComputationalGuide { should_pass: true }));
+        assert!(manager.run_pre_action_guides("tool_call", "context").await.is_ok());
+
+        let mut fail_manager = VerificationManager::new();
+        fail_manager.add_computational(Arc::new(super::tests::MockComputationalGuide { should_pass: false }));
+        assert!(fail_manager.run_pre_action_guides("tool_call", "context").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verification_manager_post_action() {
+        let mut manager = VerificationManager::new();
+        manager.add_visual(Arc::new(super::tests::MockVisualVerifier { should_pass: true }));
+        assert!(manager.run_post_action_sensors("results", "task").await.is_ok());
+
+        let mut fail_manager = VerificationManager::new();
+        fail_manager.add_visual(Arc::new(super::tests::MockVisualVerifier { should_pass: false }));
+        assert!(fail_manager.run_post_action_sensors("results", "task").await.is_err());
+    }
+}
+
+impl VerificationManager {
+    /// 10. Verification Loops: Sensors (observe after action).
+    /// Executes visual and inferential sensors to evaluate the state after action(s) are performed.
+    pub async fn run_post_action_sensors(&self, action_results: &str, task_objective: &str) -> Result<(), String> {
+        let mut errors = Vec::new();
+        if let Err(e) = self.run_visual_verifiers(action_results).await {
+            errors.push(e);
+        }
+        if let Err(e) = self.run_inferential_sensors(action_results, task_objective).await {
+            errors.push(e);
+        }
+        if !errors.is_empty() {
+            return Err(errors.join("\n---\n"));
+        }
+        Ok(())
     }
 }

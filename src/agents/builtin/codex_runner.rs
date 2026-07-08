@@ -492,7 +492,7 @@ impl AppServer {
                         },
                     ));
                     verification_manager
-                        .run_computational_guides(&output_text, &task_context)
+                        .run_pre_action_guides(&output_text, &task_context)
                         .await
                 }
                 "visual" => {
