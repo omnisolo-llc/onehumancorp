@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viral Give-Get Widget</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+      color: #1d1d1f;
+    }
+
+    .container {
+      max-width: 450px;
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 25px;
+      line-height: 1.4;
+      color: #86868b;
+    }
+
+    #result-area p {
+      color: #1d1d1f;
+    }
+
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      min-height: 44px;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+
+    button:hover { background-color: #0052cc; transform: translateY(-1px); }
+    button:active { transform: scale(0.98); }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 25px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: opacity 0.2s;
+    }
+
+    .back-link:hover { opacity: 0.8; }
+
+    #result-area {
+      display: none;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid rgba(134, 134, 139, 0.2);
+    }
+
+    .card-preview {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .give-get-preview {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 10px;
+    }
+
+    .give-get-box {
+      background: #f0f7ff;
+      border: 2px dashed #0066FF;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      width: 120px;
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+
+    .give-get-box.active {
+      background: #0066FF;
+      color: white;
+      opacity: 1;
+    }
+
+    .give-get-box h3 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .give-get-box p {
+      margin: 0;
+      font-size: 20px;
+      font-weight: bold;
+      color: inherit;
+    }
+
+    .arrow {
+      font-size: 24px;
+      color: #999;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .demo-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .demo-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #16161a;
+        color: #F5F5F7;
+      }
+      .container, .card-preview {
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      p {
+        color: #a1a1a6;
+      }
+      #result-area {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      #result-area h2, #result-area p {
+        color: inherit;
+      }
+      #share-link {
+        background-color: #1c1c1e !important;
+        color: #F5F5F7 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      #copy-btn {
+        background-color: #333 !important;
+        color: white !important;
+      }
+      .form-group input {
+        background-color: #1c1c1e;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .give-get-box {
+        background: rgba(22, 22, 26, 0.7);
+      }
+      .give-get-box.active {
+        background: #0066FF;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">🎁</div>
+    <h1>Viral Give-Get Generator</h1>
+    <p>Create a classic "Give 20%, Get $10" referral program. Friends get a discount, and you get rewarded when they buy.</p>
+
+    <div class="card-preview">
+        <div class="form-group">
+            <label for="give-reward">Give (Friend's Reward)</label>
+            <input type="text" id="give-reward" value="20% Off" />
+        </div>
+        <div class="form-group">
+            <label for="get-reward">Get (Your Reward)</label>
+            <input type="text" id="get-reward" value="$10 Credit" />
+        </div>
+
+       <div class="give-get-preview">
+         <div class="give-get-box" id="give-box">
+           <h3>Give</h3>
+           <p id="give-display">20% Off</p>
+         </div>
+         <div class="arrow">➡️</div>
+         <div class="give-get-box" id="get-box">
+           <h3>Get</h3>
+           <p id="get-display">$10 Credit</p>
+         </div>
+       </div>
+    </div>
+
+    <button id="generate-btn">Generate Referral Link</button>
+
+    <div id="result-area">
+      <h2 style="font-size: 18px; margin-bottom: 10px;">Link Generated Successfully!</h2>
+      <p style="margin-bottom: 15px; font-weight: 500;">Share this link to start your Give-Get loop:</p>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="share-link" class="give-get-share-link" readonly style="flex: 1; padding: 12px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.65);" />
+        <button id="copy-btn" style="width: auto; padding: 12px 20px; min-height: 44px; background-color: #1d1d1f; box-shadow: none;">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    const giveInput = document.getElementById('give-reward');
+    const getInput = document.getElementById('get-reward');
+    const giveDisplay = document.getElementById('give-display');
+    const getDisplay = document.getElementById('get-display');
+
+    giveInput.addEventListener('input', (e) => {
+        giveDisplay.textContent = e.target.value;
+    });
+
+    getInput.addEventListener('input', (e) => {
+        getDisplay.textContent = e.target.value;
+    });
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      const giveBox = document.getElementById('give-box');
+      const getBox = document.getElementById('get-box');
+
+      giveBox.classList.remove('active');
+      getBox.classList.remove('active');
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        let refId = tenantId;
+
+        try {
+          // Send request without body since handle_referral_generate does not expect a body
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+              }
+          });
+
+          if (!res.ok) {
+              throw new Error("API returned " + res.status);
+          }
+
+          const data = await res.json();
+          if (data.referral_link) {
+              refId = data.referral_link.split('/').pop();
+          }
+        } catch (fetchErr) {
+            console.error("Network unreachable or API error", fetchErr);
+            let toast = document.getElementById('demo-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'demo-toast';
+                toast.className = 'demo-toast';
+                document.body.appendChild(toast);
+            }
+            toast.style.background = 'rgba(220, 38, 38, 0.9)'; // Red error background
+            toast.textContent = 'Failed to generate referral link';
+
+            // Trigger reflow
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+
+            // Abort generation process on error
+            btn.disabled = false;
+            btn.textContent = 'Generate Referral Link';
+            return;
+        }
+
+        const baseUrl = window.location.origin;
+        document.getElementById('share-link').value = `${baseUrl}/give-get/join?ref=${refId}`;
+
+        // Animate boxes
+        setTimeout(() => { giveBox.classList.add('active'); }, 200);
+        setTimeout(() => { getBox.classList.add('active'); }, 600);
+
+        setTimeout(() => {
+           document.getElementById('result-area').style.display = 'block';
+        }, 1000);
+
+      } catch (err) {
+        console.error("Error generating link:", err);
+      } finally {
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = 'Generate Referral Link';
+        }, 1000);
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const urlInput = document.getElementById('share-link');
+        urlInput.select();
+        try {
+            await navigator.clipboard.writeText(urlInput.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    });
+  </script>
+</body>
+</html>
