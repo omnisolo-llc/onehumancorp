@@ -35,3 +35,34 @@ test.describe('Master Catalog B.10 / C.4: Verification Loops UI integration', ()
     await expect(page.locator('.verification-result').first()).toBeVisible({ timeout: 15000 });
   });
 });
+
+  test('CUJ: Verification Loops Dashboard displays Computational Guide option', async ({ page, unlimitedAdminUser, loginAs }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/verification-loops');
+    await expect(page.getByRole('button', { name: /Run Computational Guide/i })).toBeVisible();
+  });
+
+  test('CUJ: Verification Loops Dashboard displays Visual Verifier option', async ({ page, unlimitedAdminUser, loginAs }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/verification-loops');
+    await expect(page.getByRole('button', { name: /Run Visual Verifier/i })).toBeVisible();
+  });
+
+  test('CUJ: Verification Loops Dashboard displays Inferential Sensor option', async ({ page, unlimitedAdminUser, loginAs }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/verification-loops');
+    await expect(page.getByRole('button', { name: /Run Inferential Sensor/i })).toBeVisible();
+  });
+
+  test('CUJ: Verification Loops inputs capture text correctly', async ({ page, unlimitedAdminUser, loginAs }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/verification-loops');
+
+    const taskContextInput = page.getByPlaceholder(/e.g. Write a bash script/i).first();
+    await taskContextInput.fill('Check spelling');
+    await expect(taskContextInput).toHaveValue('Check spelling');
+
+    const outputInput = page.getByPlaceholder(/echo 'ok'/i).first();
+    await outputInput.fill('ok');
+    await expect(outputInput).toHaveValue('ok');
+  });
