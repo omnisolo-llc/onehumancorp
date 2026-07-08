@@ -317,6 +317,7 @@ pub struct PosOfflineTransaction {
     pub currency: String,
     pub payload: String,
     pub timestamp: Option<String>,
+    pub mutation_type: Option<String>,
     pub device_signature: Option<String>,
 }
 
@@ -498,12 +499,23 @@ pub async fn sync_offline_transactions_handler(
                         let payload_val: serde_json::Value = row.get("payload");
                         let payload_str = payload_val.to_string();
 
+
+                        let mut m_type = None;
+                        for tx_req in &req_data.transactions {
+                            if tx_req.id.as_deref() == Some(tx_id.as_str()) {
+                                m_type = tx_req.mutation_type.clone();
+                                break;
+                            }
+                        }
+
                         let job_payload = serde_json::json!({
+
                             "pos_transaction_id": tx_id,
                             "client_id": client_id_clone,
                             "amount_cents": amount_cents,
                             "currency": currency,
                             "payload": payload_str,
+                            "mutation_type": m_type,
                         }).to_string();
 
                         b.push_bind(job_id)

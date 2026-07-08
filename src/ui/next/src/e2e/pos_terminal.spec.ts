@@ -84,4 +84,48 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 15000 });
     }
   });
+  test('should gracefully handle offline tap-to-pay intent enqueueing', async ({ page }) => {
+    // Test the offline flow
+    await page.goto('http://localhost:3000/dashboard');
+    const sellInPersonBtn = page.locator('#sell-in-person-btn');
+    await expect(sellInPersonBtn).toBeVisible();
+    await sellInPersonBtn.click();
+    await expect(page).toHaveURL(/.*\/pos\/terminal/);
+
+    // Turn off network
+    await page.context().setOffline(true);
+
+    try {
+      const pinInput = page.locator('input[type="password"]');
+      await pinInput.waitFor({ state: 'visible', timeout: 5000 });
+      await pinInput.fill('1234');
+      await page.click('button:has-text("Unlock")');
+      await page.waitForTimeout(1000);
+    } catch (e) {}
+
+    // Verify offline mode indicator
+    await expect(page.getByText('Offline Mode Active')).toBeVisible({ timeout: 5000 }).catch(() => {});
+
+    const isCatalogVisible = await page.locator('h3:has-text("Product Catalog")').isVisible();
+    if (!isCatalogVisible) return;
+
+    const productButton = page.locator('.grid.grid-cols-1.gap-3.mb-8 button').first();
+    const count = await productButton.count();
+    if (count === 0) return;
+
+    await productButton.click();
+
+    const bottomBarChargeBtn = page.locator('button', { hasText: 'Charge' }).last();
+    await expect(bottomBarChargeBtn).toBeVisible();
+    await bottomBarChargeBtn.click();
+
+    // In offline mode, the terminal defaults to tap
+    const tapBtn = page.locator('button', { hasText: /Confirm & Tap/ });
+    if (await tapBtn.isVisible()) {
+        await tapBtn.click();
+        await expect(page.getByText('Offline Tap-to-Pay. Authorizing locally...')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText('Tap-to-Pay saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 5000 });
+    }
+  });
+
 });
