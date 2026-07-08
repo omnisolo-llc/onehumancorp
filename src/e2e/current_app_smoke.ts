@@ -103,6 +103,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     }
 
     // Verify Referral Leaderboard Generator
+    await page.goto('/ui/viral-before-after-slider.html');
+    await page.waitForTimeout(1000);
+    const sliderTitle = await page.locator('h1', { hasText: 'Before & After Slider' });
+    await expect(sliderTitle).toBeVisible();
+
     await page.goto('/referral-leaderboard-generator');
 
 

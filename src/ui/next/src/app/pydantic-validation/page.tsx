@@ -57,7 +57,7 @@ export default function PydanticValidationPage() {
         Test how the system validates tool payloads and generates recoverable errors.
       </p>
 
-      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/40 rounded-2xl">
+      <div className="space-y-6 bg-white/65 backdrop-blur-[40px] backdrop-saturate-[2.5] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/40 rounded-2xl">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool Name

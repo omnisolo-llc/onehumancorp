@@ -70,4 +70,20 @@ test.describe('Viral Loyalty Widget', () => {
     await expect(backLink).toBeVisible();
     await expect(backLink).toHaveAttribute('href', '/dashboard.html');
   });
+
+  test('should display emojis in stamps', async ({ page }) => {
+    await page.goto('/ui/viral-loyalty-widget.html');
+
+    const generateBtn = page.locator('#generate-btn');
+    await generateBtn.click();
+    const resultArea = page.locator('#result-area');
+    await expect(resultArea).toBeVisible({ timeout: 5000 });
+
+    const filledStamps = page.locator('.stamp.filled');
+    await expect(filledStamps).toHaveCount(4);
+
+    // Check that at least one stamp contains the coffee emoji
+    const firstStamp = filledStamps.first();
+    await expect(firstStamp).toContainText('☕');
+  });
 });

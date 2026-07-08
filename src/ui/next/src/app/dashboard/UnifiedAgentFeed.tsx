@@ -707,12 +707,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         Action Required
       </h2>
       {isOffline && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+        <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
         </div>
       )}
       {offlineActionsCount > 0 && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+        <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>🔄</span> Pending Sync ({offlineActionsCount})
         </div>
       )}
@@ -749,7 +749,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
             {!loading && items.length === 0 && (
               <div
-                className="w-full flex flex-col items-center gap-6 p-6 glassmorphism  shadow-sm opacity-90 text-center"
+                className="w-full flex flex-col items-center gap-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm  shadow-sm opacity-90 text-center"
                 data-testid="triage-feed-empty"
               >
                 <div className="text-3xl mb-2">✨</div>
