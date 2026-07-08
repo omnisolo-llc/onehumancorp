@@ -372,7 +372,7 @@ Your response:",
 
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
-        tracing::info!("Onboarding cache invalidated for tenant_id={} user_id={}", tenant_id, user_id);
+        tracing::debug!("Onboarding cache invalidated for tenant_id={} user_id={}", tenant_id, user_id);
         tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key); // pii-safe
         cache.invalidate(&cache_key).await;
 
@@ -390,7 +390,7 @@ Your response:",
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
         tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key); // pii-safe
         if let Some(cached_state) = cache.get(&cache_key).await {
-            tracing::info!("Onboarding cache hit for tenant_id={} user_id={}", tenant_id, user_id);
+            tracing::debug!("Onboarding cache hit for tenant_id={} user_id={}", tenant_id, user_id);
             tracing::debug!("Cache hit for onboarding state key: {}", cache_key); // pii-safe
             return Ok(cached_state);
         }
