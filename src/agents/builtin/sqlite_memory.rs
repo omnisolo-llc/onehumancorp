@@ -183,6 +183,15 @@ impl LongTermMemory for SqliteMemoryStore {
         }
     }
 
+        fn get_customer_session_summaries<'a>(
+        &'a self,
+        _tenant_id: &'a str,
+        _customer_id: &'a str,
+        _limit: i64,
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<crate::memory_store::AgentSessionSummary>, String>> {
+        Box::pin(async move { Ok(vec![]) })
+    }
+
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
