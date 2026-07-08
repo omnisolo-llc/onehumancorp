@@ -116,6 +116,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
     // We must create an intent first by calling the backend
     let intentSecret = '';
+    let lockId = '';
     try {
         const intentRes = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
@@ -123,7 +124,9 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId })
         });
         const intentData = await intentRes.json();
-        intentSecret = intentData.client_secret; if (!intentSecret) { setStatus('Failed to fetch payment intent secret'); return; }
+        intentSecret = intentData.client_secret;
+        if (!intentSecret) { setStatus('Failed to fetch payment intent secret'); return; }
+        lockId = intentData.lock_id || '';
     } catch (e) {
         setStatus('Failed to fetch payment intent');
         return;
@@ -138,29 +141,81 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       if (processRes.error) {
         setStatus('Payment failed: ' + processRes.error.message);
       } else {
-        setStatus('Payment successful!');
-        if (onSuccess) onSuccess();
+        setStatus('Payment successful! Capturing...');
+        try {
+            const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_intent_id: res.paymentIntent.id, product_id: productId, lock_id: lockId, amount_cents: amount })
+            });
+            if (captureRes.ok) {
+                setStatus('Payment successful!');
+                if (onSuccess) onSuccess();
+            } else {
+                setStatus('Failed to capture intent');
+            }
+        } catch (e) {
+            setStatus('Failed to capture intent');
+        }
       }
     }
   };
 
   const processCashSale = async () => {
-     const syncManager = SyncManager.getInstance();
-     if (onOptimisticReserve) onOptimisticReserve();
+     if (typeof window !== 'undefined' && !navigator.onLine) {
+         if (onOptimisticReserve) onOptimisticReserve();
+         cart?.forEach(item => {
+               SyncManager.getInstance().enqueue({
+               type: 'cash_sale',
+               product_id: item.product.id,
+               quantity: item.quantity,
+               payload: { amount_cents: item.product.price_cents * item.quantity }
+            });
+         });
+         setTimeout(() => {
+           setStatus('Cash sale saved offline. Will sync when network is restored.');
+           if (onSuccess) onSuccess();
+         }, 500);
+         return;
+     }
 
-     cart?.forEach(item => {
-           SyncManager.getInstance().enqueue({
-           type: 'cash_sale',
-           product_id: item.product.id,
-           quantity: item.quantity,
-           payload: { amount_cents: item.product.price_cents * item.quantity }
-        });
-     });
+     setStatus('Processing cash sale...');
+     // Online cash sale: explicitly reserve and commit inventory
+     try {
+         let lockId = '';
+         if (productId) {
+             const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: cart?.[0]?.quantity || 1, ttl_seconds: 15 })
+             });
+             const reserveData = await reserveRes.json();
+             if (!reserveRes.ok || !reserveData.success) {
+                 setStatus('Failed to reserve inventory: ' + (reserveData.error_message || ''));
+                 return;
+             }
+             lockId = reserveData.lock_id;
+         }
 
-     setTimeout(() => {
-       setStatus(typeof window !== 'undefined' && !navigator.onLine ? 'Cash sale saved offline. Will sync when network is restored.' : 'Cash sale recorded.');
-       if (onSuccess) onSuccess();
-     }, 500);
+         if (onOptimisticReserve) onOptimisticReserve();
+
+         if (productId && lockId) {
+             const commitRes = await fetch('/api/v1/payments/terminal/commit', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: cart?.[0]?.quantity || 1, lock_id: lockId, amount_cents: amount })
+             });
+             if (!commitRes.ok) {
+                 setStatus('Failed to commit inventory');
+                 return;
+             }
+         }
+
+         setStatus('Cash sale recorded.');
+         if (onSuccess) onSuccess();
+     } catch (e) {
+         setStatus('Error processing cash sale');
+     }
   };
 
   return (
@@ -297,6 +352,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  setStatus('Sending payment link...');
                  setReserving(true);
                  try {
+                   // A payment link does not immediately reserve inventory, unless we want it to.
+                   // The standard behavior for links is to reserve upon actual online checkout.
                    const res = await fetch('/api/v1/checkout/session', {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json' },
