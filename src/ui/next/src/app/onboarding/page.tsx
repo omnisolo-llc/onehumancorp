@@ -1857,7 +1857,7 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessName && (
                     <p className="text-red-500 text-xs mt-1">
@@ -1880,7 +1880,7 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessType && (
                     <p className="text-red-500 text-xs mt-1">
@@ -1903,7 +1903,7 @@ export default function OnboardingWizard() {
                           .map((c) => c.trim()),
                       })
                     }
-                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1918,7 +1918,7 @@ export default function OnboardingWizard() {
                       onChange={(e) =>
                         updateState({ firstProductName: e.target.value })
                       }
-                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                     />
                   </div>
                   <div>
@@ -1946,7 +1946,7 @@ export default function OnboardingWizard() {
                           });
                         }
                       }}
-                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-red-500" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                     />
                     {validationErrors.firstProductPrice && (
                       <p className="text-red-500 text-xs mt-1">
@@ -2063,7 +2063,7 @@ export default function OnboardingWizard() {
                           onClick={() =>
                             updateState({ websiteTemplate: template })
                           }
-                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/20 dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
+                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
                         >
                           <div className="font-semibold text-sm">
                             {template}
@@ -2074,14 +2074,14 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Web Address
                   </label>
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => updateState({ domainChoice: "subdomain" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/20 dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control rounded-[8px] text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
                     >
                       <span className="font-semibold text-sm mb-1">
                         Free Subdomain
@@ -2104,7 +2104,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Account Setup
                   </label>
@@ -2226,7 +2226,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Auto-Configured AI Departments
                   </label>
