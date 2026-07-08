@@ -52,7 +52,7 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
-pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 2;
 
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
@@ -130,7 +130,7 @@ pub struct SearchResult {
     pub route: String,
 }
 
-fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
+pub fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
         .or_else(|_| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f"))
         .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
@@ -866,7 +866,8 @@ impl DB {
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
@@ -1171,7 +1172,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS orders (

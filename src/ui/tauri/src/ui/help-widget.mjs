@@ -103,7 +103,7 @@
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px;';
+            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
             bubble.classList.add('glassmorphism');
             document.body.appendChild(bubble);
 
@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
-                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}'); } else { alert('Playing video: ' + '${v.title.replace(/'/g, "\\'")}' + '\\nURL: ' + '${v.video_url}'); }">` +
+                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
                             `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
                             `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
                             `</div>`;
@@ -570,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;

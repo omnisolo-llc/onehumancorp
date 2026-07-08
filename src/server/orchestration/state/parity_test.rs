@@ -769,6 +769,56 @@ mod parity_tests {
     }
 
     #[tokio::test]
+    async fn test_parity_timezone() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let mission_id = "mission_timezone";
+
+        let date_str = "2023-10-25 14:30:00"; // No timezone specified
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, tenant_id) VALUES (?, ?, 'Timezone Title', 'PENDING', ?, 'default_tenant')")
+                .bind(&task_id)
+                .bind(mission_id)
+                .bind(date_str)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let created_at: String = sqlx::query_scalar("SELECT datetime(created_at) FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+
+            // SQLite datetime function normalizes it, ensure parity function correctly normalizes
+            let parsed_sqlite = crate::db::parse_sqlite_datetime(&created_at).unwrap();
+            assert_eq!(parsed_sqlite.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+        }
+
+        if let Some(ref db) = pg_db {
+            let task_id_pg = uuid::Uuid::new_v4();
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, tenant_id) VALUES ($1, $2, 'Timezone Title', 'PENDING', $3::timestamp, 'default_tenant')")
+                .bind(task_id_pg)
+                .bind(mission_id)
+                .bind(date_str)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let created_at: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = $1")
+                .bind(task_id_pg)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+            assert_eq!(created_at.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+        }
+    }
+
+    #[tokio::test]
     async fn test_execute_with_retry_sync_lag() {
         let sqlite_db = setup_sqlite_db().await;
 
@@ -795,6 +845,28 @@ mod parity_tests {
 
         assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
         assert!(result.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+
+        let pg_db = setup_postgres_db().await;
+        if let Some(db) = pg_db {
+            let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
+            let attempts_clone = attempts.clone();
+
+            let result: Result<(), String> = db.execute_with_retry("test_sync_lag_pg", || {
+                let attempts_clone = attempts_clone.clone();
+                async move {
+                    let mut a = attempts_clone.lock().unwrap();
+                    *a += 1;
+
+                    tokio::time::advance(std::time::Duration::from_secs(65)).await;
+                    tokio::task::yield_now().await;
+
+                    Err::<(), String>("serialization failure".to_string())
+                }
+            }).await;
+
+            assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
+            assert!(result.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+        }
     }
 
     #[tokio::test]
@@ -817,7 +889,7 @@ mod parity_tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Database retry exhausted"));
         // execute_with_retry makes 1 initial attempt + 2 retries (max_attempts = 2)
-        assert_eq!(*attempts.lock().unwrap(), 4);
+        assert_eq!(*attempts.lock().unwrap(), 3);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -835,7 +907,7 @@ mod parity_tests {
 
             assert!(res.is_err());
             assert!(res.unwrap_err().contains("Database retry exhausted"));
-            assert_eq!(*attempts.lock().unwrap(), 4);
+            assert_eq!(*attempts.lock().unwrap(), 3);
         }
     }
 

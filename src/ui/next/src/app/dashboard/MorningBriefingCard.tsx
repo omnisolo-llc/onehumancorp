@@ -128,7 +128,7 @@ try {
         {!triageLoading && triageItems.filter(item => item.source === 'Decision Assistant').length > 0 && (
           <div className="mt-4 pb-2 w-full overflow-x-auto flex gap-4 snap-x hide-scrollbar">
             {triageItems.filter(item => item.source === 'Decision Assistant').map((item) => (
-              <div key={item.id} className="snap-start shrink-0 w-[280px] p-4 rounded-xl glassmorphism border border-orange-200 dark:border-orange-900/50 bg-orange-50/40 dark:bg-orange-900/10 flex flex-col justify-between">
+              <div key={item.id} className="snap-start shrink-0 w-[280px] p-4 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 flex flex-col justify-between shadow-sm">
                 <div>
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300">Suggested Action</span>

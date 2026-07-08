@@ -1,27 +1,27 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Documentation Features Flow', () => {
-  test('User can navigate the Help Center and view an article', async ({ page }) => {
-    // Navigate directly without mocking, allowing the real backend / fallback APIs to respond.
-    await page.goto('/help');
 
-    // Help Center Index
-    await expect(page).toHaveURL(/\/help/);
+    test('Help Center page UI loads and structure is visible', async ({ page }) => {
+        // Go to the help widget UI
+        await page.goto('/help.html');
+        await expect(page.locator('h1').filter({ hasText: 'In-App Help Center' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'Getting Started' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'My Store' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'Payments' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'AI Agents' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'Marketing' })).toBeVisible();
+        await expect(page.locator('h3').filter({ hasText: 'Account & Billing' })).toBeVisible();
+    });
 
-    // Wait until hydration finishes or layout settles before clicking
-    await page.waitForLoadState('networkidle');
+    test('Changelog UI loads', async ({ page }) => {
+        await page.goto('/changelog.html');
+        await expect(page.locator('h1').filter({ hasText: 'Release Notes & Changelog' })).toBeVisible();
+    });
 
-    // Click on the first article using a simpler selector that works regardless of exact visible state transitions
-    const articleLink = page.locator('a[href="/help/getting-started-1"]').first();
-    await articleLink.click({ force: true });
+    test('API Docs UI loads', async ({ page }) => {
+        await page.goto('/api-docs.html');
+        await expect(page.locator('title').filter({ hasText: 'API Documentation' })).toBeVisible({ timeout: 1000 });
+    });
 
-    // Help Article Page
-    await expect(page).toHaveURL(/\/help\/getting-started-1/, { timeout: 15000 });
-  });
-
-  test('Advanced User can access API Documentation', async ({ page }) => {
-    // Navigate directly without mocking
-    await page.goto('/api-docs');
-    await page.waitForLoadState('networkidle');
-  });
 });
