@@ -569,23 +569,28 @@ async fn handle_trial_extension_claim(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
+    let org_id_str = &auth_info.org_id;
+    let parsed_uuid = uuid::Uuid::parse_str(org_id_str).ok();
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-    {
-        Ok(result) => result,
-        Err(e) => {
-            tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    let has_claimed: Option<bool> = match parsed_uuid {
+        Some(uid) => {
+            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $2")
+                .bind(uid)
+                .bind(org_id_str)
+                .fetch_optional(&state.pool)
+                .await
+        },
+        None => {
+            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE tenant_id = $1")
+                .bind(org_id_str)
+                .fetch_optional(&state.pool)
+                .await
         }
-    };
+    }.map_err(|e| {
+        tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     if let Some(claimed) = has_claimed {
         if claimed {
@@ -595,11 +600,23 @@ async fn handle_trial_extension_claim(
         return Err(StatusCode::NOT_FOUND);
     }
 
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
-        .bind(parsed_uuid)
-        .execute(&state.pool)
-        .await
-    {
+    let update_result = match parsed_uuid {
+        Some(uid) => {
+            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $2")
+                .bind(uid)
+                .bind(org_id_str)
+                .execute(&state.pool)
+                .await
+        },
+        None => {
+            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE tenant_id = $1")
+                .bind(org_id_str)
+                .execute(&state.pool)
+                .await
+        }
+    };
+
+    match update_result {
         Ok(result) => {
             if result.rows_affected() > 0 {
                 if let Some(client) = crate::get_redis_client() {
@@ -608,7 +625,7 @@ async fn handle_trial_extension_claim(
                         let invalidation_payload = serde_json::json!({
                             "event": "tenant.updated",
                             "tags": [
-                                format!("tenant-id:{}", parsed_uuid)
+                                format!("tenant-id:{}", org_id_str)
                             ]
                         }).to_string();
                         let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
