@@ -1,6 +1,7 @@
 #![allow(clippy::empty_line_after_doc_comments)]
 use crate::llm::LlmClient;
 use crate::output_parser::{LlmClientForParser, parse_structured_output};
+/// Master Catalog C.4. Verification Loops: Guides (steer before action) vs Sensors (observe after action).
 /// Master Catalog B.10. Verification Loops
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use serde::Deserialize;
@@ -175,6 +176,12 @@ impl VerificationManager {
         self.inferential.push(sensor);
     }
 
+    /// Architectural Decision C.4: Guides (steer before action) vs Sensors (observe after action)
+    /// Run guides *before* an action is taken to evaluate intent/code.
+    pub async fn run_guides_before_action(&self, code: &str, context: &str) -> Result<(), String> {
+        self.run_computational_guides(code, context).await
+    }
+
     pub async fn run_computational_guides(&self, code: &str, context: &str) -> Result<(), String> {
         let futures = self
             .computational
@@ -182,6 +189,24 @@ impl VerificationManager {
             .map(|guide| guide.verify(code, context));
         let results = futures::future::join_all(futures).await;
         let errors: Vec<String> = results.into_iter().filter_map(|r| r.err()).collect();
+        if !errors.is_empty() {
+            return Err(errors.join("\n---\n"));
+        }
+        Ok(())
+    }
+
+    /// Architectural Decision C.4: Guides (steer before action) vs Sensors (observe after action)
+    /// Run sensors *after* an action is taken to observe its result.
+    pub async fn run_sensors_after_action(&self, output: &str, task: &str, ui_state_path: Option<&str>) -> Result<(), String> {
+        let mut errors = Vec::new();
+        if let Some(path) = ui_state_path {
+            if let Err(e) = self.run_visual_verifiers(path).await {
+                errors.push(e);
+            }
+        }
+        if let Err(e) = self.run_inferential_sensors(output, task).await {
+            errors.push(e);
+        }
         if !errors.is_empty() {
             return Err(errors.join("\n---\n"));
         }
@@ -637,5 +662,60 @@ mod tests {
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(err.contains("APPROVED the output, but confidence 0.40 was below threshold 0.80"));
+    }
+}
+
+#[cfg(test)]
+mod c4_architectural_mechanics_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct MockC4Guide {
+        called: Arc<Mutex<bool>>,
+    }
+
+    #[async_trait::async_trait]
+    impl ComputationalGuide for MockC4Guide {
+        async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+            *self.called.lock().await = true;
+            Ok(())
+        }
+    }
+
+    struct MockC4Sensor {
+        called: Arc<Mutex<bool>>,
+    }
+
+    #[async_trait::async_trait]
+    impl InferentialSensor for MockC4Sensor {
+        async fn verify_inferential(&self, _output: &str, _task: &str) -> Result<(), String> {
+            *self.called.lock().await = true;
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_c4_verification_loops_guides_vs_sensors() {
+        let mut manager = VerificationManager::new();
+
+        let guide_called = Arc::new(Mutex::new(false));
+        let sensor_called = Arc::new(Mutex::new(false));
+
+        manager.add_computational(Arc::new(MockC4Guide { called: guide_called.clone() }));
+        manager.add_inferential(Arc::new(MockC4Sensor { called: sensor_called.clone() }));
+
+        // 1. Run Guides BEFORE action
+        assert!(manager.run_guides_before_action("code", "context").await.is_ok());
+        assert!(*guide_called.lock().await, "Guides must be called before action to steer LLM");
+        assert!(!*sensor_called.lock().await, "Sensors must NOT be called before action");
+
+        // Reset state
+        *guide_called.lock().await = false;
+
+        // 2. Run Sensors AFTER action
+        assert!(manager.run_sensors_after_action("output", "task", None).await.is_ok());
+        assert!(!*guide_called.lock().await, "Guides must NOT be called after action");
+        assert!(*sensor_called.lock().await, "Sensors must be called after action to observe result");
     }
 }
