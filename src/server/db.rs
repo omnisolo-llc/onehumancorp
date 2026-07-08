@@ -1171,7 +1171,10 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        terminal_id TEXT,
+                        offline_queued BOOLEAN DEFAULT FALSE,
+                        sync_timestamp TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS orders (
@@ -1187,7 +1190,10 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        terminal_id TEXT,
+                        offline_queued BOOLEAN DEFAULT FALSE,
+                        sync_timestamp TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,

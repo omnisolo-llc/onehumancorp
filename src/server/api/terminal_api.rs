@@ -318,6 +318,9 @@ pub struct PosOfflineTransaction {
     pub payload: String,
     pub timestamp: Option<String>,
     pub device_signature: Option<String>,
+    pub terminal_id: Option<String>,
+    pub offline_queued: Option<bool>,
+    pub sync_timestamp: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -422,7 +425,7 @@ pub async fn sync_offline_transactions_handler(
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature) "
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature, terminal_id, offline_queued, sync_timestamp) "
         );
 
         let tenant_id_clone = tenant_id.clone();
@@ -433,6 +436,13 @@ pub async fn sync_offline_transactions_handler(
             let currency = tx.currency.clone();
             let payload_str = tx.payload.clone();
             let device_signature = tx.device_signature.clone();
+            let terminal_id = tx.terminal_id.clone();
+            let offline_queued = tx.offline_queued.unwrap_or(false);
+
+            // Convert timestamp string to chrono DateTime if available
+            let sync_timestamp: Option<chrono::DateTime<chrono::Utc>> = tx.sync_timestamp.as_ref().and_then(|ts| {
+                chrono::DateTime::parse_from_rfc3339(ts).map(|dt| dt.with_timezone(&chrono::Utc)).ok()
+            });
 
             b.push_bind(tx_id)
              .push_bind(tenant_id_clone.clone())
@@ -442,7 +452,10 @@ pub async fn sync_offline_transactions_handler(
              .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
              .push_bind("PENDING")
              .push_bind("pending")
-             .push_bind(device_signature);
+             .push_bind(device_signature)
+             .push_bind(terminal_id)
+             .push_bind(offline_queued)
+             .push_bind(sync_timestamp);
         });
 
         query_builder.push(" ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload");
@@ -511,6 +524,52 @@ pub async fn sync_offline_transactions_handler(
                          .push_bind("offline_pos_sync")
                          .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&job_payload).unwrap_or(serde_json::json!({}))));
                     });
+
+                    for tx in &req_data.transactions {
+                        if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
+                            if let Some(items) = payload_val.as_array() {
+                                for item in items {
+                                    if let (Some(product_id), Some(quantity)) = (
+                                        item.get("product_id").and_then(|v| v.as_str()),
+                                        item.get("quantity").and_then(|v| v.as_i64()),
+                                    ) {
+                                        let sales_req_id = uuid::Uuid::new_v4().to_string();
+                                        let sales_payload = serde_json::json!({
+                                            "source": "terminal",
+                                            "event": "pos_transaction_completed",
+                                            "agent_type": "sales_and_revenue",
+                                            "product_id": product_id,
+                                            "quantity": quantity,
+                                            "amount_cents": tx.amount_cents,
+                                        });
+                                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload) VALUES ($1, $2, 'record_pos_transaction', 'pending', $3, $4)")
+                                            .bind(&sales_req_id)
+                                            .bind(&tenant_id)
+                                            .bind(&product_id)
+                                            .bind(sqlx::types::Json(sales_payload))
+                                            .execute(&mut *db_tx)
+                                            .await;
+
+                                        let ops_req_id = uuid::Uuid::new_v4().to_string();
+                                        let ops_payload = serde_json::json!({
+                                            "source": "terminal",
+                                            "event": "pos_transaction_completed",
+                                            "agent_type": "operations",
+                                            "product_id": product_id,
+                                            "quantity": quantity,
+                                        });
+                                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload) VALUES ($1, $2, 'record_pos_transaction', 'pending', $3, $4)")
+                                            .bind(&ops_req_id)
+                                            .bind(&tenant_id)
+                                            .bind(&product_id)
+                                            .bind(sqlx::types::Json(ops_payload))
+                                            .execute(&mut *db_tx)
+                                            .await;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     if let Err(e) = job_query_builder.build().execute(&mut *db_tx).await {
                         tracing::error!("Failed to enqueue jobs: {}", e);

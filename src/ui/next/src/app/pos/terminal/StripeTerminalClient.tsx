@@ -101,6 +101,9 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              type: 'tap_to_pay',
              product_id: item.product.id,
              quantity: item.quantity,
+             terminal_id: localStorage.getItem('ohc_pos_device_id') || 'local_device',
+             offline_queued: true,
+             sync_timestamp: new Date().toISOString(),
              payload: { amount_cents: item.product.price_cents * item.quantity }
           });
        });
