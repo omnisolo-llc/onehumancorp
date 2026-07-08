@@ -177,7 +177,7 @@ export default function QuoteReviewPage() {
               disabled={sending}
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
-              {sending ? 'Sending...' : 'Send Quote to Client'}
+              {sending ? 'Sending...' : 'Approve & Send Quote'}
             </button>
           )
         )}
