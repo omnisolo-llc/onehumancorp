@@ -27,6 +27,7 @@ pub struct ApprovalsResponse {
 pub struct PaginationQuery {
     pub cursor: Option<String>,
     pub limit: Option<usize>,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -370,7 +371,8 @@ async fn list_approvals(
     };
 
     let limit = query.limit.unwrap_or(20);
-    let cache_key = format!("approvals:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("approvals:{}:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit, mobile_optimized);
     let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -383,7 +385,12 @@ async fn list_approvals(
         let orchestrator_bg = orchestrator.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let approvals = orchestrator_bg.get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let mut approvals = orchestrator_bg.get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64).await;
+            if mobile_optimized {
+                for a in &mut approvals {
+                    a.payload = None;
+                }
+            }
             let next_cursor = if approvals.len() == limit {
                 approvals.last().map(|a| a.id.clone())
             } else {
@@ -397,7 +404,12 @@ async fn list_approvals(
         return (StatusCode::OK, Json(cached)).into_response();
     }
 
-    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let mut approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    if mobile_optimized {
+        for a in &mut approvals {
+            a.payload = None;
+        }
+    }
 
     let next_cursor = if approvals.len() == limit {
         approvals.last().map(|a| a.id.clone())
@@ -426,7 +438,8 @@ async fn list_activity_feed(
     };
 
     let limit = query.limit.unwrap_or(20);
-    let cache_key = format!("activity_feed:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("activity_feed:{}:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit, mobile_optimized);
     let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -439,7 +452,12 @@ async fn list_activity_feed(
         let orchestrator_bg = orchestrator.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let activities = orchestrator_bg.get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let mut activities = orchestrator_bg.get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64).await;
+            if mobile_optimized {
+                for a in &mut activities {
+                    a.payload = None;
+                }
+            }
             let next_cursor = if activities.len() == limit {
                 activities.last().map(|a| a.id.clone())
             } else {
@@ -453,7 +471,12 @@ async fn list_activity_feed(
         return (StatusCode::OK, Json(cached)).into_response();
     }
 
-    let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let mut activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+    if mobile_optimized {
+        for a in &mut activities {
+            a.payload = None;
+        }
+    }
 
     let next_cursor = if activities.len() == limit {
         activities.last().map(|a| a.id.clone())
@@ -514,7 +537,7 @@ mod tests {
     #[tokio::test]
     async fn test_approvals_cache_initialization() {
         let tenant_id = "test_tenant";
-        let cache_key = format!("approvals:{}:none:20", tenant_id);
+        let cache_key = format!("approvals:{}:none:20:false", tenant_id);
         let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
 
         let initial_val = cache.get(&cache_key).await;
