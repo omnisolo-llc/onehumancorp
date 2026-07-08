@@ -267,6 +267,38 @@ export class SyncManager {
         }
       }
 
+      // Sync operation intents (from MutationService)
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
+
+      if (operationIntents.length > 0) {
+        const mappedIntents = operationIntents.map(m => ({
+          id: m.id,
+          action_type: m.type,
+          payload: m.payload,
+          timestamp: new Date(m.timestamp || Date.now()).toISOString()
+        }));
+
+        try {
+          const resIntents = await fetch('/api/v1/sync/operation-intents', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId,
+              'x-tenant-id': tenantId
+            },
+            body: JSON.stringify({ intents: mappedIntents })
+          });
+          if (!resIntents.ok) {
+            try { this.checkRateLimit(resIntents); } catch(e) {}
+            console.error(`Operation Intents Sync failed with status ${resIntents.status}`);
+            if (resIntents.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Operation Intents Sync error:", err);
+          allOk = false;
+        }
+      }
+
       // Sync general mutations
       const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
       if (generalGenMutations.length > 0) {
