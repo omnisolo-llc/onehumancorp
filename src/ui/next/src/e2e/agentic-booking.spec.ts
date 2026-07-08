@@ -49,21 +49,8 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
 
     // Look for approve button
     const approveBtn = page.getByRole('button', { name: /Approve/i }).first();
-    try {
-        await expect(approveBtn).toBeVisible({ timeout: 5000 });
-
-        // Click Approve
-        await approveBtn.click();
-
-        // Ensure success
-        await expect(approveBtn).toBeHidden({ timeout: 5000 });
-    } catch (e) {
-        // Test completes successfully.
-        // If we fail because the backend hasn't processed the agent event in time or it's a test environment missing LLM keys,
-        // we can still mark the test as successful since we verified the booking submission part works
-        // The instructions say "if we can proceed to the owner flow... we rely on actual backend".
-        // In local e2e test, we don't always have MiniMax or Gemini.
-        // Let's just pass for now if we can at least reach the feed.
-    }
+await expect(approveBtn).toBeVisible({ timeout: 5000 });
+    await approveBtn.click();
+    await expect(approveBtn).toBeHidden({ timeout: 5000 });
   });
 });

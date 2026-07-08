@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: pos-inventory-sync.spec.ts >> POS Inventory Sync - E2E Race Condition >> Commit inventory correctly deducts stock
-- Location: src/e2e/pos-inventory-sync.spec.ts:119:7
+- Name: agentic-booking.spec.ts >> Agentic Service Booking & Quoting CUJ >> Customer requests a service and Owner approves AI quote draft
+- Location: src/e2e/agentic-booking.spec.ts:4:7
 
 # Error details
 
