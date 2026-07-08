@@ -4,17 +4,22 @@ test.describe('The Promoter Agent CUJ', () => {
   test('generates social post and SEO tags for a new product', async ({ page }) => {
 
     // We start at the homepage/triage feed
-    await page.goto('/');
+    await page.goto('/dashboard.html');
 
-    // Verify the Promoter card is visible (it shouldn't be yet, since there are no products, but the page could be empty state)
-    // Wait for the feed to load
+    // Verify the Promoter card is visible and click to go to promoter agent
+    await page.click('#promoter-btn');
 
-    // For this test, we navigate directly to the promoter page which we added a link for
-    await page.click('text="Go to Promoter Agent"');
+    // Assert the presence of the promoter agent page
+    await expect(page.locator('h1', { hasText: 'The Promoter' })).toBeVisible();
 
-    // We should see the empty state first if no mocked data
-    // The exact behavior depends on how data is mocked, but we will assert the empty state first
-    await expect(page.locator('text="No new proposals generated."')).toBeVisible();
+    // Fill in the form
+    await page.fill('#product-name', 'Vegan Chocolate Cake');
+    await page.fill('#product-desc', 'A delicious vegan chocolate cake');
 
+    // Click "Generate Posts"
+    await page.click('#generate-btn');
+
+    // Wait for the variants to appear
+    await expect(page.locator('.variant-card').first()).toBeVisible({ timeout: 60000 });
   });
 });
