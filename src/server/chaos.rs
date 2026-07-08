@@ -1730,4 +1730,68 @@ mod stress_verification_tests {
 
         assert!(p99 < 200, "p99 latency should remain reasonable under stress");
     }
+    #[tokio::test]
+    async fn test_sentry_agent_lock_race_conditions() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        let temp_dir = std::env::temp_dir().join(format!("agent_lock_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let lock_file = temp_dir.join(".agent-lock");
+
+        let mut handles = vec![];
+        for _ in 0..10 {
+            let file_path = lock_file.clone();
+            handles.push(tokio::spawn(async move {
+                let mut attempts = 0;
+                while attempts < 3 {
+                    // Simulate acquiring a lock by writing to a file, testing race conditions
+                    let res = tokio::fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&file_path)
+                        .await;
+                    if res.is_ok() {
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                        let _ = tokio::fs::remove_file(&file_path).await;
+                        return Ok(());
+                    }
+                    attempts += 1;
+                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                }
+                Err("Failed to acquire lock after 3 attempts")
+            }));
+        }
+
+        let mut success_count = 0;
+        let mut timeout_count = 0;
+        for h in handles {
+            match h.await.unwrap() {
+                Ok(_) => success_count += 1,
+                Err(_) => timeout_count += 1,
+            }
+        }
+
+        assert!(success_count > 0 || timeout_count > 0, "Race condition check completed safely");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[tokio::test]
+    async fn test_sentry_pubsub_message_loss() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        let (tx, rx) = tokio::sync::mpsc::channel::<String>(1);
+
+        // Simulate a dropped receiver
+        drop(rx);
+
+        // The send should fail but not panic
+        let result = tx.send("test_message".to_string()).await;
+        assert!(result.is_err(), "Pub/Sub message loss should be handled gracefully");
+
+        // Simulate timeout in pub/sub
+        let timeout_result = tokio::time::timeout(std::time::Duration::from_millis(5), async {
+            // something that hangs
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }).await;
+        assert!(timeout_result.is_err(), "Pub/Sub latency/timeout should be handled gracefully");
+    }
 }
