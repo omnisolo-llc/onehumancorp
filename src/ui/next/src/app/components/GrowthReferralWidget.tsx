@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function GrowthReferralWidget() {
   const [loading, setLoading] = useState(false);
   const [referralLink, setReferralLink] = useState('');
+  const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const generateLink = async () => {
     setLoading(true);
-    setError(null);
+    setError('');
     try {
       const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
@@ -66,95 +67,99 @@ export default function GrowthReferralWidget() {
 
   return (
     <div className="ohc-growth-card flex flex-col gap-8">
-      <div className="p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl mb-6">
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-        <div className="flex-1">
-          <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
-            <span>🚀 Sovereign-to-Cloud Bridge</span>
-          </div>
-          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-            Grow Your Team
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-            Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space while maintaining Zero Data Leakage locally.
-          </p>
-        </div>
-
-        <div className="w-full md:w-auto">
-          {!referralLink ? (
-            <button
-              onClick={generateLink}
-              disabled={loading}
-              className="w-full md:w-auto app-button min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white border-none py-3 px-6 text-base"
-            >
-              {loading ? 'Generating...' : 'Invite to Cloud Team'}
-            </button>
-          ) : (
-            <div className="flex flex-col gap-3 w-full md:w-auto">
-              <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                <input id="cloud-bridge-invite-link"
-                  type="text"
-                  readOnly
-                  value={referralLink}
-                  className="bg-transparent border-none outline-none text-sm w-full md:w-48 text-gray-700 dark:text-gray-200 px-2"
-                />
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-2 bg-gray-100 min-h-[44px] hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors"
-                >
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
+      <Card className="mb-6 border-white/20 dark:border-white/10 shadow-xl overflow-hidden backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
+                <span>🚀 Sovereign-to-Cloud Bridge</span>
               </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
+                Grow Your Team
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space while maintaining Zero Data Leakage locally.
+              </p>
+            </div>
+
+            <div className="w-full md:w-auto">
+              {!referralLink ? (
+                <button
+                  onClick={generateLink}
+                  disabled={loading}
+                  className="w-full md:w-auto app-button min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white border-none py-3 px-6 text-base rounded-md"
+                >
+                  {loading ? 'Generating...' : 'Invite to Cloud Team'}
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                  <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <input id="cloud-bridge-invite-link"
+                      type="text"
+                      readOnly
+                      value={referralLink}
+                      className="bg-transparent border-none outline-none text-sm w-full md:w-48 text-gray-700 dark:text-gray-200 px-2"
+                    />
+                    <button
+                      onClick={handleCopy}
+                      className="px-4 py-2 bg-gray-100 min-h-[44px] hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors"
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleWhatsApp}
+                    className="w-full app-button min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] text-white border-none py-2 text-sm flex items-center justify-center gap-2 rounded-md"
+                  >
+                    Share on WhatsApp
+                  </button>
+                  <button
+                    onClick={handleTwitter}
+                    className="w-full app-button min-h-[44px] bg-black hover:bg-gray-800 text-white border-none py-2 text-sm flex items-center justify-center gap-2 shadow-sm transition-all rounded-md"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                    Share on X (Twitter)
+                  </button>
+                </div>
+              )}
+              {error && <p className="text-[#FF3B30] text-sm mt-2">{error}</p>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/20 dark:border-white/10 shadow-xl overflow-hidden backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-semibold">
+                <span>🌐 Viral Storefront Embed</span>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
+                Embed Your Business
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
+                <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                Put your storefront anywhere. Includes a built-in referral loop to reward you when other owners join through your embed.
+              </p>
+            </div>
+
+            <div className="w-full md:w-auto">
               <button
-                onClick={handleWhatsApp}
-                className="w-full app-button min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] text-white border-none py-2 text-sm flex items-center justify-center gap-2"
+                onClick={() => {
+                  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
+                  navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
+                  alert('Embed code copied to clipboard!');
+                }}
+                className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm rounded-md"
               >
-                Share on WhatsApp
-              </button>
-              <button
-                onClick={handleTwitter}
-                className="w-full app-button min-h-[44px] bg-black hover:bg-gray-800 text-white border-none py-2 text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                Share on X (Twitter)
+                Copy Embed Code
               </button>
             </div>
-          )}
-          {error && <p className="text-[#FF3B30] text-sm mt-2">{error}</p>}
-        </div>
-        </div>
-      </div>
-
-      <div className="p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl">
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-          <div className="flex-1">
-            <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-semibold">
-              <span>🌐 Viral Storefront Embed</span>
-            </div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-              Embed Your Business
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              Put your storefront anywhere. Includes a built-in referral loop to reward you when other owners join through your embed.
-            </p>
           </div>
-
-          <div className="w-full md:w-auto">
-            <button
-              onClick={() => {
-                const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
-                navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
-                alert('Embed code copied to clipboard!');
-              }}
-              className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm"
-            >
-              Copy Embed Code
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="mt-8 pt-6 border-t border-white/20 dark:border-white/10">
         <div className="flex flex-col md:flex-row gap-6 items-center">

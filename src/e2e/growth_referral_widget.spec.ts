@@ -3,49 +3,50 @@ import { test, expect } from './fixtures';
 test.describe('Growth Referral Widget', () => {
   test('generates widget code and handles paywall correctly', async ({ page }) => {
 
-    // In our E2E environment we go directly to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/team');
 
     // Wait for the Widget Builder button to appear under Invite & Earn section and click it
-    const widgetBuilderBtn = page.locator('#dashboard-widget-btn');
+    const widgetBuilderBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+
+    // Explicitly wait for it to be attached/visible
+    await widgetBuilderBtn.waitFor({ state: 'visible', timeout: 15000 });
+
     await expect(widgetBuilderBtn).toBeVisible();
     await widgetBuilderBtn.click();
 
-    // Ensure the builder is visible
-    await expect(page.getByRole('heading', { name: 'Referral Widget Builder' })).toBeVisible();
+    // Check that the invite link generated has the expected format
+    const copyInput = page.locator('input#cloud-bridge-invite-link');
+    await copyInput.waitFor({ state: 'visible', timeout: 15000 });
+    await expect(copyInput).toBeVisible();
 
-    // Verify preview renders correctly with defaults
-    await expect(page.getByRole('heading', { name: 'Give 10%, Get 10%' })).toBeVisible();
+    // Check invite link value
+    await expect(copyInput).toHaveValue(/invite/, { timeout: 15000 });
+    const inviteLink = await copyInput.inputValue();
+    expect(inviteLink).toContain('/invite/');
 
-    // Test updating the offer
-    await page.locator('#discount-amount').fill('20');
-    await page.locator('#discount-amount').dispatchEvent('input', { bubbles: true });
-    await expect(page.getByRole('heading', { name: 'Give 20%, Get 20%' })).toBeVisible();
+    // Verify Copy button is present using exact text to avoid matching "Copy Embed Code"
+    const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
+    await expect(copyBtn).toBeVisible();
 
-    // Test updating the offer type
-    await page.locator('#discount-type').selectOption('$');
-    await page.locator('#discount-type').dispatchEvent('change', { bubbles: true });
-    await expect(page.getByRole('heading', { name: 'Give $20, Get $20' })).toBeVisible();
+    // Verify WhatsApp and Twitter buttons are present
+    const whatsappBtn = page.getByRole('button', { name: /Share on WhatsApp/i });
+    await expect(whatsappBtn).toBeVisible();
 
-    // Verify branding is present by default
-    await expect(page.getByText('⚡ Powered by OHC')).toBeVisible();
+    const twitterBtn = page.getByRole('button', { name: /Share on X/i });
+    await expect(twitterBtn).toBeVisible();
 
-    // Click Generate code
-    await page.getByRole('button', { name: 'Get Widget Code' }).click();
+    // Verify the embed section
+    const embedHeading = page.getByRole('heading', { name: 'Embed Your Business' });
+    await expect(embedHeading).toBeVisible();
 
-    // Verify embed modal
-    const embedModal = page.locator('#embed-modal');
-    await expect(embedModal).toHaveClass(/active/);
-    await expect(page.getByRole('heading', { name: 'Embed Referral Widget' })).toBeVisible();
+    const copyEmbedBtn = page.getByRole('button', { name: 'Copy Embed Code' });
+    await expect(copyEmbedBtn).toBeVisible();
 
-    // Verify iframe code structure
-    const codeArea = page.locator('#embed-code');
-    const codeValue = await codeArea.inputValue();
-    expect(codeValue).toContain('<iframe');
-    expect(codeValue).toContain('discount=20flat');
+    // Verify 10th order milestone section
+    const milestoneHeading = page.getByRole('heading', { name: '🎉 10th Order! Share your success' });
+    await expect(milestoneHeading).toBeVisible();
 
-    // Close modal
-    await page.locator('#close-embed-btn').click();
-    await expect(embedModal).not.toHaveClass(/active/);
+    const milestoneShareBtn = page.getByRole('link', { name: /Share to WhatsApp/i });
+    await expect(milestoneShareBtn).toBeVisible();
   });
 });

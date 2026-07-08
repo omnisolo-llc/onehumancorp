@@ -1,41 +1,48 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
 import { POST } from './route';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('POST /api/v1/growth/cloud-bridge/invite', () => {
-    let mockBackendUrl: string;
+    const mockBackendUrl = 'http://127.0.0.1:18789';
 
     beforeEach(() => {
+        vi.stubEnv('OHC_BACKEND_URL', mockBackendUrl);
+        vi.stubEnv('NODE_ENV', 'test');
+        // ensure Playwright fallback doesn't trigger for these standard errors
+        vi.stubEnv('PLAYWRIGHT_TEST', '');
+        vi.stubEnv('CI', '');
+
         global.fetch = vi.fn();
-        mockBackendUrl = 'http://mock-backend';
-        process.env.OHC_BACKEND_URL = mockBackendUrl;
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
-        delete process.env.OHC_BACKEND_URL;
+        vi.unstubAllEnvs();
     });
 
     it('should successfully proxy the request and return the invite link', async () => {
-        const mockResponse = { invite_link: 'https://ohc.app/invite/inv-123' };
+        const mockRequestData = {
+            team_id: 'team1',
+            inviter_id: 'user1',
+            invitee_id: 'test@example.com',
+        };
+
+        const mockResponse = {
+            invite_link: 'https://ohc.app/invite/inv-123'
+        };
 
         (global.fetch as any).mockResolvedValueOnce({
             ok: true,
             json: async () => mockResponse,
         });
 
-        const req = new Request('http://localhost/api/v1/growth/cloud-bridge/invite', {
+        const req = new NextRequest('http://localhost:3000/api/v1/growth/cloud-bridge/invite', {
             method: 'POST',
-            headers: {
-                'authorization': 'Bearer token123',
-                'cookie': 'session=abc',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                team_id: 'team1',
-                inviter_id: 'user1',
-                invitee_id: 'test@example.com'
-            }),
+            body: JSON.stringify(mockRequestData),
         });
+
+        req.headers.set('authorization', 'Bearer token');
+        req.headers.set('cookie', 'session=123');
 
         const response = await POST(req);
         const data = await response.json();
@@ -48,28 +55,29 @@ describe('POST /api/v1/growth/cloud-bridge/invite', () => {
             body: JSON.stringify({
                 team_id: 'team1',
                 inviter_id: 'user1',
-                invitee_id: 'test@example.com'
+                invitee_id: 'test@example.com',
             }),
         }));
     });
 
     it('should use default values if body is missing fields', async () => {
-        const mockResponse = { invite_link: 'https://ohc.app/invite/inv-default' };
+        const mockResponse = {
+            invite_link: 'https://ohc.app/invite/inv-default'
+        };
 
         (global.fetch as any).mockResolvedValueOnce({
             ok: true,
             json: async () => mockResponse,
         });
 
-        const req = new Request('http://localhost/api/v1/growth/cloud-bridge/invite', {
+        const req = new NextRequest('http://localhost:3000/api/v1/growth/cloud-bridge/invite', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
             body: JSON.stringify({}),
         });
 
         const response = await POST(req);
+        const data = await response.json();
+
         expect(response.status).toBe(200);
 
         expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/team-invites`, expect.objectContaining({
@@ -77,7 +85,7 @@ describe('POST /api/v1/growth/cloud-bridge/invite', () => {
             body: JSON.stringify({
                 team_id: 'default-team',
                 inviter_id: 'current-user',
-                invitee_id: ''
+                invitee_id: '',
             }),
         }));
     });
@@ -85,7 +93,7 @@ describe('POST /api/v1/growth/cloud-bridge/invite', () => {
     it('should return 500 on fetch error', async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
-        const req = new Request('http://localhost/api/v1/growth/cloud-bridge/invite', {
+        const req = new NextRequest('http://localhost:3000/api/v1/growth/cloud-bridge/invite', {
             method: 'POST',
             body: JSON.stringify({}),
         });
