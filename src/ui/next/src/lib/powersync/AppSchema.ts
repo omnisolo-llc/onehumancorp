@@ -63,10 +63,29 @@ const serviceRoutes = new Table({
   updated_at: column.text
 });
 
+const posOfflineTransactions = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  client_id: column.text,
+  status: column.text,
+  amount_cents: column.integer,
+  currency: column.text,
+  payload: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+  is_subscribable: column.integer,
+  subscription_frequency: column.text,
+  subscription_discount_percent: column.integer,
+  _sync_status: column.text,
+  version: column.integer,
+  device_signature: column.text
+});
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions
+  pending_actions: pendingActions,
+  pos_offline_transactions: posOfflineTransactions
 });
