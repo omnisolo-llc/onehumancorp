@@ -12,6 +12,8 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/cart-recovery.spec.ts",
     "//src/ui/next:src/e2e/visual-workflow.spec.ts",
     "//src/ui/next:src/e2e/pos-inventory-sync-optimistic.spec.ts",
+    "inventory_conflict.spec.ts",
+    "e2e_mobile_pos_optimistic.spec.ts",
     "//src/ui/next:src/e2e/quoting-offline.spec.ts",
     "//src/ui/next:src/e2e/pricing.spec.ts",
     "//src/ui/next:src/e2e/growth_loops.spec.ts",
