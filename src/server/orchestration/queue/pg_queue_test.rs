@@ -71,6 +71,8 @@ async fn test_pg_fail_max_retries_dead_letter() {
     // Ensure tables are clean for tests
     sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
     sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM agents WHERE id = 'agent-1'").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status) VALUES ('agent-1', 'test_org', 'test', 'test', 'ACTIVE')").execute(&pool).await.unwrap();
 
     let job = Job {
         id: "job-fail-pg-dead".to_string(),
@@ -111,6 +113,10 @@ async fn test_pg_fail_max_retries_dead_letter() {
     assert_eq!(dl_department, "job_queue");
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "test reason");
+
+    let agent_row = sqlx::query("SELECT status FROM agents WHERE id = 'agent-1'").fetch_one(&pool).await.unwrap();
+    let agent_status: String = agent_row.get("status");
+    assert_eq!(agent_status, "PAUSED");
 }
 
 #[tokio::test]

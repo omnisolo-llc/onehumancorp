@@ -39,7 +39,7 @@ impl ResearcherLlmClient for AdapterLlm {
         let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
         let response_text = if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false}]"#.to_string()
+            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
         } else {
             crate::minimax::LocalLLMClient::new().reason(&prompt).await?
         };
@@ -210,11 +210,30 @@ async fn draft_quote_agent(
 ) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
 
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+    // Fetch the services catalog for this tenant
+    #[derive(sqlx::FromRow, serde::Serialize)]
+    struct Service {
+        id: uuid::Uuid,
+        name: String,
+        base_price_cents: i64,
+    }
+
+    let services = sqlx::query_as::<_, Service>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1")
+        .bind(&payload.tenant_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+    let catalog_json = serde_json::to_string(&services).unwrap_or_else(|_| "[]".to_string());
+
+    let system_prompt = format!(
+        "You are the Ambassador Agent, an expert quoting AI. You have the following service catalog:\n{}\n\nGiven a customer inquiry, generate a JSON array of line items representing an estimate for the requested work by matching it with the catalog. Each object must have: 'description' (string, matching a service title if possible), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean), and 'service_item_id' (string UUID of the matched service from catalog, or null). Return ONLY the raw JSON array.",
+        catalog_json
+    );
 
     let req = ChatRequest {
         model: "default-model".to_string(),
-        system: system_prompt,
+        system: system_prompt.clone(),
         messages: vec![Message::user(payload.inquiry)],
         temperature: 0.1,
         max_tokens: 1024,
