@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Automated Cart Recovery Agent', () => {
-  test('Agent automatically dispatches AI generated message for abandoned cart', async ({ page, request }) => {
+  test('Agent automatically dispatches AI generated message for abandoned cart', async ({ adminPage: page, request }) => {
     // 1. Merchant views their dashboard to confirm baseline
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
