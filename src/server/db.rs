@@ -52,7 +52,7 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
-pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 2;
 
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
