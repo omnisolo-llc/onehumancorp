@@ -12,6 +12,7 @@ const options = [
   "Seed Database with Mock Data",
   "Check Swarm Status",
   "Browse Agent Marketplace",
+  "Visual Workflow Builder",
   "Verify Setup",
   "Exit"
 ];
