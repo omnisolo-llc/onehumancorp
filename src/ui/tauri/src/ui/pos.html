@@ -1243,7 +1243,8 @@
                   currency: 'usd',
                   product_id: currentProductId,
                   quantity: 1,
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
+                  device_signature: `sig_offline_${crypto.randomUUID()}`
               });
 
               // Optimistically update local inventory
@@ -2072,7 +2073,7 @@ initWalkthrough();
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
                     timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-                    device_signature: `sig_offline_${m.id}_${crypto.randomUUID()}`
+                    device_signature: m.device_signature || `sig_offline_${m.id}_${crypto.randomUUID()}`
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
