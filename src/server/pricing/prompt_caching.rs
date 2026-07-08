@@ -123,44 +123,39 @@ impl PromptCache {
             return;
         }
 
-        // To avoid cloning all strings (which are long prompts), we keep a BinaryHeap
-        // of the oldest elements.
-        // BinaryHeap is a max-heap. We want to keep the oldest elements (smallest Instant).
-        // If we store `Reverse<Instant>`, a max-heap gives us the *largest Reverse<Instant>*,
-        // which corresponds to the *smallest Instant*.
-        // Wait, if we want to find the `to_remove` oldest elements:
-        // A max-heap of size `to_remove` tracking the *newest* of the oldest will help.
-        // We push elements. If size > to_remove, we pop the max (which is the newest among the oldest).
-        // What's left are the `to_remove` oldest elements.
-        use std::collections::BinaryHeap;
+        // Optimization: Rather than cloning potentially massive prompt strings to track what to evict,
+        // we can simply collect all `Instant`s, sort them, and determine the threshold.
+        // This is significantly faster and uses vastly less memory during eviction.
 
-        // (Instant, String) tuple for the heap. Instant implements Ord.
-        let mut heap: BinaryHeap<(Instant, String)> = BinaryHeap::with_capacity(to_remove + 1);
-
+        let mut instants: Vec<Instant> = Vec::with_capacity(len);
         for kv in self.cache.iter() {
-            let created_at = kv.value().created_at;
+            instants.push(kv.value().created_at);
+        }
 
-            // If heap isn't full, just push. We clone the key here.
-            if heap.len() < to_remove {
-                heap.push((created_at, kv.key().clone()));
-            } else {
-                #[allow(clippy::collapsible_if)]
-                // If it's full, compare with the max element (the newest of the oldest)
-                #[allow(clippy::collapsible_if)]
-                if let Some(max) = heap.peek() {
-                    if created_at < max.0 {
-                        // This element is older than the newest of our oldest.
-                        // Clone the key and push it, then pop the max.
-                        heap.push((created_at, kv.key().clone()));
-                        heap.pop();
-                    }
+        if instants.is_empty() {
+            return;
+        }
+
+        // We want to remove `to_remove` elements, which means keeping `target_len` elements.
+        // The `to_remove` oldest elements will have the smallest Instants.
+        // If we sort, the element at index `to_remove - 1` is the threshold.
+        // We can just use `select_nth_unstable` for O(N) performance instead of O(N log N) sorting.
+        // Guard against out-of-bounds if the cache was modified concurrently.
+        let target_idx = std::cmp::min(to_remove.saturating_sub(1), instants.len() - 1);
+        let (_, &mut threshold_instant, _) = instants.select_nth_unstable(target_idx);
+
+        let mut keys_to_remove = Vec::with_capacity(to_remove);
+        for kv in self.cache.iter() {
+            if kv.value().created_at <= threshold_instant {
+                keys_to_remove.push(kv.key().clone());
+                if keys_to_remove.len() >= to_remove {
+                    break;
                 }
             }
         }
 
-        // Remove the oldest elements from the cache
-        for (_, key) in heap.into_iter() {
-            self.cache.remove(&key);
+        for k in keys_to_remove {
+            self.cache.remove(&k);
         }
     }
 
