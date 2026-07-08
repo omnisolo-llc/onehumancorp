@@ -61,7 +61,7 @@ impl ClaudeSubagentSpawner {
                 self.execute_and_summarize(task, &sub_config).await
             }
             ClaudeSubagentMode::Teammate { mailbox_dir } => {
-                // Teammate: communicates via file-based mailboxes
+                // Teammate: communicates via file-based mailboxes (separate terminal pane)
                 if !mailbox_dir.exists() {
                     fs::create_dir_all(mailbox_dir).await?;
                 }
@@ -69,6 +69,10 @@ impl ClaudeSubagentSpawner {
                 let out_mbox = mailbox_dir.join("outbox.txt");
 
                 fs::write(&in_mbox, task).await?;
+                // Ensure outbox is clear before starting
+                if out_mbox.exists() {
+                    let _ = fs::remove_file(&out_mbox).await;
+                }
 
                 // Inject mailbox instruction
                 let mut mailbox_instructions = config.developer_instructions.clone();
@@ -78,11 +82,49 @@ impl ClaudeSubagentSpawner {
                 ));
                 sub_config.developer_instructions = mailbox_instructions;
 
-                let result = self.execute_and_summarize(task, &sub_config).await?;
+                // Clone spawner properties for the background task
+                let self_clone = Self {
+                    parent_llm: self.parent_llm.clone(),
+                    subagent: self.subagent.clone(),
+                    mode: self.mode.clone(),
+                };
+                let task_clone = task.to_string();
+                let sub_config_clone = sub_config.clone();
+                let out_mbox_clone = out_mbox.clone();
 
-                // Save result to outbox
-                fs::write(&out_mbox, &result).await?;
-                Ok(result)
+                // Spawn a background OS thread to represent the separate terminal pane.
+                // We use a new current-thread tokio runtime because the subagent.run future is !Send.
+                let _handle = std::thread::spawn(move || {
+                    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+                    rt.block_on(async {
+                        let result = match self_clone.execute_and_summarize(&task_clone, &sub_config_clone).await {
+                            Ok(res) => res,
+                            Err(e) => format!("Subagent failed: {}", e),
+                        };
+                        // Save result to outbox safely using an atomic rename
+                        let tmp_file = out_mbox_clone.with_extension("tmp");
+                        let _ = fs::write(&tmp_file, &result).await;
+                        let _ = fs::rename(&tmp_file, &out_mbox_clone).await;
+                    });
+                });
+
+                // Polling loop in the main thread (acts as the caller waiting for the teammate)
+                let timeout_duration = std::time::Duration::from_secs(300); // 5 minutes timeout
+                let poll_interval = std::time::Duration::from_millis(100);
+                let start_time = std::time::Instant::now();
+
+                loop {
+                    if start_time.elapsed() > timeout_duration {
+                        return Err("Teammate execution timed out waiting for outbox response".into());
+                    }
+
+                    if fs::try_exists(&out_mbox).await.unwrap_or(false) {
+                        let result = fs::read_to_string(&out_mbox).await?;
+                        return Ok(result);
+                    }
+
+                    tokio::time::sleep(poll_interval).await;
+                }
             }
             ClaudeSubagentMode::Worktree {
                 base_repo_path,
