@@ -593,6 +593,10 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
+INSERT INTO service_items (id, tenant_id, name, base_price_cents, created_at, updated_at) VALUES
+('si-1', 'tenant-1', 'Plumbing Fix', 25000, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, currency, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 'USD', 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;

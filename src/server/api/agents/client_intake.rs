@@ -99,7 +99,7 @@ async fn handle_client_intake(
     let llm = Arc::new(LocalLlm);
     let planner = Arc::new(PlannerAgent::new(llm.clone(), "default".to_string()));
     if let Ok(plan) = planner.plan_research(&payload.details).await {
-        let heuristics_res = sqlx::query("SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1")
+        let heuristics_res = sqlx::query("SELECT name, base_price_cents FROM service_items WHERE tenant_id = $1")
             .bind(&tenant_id)
             .fetch_all(&state.orchestrator.db().pool)
             .await;
@@ -107,8 +107,8 @@ async fn handle_client_intake(
             use sqlx::Row;
             let plan_lower = plan.join(" ").to_lowercase();
             for h in heuristics {
-                let category: String = h.get("service_category");
-                let rate_cents: i64 = h.get("base_rate_cents");
+                let category: String = h.get("name");
+                let rate_cents: i64 = h.get("base_price_cents");
                 if plan_lower.contains(&category.to_lowercase()) || payload.details.to_lowercase().contains(&category.to_lowercase()) {
                     service_name = category;
                     suggested_price = (rate_cents as f64) / 100.0;
