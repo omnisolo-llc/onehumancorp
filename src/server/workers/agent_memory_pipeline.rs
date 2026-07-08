@@ -75,7 +75,34 @@ impl AgentMemoryPipeline {
                     let context_data: String = row.get("context_data");
                     let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+
+                    let mut customer_id_val = serde_json::Value::Null;
+                    if let Ok(parsed_ctx) = serde_json::from_str::<serde_json::Value>(&context_data) {
+                        if let Some(cid) = parsed_ctx.get("customer_id") {
+                            customer_id_val = cid.clone();
+                        }
+                    }
+                    let metadata = serde_json::json!({
+                        "customer_id": customer_id_val
+                    });
+                    let metadata_str = metadata.to_string();
+
+                    let summary_prompt = format!("Summarize the following session context into a concise memory. Focus on user preferences, important facts, and outcomes. Context: {}", context_data);
+                    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&summary_prompt);
+                    let summarized_context = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                        Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
+                        Ok("minimax") => {
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            if api_key.is_empty() {
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone())
+                            } else {
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or(context_data.clone())
+                            }
+                        }
+                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
+                    };
+
+                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&summarized_context)).await {
                         Ok(Ok(emb)) => emb,
                         Ok(Err(e)) => {
                             ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
@@ -105,13 +132,14 @@ impl AgentMemoryPipeline {
                     let mem_id = Uuid::new_v4();
 
                     let mut tx = sqlite_pool.begin().await?;
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?)")
+                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         .bind(mem_id.to_string())
                         .bind(&tenant_id)
                         .bind(&agent_id)
                         .bind("SESSION_DATA")
-                        .bind(&context_data)
+                        .bind(&summarized_context)
                         .bind(&emb_str)
+                        .bind(&metadata_str)
                         .execute(&mut *tx)
                         .await?;
 
@@ -161,7 +189,34 @@ impl AgentMemoryPipeline {
                     let context_data: String = row.get("context_data");
                     let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+
+                    let mut customer_id_val = serde_json::Value::Null;
+                    if let Ok(parsed_ctx) = serde_json::from_str::<serde_json::Value>(&context_data) {
+                        if let Some(cid) = parsed_ctx.get("customer_id") {
+                            customer_id_val = cid.clone();
+                        }
+                    }
+                    let metadata = serde_json::json!({
+                        "customer_id": customer_id_val
+                    });
+                    let metadata_str = metadata.to_string();
+
+                    let summary_prompt = format!("Summarize the following session context into a concise memory. Focus on user preferences, important facts, and outcomes. Context: {}", context_data);
+                    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&summary_prompt);
+                    let summarized_context = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                        Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
+                        Ok("minimax") => {
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            if api_key.is_empty() {
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone())
+                            } else {
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or(context_data.clone())
+                            }
+                        }
+                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
+                    };
+
+                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&summarized_context)).await {
                         Ok(Ok(emb)) => emb,
                         Ok(Err(e)) => {
                             ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
@@ -193,13 +248,14 @@ impl AgentMemoryPipeline {
                     let mut tx = self.db.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
 
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding, metadata) VALUES ($1, $2, $3, $4, $5, $6::vector, $7::jsonb)")
                         .bind(mem_id.to_string())
                         .bind(&tenant_id)
                         .bind(&agent_id)
                         .bind("SESSION_DATA")
-                        .bind(&context_data)
+                        .bind(&summarized_context)
                         .bind(&emb_str)
+                        .bind(&metadata_str)
                         .execute(&mut *tx)
                         .await?;
 

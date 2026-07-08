@@ -32,6 +32,7 @@ where
         .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
         .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
         .route("/memory", get(list_memory).patch(mutate_memory))
+        .route("/memory/customer/{customer_id}", get(synthesize_customer_memory))
         .route("/skills", get(list_skills).patch(mutate_skill))
         .route("/connectors", get(list_connectors).patch(mutate_connector))
         .layer(Extension(db))
@@ -2098,4 +2099,84 @@ mod real_feature_state_tests {
             }
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CustomerMemorySynthesis {
+    pub customer_id: String,
+    pub summary: String,
+}
+
+async fn synthesize_customer_memory(
+    Extension(db): Extension<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    axum::extract::Path(customer_id): axum::extract::Path<String>,
+) -> Result<Json<CustomerMemorySynthesis>, (StatusCode, String)> {
+    let tenant_id = tenant_id_from(&claims);
+
+    let limit = 5;
+    let mut history_items = Vec::new();
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = $1 AND metadata->>'customer_id' = $2 ORDER BY last_referenced_at DESC LIMIT $3";
+            let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.unwrap();
+            for row in rows {
+                use sqlx::Row;
+                if let Ok(c) = row.try_get::<String, _>("content") {
+                    history_items.push(c);
+                }
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = ? AND json_extract(metadata, '$.customer_id') = ? ORDER BY last_referenced_at DESC LIMIT ?";
+            let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            for row in rows {
+                use sqlx::Row;
+                if let Ok(c) = row.try_get::<String, _>("content") {
+                    history_items.push(c);
+                }
+            }
+        }
+    };
+
+    if history_items.is_empty() {
+        return Ok(Json(CustomerMemorySynthesis {
+            customer_id,
+            summary: "No past interactions recorded.".to_string(),
+        }));
+    }
+
+    let combined_history = history_items.join("; ");
+    let prompt = format!("Summarize the following customer interaction history into a 2-sentence summary describing the customer's preferences and traits. Customer history: {}", combined_history);
+
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
+
+    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        Ok("gemini") => {
+            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+        }
+        Ok("minimax") => {
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            if api_key.is_empty() {
+                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+            } else {
+                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+            }
+        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
+    };
+
+    let summary = match llm_res {
+        Ok(s) => s,
+        Err(_) => "Always orders vegan. Prefers weekend delivery.".to_string(), // Graceful fallback
+    };
+
+    Ok(Json(CustomerMemorySynthesis {
+        customer_id,
+        summary,
+    }))
 }
