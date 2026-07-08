@@ -85,6 +85,7 @@ pub struct LocalUiTenantQuery {
 
 async fn generate_draft_reply(
     tenant_id: &str,
+    customer_id: &str,
     customer_message: &str,
     context_summary: &str,
     db: &Arc<DB>,
@@ -114,9 +115,63 @@ async fn generate_draft_reply(
         format!("A {} business named {}", industry, business_name)
     };
 
+    let mut enriched_context_summary = context_summary.to_string();
+
+    let embedding = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        Ok("gemini") => crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await,
+        Ok("minimax") => {
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            if api_key.is_empty() {
+                crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await
+            } else {
+                crate::minimax::MinimaxClient::new(api_key).generate_embedding(customer_message).await
+            }
+        }
+        _ => crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await,
+    };
+
+    if let Ok(emb) = embedding {
+        let emb_str = format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+        let similar_memories: Result<Vec<String>, sqlx::Error> = match &db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.unwrap();
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.unwrap();
+
+                let rows = sqlx::query(
+                    "SELECT content FROM consolidated_memory WHERE tenant_id = $1 AND metadata->>'customer_id' = $2 ORDER BY embedding <=> $3::vector LIMIT 3"
+                )
+                .bind(tenant_id)
+                .bind(customer_id)
+                .bind(emb_str)
+                .fetch_all(&mut *tx)
+                .await;
+                tx.commit().await.unwrap();
+                rows.map(|rows| rows.into_iter().map(|r| r.get("content")).collect())
+            }
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    "SELECT content FROM consolidated_memory WHERE tenant_id = ? AND json_extract(metadata, '$.customer_id') = ? ORDER BY vec_distance_cosine(embedding, ?) LIMIT 3"
+                )
+                .bind(tenant_id)
+                .bind(customer_id)
+                .bind(emb_str)
+                .fetch_all(sqlite_pool)
+                .await
+                .map(|rows| rows.into_iter().map(|r| r.get("content")).collect())
+            }
+        };
+
+        if let Ok(mems) = similar_memories {
+            if !mems.is_empty() {
+                enriched_context_summary = format!("{} Past memories: {}", enriched_context_summary, mems.join("; "));
+            }
+        }
+    }
+
+
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {}. Customer recent history: {}. Customer message: {}",
-        business_context, context_summary, customer_message
+        business_context, enriched_context_summary, customer_message
     );
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
@@ -258,6 +313,7 @@ pub async fn handle_unified_webhook(
 
             let draft_reply = generate_draft_reply(
                 tenant_id,
+                &customer_id,
                 &payload.message,
                 &context_summary,
                 &state.db,
@@ -314,6 +370,7 @@ pub async fn handle_unified_webhook(
 
             let draft_reply = generate_draft_reply(
                 tenant_id,
+                &customer_id,
                 &payload.message,
                 &context_summary,
                 &state.db,
