@@ -275,48 +275,34 @@ export default function OnboardingWizard() {
         const isValid = (d: any) => d && Object.keys(d).length > 0;
         let data = isValid(draftData) ? draftData : stateData;
         if (isValid(data)) {
+          // Cross-device sync: If we fetched valid state from server, we merge it without overriding valid local state
+          const updates: any = {};
           if (data.wizardState) data = data.wizardState;
-          if (data.step !== undefined)
-            updateState({ step: data.step === 4 ? 3 : data.step });
-          if (data.chatStep !== undefined)
-            updateState({ chatStep: data.chatStep });
-          if (data.businessDescription !== undefined)
-            updateState({ businessDescription: data.businessDescription });
-          if (data.businessGoal !== undefined)
-            updateState({ businessGoal: data.businessGoal });
-          if (data.bio !== undefined) updateState({ bio: data.bio });
-          if (data.businessName !== undefined)
-            updateState({ businessName: data.businessName });
-          if (data.whatYouSell !== undefined)
-            updateState({ whatYouSell: data.whatYouSell });
-          if (data.location !== undefined)
-            updateState({ location: data.location });
-          if (data.targetAudience !== undefined)
-            updateState({ targetAudience: data.targetAudience });
-          if (data.businessType !== undefined)
-            updateState({ businessType: data.businessType });
-          if (data.categories !== undefined)
-            updateState({ categories: data.categories });
-          if (data.websiteTemplate !== undefined)
-            updateState({ websiteTemplate: data.websiteTemplate });
-          if (data.firstProductName !== undefined)
-            updateState({ firstProductName: data.firstProductName });
-          if (data.firstProductPrice !== undefined)
-            updateState({ firstProductPrice: data.firstProductPrice });
-          if (data.adminName !== undefined)
-            updateState({ adminName: data.adminName });
-          if (data.adminEmail !== undefined)
-            updateState({ adminEmail: data.adminEmail });
-          if (data.adminPassword !== undefined)
-            updateState({ adminPassword: data.adminPassword });
-          if (data.domainChoice !== undefined)
-            updateState({ domainChoice: data.domainChoice });
-          if (data.aiAgents !== undefined)
-            updateState({ aiAgents: data.aiAgents });
-          if (data.aiAutoRespond !== undefined)
-            updateState({ aiAutoRespond: data.aiAutoRespond });
-          if (data.instantImageUrl !== undefined)
-            updateState({ instantImageUrl: data.instantImageUrl });
+          if (data.step !== undefined) updates.step = data.step === 4 ? 3 : data.step;
+          if (data.chatStep !== undefined) updates.chatStep = data.chatStep;
+          if (data.businessDescription) updates.businessDescription = data.businessDescription;
+          if (data.businessGoal) updates.businessGoal = data.businessGoal;
+          if (data.bio) updates.bio = data.bio;
+          if (data.businessName) updates.businessName = data.businessName;
+          if (data.whatYouSell) updates.whatYouSell = data.whatYouSell;
+          if (data.location) updates.location = data.location;
+          if (data.targetAudience) updates.targetAudience = data.targetAudience;
+          if (data.businessType) updates.businessType = data.businessType;
+          if (data.categories) updates.categories = data.categories;
+          if (data.websiteTemplate) updates.websiteTemplate = data.websiteTemplate;
+          if (data.firstProductName) updates.firstProductName = data.firstProductName;
+          if (data.firstProductPrice) updates.firstProductPrice = data.firstProductPrice;
+          if (data.adminName) updates.adminName = data.adminName;
+          if (data.adminEmail) updates.adminEmail = data.adminEmail;
+          if (data.adminPassword) updates.adminPassword = data.adminPassword;
+          if (data.domainChoice) updates.domainChoice = data.domainChoice;
+          if (data.aiAgents) updates.aiAgents = data.aiAgents;
+          if (data.aiAutoRespond !== undefined) updates.aiAutoRespond = data.aiAutoRespond;
+          if (data.instantImageUrl) updates.instantImageUrl = data.instantImageUrl;
+
+          if (Object.keys(updates).length > 0) {
+             updateState(updates);
+          }
           initialStateLoaded.current = true;
         }
       })
@@ -966,7 +952,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative glassmorphism premium-glass"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
