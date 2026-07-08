@@ -1,4 +1,5 @@
 use axum::{
+    extract::Extension,
     extract::{State, Json},
     response::IntoResponse,
     http::StatusCode,
@@ -71,8 +72,12 @@ where
 
 pub async fn get_conversations(
     State(state): State<OmnichannelWebhookState>,
+    Extension(claims): Extension<::server_common::Claims>,
     axum::extract::Path(tenant_id): axum::extract::Path<String>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&tenant_id) {
+        return (StatusCode::UNAUTHORIZED, Json(Vec::<ConversationResponse>::new())).into_response();
+    }
     match &state.db.store {
         crate::db::DbStore::Postgres => {
             let query = "SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC";
@@ -119,8 +124,12 @@ pub async fn get_conversations(
 
 pub async fn get_messages(
     State(state): State<OmnichannelWebhookState>,
+    Extension(claims): Extension<::server_common::Claims>,
     axum::extract::Path((tenant_id, conversation_id)): axum::extract::Path<(String, String)>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&tenant_id) {
+        return (StatusCode::UNAUTHORIZED, Json(Vec::<MessageResponse>::new())).into_response();
+    }
     match &state.db.store {
         crate::db::DbStore::Postgres => {
             let query = "SELECT id, tenant_id, source, original_content, translated_content, draft_reply, status, sender_id, CAST(created_at AS text) as created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND customer_id = (SELECT customer_id FROM unified_threads WHERE id = $2) ORDER BY created_at ASC";

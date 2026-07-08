@@ -1,4 +1,5 @@
 use axum::{
+    extract::Extension,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
@@ -67,9 +68,13 @@ pub fn router() -> Router<AppState> {
 
 async fn get_invoice(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Path(id): Path<String>,
     axum::extract::Query(query): axum::extract::Query<GetInvoiceQuery>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&query.tenant_id) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
     let repo = LedgerRepository::new(state.db);
     match repo.get_invoice(&query.tenant_id, &id).await {
         Ok(Some(invoice)) => (StatusCode::OK, Json(invoice)).into_response(),
@@ -80,8 +85,12 @@ async fn get_invoice(
 
 async fn create_invoice_draft(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<CreateInvoiceDraftRequest>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&payload.tenant_id) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
     let repo = LedgerRepository::new(state.db);
 
     let invoice_id = Uuid::new_v4().to_string();
@@ -126,9 +135,13 @@ async fn create_invoice_draft(
 
 async fn update_invoice_status(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateInvoiceStatusRequest>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&payload.tenant_id) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
     let repo = LedgerRepository::new(state.db);
     match repo.update_invoice_status(&payload.tenant_id, &id, &payload.status).await {
         Ok(_) => StatusCode::OK.into_response(),
@@ -138,8 +151,12 @@ async fn update_invoice_status(
 
 async fn apply_payment(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<ApplyPaymentRequest>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&payload.tenant_id) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
     let repo = LedgerRepository::new(state.db);
     let event = PaymentEvent {
         id: Uuid::new_v4().to_string(),
@@ -159,8 +176,12 @@ async fn apply_payment(
 
 async fn get_ledger_entries(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Path(tenant_id): Path<String>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(&tenant_id) {
+        return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
     let repo = LedgerRepository::new(state.db);
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),

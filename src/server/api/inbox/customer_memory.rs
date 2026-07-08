@@ -1,4 +1,5 @@
 use axum::{
+    extract::Extension,
     extract::{State, Json, Path},
     http::StatusCode,
     routing::{post, get},
@@ -30,8 +31,12 @@ pub struct IngestEventResponse {
 
 pub async fn ingest_event(
     State(state): State<CustomerMemoryState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<IngestEventPayload>,
 ) -> Result<Json<IngestEventResponse>, StatusCode> {
+    if claims.organization_id.as_deref() != Some(&payload.tenant_id) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
     let service = CustomerMemoryGraphService::new(state.db.pool.clone());
 
     match service.ingest_interaction(&payload.tenant_id, &payload.customer_id, &payload.channel, &payload.raw_content).await {
@@ -45,8 +50,12 @@ pub async fn ingest_event(
 
 pub async fn get_profile_summary(
     State(state): State<CustomerMemoryState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Path((tenant_id, customer_id)): Path<(String, String)>,
 ) -> Result<Json<CustomerProfileSummary>, StatusCode> {
+    if claims.organization_id.as_deref() != Some(&tenant_id) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
     let service = CustomerMemoryGraphService::new(state.db.pool.clone());
 
     match service.get_profile_summary(&tenant_id, &customer_id).await {
