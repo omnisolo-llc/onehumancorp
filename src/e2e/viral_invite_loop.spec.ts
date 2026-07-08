@@ -15,7 +15,7 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByText(/Bridge your local sovereignty with cloud-native collaboration/)).toBeVisible();
 
     // Click the invite button
-    await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
+    await page.getByRole('button', { name: 'Unlock Cloud Collaboration' }).click();
 
     // Wait for the link to be generated (input appears)
     const linkInput = page.locator('input[readonly]').first();
