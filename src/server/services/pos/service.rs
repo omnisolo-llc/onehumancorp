@@ -456,6 +456,7 @@ mod tests {
                     payload: "{}".to_string(),
                     status: "PENDING".to_string(),
                     created_at_unix: 0,
+                    terminal_id: None,
                 }
             ],
             session_id: Some("test_session".to_string()),
