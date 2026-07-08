@@ -190,7 +190,8 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 
 /// 4. User Instructions (capped at 32 KiB)
 // Prompt Construction: OpenAI Codex Hierarchy
-pub struct HierarchicalPromptBuilder {
+// This builder implements a strict hierarchical priority stack for prompt components.
+pub struct StrictHierarchicalPromptBuilder {
     server_system_message: String,
     tool_definitions: String,
     developer_instructions: String,
@@ -198,7 +199,7 @@ pub struct HierarchicalPromptBuilder {
     lightweight_memory_index: Vec<String>,
 }
 
-impl HierarchicalPromptBuilder {
+impl StrictHierarchicalPromptBuilder {
     pub fn new(
         cfg: &AgentRunConfig,
         tools: &[crate::tools::Tool],
@@ -406,7 +407,7 @@ mod tests {
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let agents_md = load_cascading_instructions(Some(&grandchild_dir)).await;
             let cfg = AgentRunConfig::default();
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
+            let builder = StrictHierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
             builder.build()
         });
 
@@ -449,7 +450,7 @@ mod tests {
         let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
             let agents_md = load_cascading_instructions(Some(&root_dir)).await;
             let cfg = AgentRunConfig::default();
-            let builder = HierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
+            let builder = StrictHierarchicalPromptBuilder::new(&cfg, &[], Some(agents_md), None);
             builder.build()
         });
 
@@ -584,7 +585,7 @@ mod tests {
         // Total will be > 4000 chars
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+        let builder = StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let built = builder.build();
 
         assert!(built.contains("<system_anchor_high_signal_context_reinjection>"));
@@ -648,7 +649,7 @@ mod tests {
         let normal_entry = "Just a regular memory entry".to_string();
         let index = vec![long_entry, normal_entry.clone()];
 
-        let builder = HierarchicalPromptBuilder::new(&cfg, &[], None, Some(index));
+        let builder = StrictHierarchicalPromptBuilder::new(&cfg, &[], None, Some(index));
         let built = builder.build();
 
         assert!(built.contains("<system_memory_index>"));

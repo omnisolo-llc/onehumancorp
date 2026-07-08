@@ -78,7 +78,7 @@ impl GatherActVerifyHarness {
             all_tools.extend(act_tools.clone());
             all_tools.extend(verify_tools.clone());
 
-            let prompt_builder = crate::prompt_construction::HierarchicalPromptBuilder::new(
+            let prompt_builder = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
                 &config,
                 &all_tools,
                 None, // cascading_agents_md
