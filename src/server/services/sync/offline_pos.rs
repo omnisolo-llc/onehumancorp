@@ -54,8 +54,8 @@ impl CRDTOfflineSynchronizer {
                     // Record successful pos offline transaction
                     let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
                     let res = sqlx::query(
-                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status)
-                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced')
+                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status, terminal_id)
+                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced', $8)
                          ON CONFLICT (id) DO UPDATE SET status = 'RESOLVED', payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at, _sync_status = 'synced'
                          WHERE pos_offline_transactions.updated_at < EXCLUDED.updated_at"
                     )
@@ -66,6 +66,7 @@ impl CRDTOfflineSynchronizer {
                     .bind(mutation.currency.as_deref().unwrap_or("USD"))
                     .bind(serde_json::to_value(mutation).unwrap())
                     .bind(&mutation_ts)
+                    .bind(mutation.terminal_id.clone())
                     .execute(&mut *tx)
                     .await;
 
@@ -93,8 +94,8 @@ impl CRDTOfflineSynchronizer {
             // Record failure in pos_offline_transactions
             let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
             let _ = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status)
-                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced')
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status, terminal_id)
+                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb, $7::timestamptz, $7::timestamptz, 'synced', $8)
                  ON CONFLICT (id) DO UPDATE SET status = 'FAILED', payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at, _sync_status = 'synced'
                  WHERE pos_offline_transactions.updated_at < EXCLUDED.updated_at"
             )
@@ -105,6 +106,7 @@ impl CRDTOfflineSynchronizer {
             .bind(mutation.currency.as_deref().unwrap_or("USD"))
             .bind(serde_json::to_value(mutation).unwrap())
             .bind(&mutation_ts)
+            .bind(mutation.terminal_id.clone())
             .execute(pool)
             .await;
 
