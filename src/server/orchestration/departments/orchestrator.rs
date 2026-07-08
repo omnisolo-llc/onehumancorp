@@ -585,14 +585,14 @@ pub async fn execute_action(
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT') AND id > $2 ORDER BY id ASC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT') ORDER BY id ASC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -642,14 +642,14 @@ pub async fn execute_action(
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT') AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT') ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -670,7 +670,13 @@ pub async fn execute_action(
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
-                        let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
+                        let payload_str: Option<String> = match row.try_get::<String, _>("payload") {
+                            Ok(p) => Some(p),
+                            Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p.to_string()),
+                                Err(_) => None,
+                            }
+                        };
                         let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
@@ -742,14 +748,14 @@ pub async fn execute_action(
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT') AND id < $2 ORDER BY id DESC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT') ORDER BY id DESC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, event_source as department, context_payload->>'description' as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -799,14 +805,14 @@ pub async fn execute_action(
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT') AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT') ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, event_source as department, json_extract(context_payload, '$.description') as description, lifecycle_state as status, 'HIGH' as action_risk, proposed_action as payload FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -827,7 +833,13 @@ pub async fn execute_action(
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
-                        let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
+                        let payload_str: Option<String> = match row.try_get::<String, _>("payload") {
+                            Ok(p) => Some(p),
+                            Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p.to_string()),
+                                Err(_) => None,
+                            }
+                        };
                         let payload_opt = payload_str.and_then(|s: String| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
@@ -867,7 +879,7 @@ pub async fn execute_action(
                 let row = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let updated = if let Some(ref ep) = edited_payload {
-                            sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2, payload = $3 WHERE id = $4 AND tenant_id = $5 RETURNING department, payload")
+                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2, proposed_action = $3 WHERE id = $4 AND tenant_id = $5 RETURNING event_source as department, proposed_action as payload")
                                 .bind(new_status)
                                 .bind(now)
                                 .bind(ep)
@@ -876,7 +888,7 @@ pub async fn execute_action(
                                 .fetch_optional(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
+                            sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING event_source as department, proposed_action as payload")
                                 .bind(new_status)
                                 .bind(now)
                                 .bind(request_id)
@@ -918,7 +930,7 @@ pub async fn execute_action(
             DbStore::Sqlite(pool) => {
                 let row = if let Some(ref ep) = edited_payload {
                     let ep_str = serde_json::to_string(ep).unwrap_or_default();
-                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ?, payload = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
+                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ?, proposed_action = ? WHERE id = ? AND tenant_id = ? RETURNING event_source as department, proposed_action as payload")
                         .bind(new_status)
                         .bind(now)
                         .bind(ep_str)
@@ -927,7 +939,7 @@ pub async fn execute_action(
                         .fetch_optional(pool)
                         .await
                 } else {
-                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
+                    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING event_source as department, proposed_action as payload")
                         .bind(new_status)
                         .bind(now)
                         .bind(request_id)

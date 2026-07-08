@@ -615,14 +615,13 @@ mod tests {
         .await
         .unwrap();
         sqlx::query(
-            "CREATE TABLE agent_approvals (
+            "CREATE TABLE agent_feed_items (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
-                department TEXT NOT NULL,
-                description TEXT NOT NULL,
-                status TEXT NOT NULL,
-                action_risk TEXT NOT NULL,
-                payload TEXT,
+                event_source TEXT,
+                context_payload TEXT,
+                proposed_action TEXT,
+                lifecycle_state TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )",
