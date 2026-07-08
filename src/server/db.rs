@@ -866,7 +866,8 @@ impl DB {
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
@@ -1171,7 +1172,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS orders (
