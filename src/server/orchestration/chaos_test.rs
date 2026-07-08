@@ -401,26 +401,6 @@ mod chaos_tests {
         .await
         .unwrap();
 
-
-        // Create the necessary table schema
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         // Insert a task stuck in IN_PROGRESS with a corrupted dependency JSON
 
         let task_id = "corrupted-task-id";
