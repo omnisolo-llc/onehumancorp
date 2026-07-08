@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Viral Portfolio Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0066FF;
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 414px;
+      padding: 24px;
+      margin-top: 40px;
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      text-align: center;
+      margin: 0 0 24px 0;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 15px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    .branding-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #result-area {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background-color: #333;
+    }
+
+    .back-link {
+      margin-top: 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --card-bg: rgba(30, 30, 30, 0.65);
+        --text-main: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      input[type="text"], textarea {
+          background: #1c1c1e;
+          color: #f5f5f7;
+      }
+      .code-block {
+        background: #000;
+        border: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">🎨</div>
+    <h1>Embeddable Portfolio Generator</h1>
+    <p class="subtitle">Create a beautiful, shareable portfolio widget for your website. Free users include a "Powered by OHC" referral badge to earn credits.</p>
+
+    <div class="form-group">
+        <label for="p-name">Name</label>
+        <input type="text" id="p-name" placeholder="Leo's Music Tutoring" />
+    </div>
+
+    <div class="form-group">
+        <label for="p-role">Profession / Title</label>
+        <input type="text" id="p-role" placeholder="Professional Music Tutor" />
+    </div>
+
+    <div class="form-group">
+        <label for="p-bio">Short Bio</label>
+        <textarea id="p-bio" placeholder="Helping students find their voice through personalized music lessons."></textarea>
+    </div>
+
+    <div class="branding-toggle">
+        <input type="checkbox" id="remove-branding" />
+        <label for="remove-branding" style="margin: 0;">Remove "Powered by OHC" Badge (Pro only)</label>
+    </div>
+
+    <button id="generate-btn">Generate Embed Code</button>
+
+    <div id="result-area">
+      <h2 style="font-size: 16px; margin: 0 0 12px 0;">Your Embed Code</h2>
+      <p style="font-size: 14px; color: var(--text-secondary); margin: 0 0 12px 0;">Paste this snippet where you want your portfolio to appear on your website.</p>
+
+      <div class="code-block" id="embed-code"></div>
+
+      <button id="copy-btn" class="copy-btn">Copy Code</button>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        const name = document.getElementById('p-name').value || 'My Portfolio';
+        const role = document.getElementById('p-role').value || 'Professional';
+        const bio = document.getElementById('p-bio').value || 'Welcome to my work.';
+        const removeBranding = document.getElementById('remove-branding').checked;
+
+        let referralLink = `https://ohc.network/invite/${tenantId}`;
+
+        // Attempt to call the actual backend API to generate a referral link if it exists
+        try {
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.referral_link) {
+              referralLink = data.referral_link;
+            }
+          }
+        } catch (e) {
+          // Using default format for demo due to API error
+        }
+
+        let brandingHtml = '';
+        if (!removeBranding) {
+            brandingHtml = `
+  <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 16px;">
+    <a href="${referralLink}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:#86868b;font-family:sans-serif;font-size:12px;font-weight:500;text-decoration:none;">
+      <svg style="width:12px;height:12px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      ⚡ Powered by OHC
+    </a>
+  </div>`;
+        }
+
+        const snippet = `<!-- OHC Portfolio Widget -->
+<div style="max-width: 400px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="text-align: center;">
+    <div style="width: 80px; height: 80px; border-radius: 40px; background: #f0f0f5; margin: 0 auto 16px auto; display: flex; align-items: center; justify-content: center; font-size: 32px;">🧑‍🎨</div>
+    <h3 style="margin: 0 0 4px 0; color: #1d1d1f; font-size: 20px;">${name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h3>
+    <p style="margin: 0 0 16px 0; color: #0066FF; font-size: 14px; font-weight: 500;">${role.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+    <p style="margin: 0; color: #555; font-size: 14px; line-height: 1.5;">${bio.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+  </div>${brandingHtml}
+</div>`;
+
+        document.getElementById('embed-code').textContent = snippet;
+
+        // Simulate a tiny delay for realism
+        await new Promise(r => setTimeout(r, 600));
+
+        document.getElementById('result-area').style.display = 'block';
+        btn.style.display = 'none';
+
+      } catch (err) {
+        console.error(err);
+        btn.textContent = 'Error. Try Again.';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      const code = document.getElementById('embed-code').textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    });
+  </script>
+</body>
+</html>
