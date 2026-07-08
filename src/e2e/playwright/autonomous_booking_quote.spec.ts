@@ -46,5 +46,15 @@ test.describe('Autonomous Booking & Quoting E2E', () => {
 
         const editBtn = page.locator('button:has-text("Edit")');
         await expect(editBtn).toBeVisible();
+
+        // 3. Verify that the AI quoting engine produces a quote correctly containing a line item tied to the created service_item.
+        // Check for specific verifications to ensure the new AI logic effectively parsed the quote, checking the DOM elements that appear when a quote is successfully parsed and matched with the correct ServiceItem.
+        await page.goto('/ui/quote.html?tenant=carlos-handyman');
+        // Because Carlos created a "Sink Repair" service, the draft quote should contain a line item with that name.
+        await expect(page.locator('text=Sink Repair').first()).toBeVisible({ timeout: 10000 });
+
+        // Assert the glassmorphism UI element
+        const glassmorphismElement = page.locator('.glassmorphism').first();
+        await expect(glassmorphismElement).toBeVisible();
     });
 });
