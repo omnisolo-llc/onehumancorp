@@ -1410,6 +1410,26 @@
 
 
 
+
+      <div class="step" id="step-preview" style="display: none;">
+        <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; border-radius: 50%;">
+          <svg style="width: 32px; height: 32px; color: #0066FF" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h1>Review Your Workspace</h1>
+        <p style="margin-bottom: 24px;">Your AI-generated storefront, product catalog, and policies are ready.</p>
+
+        <div id="preview-content" style="text-align: left; background: rgba(255, 255, 255, 0.4); padding: 16px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; max-height: 250px; overflow-y: auto;">
+            <!-- Generated content will appear here -->
+        </div>
+
+        <div class="btn-group">
+          <button id="approve-launch-btn" class="btn-primary" style="width: 100%; margin-bottom: 12px;">Approve & Launch</button>
+          <button class="btn-secondary" onclick="goToStep('step-initial')" style="width: 100%;">Back to Start</button>
+        </div>
+      </div>
+
       <div class="step" id="step-loading">
         <h1 id="loading-title">Building Your Business...</h1>
         <p id="loading-msg">Please wait while we set up your workspace.</p>
@@ -3551,6 +3571,98 @@
         });
       });
 
+
+      const approveLaunchBtn = document.getElementById("approve-launch-btn");
+      if (approveLaunchBtn) {
+          approveLaunchBtn.addEventListener("click", async () => {
+              approveLaunchBtn.disabled = true;
+              approveLaunchBtn.innerHTML = '<div class="spinner"></div>Launching...';
+              goToStep("step-loading");
+
+              try {
+                  const backendUrl =
+                    window.location.protocol === "file:" ||
+                    ["1420", "3000", "8081"].includes(window.location.port)
+                      ? "http://127.0.0.1:18789"
+                      : "";
+
+                  const data = window.zeroClickIntakeData || {};
+                  const bioInput = window.zeroClickBioInput || "";
+
+                  const startReq = {
+                      business_type: data.business_type || "Other",
+                      company_name: data.business_name || "My Store",
+                      company_description: bioInput,
+                      selling_categories: data.categories || ["Other"],
+                      payment_pref: "online",
+                      admin_email: "owner@ohc.app",
+                      admin_name: "Owner",
+                      admin_password: "password123",
+                      website_template: "Modern",
+                      first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
+                      first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+                      domain_choice: "subdomain",
+                      price_type: "fixed",
+                      location: data.location || "Global",
+                      target_audience: data.target_audience || "Everyone",
+                      initial_products: data.initial_products || [],
+                      ai_agents: [],
+                      ai_auto_respond: false,
+                      deposit_percentage: data.deposit_percentage,
+                      lead_time_days: data.lead_time_days
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                    const startData = await window.__TAURI__.core.invoke(
+                        "start_onboarding",
+                        { req: startReq },
+                    );
+
+                    if (startData && startData.organization_id) {
+                        localStorage.setItem("tenant_id", startData.organization_id);
+                        localStorage.setItem("tenant", startData.organization_id);
+                    }
+                    if (startData && startData.user_id) {
+                        localStorage.setItem("user_id", startData.user_id);
+                    }
+
+                    localStorage.removeItem("onboardingState");
+                    localStorage.setItem("has_onboarded", "true");
+
+                    window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+                    return;
+                  }
+
+                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(startReq),
+                  });
+
+                  if (!startRes.ok) {
+                      throw new Error("Failed to start onboarding");
+                  }
+
+                  const startData = await startRes.json();
+                  if (startData.organization_id) {
+                      localStorage.setItem("tenant_id", startData.organization_id);
+                      localStorage.setItem("tenant", startData.organization_id);
+                  }
+                  if (startData.user_id) {
+                      localStorage.setItem("user_id", startData.user_id);
+                  }
+                  localStorage.removeItem("onboardingState");
+                  localStorage.setItem("has_onboarded", "true");
+                  window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+              } catch (e) {
+                  console.error(e);
+                  approveLaunchBtn.disabled = false;
+                  approveLaunchBtn.innerHTML = "Approve & Launch";
+                  goToStep("step-preview");
+              }
+          });
+      }
+
       document.querySelectorAll(".save-draft-btn").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -3705,122 +3817,56 @@
             }
 
             const bioInput = chatHistory.map((m) => m.content).join("\n");
-            // Find the last uploaded image if any
-            let imageUrl = undefined;
-            for (let i = chatHistory.length - 1; i >= 0; i--) {
-              if (chatHistory[i].image_url) {
-                imageUrl = chatHistory[i].image_url;
-                break;
-              }
-            }
 
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              const startReq = {
-                business_type: data.intake_data.business_type || state.work_context || "Other",
-                company_name: data.intake_data.business_name || state.business_name || "My Store",
-                company_description: bioInput || state.tagline,
-                selling_categories: data.intake_data.categories || [state.categories || "Other"],
-                payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
-                website_template: state.template_selection || "Modern",
-                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
-                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
-                domain_choice: state.domain || "subdomain",
-                price_type: "fixed",
-                location: data.intake_data.location || state.location || "Global",
-                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
-                initial_products: data.intake_data.initial_products || [],
-                ai_agents: [],
-                ai_auto_respond: false,
-                deposit_percentage: data.intake_data.deposit_percentage,
-                lead_time_days: data.intake_data.lead_time_days
-              };
+            setTimeout(() => {
+                if (window.generateStorefrontLoadingInterval) {
+                    clearInterval(window.generateStorefrontLoadingInterval);
+                    delete window.generateStorefrontLoadingInterval;
+                }
 
-              const startData = await window.__TAURI__.core.invoke("start_onboarding", { req: startReq });
+                window.zeroClickIntakeData = data.intake_data;
+                window.zeroClickBioInput = bioInput;
 
-              if (startData && startData.organization_id) {
-                localStorage.setItem("tenant_id", startData.organization_id);
-                localStorage.setItem("tenant", startData.organization_id);
-              }
-              if (startData && startData.user_id) {
-                localStorage.setItem("user_id", startData.user_id);
-              }
+                const previewEl = document.getElementById("preview-content");
+              if (previewEl && data.intake_data) {
+                  // Safe text injection
+                  previewEl.innerHTML = '';
+                  const safeAppend = (label, value) => {
+                      if (!value) return;
+                      const strong = document.createElement("strong");
+                      strong.textContent = label + ": ";
+                      const text = document.createTextNode(value);
+                      const br = document.createElement("br");
+                      previewEl.appendChild(strong);
+                      previewEl.appendChild(text);
+                      previewEl.appendChild(br);
+                  };
 
-              localStorage.removeItem("onboardingState");
-              localStorage.setItem("has_onboarded", "true");
+                  safeAppend("Business Name", data.intake_data.business_name || "N/A");
+                  safeAppend("Business Type", data.intake_data.business_type || "N/A");
+                  safeAppend("Location", data.intake_data.location || "N/A");
+                  safeAppend("Target Audience", data.intake_data.target_audience || "N/A");
 
-              if (window.generateStorefrontLoadingInterval) {
-                  clearInterval(window.generateStorefrontLoadingInterval);
-                  delete window.generateStorefrontLoadingInterval;
+                  if (data.intake_data.initial_products && data.intake_data.initial_products.length > 0) {
+                      const pStrong = document.createElement("strong");
+                      pStrong.textContent = "Initial Products:";
+                      previewEl.appendChild(pStrong);
+                      const ul = document.createElement("ul");
+                      data.intake_data.initial_products.forEach(p => {
+                          const li = document.createElement("li");
+                          li.textContent = `${p.name} - $${p.price}`;
+                          ul.appendChild(li);
+                      });
+                      previewEl.appendChild(ul);
+                  }
+
+                  if (data.intake_data.deposit_percentage) {
+                      safeAppend("Deposit Policy", `${data.intake_data.deposit_percentage}%`);
+                  }
               }
 
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-              return;
-            }
-
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                business_type: data.intake_data.business_type || state.work_context || "Other",
-                company_name: data.intake_data.business_name || state.business_name || "My Store",
-                company_description: bioInput || state.tagline,
-                selling_categories: data.intake_data.categories || [state.categories || "Other"],
-                payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                website_template: state.template_selection || "Modern",
-                domain_choice: state.domain || "subdomain",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
-                price_type: "fixed",
-                location: data.intake_data.location || state.location || "Global",
-                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
-                initial_products: data.intake_data.initial_products || [],
-                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
-                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
-                ai_agents: [],
-                ai_auto_respond: false,
-                deposit_percentage: data.intake_data.deposit_percentage,
-                lead_time_days: data.intake_data.lead_time_days
-              }),
-            });
-
-            if (!startRes.ok) {
-              const errData = await startRes.json().catch(() => ({}));
-              throw new Error(
-                errData.error ||
-                  errData.message ||
-                  "Failed to start onboarding",
-              );
-            }
-
-            const startData = await startRes.json();
-
-            if (startData.organization_id) {
-              localStorage.setItem("tenant_id", startData.organization_id);
-              localStorage.setItem("tenant", startData.organization_id);
-            }
-            if (startData.user_id) {
-              localStorage.setItem("user_id", startData.user_id);
-            }
-
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
-
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-
-            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+                goToStep("step-preview");
+            }, 1500);
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -4043,7 +4089,7 @@
                 ? "http://127.0.0.1:18789"
                 : "";
             const res = await fetch(
-              `${backendUrl}/api/onboarding/start_zero_click`,
+              `${backendUrl}/api/onboarding/preview_zero_click`,
               {
                 method: "POST",
                 headers: {
@@ -4105,6 +4151,7 @@
           }
         });
       }
+
       document.querySelectorAll(".save-draft-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const originalText = e.target.innerText;
