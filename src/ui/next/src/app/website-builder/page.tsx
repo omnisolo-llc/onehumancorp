@@ -543,8 +543,8 @@ export default function WebsiteBuilderPage() {
                     >
                       Next
                     </button>
-                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-[#FF3B30] text-xs text-center mt-1">Please enter a valid email address.</p>}
-                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-[#FF3B30] text-xs text-center mt-1">Password must be at least 8 characters.</p>}
+                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-red-500 text-xs text-center mt-1">Please enter a valid email address.</p>}
+                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-red-500 text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
