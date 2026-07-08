@@ -21,7 +21,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await expect(bioInput).toBeVisible();
     await bioInput.fill("I run a specialty coffee shop that also sells fresh pastries daily.");
 
-    const generateBtn = page.getByRole('button', { name: /Generate My Workspace/ });
+    const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeVisible();
 
     await page.route('**/api/onboarding/start', async route => {
@@ -41,7 +41,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   });
 
   test('validates empty input in Tell us about your business', async ({ page }) => {
-    const generateBtn = page.getByRole('button', { name: /Generate My Workspace/ });
+    const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeDisabled();
   });
 
@@ -64,14 +64,14 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   });
 
   test('verifies Step-by-Step Setup navigation is distinct from Instant Build', async ({ page }) => {
-    await page.getByRole('button', { name: /Step-by-Step Setup/ }).click();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     await expect(page.getByRole('heading', { name: /How do you work\?/ })).toBeVisible();
     await expect(page.locator('[data-testid="persona-tutor"]')).toBeVisible();
     await expect(page.locator('[data-testid="persona-baker"]')).toBeVisible();
   });
 
   test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {
-    const generateBtn = page.getByRole('button', { name: /Generate My Workspace/ });
+    const generateBtn = page.getByTestId('generate-storefront-btn');
     const bioInput = page.locator('#instant-bio');
 
     await bioInput.fill("     \n\t   ");
@@ -83,7 +83,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('Powered by OHC link is visible on step 0', async ({ page }) => {
     const poweredLink = page.getByRole('link', { name: /Powered by OHC/i });
     await expect(poweredLink).toBeVisible();
-    await expect(poweredLink).toHaveAttribute('href', '/setup.html?ref=website-builder');
+    await expect(poweredLink).toHaveAttribute('href', '/api/v1/growth/referrals/click?target=/onboarding&ref=website-builder');
   });
 
 });
