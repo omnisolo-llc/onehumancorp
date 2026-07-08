@@ -163,7 +163,8 @@ impl RedisRateLimiter {
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         if let Some(entry) = self.tier_cache.get(tenant_id) {
-            if entry.1.elapsed() < Duration::from_secs(300) {
+            let res = entry.1.elapsed() < Duration::from_secs(300);
+            if res {
                 return Ok(entry.0.clone());
             }
         }

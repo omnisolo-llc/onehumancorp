@@ -25,7 +25,8 @@ impl McpSyncWorker {
         info!("Starting McpSyncWorker...");
         loop {
             if ::server_config::get().telemetry_enabled {
-                if let Err(e) = self.sync_metrics().await {
+                let res = self.sync_metrics().await;
+                if let Err(e) = res {
                     warn!("McpSyncWorker error: {}", e);
                 }
             }

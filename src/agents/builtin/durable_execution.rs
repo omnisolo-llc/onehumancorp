@@ -48,8 +48,16 @@ pub struct DurableExecutionEngine {
     state_store: Arc<Mutex<HashMap<String, WorkflowState>>>,
 }
 
+
+impl Default for DurableExecutionEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DurableExecutionEngine {
     pub fn new() -> Self {
+
         Self {
             state_store: Arc::new(Mutex::new(HashMap::new())),
         }

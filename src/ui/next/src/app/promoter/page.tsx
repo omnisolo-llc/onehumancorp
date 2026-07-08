@@ -19,10 +19,84 @@ export default function PromoterPage() {
   const [selectedProposal, setSelectedProposal] = useState<SocialPostProposal | null>(null);
 
   useEffect(() => {
-    // This is mocked for now
+    async function fetchProposals() {
+      try {
+        const token = localStorage.getItem("token") || "";
+        const res = await fetch("/api/v1/agents/approvals/pending", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Filter out the approvals that are specifically for the promoter
+          const promoterProposals = data.pending_approvals.filter((a: any) =>
+            a.department === "Marketing" && a.action_type === "DraftForReview"
+          ).map((a: any) => ({
+            id: a.id,
+            tenant_id: a.tenant_id,
+            product_id: a.payload?.product_id || "unknown",
+            content: a.payload?.draft_content || a.description || "",
+            image_url: a.payload?.image_url || "",
+            seo_alt_text: a.payload?.seo_alt_text || "",
+            seo_meta_description: a.payload?.seo_meta_description || "",
+            status: a.status,
+            created_at_unix: new Date(a.created_at).getTime() / 1000
+          }));
+          setProposals(promoterProposals);
+        }
+      } catch (err) {
+        console.error("Failed to fetch proposals", err);
+      }
+    }
+    fetchProposals();
   }, []);
 
+
+  async function handleApprove() {
+    if (!selectedProposal) return;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/v1/agents/approvals/${selectedProposal.id}/decide`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: true, edited_payload: null })
+      });
+      if (res.ok) {
+        setProposals(prev => prev.filter(p => p.id !== selectedProposal.id));
+        setSelectedProposal(null);
+      }
+    } catch (err) {
+      console.error("Approval failed", err);
+    }
+  }
+
+  async function handleDiscard() {
+    if (!selectedProposal) return;
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/v1/agents/approvals/${selectedProposal.id}/decide`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ approved: false, edited_payload: null })
+      });
+      if (res.ok) {
+        setProposals(prev => prev.filter(p => p.id !== selectedProposal.id));
+        setSelectedProposal(null);
+      }
+    } catch (err) {
+      console.error("Discard failed", err);
+    }
+  }
+
   if (selectedProposal) {
+
     return (
       <div className="p-4 max-w-sm mx-auto">
         <button onClick={() => setSelectedProposal(null)} className="mb-4 text-blue-500">&larr; Back</button>
@@ -39,9 +113,9 @@ export default function PromoterPage() {
                 </div>
             </details>
             <div className="flex gap-2">
-                <button className="flex-1 bg-blue-500 text-white py-2 rounded">Approve & Publish</button>
+                <button className="flex-1 bg-blue-500 text-white py-2 rounded" onClick={handleApprove}>Approve & Publish</button>
                 <button className="flex-1 bg-gray-200 text-gray-800 py-2 rounded">Edit</button>
-                <button className="flex-1 bg-red-100 text-red-600 py-2 rounded">Discard</button>
+                <button className="flex-1 bg-red-100 text-red-600 py-2 rounded" onClick={handleDiscard}>Discard</button>
             </div>
         </div>
       </div>
