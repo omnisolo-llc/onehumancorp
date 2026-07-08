@@ -188,7 +188,7 @@
              let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
 
              html += `
-                <div class="changelog-card glassmorphism" style="padding: 24px; margin-bottom: 24px;">
+                <div class="changelog-card glassmorphism" style="display: flex; flex-direction: column; padding: 24px; margin-bottom: 24px;">
                   <h2 class="version-title">${item.version}</h2>
                   ${imgHtml}
                   ${contentHtml}
