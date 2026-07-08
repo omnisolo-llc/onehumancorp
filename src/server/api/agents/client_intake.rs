@@ -239,7 +239,6 @@ async fn handle_client_intake(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
 
     #[test]
     fn test_client_intake_response_serialize() {
