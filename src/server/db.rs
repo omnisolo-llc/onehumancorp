@@ -130,7 +130,7 @@ pub struct SearchResult {
     pub route: String,
 }
 
-fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
+pub fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
         .or_else(|_| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f"))
         .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
