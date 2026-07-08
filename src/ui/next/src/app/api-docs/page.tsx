@@ -31,7 +31,7 @@ export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-4 sm:p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center overflow-x-hidden w-full max-w-[100vw]">
       <style dangerouslySetInnerHTML={{__html: `
-        .swagger-ui { background: white; border-radius: 12px; padding: 12px; width: 100%; box-sizing: border-box; max-width: 100vw; overflow-x: hidden; }
+        .swagger-ui { background: transparent; border-radius: 12px; padding: 12px; width: 100%; box-sizing: border-box; max-width: 100vw; overflow-x: hidden; }
         @media (min-width: 640px) { .swagger-ui { padding: 24px; } }
         .swagger-ui .wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; padding: 0 10px; box-sizing: border-box; }
         .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
@@ -45,6 +45,7 @@ export default function ApiDocsPage() {
         .swagger-ui .opblock .opblock-summary { padding: 5px; box-sizing: border-box; }
         .swagger-ui .opblock .opblock-summary-method { min-width: 60px; font-size: 12px; }
         .swagger-ui .opblock .opblock-summary-path { font-size: 14px; max-width: calc(100vw - 120px); overflow-wrap: break-word; word-break: break-all; }
+        .swagger-ui .info h1, .swagger-ui .info h2, .swagger-ui .info h3, .swagger-ui .info p, .swagger-ui .opblock-summary-method, .swagger-ui .opblock-summary-path, .swagger-ui .opblock-summary-description { color: inherit !important; }
       `}} />
       <div data-testid="api-docs-title" className="w-full max-w-6xl bg-yellow-50/80 backdrop-blur-[30px] saturate-[210%] border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <div className="text-yellow-700 text-sm">
