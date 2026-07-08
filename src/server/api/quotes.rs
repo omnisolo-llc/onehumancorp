@@ -486,6 +486,7 @@ mod tests {
             is_optional: false,
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
+            service_item_id: None,
         }];
 
         // Simulate mobile_optimized = true logic
