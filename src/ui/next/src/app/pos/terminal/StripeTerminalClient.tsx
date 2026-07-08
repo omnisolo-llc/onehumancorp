@@ -125,21 +125,28 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         });
         const intentData = await intentRes.json();
         intentSecret = intentData.client_secret;
-        if (!intentSecret) { setStatus('Failed to fetch payment intent secret'); return; }
+        if (!intentSecret) {
+            setStatus('Failed to fetch payment intent secret');
+            if (onOptimisticRollback) onOptimisticRollback();
+            return;
+        }
         lockId = intentData.lock_id || '';
     } catch (e) {
         setStatus('Failed to fetch payment intent');
+        if (onOptimisticRollback) onOptimisticRollback();
         return;
     }
 
     const res = await terminal.collectPaymentMethod(intentSecret);
     if (res.error) {
       setStatus('Payment failed: ' + res.error.message);
+      if (onOptimisticRollback) onOptimisticRollback();
     } else {
       setStatus('Processing payment...');
       const processRes = await terminal.processPayment(res.paymentIntent);
       if (processRes.error) {
         setStatus('Payment failed: ' + processRes.error.message);
+        if (onOptimisticRollback) onOptimisticRollback();
       } else {
         setStatus('Payment successful! Capturing...');
         try {
@@ -192,6 +199,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              const reserveData = await reserveRes.json();
              if (!reserveRes.ok || !reserveData.success) {
                  setStatus('Failed to reserve inventory: ' + (reserveData.error_message || ''));
+                 if (onOptimisticRollback) onOptimisticRollback();
                  return;
              }
              lockId = reserveData.lock_id;
@@ -311,6 +319,16 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                   });
+                  if (!sessionRes.ok) {
+                     if (sessionRes.status === 409) {
+                         setStatus('Failed to reserve inventory: Item is currently being checked out by another customer.');
+                     } else {
+                         setStatus('Failed to create checkout session.');
+                     }
+                     if (onOptimisticRollback) onOptimisticRollback();
+                     return;
+                  }
+                  if (onOptimisticReserve) onOptimisticReserve();
                   await processPayment();
                 } catch(e: any) {
                   setStatus('Error: ' + e.message);
