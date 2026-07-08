@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Poll Generator</title>
+    <style>
+        body { font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f5f5f7; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { max-width: 600px; width: 100%; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); padding: 30px; border: 1px solid rgba(255, 255, 255, 0.4); }
+        h1 { margin-top: 0; font-size: 24px; margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 16px; background: rgba(255,255,255,0.65); }
+        button { background-color: #0066FF; color: white; border: none; padding: 14px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 16px; transition: transform 0.1s; }
+        button:hover { background-color: #0052cc; }
+        button:active { transform: scale(0.98); }
+        .result-area { display: none; margin-top: 20px; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .result-area h3 { margin-top: 0; font-size: 18px; }
+        textarea { width: 100%; height: 150px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; margin-bottom: 16px; }
+        .preview { margin-top: 20px; padding: 20px; border: 1px dashed #d1d5db; border-radius: 8px; text-align: center; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #6b7280; text-decoration: none; font-size: 14px; }
+        .back-link:hover { color: #111827; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+        <h1>Viral Customer Poll Generator</h1>
+
+        <label for="poll-question">Poll Question</label>
+        <input type="text" id="poll-question" value="How was your experience with us today?" />
+
+        <label for="poll-options">Options (comma separated)</label>
+        <input type="text" id="poll-options" value="Great, Average, Poor" />
+
+        <button id="generate-btn">Generate Poll Embed</button>
+
+        <div id="result-area" class="result-area">
+            <h3>Your Embed Code</h3>
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">Copy this HTML and paste it into your emails or website.</p>
+            <textarea id="embed-code" readonly></textarea>
+            <button id="copy-btn">Copy Code</button>
+
+            <div class="preview" id="preview-area">
+                <!-- Preview will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateBtn = document.getElementById('generate-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const resultArea = document.getElementById('result-area');
+            const embedCodeInput = document.getElementById('embed-code');
+            const previewArea = document.getElementById('preview-area');
+
+            generateBtn.addEventListener('click', async () => {
+                const question = document.getElementById('poll-question').value.trim();
+                const optionsStr = document.getElementById('poll-options').value.trim();
+                const options = optionsStr.split(',').map(o => o.trim()).filter(o => o.length > 0);
+
+                if (!question || options.length === 0) {
+                    alert('Please enter a question and at least one option.');
+                    return;
+                }
+
+                generateBtn.textContent = 'Generating...';
+                generateBtn.disabled = true;
+
+                // Simulate API delay
+                await new Promise(r => setTimeout(r, 600));
+
+                let tenantId = 'e2e-test-store';
+                try {
+                    tenantId = localStorage.getItem('tenant') || tenantId;
+                } catch(e) {}
+
+                const baseUrl = window.location.origin;
+
+                let buttonsHtml = '';
+                options.forEach(opt => {
+                    const encodedOpt = encodeURIComponent(opt);
+                    const encodedQ = encodeURIComponent(question);
+                    const voteUrl = `${baseUrl}/ui/customer-poll/index.html?q=${encodedQ}&vote=${encodedOpt}&tenant=${tenantId}`;
+                    buttonsHtml += `<a href="${voteUrl}" style="display: inline-block; background-color: #f3f4f6; color: #111827; padding: 10px 20px; border-radius: 8px; text-decoration: none; margin: 5px; font-family: sans-serif; font-weight: 500; border: 1px solid #e5e7eb;">${opt}</a>\n`;
+                });
+
+                const embedHtml = `
+<div style="text-align: center; font-family: sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 12px; max-width: 400px; margin: 0 auto; background-color: #fafafa;">
+    <h3 style="margin-top: 0; color: #111827; font-size: 18px;">${question}</h3>
+    <div style="margin-bottom: 20px;">
+        ${buttonsHtml}
+    </div>
+    <div style="font-size: 12px; color: #888;">
+        <a href="${baseUrl}/setup.html?ref=${tenantId}&source=customer_poll" target="_blank" style="color: #888; text-decoration: none;">⚡ Powered by OHC</a>
+    </div>
+</div>`.trim();
+
+                embedCodeInput.value = embedHtml;
+                previewArea.innerHTML = embedHtml;
+                resultArea.style.display = 'block';
+
+                generateBtn.textContent = 'Generate Poll Embed';
+                generateBtn.disabled = false;
+            });
+
+            copyBtn.addEventListener('click', () => {
+                embedCodeInput.select();
+                document.execCommand('copy');
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => { copyBtn.textContent = 'Copy Code'; }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
