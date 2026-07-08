@@ -2904,6 +2904,7 @@
         ];
 
         if (state.step === undefined || state.step === 0) {
+          if (state.step === 0) { const instantBioInputEl = document.getElementById("instant-bio"); if (instantBioInputEl) instantBioInputEl.value = ""; }
           goToStep("step-initial", false);
         } else if (state.step < steps.length) {
           goToStep(steps[state.step], false);
@@ -4979,7 +4980,7 @@
   "
 >
   <a
-    href="/setup.html?ref=website-builder"
+    href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref=website-builder"
     id="dashboard-footer-viral-link"
     style="
       color: #0066FF;
