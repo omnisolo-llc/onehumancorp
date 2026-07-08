@@ -396,6 +396,7 @@ pub async fn execute_action(
         let within_budget = self.check_ai_budget(&tenant_id, cost).await.unwrap_or(true);
         if !within_budget {
             tracing::info!("💰 Miser telemetry: Tenant {} soft limit reached. Action allowed. Please upgrade your plan.", tenant_id); // pii-safe
+            return Err("Token budget exhausted. Please upgrade your plan to continue using AI actions.".to_string());
         }
 
         match risk {
