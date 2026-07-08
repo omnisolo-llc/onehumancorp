@@ -19,7 +19,7 @@ test.describe('Quote Feed e2e', () => {
     // Deep link works
     await page.locator('[data-testid="edit-quote-draft"]').click();
 
-    await expect(page).toHaveURL(/\/quoting\?id=.*/);
+    await expect(page).toHaveURL(/\/quote.html\?id=.*/);
 
     await expect(page.getByText('Quote Summary')).toBeVisible();
 
