@@ -93,7 +93,7 @@ function BookingForm() {
   if (submitted) {
     if (checkoutUrl) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
+        <div className="min-h-screen bg-gray-50 flex items-start justify-center p-0 sm:p-4 font-inter overflow-x-hidden">
           <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-checkout-container">
             <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -111,7 +111,7 @@ function BookingForm() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
+      <div className="min-h-screen bg-gray-50 flex items-start justify-center p-0 sm:p-4 font-inter overflow-x-hidden">
         <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-success-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,8 +126,8 @@ function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-      <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex items-start justify-center p-0 sm:p-4 font-inter overflow-x-hidden">
+      <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-[375px] mx-auto w-full overflow-hidden">
         <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F] px-8 py-10  text-center">
           <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">Book an Appointment</h1>
           <p className="text-blue-100 font-medium">Select a time that works for you.</p>
@@ -177,7 +177,7 @@ function BookingForm() {
                 {isLoadingSlots ? (
                   <div className="text-sm text-gray-500 text-center py-4">Loading slots...</div>
                 ) : availableSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {availableSlots.map((slot) => {
                       const d = new Date(slot.start_time);
                       const timeString = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -186,7 +186,7 @@ function BookingForm() {
                           key={slot.start_time}
                           type="button"
                           onClick={() => setSelectedSlot(slot.start_time)}
-                          className={`py-2 text-sm font-medium rounded-lg border transition-all ${
+                          className={`min-h-[44px] min-w-[44px] py-2 px-3 text-sm flex items-center justify-center font-medium rounded-lg border transition-all ${
                             selectedSlot === slot.start_time
                               ? 'bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F] border-[#0071E3]  shadow-md transform scale-[1.02]'
                               : 'bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'

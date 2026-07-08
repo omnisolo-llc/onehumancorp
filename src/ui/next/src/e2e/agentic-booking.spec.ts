@@ -30,8 +30,8 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     await page.waitForTimeout(1000);
 
     // Verify submission success
-    const heading = page.locator('h2');
-    await expect(heading).toHaveText(/Almost there!|Request Sent!/, { timeout: 15000 });
+    const heading = page.getByRole('heading', { name: /Almost there!|Request Sent!/i });
+    await expect(heading.first()).toBeVisible({ timeout: 15000 });
 
     // 2. Owner Flow
     // Ensure login happens properly

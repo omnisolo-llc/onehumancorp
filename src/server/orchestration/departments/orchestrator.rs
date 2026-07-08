@@ -247,14 +247,12 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES ($1, $2, $3, $4, 'PAUSED', 'LOW', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, \'PAUSED\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
                                     .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
-                                    .bind("The AI agent is paused because the AI service is unavailable.")
-                                    .bind(r#"{"proposed_content": "System is paused. Please manually check the relevant work."}"#)
+                                    .bind(serde_json::json!({"description": "The AI agent is paused because the AI service is unavailable."}))
+                                    .bind(serde_json::json!({"proposed_content": "System is paused. Please manually check the relevant work."}))
                                     .execute(&self.db.pool)
                                     .await;
                                 }
@@ -276,14 +274,12 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES (?, ?, ?, ?, 'PAUSED', 'LOW', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, \'PAUSED\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
                                     .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
-                                    .bind("The AI agent is paused because the AI service is unavailable.")
-                                    .bind(r#"{"proposed_content": "System is paused. Please manually check the relevant work."}"#)
+                                    .bind(serde_json::json!({"description": "The AI agent is paused because the AI service is unavailable."}).to_string())
+                                    .bind(serde_json::json!({"proposed_content": "System is paused. Please manually check the relevant work."}).to_string())
                                     .execute(pool)
                                     .await;
                                 }
@@ -508,7 +504,7 @@ pub async fn execute_action(
             }
         }
 
-        let lifecycle_state = match req.status {
+        let _lifecycle_state = match req.status {
             ApprovalStatus::PendingApproval => "PENDING_APPROVAL",
             ApprovalStatus::Approved => "APPROVED",
             ApprovalStatus::Rejected => "REJECTED",
@@ -519,27 +515,6 @@ pub async fn execute_action(
             DbStore::Postgres => {
                 if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.is_ok() {
-                        let payload_str = {
-                            let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                            let redacted = ::server_telemetry::redact_interface_pii(p);
-                            serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                        };
-
-                        let _ = sqlx::query(
-                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-                        )
-                        .bind(&req.id)
-                        .bind(&req.tenant_id)
-                        .bind(req.department.to_string())
-                        .bind(&req.description)
-                        .bind(status_str)
-                        .bind(req.action_risk.to_string())
-                        .bind(&payload_str)
-                        .bind(now)
-                        .bind(now)
-                        .execute(&mut *tx)
-                        .await;
-
                         let context_payload = serde_json::json!({"description": req.description});
 
                         let _ = sqlx::query(
@@ -550,42 +525,19 @@ pub async fn execute_action(
                         .bind(req.department.to_string())
                         .bind(sqlx::types::Json(context_payload))
                         .bind(sqlx::types::Json(req.payload.clone().unwrap_or_default()))
-                        .bind(lifecycle_state)
+                        .bind(_lifecycle_state)
                         .bind(now)
                         .bind(now)
                         .execute(&mut *tx)
                         .await;
+
+
 
                         let _ = tx.commit().await;
                     }
                 }
             }
             DbStore::Sqlite(pool) => {
-                let payload_str = {
-                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                    let redacted = ::server_telemetry::redact_interface_pii(p);
-                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                };
-
-                let _ = sqlx::query(
-                    "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                )
-                .bind(&req.id)
-                .bind(&req.tenant_id)
-                .bind(req.department.to_string())
-                .bind(&req.description)
-                .bind(status_str)
-                .bind(req.action_risk.to_string())
-                .bind(&payload_str)
-                .bind(now)
-                .bind(now)
-                .execute(pool)
-                .await;
-
-                let _ = sqlx::query(
-                    "CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, event_source TEXT NOT NULL, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
-                ).execute(pool).await;
-
                 let context_payload_str = serde_json::json!({"description": req.description}).to_string();
                 let proposed_action_str = req.payload.clone().unwrap_or_default().to_string();
 
@@ -597,11 +549,13 @@ pub async fn execute_action(
                 .bind(req.department.to_string())
                 .bind(&context_payload_str)
                 .bind(&proposed_action_str)
-                .bind(lifecycle_state)
+                .bind(_lifecycle_state)
                 .bind(now)
                 .bind(now)
                 .execute(pool)
                 .await;
+
+
             }
         }
 
