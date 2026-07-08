@@ -3990,5 +3990,96 @@ document.addEventListener('DOMContentLoaded', () => {
     </style>
     <script src="help-widget.mjs" type="module"></script>
     <script src="voice-assistant.mjs" type="module"></script>
-  </body>
+
+<!-- Global Search Modal and Logic -->
+<div id="global-search-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('global-search-modal').classList.add('hidden')"></div>
+    <div class="relative w-full max-w-2xl bg-white shadow-2xl rounded-xl overflow-hidden border border-gray-200 m-4 transition-all">
+        <div class="flex items-center px-4 py-3 border-b border-gray-100">
+            <svg class="text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="global-search-input" class="flex-1 w-full px-4 py-2 text-lg bg-transparent border-none outline-none focus:ring-0" placeholder="Search customers, invoices, orders...">
+            <button onclick="document.getElementById('global-search-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto p-2" id="global-search-results">
+            <div class="p-8 text-center text-gray-400 text-sm">Type to start searching across your workspace.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('global-search-btn');
+    const modal = document.getElementById('global-search-modal');
+    const input = document.getElementById('global-search-input');
+    const resultsContainer = document.getElementById('global-search-results');
+
+    if (btn) {
+        btn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            input.focus();
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            modal.classList.remove('hidden');
+            input.focus();
+        }
+        if (e.key === 'Escape') {
+            modal.classList.add('hidden');
+        }
+    });
+
+    let timeoutId;
+    if (input) {
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            clearTimeout(timeoutId);
+
+            if (!query.trim()) {
+                resultsContainer.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">Type to start searching across your workspace.</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="p-8 text-center text-gray-500">Searching...</div>';
+
+            timeoutId = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const results = data.results || [];
+
+                        if (results.length > 0) {
+                            resultsContainer.innerHTML = '<ul class="space-y-1">' + results.map(r => `
+                                <li>
+                                    <a href="${r.link}" class="block px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors group">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="font-medium text-gray-900 group-hover:text-blue-600">${r.title}</div>
+                                                <div class="text-sm text-gray-500 mt-0.5">${r.snippet}</div>
+                                            </div>
+                                            <span class="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded">${r.domain}</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            `).join('') + '</ul>';
+                        } else {
+                            resultsContainer.innerHTML = `<div class="p-8 text-center text-gray-500">No results found for "${query}"</div>`;
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    resultsContainer.innerHTML = '<div class="p-8 text-center text-red-500">Error searching.</div>';
+                }
+            }, 300);
+        });
+    }
+});
+</script>
+
+</body>
 </html>
