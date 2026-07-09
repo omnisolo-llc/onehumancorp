@@ -1381,10 +1381,12 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("iban")
         || k.contains("routing")
         || k.contains("pin")
-        || k.contains("ipaddress")
-        || k.contains("macaddress")
-        || k.contains("creditcard") || k.contains("deviceid") || k.contains("gps") || k.contains("latitude") || k.contains("longitude")
-        || (k.contains("tenant") && k != "tenantid")
+        || k.contains("creditcard")
+        || k.contains("deviceid")
+        || k.contains("gps")
+        || k.contains("latitude")
+        || k.contains("longitude")
+        || (k.contains("tenant") && k != "tenantid" && k != "organizationid")
 }
 
 pub fn is_email(s: &str) -> bool {

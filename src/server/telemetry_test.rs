@@ -20,6 +20,21 @@ mod tests {
         props.insert("geolocation".to_string(), "0,0".to_string());
         props.insert("auth_jwt".to_string(), "eyJhbGci...".to_string());
         props.insert("authorization_bearer".to_string(), "Bearer xyz123".to_string());
+        props.insert("stripe_id".to_string(), "cus_123".to_string());
+        props.insert("billing_zip".to_string(), "12345".to_string());
+        props.insert("medical_record".to_string(), "foo".to_string());
+        props.insert("health_status".to_string(), "bar".to_string());
+        props.insert("salary_amount".to_string(), "100000".to_string());
+        props.insert("tax_id".to_string(), "123-45-678".to_string());
+        props.insert("socialsecurity_number".to_string(), "123-45-678".to_string());
+        props.insert("creditcard_number".to_string(), "1234-5678-9012-3456".to_string());
+        props.insert("deviceid".to_string(), "foo".to_string());
+        props.insert("gps_location".to_string(), "foo".to_string());
+        props.insert("latitude_val".to_string(), "12.34".to_string());
+        props.insert("longitude_val".to_string(), "12.34".to_string());
+        props.insert("tenant_name".to_string(), "foo".to_string());
+        props.insert("tenant_id".to_string(), "allowed_tenant".to_string());
+        props.insert("organization_id".to_string(), "allowed_org".to_string());
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
@@ -39,6 +54,21 @@ mod tests {
         assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
         assert_eq!(sanitized_props.get("auth_jwt").unwrap(), "[REDACTED]");
         assert_eq!(sanitized_props.get("authorization_bearer").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("stripe_id").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("billing_zip").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("medical_record").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("health_status").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("salary_amount").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("tax_id").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("socialsecurity_number").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("creditcard_number").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("deviceid").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("gps_location").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("latitude_val").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("longitude_val").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("tenant_name").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("tenant_id").unwrap(), "allowed_tenant");
+        assert_eq!(sanitized_props.get("organization_id").unwrap(), "allowed_org");
     }
 
 
