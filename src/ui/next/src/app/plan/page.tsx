@@ -128,7 +128,7 @@ export default function MyPlanPage() {
                 </div>
                 <div>
                     <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
-                        Estimated Next Bill: <span className="text-green-600">{formatCurrency(data?.next_bill_estimated || 0)}</span>
+                        Estimated Next Bill <span className="text-gray-900">{formatCurrency(data?.next_bill_estimated || 0)}</span>
                     </h2>
                 </div>
             </div>
@@ -163,7 +163,7 @@ export default function MyPlanPage() {
                   {/* AI Actions */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">AI actions used this month</span>
+                          <span className="font-medium text-gray-700 text-lg">AI Actions Used</span>
                           <span className="font-bold text-gray-900 text-lg">
                               {data?.ai_actions_used || 0} <span className="text-gray-500 font-normal text-base">{data?.ai_actions_limit != null && data.ai_actions_limit > 0 ? `/ ${data.ai_actions_limit}` : '/ Unlimited'}</span>
                           </span>
@@ -179,7 +179,7 @@ export default function MyPlanPage() {
                   {/* Storage */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">Storage used</span>
+                          <span className="font-medium text-gray-700 text-lg">Storage Used</span>
                           <span className="font-bold text-gray-900 text-lg">
                               {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{data?.storage_limit_bytes != null && data.storage_limit_bytes > 0 ? `/ ${formatStorage(data.storage_limit_bytes)}` : '/ Unlimited'}</span>
                           </span>

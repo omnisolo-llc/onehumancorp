@@ -579,7 +579,36 @@
         }
       }
     </style>
-  </head>
+
+    <script>
+      function renderAgentBadge(source, fallbackLabel = null) {
+        const style = getAgentIconAndColor(source);
+        let label = fallbackLabel || (source || 'Unknown');
+        if (!fallbackLabel && typeof label === 'string') {
+           label = label.replace(/_/g, ' ').toUpperCase();
+        } else if (fallbackLabel) {
+           label = fallbackLabel.toUpperCase();
+        }
+        return `<div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: ${style.bg}; color: ${style.color}; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${style.icon} ${label}</div>`;
+      }
+
+      function getAgentIconAndColor(source) {
+        const src = (source || "").toLowerCase();
+        if (src.includes('operation') || src.includes('ops')) {
+          return { icon: '⚙️', bg: 'rgba(255, 149, 0, 0.1)', color: '#FF9500' };
+        } else if (src.includes('advisor') || src.includes('knowledge')) {
+          return { icon: '🧠', bg: 'rgba(175, 82, 222, 0.1)', color: '#AF52DE' };
+        } else if (src.includes('market') || src.includes('promot')) {
+          return { icon: '✨', bg: 'rgba(255, 45, 85, 0.1)', color: '#FF2D55' };
+        } else if (src.includes('message') || src.includes('chat') || src.includes('email') || src.includes('welcome')) {
+          return { icon: '💬', bg: 'rgba(0, 102, 255, 0.1)', color: '#0066FF' };
+        } else if (src.includes('finance') || src.includes('invoice') || src.includes('quote')) {
+          return { icon: '💰', bg: 'rgba(52, 199, 89, 0.1)', color: '#34C759' };
+        }
+        return { icon: '🤖', bg: 'rgba(142, 142, 147, 0.1)', color: '#8E8E93' };
+      }
+    </script>
+</head>
   <body>
     <!-- Omnibox Modal -->
     <div id="omnibox-overlay">
@@ -864,6 +893,7 @@
 
         <a href="referrals.html" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a>
         <a href="viral-powered-by-ohc-widget.html" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;">Footer Branding Generator</a>
+        <a href="viral-community-goal-generator.html" id="viral-community-goal-link" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-bottom: 8px;">Community Goal Generator</a>
         <a href="referral-leaderboard-generator.html" id="leaderboard-link" class="btn-outline" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Generate a gamified leaderboard for your website.">Leaderboard Generator 🏆</a>
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
         <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
@@ -928,6 +958,7 @@
         <a href="viral-countdown-drop.html" id="countdown-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Countdown Drop ⏱️</a>
         <a href="viral-quiz-generator.html" id="quiz-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Quiz Generator 🧠</a>
         <a href="viral-job-board-generator.html" id="viral-job-board-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Job Board Generator 📋</a>
+        <a href="viral-coupon-unlock.html" id="viral-coupon-unlock-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Coupon Unlock 🎁</a>
         <a href="viral-waitlist-generator.html" id="viral-waitlist-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Waitlist Generator ⏳</a>
         <a href="viral-before-after-slider.html" id="viral-before-after-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Before & After Slider 📸</a>
         <a href="viral-goal-tracker.html" id="viral-goal-tracker-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Goal Tracker Builder 🎯</a>
@@ -953,6 +984,7 @@
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Work-Intake Widget 📋</a>
+        <a href="viral-receipt-lottery.html" id="viral-receipt-lottery-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Receipt Lottery 🎟</a>
         <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
         <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
         <a href="share-and-save-widget.html" id="share-and-save-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share & Save Widget 💸</a>
@@ -2211,9 +2243,7 @@
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
+                  ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2367,9 +2397,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
-                  </div>
+                  ${renderAgentBadge(item.source || "message")}
                   <div class="triage-priority ${priorityClass}">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2457,9 +2485,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
+                  ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2481,7 +2507,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
@@ -2501,7 +2527,7 @@
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
                   <div>
                     <h2 style="font-size: 20px; font-weight: 700; color: #995500; display: flex; align-items: center; gap: 8px; margin: 0;">
-                      <span style="font-size: 24px;">✨</span> Needs Attention Today
+                      <span style="font-size: 24px;">💡</span> Needs Attention Today
                     </h2>
                   </div>
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'High'}</div>
@@ -2520,7 +2546,7 @@
           return `
             <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
               <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
@@ -2549,7 +2575,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="invoice-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">Invoice</div>
+                  ${renderAgentBadge("invoice", "Invoice")}
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">${status}</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
@@ -2574,7 +2600,7 @@
             return `
               <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px; box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
+                  ${renderAgentBadge(activity.event_source || "Unknown")}
                   <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px; font-weight: 600;">${activity.lifecycle_state}</div>
                 </div>
                 <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px; margin-bottom: 8px; color: #1D1D1F;">${description}</div>

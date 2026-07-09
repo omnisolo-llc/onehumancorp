@@ -49,6 +49,13 @@ export function GrowBusinessCard() {
               Group Buy
             </Link>
             <Link
+              id="mystery-discount-btn"
+              href="/mystery-discount-generator"
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Mystery Discount
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"

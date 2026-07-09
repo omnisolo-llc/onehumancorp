@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viral Receipt Lottery</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #005ce6;
+      --bg: #F5F5F7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text: #1D1D1F;
+      --text-secondary: #86868b;
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --card-bg: rgba(28, 28, 30, 0.65);
+        --text: #F5F5F7;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 16px;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0;
+      margin-right: 15px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .back-btn svg {
+      width: 20px;
+      height: 20px;
+      margin-right: 4px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      margin: 0 0 8px 0;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .receipt-mockup {
+      background: #fff;
+      color: #1d1d1f;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px dashed #ccc;
+      position: relative;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .receipt-mockup {
+        background: #1c1c1e;
+        color: #f5f5f7;
+        border-color: #3a3a3c;
+      }
+    }
+
+    .receipt-mockup::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 0;
+      width: 100%;
+      height: 8px;
+      background-image: radial-gradient(circle at 10px 0, transparent 10px, #fff 11px);
+      background-size: 20px 20px;
+      background-repeat: repeat-x;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .receipt-mockup::before {
+         background-image: radial-gradient(circle at 10px 0, transparent 10px, #1c1c1e 11px);
+      }
+    }
+
+    .receipt-title {
+      font-family: 'Outfit', monospace;
+      font-size: 18px;
+      text-align: center;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .receipt-content {
+      font-family: monospace;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .qr-code-placeholder {
+      width: 120px;
+      height: 120px;
+      background: #eee;
+      margin: 16px auto;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .qr-code-placeholder {
+        background: #333;
+      }
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-area {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .share-link-input {
+      width: 100%;
+      padding: 14px;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--text);
+      font-size: 14px;
+      margin-bottom: 12px;
+      font-family: monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .share-link-input {
+        background: rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    .share-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .share-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      color: white;
+    }
+
+    .btn-copy { background: #1d1d1f; }
+    .btn-print { background: var(--text-secondary); }
+
+    @media (max-width: 375px) {
+      body { padding: 20px 15px; }
+      .container { padding: 20px; }
+      .receipt-mockup { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-nav">
+      <a href="dashboard.html" class="back-btn">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        Back
+      </a>
+    </div>
+
+    <h1>Viral Receipt Lottery 🎟</h1>
+    <p class="subtitle">Turn the bottom of your receipts into a viral growth loop. Generate a scannable link for customers to share their purchase and win their next meal or service free!</p>
+
+    <div class="receipt-mockup">
+      <div class="receipt-title">WIN YOUR NEXT ORDER!</div>
+      <div class="receipt-content">
+        Scan the code below or visit the link to enter this week's giveaway.
+        <br><br>
+        1. Scan the code<br>
+        2. Share your experience<br>
+        3. Win!
+        <br>
+        <div class="qr-code-placeholder">📱</div>
+        <div id="preview-url" style="font-size: 12px; opacity: 0.7;">ohc.app/win/your-store</div>
+      </div>
+    </div>
+
+    <button id="generate-btn" class="btn-primary">Generate Lottery Link</button>
+
+    <div id="result-area" class="result-area">
+      <h3 style="margin-top: 0; font-size: 16px;">Lottery Link Generated!</h3>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Add this link or its QR code to your POS receipt footer.</p>
+
+      <input type="text" id="share-link" class="share-link-input" readonly>
+
+      <div class="share-buttons">
+        <button id="copy-btn" class="share-btn btn-copy">Copy Link</button>
+        <button id="print-btn" class="share-btn btn-print" onclick="window.print()">Print Demo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        let refId = tenantId;
+
+        // Simulate backend generation logic using the standard growth referral endpoint
+        try {
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+              }
+          });
+
+          if (!res.ok) {
+              throw new Error("API returned " + res.status);
+          }
+
+          const data = await res.json();
+          if (data.referral_link) {
+              refId = data.referral_link.split('/').pop();
+          }
+        } catch (fetchErr) {
+            console.warn("API not available, using fallback", fetchErr);
+        }
+
+        const baseUrl = window.location.origin;
+        const generatedUrl = `${baseUrl}/win/${refId}`;
+
+        document.getElementById('share-link').value = generatedUrl;
+        document.getElementById('preview-url').textContent = `ohc.app/win/${refId}`;
+        document.getElementById('result-area').style.display = 'block';
+
+      } catch (err) {
+        console.error("Error generating lottery link:", err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Lottery Link';
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const urlInput = document.getElementById('share-link');
+        urlInput.select();
+        try {
+            await navigator.clipboard.writeText(urlInput.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    });
+  </script>
+</body>
+</html>

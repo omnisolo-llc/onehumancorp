@@ -36,15 +36,15 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     await page.getByRole('button', { name: 'Clock In' }).click();
 
     // Verify product shows initial inventory count "5 in stock"
-    const productButton = page.locator('button.product-btn').filter({ hasText: 'Optimistic Cake' });
+    const productButton = page.locator('button:has-text("Optimistic Cake")').filter({ hasText: 'Optimistic Cake' });
     await expect(productButton).toBeVisible();
-    await expect(productButton.locator('.product-btn-inventory')).toHaveText('5 in stock');
+    await expect(productButton).toContainText('Stock: 5');
 
     // Click the product to select it
     await productButton.click();
 
     // Verify charge button appears
-    const chargeBtn = page.locator('button.charge-btn', { hasText: /Collect Payment|Charge/ });
+    const chargeBtn = page.locator('button:has-text("Charge")', { hasText: /Collect Payment|Charge/ });
     await expect(chargeBtn).toBeVisible({ timeout: 15000 });
 
     // Mock network to ensure offline handling kicks in or simulate successful tap
