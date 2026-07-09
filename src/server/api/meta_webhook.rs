@@ -128,6 +128,9 @@ pub async fn meta_webhook_post_handler(
                                       let id = img.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
                                       let caption = img.get("caption").and_then(|c| c.as_str()).unwrap_or("");
                                       format!("![Image]({}) {}", id, caption).trim().to_string()
+                                  } else if let Some(audio) = message.get("audio") {
+                                      let id = audio.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
+                                      format!("[Audio]({})", id)
                                   } else {
                                       "".to_string()
                                   };
