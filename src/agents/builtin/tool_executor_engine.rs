@@ -1,9 +1,9 @@
 use crate::agent::AgentRunConfig;
 use crate::tools_gating::ToolGater;
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+use crate::retry::{RetryStrategy, ExponentialBackoffWithJitter};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2. LangGraph Mechanic (4-types): 1) Transient (retry with backoff), 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct), 3) User-fixable (interrupt execution and ask user for input), 4) Unexpected (bubble up to debug).
-use tokio::time::Duration;
 use tracing::{error, info, warn};
 
 pub struct ToolExecutionEngine;
@@ -22,6 +22,7 @@ impl ToolExecutionEngine {
         // SOTA Harness Patterns (2025-2026): Error Handling
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
+        let retry_strategy = ExponentialBackoffWithJitter::default();
 
         loop {
             // Enhanced telemetry to explicitly log the start of the LangGraph tool execution mechanic
@@ -41,11 +42,8 @@ impl ToolExecutionEngine {
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
-                        let base_backoff = 500 * (1 << retry_count);
+                        let backoff = retry_strategy.next_backoff(retry_count);
                         retry_count += 1;
-                        use rand::Rng;
-                        let jitter = rand::thread_rng().gen_range(0..100);
-                        let backoff = Duration::from_millis((base_backoff as u64) + jitter);
                         warn!(
                             "Transient error executing '{}', retrying {}/{} after {}ms... Error details: {}",
                             tool.name,
