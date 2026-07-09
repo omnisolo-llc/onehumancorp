@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Viral Receipt Lottery Generator', () => {
   test('should load the generator and generate a lottery link', async ({ page }) => {
