@@ -3850,8 +3850,8 @@ mod tests_added_for_coverage {
             content: "content".to_string(),
             embedding: vec![0.5; 10],
             source_type: "NOTE".to_string(),
-            created_at: now,
-            last_referenced_at: now, // recent, but low reliability
+            created_at: old_time,
+            last_referenced_at: old_time, // old, low reliability
             reference_count: 10,     // high ref count, but low reliability
             reliability_score: 19,
             owner_override: false,
@@ -3866,15 +3866,15 @@ mod tests_added_for_coverage {
             content: "content".to_string(),
             embedding: vec![0.5; 10],
             source_type: "NOTE".to_string(),
-            created_at: now,
-            last_referenced_at: now,
+            created_at: old_time,
+            last_referenced_at: old_time,
             reference_count: 10,
             reliability_score: 19,
             owner_override: true,
             metadata: None,
         };
 
-        // Stale record with source_type TASK_SUMMARY, reference count < 5, owner_override false
+        // Stale record with source_type TASK_SUMMARY, reference count < 2, owner_override false
         let rec3 = EmbeddingRecord {
             id: "rec_prune_3".to_string(),
             tenant_id: "tenant_prune".to_string(),
@@ -3884,7 +3884,7 @@ mod tests_added_for_coverage {
             source_type: "TASK_SUMMARY".to_string(),
             created_at: old_time,
             last_referenced_at: old_time,
-            reference_count: 4,
+            reference_count: 1, // must be < 2 for conservative logic
             reliability_score: 50,
             owner_override: false,
             metadata: None,
@@ -3905,9 +3905,9 @@ mod tests_added_for_coverage {
             .unwrap();
         let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
-        assert!(!ids.contains(&"rec_prune_1".to_string())); // PRUNED: reliability < 20 and owner_override = false
+        assert!(!ids.contains(&"rec_prune_1".to_string())); // PRUNED: reliability < 20, old, and owner_override = false
         assert!(ids.contains(&"rec_prune_2".to_string())); // kept due to owner override
-        assert!(!ids.contains(&"rec_prune_3".to_string())); // pruned due to being stale TASK_SUMMARY
+        assert!(!ids.contains(&"rec_prune_3".to_string())); // pruned due to being stale TASK_SUMMARY with ref count < 2
     }
 
     #[tokio::test]
