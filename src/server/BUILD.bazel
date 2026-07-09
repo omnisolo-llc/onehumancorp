@@ -69,6 +69,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:audio_command.rs",
     "//src/server/api:invoice.rs",
     "//src/server/api:cart.rs",
+    "//src/server/api:checkout_api.rs",
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
