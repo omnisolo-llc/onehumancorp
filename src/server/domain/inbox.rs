@@ -12,7 +12,11 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
             .execute(pool)
             .await?;
 
-        let draft_reply = payload.get("generated_response").or_else(|| payload.get("draft_reply")).and_then(|v| v.as_str()).unwrap_or("");
+        let draft_reply = payload
+            .get("generated_response")
+            .or_else(|| payload.get("draft_reply"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
         sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
             .bind(draft_reply)
