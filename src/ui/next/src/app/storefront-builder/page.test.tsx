@@ -1,9 +1,15 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import StorefrontBuilderPage from './page';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock TooltipRegistry and help components
+vi.mock('../../components/Walkthrough', () => ({
+  WalkthroughTarget: ({ children }: any) => <>{children}</>,
+  InteractiveWalkthrough: () => null
+}));
 vi.mock('../../components/TooltipRegistry', () => ({
+  TooltipProvider: ({ children }: any) => <>{children}</>,
   WithTooltip: ({ children }: any) => <div>{children}</div>
 }));
 vi.mock('../../components/help', () => ({
@@ -23,19 +29,19 @@ describe('StorefrontBuilderPage', () => {
   });
 
   it('renders initial setup state', () => {
-    render(<StorefrontBuilderPage />);
+    render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
     expect(screen.getByText('Welcome to OHC Smart Builder')).toBeTruthy();
     expect(screen.getByText('Build My Storefront')).toBeTruthy();
   });
 
   it('handles empty input generation by keeping button disabled', () => {
-    render(<StorefrontBuilderPage />);
+    render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
     const button = screen.getByText('Build My Storefront');
     expect(button.className).toContain('cursor-not-allowed');
   });
 
   it('enables button with valid input and calls generate', async () => {
-    render(<StorefrontBuilderPage />);
+    render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
 
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
@@ -65,7 +71,7 @@ describe('StorefrontBuilderPage', () => {
   });
 
   it('handles publish workflow correctly', async () => {
-    render(<StorefrontBuilderPage />);
+    render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
 
     // Setup state manually or go through flow
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
@@ -101,7 +107,7 @@ describe('StorefrontBuilderPage', () => {
   });
 
   it('handles chat with agent workflow', async () => {
-    render(<StorefrontBuilderPage />);
+    render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
 
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
