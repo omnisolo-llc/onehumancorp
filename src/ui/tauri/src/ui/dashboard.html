@@ -1789,7 +1789,7 @@
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
 
-      generateBtn.addEventListener('click', async () => {
+      if (generateBtn) { generateBtn.addEventListener('click', async () => {
         generateBtn.innerText = "Generating...";
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1824,7 +1824,8 @@
         }
       });
 
-      copyBtn.addEventListener('click', () => {
+      }
+      if (copyBtn) { copyBtn.addEventListener('click', () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
 
@@ -1852,15 +1853,17 @@
         });
       });
 
+      }
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
-      shareWhatsAppBtn.addEventListener('click', () => {
+      if (shareWhatsAppBtn) { shareWhatsAppBtn.addEventListener('click', () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
 
+      }
       const shareXBtn = document.getElementById('share-x-btn');
-      shareXBtn.addEventListener('click', () => {
+      if (shareXBtn) { shareXBtn.addEventListener('click', () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
@@ -1870,6 +1873,7 @@
 
 
 
+      }
       const triageSection = document.getElementById('triage-section');
       const triageQueue = document.getElementById('triage-queue');
       let currentTriageTab = 'proposals';
