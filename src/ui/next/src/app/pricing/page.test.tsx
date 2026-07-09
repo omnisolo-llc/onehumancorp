@@ -481,4 +481,25 @@ describe('PricingPage', () => {
     alertMock.mockRestore();
     consoleSpy.mockRestore();
   });
+  it('renders soft limit reached message', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({
+            current_plan: 'Free',
+            soft_limit_reached: true,
+            user_message: "You've reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!"
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    expect(await screen.findByText("You've reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!")).toBeDefined();
+  });
 });

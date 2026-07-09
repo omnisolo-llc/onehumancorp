@@ -32,3 +32,25 @@ test.describe('Pricing Page Loop', () => {
     await expect(page).toHaveURL('/dashboard');
   });
 });
+
+  test('Pricing page displays soft limit reached message', async ({ page }) => {
+    // Route mock to trigger the soft limit message
+    await page.route('/api/billing/my-plan', async route => {
+      await route.fulfill({
+        json: {
+          current_plan: 'Free',
+          ai_actions_used: 150,
+          ai_actions_limit: 100,
+          storage_used_bytes: 2 * 1024 * 1024,
+          storage_limit_bytes: 500 * 1024 * 1024,
+          next_bill_estimated: 0,
+          soft_limit_reached: true,
+          user_message: "You've reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!"
+        }
+      });
+    });
+
+    await page.goto('/pricing');
+    await expect(page.locator('text="You\'ve reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!"')).toBeVisible();
+  });
+});
