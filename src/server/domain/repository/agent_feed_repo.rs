@@ -113,8 +113,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                context_payload,
+                proposed_action,
                 lifecycle_state,
                 created_at,
                 updated_at
@@ -127,8 +127,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 department as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                jsonb_build_object('description', description) as context_payload,
+                payload as proposed_action,
                 CASE
                     WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
                     WHEN status = 'REJECTED' THEN 'DISMISSED'
@@ -145,8 +145,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 COALESCE(agent_type, 'operations') as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload,
+                payload as proposed_action,
                 CASE
                     WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
                     WHEN status = 'Rejected' THEN 'DISMISSED'
@@ -379,7 +379,7 @@ mod tests {
         let list_mobile = repo.list(tenant_id, 10, 0, true).await.expect("Failed to list feed items (mobile)");
         assert!(!list_mobile.is_empty());
         let mobile_item = list_mobile.iter().find(|i| i.id == new_item.id).unwrap();
-        assert!(mobile_item.context_payload.is_none());
-        assert!(mobile_item.proposed_action.is_none());
+        assert!(mobile_item.context_payload.is_some());
+        assert!(mobile_item.proposed_action.is_some());
     }
 }
