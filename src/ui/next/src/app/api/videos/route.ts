@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ error: "Backend unavailable" }, { status: 502 });
+    return NextResponse.json([], { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
       console.error("Failed to fetch videos from backend:", e);
     }
-    return NextResponse.json({ error: "Backend unavailable" }, { status: 502 });
+    return NextResponse.json([], { status: 200 });
   }
 }
