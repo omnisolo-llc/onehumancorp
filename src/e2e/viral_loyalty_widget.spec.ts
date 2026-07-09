@@ -2,8 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Loyalty Widget', () => {
   test('should load the widget and generate a loyalty program', async ({ page }) => {
-    await page.goto('/ui/dashboard.html');
-    await page.click('a#loyalty-link');
+    await page.goto('/ui/viral-loyalty-widget.html');
 
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
     const generateBtn = page.locator('#generate-btn');

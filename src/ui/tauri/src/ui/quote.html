@@ -669,20 +669,30 @@
 
         const handlePayment = async () => {
           btnPayCard.innerText = 'Processing...';
-          try {
-            const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, {
-                method: 'POST'
-            });
-            if (res.ok) {
-                window.location.href = 'success.html?type=booking_deposit';
-            } else {
-                alert('Failed to accept quote.');
-                btnPayCard.innerText = 'Pay with Card';
+
+            try {
+                const response = await fetch('/api/v1/booking/conversational_checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-tenant-id': tenantId
+                    },
+                    body: JSON.stringify({ amount_cents: state.depositAmountCents || 5000 })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        alert('Checkout generated but no URL returned');
+                    }
+                } else {
+                    alert('Failed to initiate checkout');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error initiating checkout');
             }
-          } catch (e) {
-            alert('Failed to initiate checkout.');
-            btnPayCard.innerText = 'Pay with Card';
-          }
         };
 
         btnPayDeposit.addEventListener('click', handlePayment);

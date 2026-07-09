@@ -132,55 +132,10 @@ where
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
         .route("/simulate-invoice-followup", post(simulate_invoice_followup))
         .route("/simulate-lead-recovery", post(simulate_lead_recovery))
-        .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
 
-use axum::response::sse::{Event, Sse};
-use tokio_stream::StreamExt;
-use std::convert::Infallible;
-use futures_util::stream::Stream;
-
-async fn stream_agent_feed(
-    State(_orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Extension(claims): Extension<Claims>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let tenant_id = claims.organization_id.clone().unwrap_or_default();
-    let redis_client_opt = crate::get_redis_client();
-    let channel = format!("agent_feed:{}", tenant_id);
-
-    let stream = tokio_stream::wrappers::BroadcastStream::new({
-        let (tx, _rx) = tokio::sync::broadcast::channel::<String>(100);
-        let tx_clone = tx.clone();
-
-        tokio::spawn(async move {
-            if let Some(redis_client) = redis_client_opt {
-                if let Ok(mut pubsub) = redis_client.get_async_pubsub().await {
-                    if pubsub.subscribe(&channel).await.is_ok() {
-                        let mut msg_stream = pubsub.into_on_message();
-                        while let Some(msg) = tokio_stream::StreamExt::next(&mut msg_stream).await {
-                            if let Ok(payload) = msg.get_payload::<String>() {
-                                if tx_clone.send(payload).is_err() {
-                                    // Receiver disconnected, stop the loop to prevent resource leak
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        tx.subscribe()
-    })
-    .map(|msg| match msg {
-        Ok(payload) => Ok(Event::default().event("message").data(payload)),
-        Err(_) => Ok(Event::default().event("ping").data("connected")),
-    });
-
-    Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::new())
-}
 
 async fn simulate_stockout_reorder(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
