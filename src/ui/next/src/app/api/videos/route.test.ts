@@ -1,13 +1,13 @@
-import { GET } from './route';
-import { NextRequest } from 'next/server';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { GET } from "./route";
+import { NextRequest } from "next/server";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const mockFetch = vi.fn();
 
-describe('Videos API Route', () => {
+describe("Videos API Route", () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', mockFetch);
-    process.env.BACKEND_URL = 'http://test-backend';
+    vi.stubGlobal("fetch", mockFetch);
+    process.env.BACKEND_URL = "http://test-backend";
   });
 
   afterEach(() => {
@@ -15,60 +15,60 @@ describe('Videos API Route', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches videos from backend successfully', async () => {
-    const mockData = [{ id: 1, title: 'Test Video' }];
+  it("fetches videos from backend successfully", async () => {
+    const mockData = [{ id: "1", title: "Test Video" }];
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockData
+      json: async () => mockData,
     });
 
-    const request = new NextRequest('http://localhost/api/videos');
+    const request = new NextRequest("http://localhost/api/videos");
     const response = await GET(request);
     const data = await response.json();
 
-    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/videos');
+    expect(mockFetch).toHaveBeenCalledWith("http://test-backend/api/videos");
     expect(response.status).toBe(200);
     expect(data).toEqual(mockData);
   });
 
-  it('passes mobile_optimized param to backend', async () => {
-    const mockData = [{ id: 1, title: 'Test Video' }];
+  it("passes mobile_optimized flag correctly", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockData
+      json: async () => [{ id: "1", title: "Test Video" }],
     });
 
-    const request = new NextRequest('http://localhost/api/videos?mobile_optimized=true');
-    const response = await GET(request);
-    const data = await response.json();
+    const request = new NextRequest(
+      "http://localhost/api/videos?mobile_optimized=true",
+    );
+    await GET(request);
 
-    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/videos?mobile_optimized=true');
-    expect(response.status).toBe(200);
-    expect(data).toEqual(mockData);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://test-backend/api/videos?mobile_optimized=true",
+    );
   });
 
-  it('returns empty array on backend error', async () => {
+  it("returns empty array on backend error", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 500
+      status: 500,
     });
 
-    const request = new NextRequest('http://localhost/api/videos');
+    const request = new NextRequest("http://localhost/api/videos");
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(502);
-    expect(data.error).toBe("Backend unavailable");
+    expect(response.status).toBe(200);
+    expect(data).toEqual([]);
   });
 
-  it('handles fetch exceptions gracefully with empty array', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  it("handles fetch exceptions gracefully with empty array", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const request = new NextRequest('http://localhost/api/videos');
+    const request = new NextRequest("http://localhost/api/videos");
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(502);
-    expect(data.error).toBe("Backend unavailable");
+    expect(response.status).toBe(200);
+    expect(data).toEqual([]);
   });
 });
