@@ -19,6 +19,8 @@ describe('GrowBusinessCard', () => {
     const groupBuyLink = screen.getByRole('link', { name: /Group Buy/i });
     expect(groupBuyLink).toHaveAttribute('href', '/group-buy-widget');
 
+    const mysteryLink = screen.getByRole('link', { name: /Mystery Discount/i });
+    expect(mysteryLink).toHaveAttribute('href', '/mystery-discount-generator');
 
     const goalTrackerLink = screen.getByRole('link', { name: /Goal Tracker/i });
     expect(goalTrackerLink).toHaveAttribute('href', '/viral-goal-tracker');
