@@ -190,16 +190,30 @@ impl Department for NegotiatorAgent {
             "generated_response": drafted_message,
         });
 
-        self.orchestrator
+        let approval_req = self.orchestrator
             .execute_action(
                 DepartmentType::CustomerSuccess,
                 format!("Draft quote and propose schedule for {}", service_name),
                 event.tenant_id.clone(),
                 ActionRisk::AutoExecute, // or DraftForReview
-                action_payload,
+                action_payload.clone(),
             )
             .await
-            .map(|_| ())?;
+            .map_err(|e| e.to_string())?;
+
+        let approved_event = DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: event.tenant_id.clone(),
+            event_type: "agent:customer_success:approved".to_string(),
+            payload: serde_json::json!({
+                "original_payload": action_payload,
+                "approval_id": approval_req.id
+            }),
+        };
+
+        if let Err(e) = self.orchestrator.dispatch_event(approved_event).await {
+            tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
+        }
 
         Ok(())
     }

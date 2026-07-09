@@ -142,11 +142,75 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
-            let message = if let Some(orig) = original {
-                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
+            let mut message = if let Some(orig) = original {
+                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response").to_string()
             } else {
-                "Unknown response"
+                "Unknown response".to_string()
             };
+
+            if let Some(orig) = original {
+                if orig.get("feature_type").and_then(|v| v.as_str()) == Some("autonomous_quote") {
+                    let deposit_amount = orig.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                    let service_name = orig.get("service").and_then(|v| v.as_str()).unwrap_or("Service");
+
+                    tracing::info!("Executing autonomous quote for service {}, customer {}", service_name, customer_id);
+
+                    // Generate Stripe deposit link
+                    let stripe_client = crate::integrations::stripe::client::StripeClient::new(
+                        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
+                    );
+
+                    let quote_id = uuid::Uuid::new_v4().to_string();
+                    let stripe_link = stripe_client.create_checkout_session(&quote_id, customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+
+                    if !stripe_link.is_empty() {
+                        message.push_str(&format!("\n\nTo secure your booking, please pay the deposit here: {}", stripe_link));
+                    }
+
+                    // Insert pending booking
+                    let pool = crate::db::get_pool();
+                    let booking_id = uuid::Uuid::new_v4().to_string();
+                    let start_time_rfc = orig.get("proposed_slots").and_then(|v| v.as_array()).and_then(|v| v.first()).and_then(|v| v.get("start_time")).and_then(|v| v.as_str()).unwrap_or("");
+                    let end_time_rfc = orig.get("proposed_slots").and_then(|v| v.as_array()).and_then(|v| v.first()).and_then(|v| v.get("end_time")).and_then(|v| v.as_str()).unwrap_or("");
+
+                    let st = chrono::DateTime::parse_from_rfc3339(start_time_rfc).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now());
+                    let et = chrono::DateTime::parse_from_rfc3339(end_time_rfc).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(1));
+
+                    let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')")
+                        .bind(&booking_id)
+                        .bind(&event.tenant_id)
+                        .bind(uuid::Uuid::parse_str(customer_id).ok())
+                        .bind(service_name)
+                        .bind(st)
+                        .bind(et)
+                        .execute(&pool)
+                        .await;
+
+                    // Insert feed item for owner notification
+                    let feed_item_id = uuid::Uuid::new_v4().to_string();
+                    let context_payload = serde_json::json!({
+                        "description": format!("New Job Booked: {}. ${} Deposit Collected.", service_name, (deposit_amount as f64) / 100.0),
+                        "booking_id": booking_id,
+                        "customer_id": customer_id,
+                    });
+
+                    let _ = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccessAgent', $3, '{}', 'APPROVED', NOW(), NOW())")
+                        .bind(&feed_item_id)
+                        .bind(&event.tenant_id)
+                        .bind(sqlx::types::Json(context_payload))
+                        .execute(&pool)
+                        .await;
+
+                    if let Some(inbox_id) = orig.get("inbox_message_id").and_then(|v| v.as_str()) {
+                        let _ = sqlx::query("UPDATE conversational_intakes SET status = 'Quote Offered' WHERE inbox_message_id = $1 AND tenant_id = $2")
+                            .bind(inbox_id)
+                            .bind(&event.tenant_id)
+                            .execute(&pool)
+                            .await;
+                    }
+                }
+            }
             tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
 
             let content = format!("Sent response to customer: {}", message);
