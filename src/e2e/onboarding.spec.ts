@@ -42,7 +42,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('.step.active .next-step-btn');
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -77,7 +77,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.goto('/setup.html');
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('.step.active .next-step-btn');
     await startButton.click();
     await page.waitForTimeout(500);
 
@@ -124,7 +124,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('.step.active .next-step-btn');
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -141,7 +141,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('.step.active .next-step-btn');
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -168,7 +168,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
+    const startButton = page.locator('.step.active .next-step-btn');
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -354,7 +354,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(containerBox?.width).toBeLessThanOrEqual(375);
 
     // Click Step-by-Step Setup
-    const startMyBusinessButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
+    const startMyBusinessButton = page.locator('.step.active .next-step-btn');
     await startMyBusinessButton.click();
 
     // Check .context-card
