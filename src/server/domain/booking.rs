@@ -89,3 +89,57 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
 
     Ok(())
 }
+
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Booking {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: Option<String>,
+    pub service_id: Option<String>,
+    pub resource_id: Option<String>,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BookingSlot {
+    pub id: String,
+    pub tenant_id: String,
+    pub service_id: Option<String>,
+    pub resource_id: Option<String>,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AvailabilitySchedule {
+    pub id: String,
+    pub tenant_id: String,
+    pub business_hours: serde_json::Value,
+    pub exceptions: serde_json::Value,
+    pub timezone: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AvailabilityBlock {
+    pub id: String,
+    pub tenant_id: String,
+    pub service_id: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+    pub is_available: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BookingResource {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub resource_type: String,
+    pub availability_schedule: serde_json::Value,
+}

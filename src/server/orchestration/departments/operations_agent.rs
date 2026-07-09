@@ -37,6 +37,41 @@ impl Department for OperationsAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+
+        if event.event_type == "tenant.booking.reschedule_requested" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let booking_id = event.payload.get("booking_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Simple NLP parser using LLM
+            let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("gemini") => {
+                    crate::minimax::LocalLLMClient::new().reason(&format!("Extract a new proposed date and time from this reschedule request: '{}'. Return JSON {{ \"proposed_start_time\": \"YYYY-MM-DDTHH:MM:SSZ\" }}", message)).await
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&format!("Extract a new proposed date and time from this reschedule request: '{}'. Return JSON {{ \"proposed_start_time\": \"YYYY-MM-DDTHH:MM:SSZ\" }}", message)).await
+                }
+            }.unwrap_or_default();
+
+            let mut new_time = String::new();
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&llm_res) {
+                new_time = parsed.get("proposed_start_time").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            }
+
+            if !new_time.is_empty() {
+                 let _ = self.orchestrator.execute_action(
+                     DepartmentType::Operations,
+                     format!("Reschedule booking {} to {}", booking_id, new_time),
+                     event.tenant_id.clone(),
+                     ActionRisk::DraftForReview,
+                     serde_json::json!({
+                         "booking_id": booking_id,
+                         "new_start_time": new_time,
+                         "feature_type": "reschedule_draft"
+                     })
+                 ).await;
+            }
+            return Ok(());
+        }
         if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
@@ -580,14 +615,13 @@ mod tests {
         .await
         .unwrap();
         sqlx::query(
-            "CREATE TABLE agent_approvals (
+            "CREATE TABLE agent_feed_items (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
-                department TEXT NOT NULL,
-                description TEXT NOT NULL,
-                status TEXT NOT NULL,
-                action_risk TEXT NOT NULL,
-                payload TEXT,
+                event_source TEXT,
+                context_payload TEXT,
+                proposed_action TEXT,
+                lifecycle_state TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )",

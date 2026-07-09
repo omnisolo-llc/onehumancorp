@@ -140,16 +140,14 @@ impl ProactiveAnalysisWorker {
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
-                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind(serde_json::json!({"description": "AI Agent Paused: The Advisor"})).bind(serde_json::json!({"proposed_content": "System is paused. Please manually check business performance."})).bind("PAUSED")
                                     .execute(&db.pool).await;
                                 },
                                 crate::db::DbStore::Sqlite(_) => {
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
-                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind(serde_json::json!({"description": "AI Agent Paused: The Advisor"}).to_string()).bind(serde_json::json!({"proposed_content": "System is paused. Please manually check business performance."}).to_string()).bind("PAUSED")
                                     .execute(&db.pool).await;
                                 }
                             }
@@ -161,18 +159,16 @@ impl ProactiveAnalysisWorker {
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
                                     if let Err(e) = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
-                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind(serde_json::json!({"description": "AI Agent Paused: The Advisor"})).bind(serde_json::json!({"proposed_content": "System is paused. Please manually check business performance."})).bind("PAUSED")
                                     .execute(&db.pool).await {
                                         tracing::error!("Failed to insert PAUSED state for proactive analysis job: {}", e);
                                     }
                                 },
                                 crate::db::DbStore::Sqlite(_) => {
                                     if let Err(e) = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                                    )
-                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind(serde_json::json!({"description": "AI Agent Paused: The Advisor"}).to_string()).bind(serde_json::json!({"proposed_content": "System is paused. Please manually check business performance."}).to_string()).bind("PAUSED")
                                     .execute(&db.pool).await {
                                         tracing::error!("Failed to insert PAUSED state for proactive analysis job: {}", e);
                                     }

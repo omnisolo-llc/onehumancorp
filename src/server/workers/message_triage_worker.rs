@@ -564,11 +564,10 @@ Output JSON format:
                     }
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, 'DRAFT', 'DraftForReview', $4, NOW(), NOW())"
-                    )
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, \'CustomerSuccess\', $3::jsonb, $4::jsonb, \'PENDING_APPROVAL\', NOW(), NOW())")
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(&context_summary)
+                    .bind(serde_json::json!({"description": context_summary}))
                     .bind(serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
@@ -693,11 +692,10 @@ Output JSON format:
                     }
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, 'DRAFT', 'DraftForReview', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                    )
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, \'CustomerSuccess\', ?, ?, \'PENDING_APPROVAL\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(&context_summary)
+                    .bind(serde_json::json!({"description": context_summary}).to_string())
                     .bind(serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
