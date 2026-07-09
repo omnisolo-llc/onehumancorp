@@ -1,16 +1,16 @@
 import { test, expect } from './fixtures';
 
 test.describe('Intelligent Accounts Receivable & Dunning Engine', () => {
-    test('should display overdue invoice nudge in triage and allow approval', async ({ adminPage }) => {
+    test('should display overdue invoice nudge in triage and allow approval', async ({ page }) => {
         // Simulate the overdue invoice
-        const res = await adminPage.request.post('/api/dev/simulate-invoice-followup');
+        const res = await page.request.post('/api/dev/simulate-invoice-followup');
         expect(res.ok()).toBeTruthy();
 
         // Navigate to dashboard
-        await adminPage.goto('/dashboard.html');
+        await page.goto('/dashboard.html');
 
         // Wait for the specific triage card
-        const card = adminPage.getByTestId('invoice-followup-card').first();
+        const card = page.getByTestId('invoice-followup-card').first();
         await expect(card).toBeVisible({ timeout: 10000 });
 
         // Verify the title
