@@ -573,14 +573,14 @@ mod tests {
         assert_eq!(PlanTier::Business.to_string(), "Business");
 
         // Test FromStr
-        assert_eq!(PlanTier::from_str("free").expect("failed to unwrap"), PlanTier::Free);
-        assert_eq!(PlanTier::from_str("Free").expect("failed to unwrap"), PlanTier::Free);
-        assert_eq!(PlanTier::from_str("starter").expect("failed to unwrap"), PlanTier::Starter);
-        assert_eq!(PlanTier::from_str("Starter").expect("failed to unwrap"), PlanTier::Starter);
-        assert_eq!(PlanTier::from_str("pro").expect("failed to unwrap"), PlanTier::Pro);
-        assert_eq!(PlanTier::from_str("Pro").expect("failed to unwrap"), PlanTier::Pro);
-        assert_eq!(PlanTier::from_str("business").expect("failed to unwrap"), PlanTier::Business);
-        assert_eq!(PlanTier::from_str("Business").expect("failed to unwrap"), PlanTier::Business);
+        assert_eq!(PlanTier::from_str("free").unwrap(), PlanTier::Free);
+        assert_eq!(PlanTier::from_str("Free").unwrap(), PlanTier::Free);
+        assert_eq!(PlanTier::from_str("starter").unwrap(), PlanTier::Starter);
+        assert_eq!(PlanTier::from_str("Starter").unwrap(), PlanTier::Starter);
+        assert_eq!(PlanTier::from_str("pro").unwrap(), PlanTier::Pro);
+        assert_eq!(PlanTier::from_str("Pro").unwrap(), PlanTier::Pro);
+        assert_eq!(PlanTier::from_str("business").unwrap(), PlanTier::Business);
+        assert_eq!(PlanTier::from_str("Business").unwrap(), PlanTier::Business);
 
         // Test Invalid
         assert!(PlanTier::from_str("unknown").is_err());
@@ -606,30 +606,30 @@ mod tests {
                 let tenant_id = "test-tenant-no-mutation";
 
                 // Clear any existing products
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let product_key = format!("tenant:{}:products", tenant_id);
                 let _ : () = conn.del(&product_key).await.unwrap_or(());
 
                 // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // Check quota initially
-                let status = limiter.check_product_quota(tenant_id).await.expect("failed to unwrap");
+                let status = limiter.check_product_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
                 // Check again to ensure it didn't mutate (increment)
-                let status = limiter.check_product_quota(tenant_id).await.expect("failed to unwrap");
+                let status = limiter.check_product_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
                 // Add 10 products
                 for _ in 0..10 {
-                    limiter.record_product_added(tenant_id).await.expect("failed to unwrap");
+                    limiter.record_product_added(tenant_id).await.unwrap();
                 }
 
                 // Check quota now
-                let status = limiter.check_product_quota(tenant_id).await.expect("failed to unwrap");
+                let status = limiter.check_product_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
             }
@@ -642,11 +642,11 @@ mod tests {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-no-mutation";
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
-                let status = limiter.check_storage_quota(tenant_id, 0).await.expect("failed to unwrap");
+                let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
                 assert!(status.is_allowed);
             }
     }
@@ -659,25 +659,25 @@ mod tests {
                 let tenant_id = "test-tenant-storage-quota";
 
                 // Clear any existing storage used
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
                 // Set tier to Free (500MB limit)
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // Increment storage by a small amount (100MB)
                 let delta: i64 = 100 * 1024 * 1024;
-                let status = limiter.check_storage_quota(tenant_id, delta).await.expect("failed to unwrap");
+                let status = limiter.check_storage_quota(tenant_id, delta).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
                 // Increment storage by an amount crossing the 500MB limit
                 let large_delta: i64 = 500 * 1024 * 1024;
-                let status = limiter.check_storage_quota(tenant_id, large_delta).await.expect("failed to unwrap");
+                let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // But flag is set
-                assert!(status.user_message.expect("failed to unwrap").contains("500MB storage"));
+                assert!(status.user_message.unwrap().contains("500MB storage"));
             }
     }
 
@@ -689,18 +689,18 @@ mod tests {
                 let tenant_id = "test-tenant-agent-quota";
 
                 // Clear any existing agents
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let agent_key = format!("tenant:{}:agents", tenant_id);
                 let _ : () = conn.del(&agent_key).await.unwrap_or(());
 
                 // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // Add 1 agent
-                limiter.record_agent_added(tenant_id).await.expect("failed to unwrap");
+                limiter.record_agent_added(tenant_id).await.unwrap();
 
                 // Check quota now
-                let status = limiter.check_agent_quota(tenant_id).await.expect("failed to unwrap");
+                let status = limiter.check_agent_quota(tenant_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Limit is 1 for Free tier
             }
@@ -717,15 +717,15 @@ mod tests {
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
                 let _ : () = conn.del(&tenant_key).await.unwrap_or(());
 
                 // Set tier to Free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // Record an action
-                let status = limiter.record_action(tenant_id, agent_id).await.expect("failed to unwrap");
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
@@ -743,18 +743,18 @@ mod tests {
                 let tenant_id = "test-tenant-agent-action";
                 let agent_id = "agent-limit";
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
                 let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
                 let _ : () = conn.del(&agent_key).await.unwrap_or(());
 
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 for _ in 0..20 {
                     let _ = limiter.record_action(tenant_id, agent_id).await;
                 }
-                let status = limiter.record_action(tenant_id, agent_id).await.expect("failed to unwrap");
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
                 assert!(status.soft_limit_reached);
             }
     }
@@ -766,19 +766,19 @@ mod tests {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-tokens";
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
                 let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
 
-                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
                 assert_eq!(usage, 0);
 
-                limiter.record_token_usage(tenant_id, "gpt-4o", 1500).await.expect("failed to record tokens");
-                limiter.record_token_usage(tenant_id, "gpt-4o", 500).await.expect("failed to record tokens");
+                limiter.record_token_usage(tenant_id, "gpt-4o", 1500).await.unwrap();
+                limiter.record_token_usage(tenant_id, "gpt-4o", 500).await.unwrap();
 
-                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
                 assert_eq!(usage, 2000);
             }
     }
@@ -791,19 +791,19 @@ mod tests {
                 let tenant_id = "test-tenant-soft-limits";
                 let agent_id = "agent-1";
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
                 let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
                 let _ : () = conn.del(&tenant_key).await.unwrap_or(());
 
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
 
                 // exceed limit
                 for _ in 0..100 {
                     let _ = limiter.record_action(tenant_id, agent_id).await;
                 }
-                let status = limiter.record_action(tenant_id, agent_id).await.expect("failed to unwrap");
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
 
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached);
@@ -818,19 +818,19 @@ mod tests {
                 let tenant_id = "test-tenant-cache-hit";
 
                 // Clear any existing tier in redis
-                let mut conn = limiter.get_connection().await.expect("failed to get connection");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
 
                 // Fetch once to populate cache (fallback to Free)
-                let tier1 = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let tier1 = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier1, PlanTier::Free);
 
                 // Now modify redis directly
                 let _ : () = redis::AsyncCommands::set(&mut conn, &redis_key, "Starter").await.unwrap_or(());
 
                 // Fetch again, should still be Free because of memory cache
-                let tier2 = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let tier2 = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier2, PlanTier::Free);
             }
         }
@@ -844,7 +844,7 @@ mod tests {
                 let tenant_id = "test-tenant-cache-exp";
 
                 // Clear any existing tier in redis
-                let mut conn = limiter.get_connection().await.expect("failed to get connection");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
 
@@ -855,7 +855,7 @@ mod tests {
                 );
 
                 // Fetch should bypass expired cache, read from redis (which is None -> Free)
-                let tier = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier, PlanTier::Free);
             }
         }
@@ -871,13 +871,13 @@ mod tests {
                 let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Starter).await;
 
                 // Should hit cache
-                let tier = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier, PlanTier::Starter);
 
                 // Change via set_tenant_tier, which updates cache
                 let _ = limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await;
 
-                let new_tier = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let new_tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(new_tier, PlanTier::Pro);
             }
         }
@@ -890,12 +890,12 @@ mod tests {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-cache-db";
 
-                let mut conn = limiter.get_connection().await.expect("failed to get connection");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
 
                 // Assume no db_pool, tier defaults to Free
-                let tier = limiter.get_tenant_tier(tenant_id).await.expect("failed to get tier");
+                let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier, PlanTier::Free);
 
                 // Assert it's cached now
@@ -938,14 +938,14 @@ mod tests {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-negative";
 
-                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let mut conn = limiter.get_connection().await.unwrap();
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
                 // Set negative storage manually
                 let _ : () = redis::AsyncCommands::set(&mut conn, &storage_key, -100).await.unwrap_or(());
 
                 // Getting storage used should fix the negative value to 0
-                let used = limiter.get_tenant_storage_used(tenant_id).await.expect("failed to unwrap");
+                let used = limiter.get_tenant_storage_used(tenant_id).await.unwrap();
                 assert_eq!(used, 0);
             }
         }
@@ -966,7 +966,7 @@ mod tests {
                 let res = limiter.record_token_usage(tenant_id, "gpt-4o", -10).await;
                 assert!(res.is_ok());
 
-                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
                 assert_eq!(usage, 0);
             }
         }
