@@ -68,16 +68,33 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
         .await?;
 
         // Insert into booking_slots
-        sqlx::query(
-            "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'booked')"
-        )
-        .bind(proposed_slot_id)
-        .bind(tenant_id)
-        .bind(service)
-        .bind(start_time)
-        .bind(end_time)
-        .execute(pool)
-        .await?;
+        // First check if it already exists from the orchestrator logic
+        let existing: Result<(i64,), _> = sqlx::query_as("SELECT count(*) FROM booking_slots WHERE id = $1")
+            .bind(proposed_slot_id)
+            .fetch_one(pool)
+            .await;
+
+        if let Ok((count,)) = existing {
+            if count == 0 {
+                sqlx::query(
+                    "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'booked')"
+                )
+                .bind(proposed_slot_id)
+                .bind(tenant_id)
+                .bind(service)
+                .bind(start_time)
+                .bind(end_time)
+                .execute(pool)
+                .await?;
+            } else {
+                sqlx::query(
+                    "UPDATE booking_slots SET status = 'booked' WHERE id = $1"
+                )
+                .bind(proposed_slot_id)
+                .execute(pool)
+                .await?;
+            }
+        }
 
         // Release the Redis Redlock explicitly as it was just a temporary hold during quote generation
         if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {

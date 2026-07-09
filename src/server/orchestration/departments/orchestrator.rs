@@ -985,19 +985,47 @@ pub async fn execute_action(
 
                 if let Some(payload) = payload_to_use {
 
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("field_service_quote") {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("field_service_quote") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("autonomous_quote") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or((price * 0.20 * 100.0) as i64);
                         let total_amount_cents = (price * 100.0) as i64;
                         let quote_id = uuid::Uuid::new_v4().to_string();
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
                         let service_id = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-                        let start_time = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
-                        let end_time = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let start_time_arr = payload.get("proposed_slots").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|o| o.get("start_time")).and_then(|v| v.as_str()).unwrap_or("");
+                        let end_time_arr = payload.get("proposed_slots").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|o| o.get("end_time")).and_then(|v| v.as_str()).unwrap_or("");
+
+                        let start_time = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or(start_time_arr);
+                        let end_time = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or(end_time_arr);
+
+                        let mut customer_id_to_use = customer_id.clone();
+                        if customer_id_to_use.is_empty() {
+                            customer_id_to_use = uuid::Uuid::new_v4().to_string();
+                        }
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id_to_use, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                        if !stripe_link.is_empty() {
+                            generated_reply.push_str(&format!("\n\nTo secure your booking, please pay the deposit here: {}", stripe_link));
+                        }
+
+                        if !inbox_message_id.is_empty() {
+                            if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                .bind(&generated_reply)
+                                .bind(inbox_message_id)
+                                .bind(tenant_id)
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to update inbox_messages for autonomous quote: {}", e);
+                            }
+                        }
 
                         if let DbStore::Postgres = &self.db.store {
                             // Convert string times to DateTime
@@ -1038,59 +1066,6 @@ pub async fn execute_action(
                         }
                     }
 
-
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("field_service_quote") {
-                        let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-                        let total_amount_cents = (price * 100.0) as i64;
-                        let quote_id = uuid::Uuid::new_v4().to_string();
-                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                        let service_id = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-                        let start_time = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
-                        let end_time = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
-
-                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
-                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
-
-                        if let DbStore::Postgres = &self.db.store {
-                            // Convert string times to DateTime
-                            let st = chrono::DateTime::parse_from_rfc3339(start_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now());
-                            let et = chrono::DateTime::parse_from_rfc3339(end_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(1));
-
-                            // Insert booking with pending_payment to wait for customer confirmation
-                            let booking_id = uuid::Uuid::new_v4().to_string();
-                            let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')")
-                                .bind(&booking_id)
-                                .bind(tenant_id)
-                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
-                                .bind(&service_id)
-                                .bind(st)
-                                .bind(et)
-                                .execute(&self.db.pool)
-                                .await;
-
-                            // Update availability blocks to ensure no double bookings globally
-                            let _ = sqlx::query("UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4")
-                                .bind(tenant_id)
-                                .bind(&service_id)
-                                .bind(st)
-                                .bind(et)
-                                .execute(&self.db.pool)
-                                .await;
-
-                            // Insert quote/proposal
-                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, 'Sent', $4, $5, $6)")
-                                .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
-                                .bind(tenant_id)
-                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
-                                .bind(total_amount_cents)
-                                .bind(deposit_amount)
-                                .bind(&stripe_link)
-                                .execute(&self.db.pool)
-                                .await;
-                        }
-                    }
 
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_draft") {
                         let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
