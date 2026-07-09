@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
+import { PricingCard } from './PricingCard';
+
 
 export default function PricingPage() {
   const router = useRouter();
@@ -149,118 +151,44 @@ export default function PricingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
-          {/* Free Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Free</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
-              </ul>
-            </div>
-            {loading ? (
-              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Loading...
-              </button>
-            ) : currentPlan === 'Free' || !currentPlan ? (
-              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Current Plan
-              </button>
-            ) : (
-              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-300 transition-colors">
-                Downgrade to Free
-              </button>
-            )}
-            {(!loading && (currentPlan === 'Free' || !currentPlan)) && (
-              <ViralTrialExtensionWidget />
-            )}
-          </div>
-
-          {/* Starter Tier */}
-          <div className="p-6 flex flex-col justify-between relative app-card ohc-growth-card glass-card shadow-xl rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
-            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
-              <p className="text-xl font-semibold mb-2 text-gray-900">$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 1,000 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 5GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
-              </ul>
-            </div>
-            {loading ? (
-              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Loading...
-              </button>
-            ) : currentPlan === 'Starter' ? (
-              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-xl font-medium flex items-center justify-center transition-colors">
-                Manage Plan
-              </button>
-            ) : (
-              <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
-                Upgrade to Starter via Stripe
-              </button>
-            )}
-          </div>
-
-          {/* Pro Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 50GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
-            </div>
-            {loading ? (
-              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Loading...
-              </button>
-            ) : currentPlan === 'Pro' ? (
-              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
-                Manage Plan
-              </button>
-            ) : (
-              <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
-                Upgrade to Pro via Stripe
-              </button>
-            )}
-          </div>
-
-          {/* Business Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
-            </div>
-            {loading ? (
-              <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Loading...
-              </button>
-            ) : currentPlan === 'Business' ? (
-              <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
-                Manage Plan
-              </button>
-            ) : (
-              <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
-                Upgrade to Business via Stripe
-              </button>
-            )}
-          </div>
+          <PricingCard
+            tierName="Free"
+            price="$0"
+            features={["1 Agent Limit", "100 AI actions / month", "500MB Storage Quota", "10 Products Limit"]}
+            currentPlan={currentPlan}
+            loading={loading}
+            onManageBilling={handleManageBilling}
+            onUpgrade={handleUpgrade}
+          />
+          <PricingCard
+            tierName="Starter"
+            price="$29"
+            isRecommended={true}
+            recommendationText="Suggested for growing stores"
+            features={["3 Agents Limit", "1,000 AI actions / month", "5GB Storage Quota", "100 Products Limit"]}
+            currentPlan={currentPlan}
+            loading={loading}
+            onManageBilling={handleManageBilling}
+            onUpgrade={handleUpgrade}
+          />
+          <PricingCard
+            tierName="Pro"
+            price="$79"
+            features={["10 Agents Limit", "Unlimited AI actions", "50GB Storage Quota", "Unlimited Products"]}
+            currentPlan={currentPlan}
+            loading={loading}
+            onManageBilling={handleManageBilling}
+            onUpgrade={handleUpgrade}
+          />
+          <PricingCard
+            tierName="Business"
+            price="$299"
+            features={["Unlimited Agents", "Unlimited AI actions", "500GB Storage Quota", "Unlimited Products"]}
+            currentPlan={currentPlan}
+            loading={loading}
+            onManageBilling={handleManageBilling}
+            onUpgrade={handleUpgrade}
+          />
         </div>
 
         <div className="text-center mt-4 mb-2">
