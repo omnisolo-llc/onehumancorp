@@ -28,7 +28,7 @@ pub async fn create_checkout_session_handler(
     let session_id = uuid::Uuid::new_v4().to_string();
     let tenant_id = req_data.tenant_id.clone();
 
-    let mut db_tx = match hub.db.pool.begin().await {
+    let mut db_tx = match hub.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     };
@@ -39,7 +39,7 @@ pub async fn create_checkout_session_handler(
 
     let query = sqlx::query(
         "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
-         VALUES (\$1, \$2, \$3, \$4, \$5, \$6, 'PENDING')"
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
     )
     .bind(&session_id)
     .bind(&tenant_id)
@@ -67,6 +67,6 @@ pub async fn create_checkout_session_handler(
     }
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<Hub>> {
-    axum::Router::new().route("/session", axum::routing::post(create_checkout_session_handler))
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+    axum::Router::new().route("/session", axum::routing::post(create_checkout_session_handler)).with_state(hub)
 }
