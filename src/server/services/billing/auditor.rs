@@ -232,13 +232,7 @@ impl CostAuditor {
     }
 
     pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
-        let savings = calculator::calculate_bandwidth_savings(original_bytes, compressed_bytes, &self.config);
-
-        let mut tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        let current_savings = tenant_bandwidth_savings.entry(tenant_id.to_string()).or_insert(0.0);
-        *current_savings += savings;
-
-        savings
+        self.record_bandwidth_savings(tenant_id, original_bytes, compressed_bytes)
     }
 
     pub fn get_total_storage_savings(&self) -> f64 {
@@ -744,6 +738,9 @@ mod tests {
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("other_tenant"), 0.0);
+
+        let total_savings = auditor.bandwidth_savings.lock().unwrap();
+        assert_eq!(*total_savings, 0.1);
     }
 }
 
