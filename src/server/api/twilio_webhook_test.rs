@@ -65,6 +65,17 @@ async fn test_twilio_webhook_post_handler_success() {
 
     let response_media = app.oneshot(request_media).await.unwrap();
     assert_eq!(response_media.status(), StatusCode::OK);
+    // Test with audio
+    let body_audio = Body::from("From=whatsapp%3A%2B14155238886&To=whatsapp%3A%2B1234567890&Body=&NumMedia=1&MediaUrl0=https%3A%2F%2Fexample.com%2Faudio.ogg&MediaContentType0=audio%2Fogg");
+    let request_audio = Request::builder()
+        .method("POST")
+        .uri("/api/v1/webhooks/twilio")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body_audio)
+        .unwrap();
+
+    let response_audio = app.oneshot(request_audio).await.unwrap();
+    assert_eq!(response_audio.status(), StatusCode::OK);
 }
 
 #[tokio::test]

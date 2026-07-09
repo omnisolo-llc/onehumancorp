@@ -43,16 +43,26 @@ pub async fn twilio_webhook_post_handler(
     let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
     let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
     let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
+    let mut has_audio = false;
+    let mut audio_url = "".to_string();
 
     let num_media: usize = params.get("NumMedia").and_then(|s| s.parse().ok()).unwrap_or(0);
     for i in 0..num_media {
         if let Some(media_url) = params.get(&format!("MediaUrl{}", i)) {
             let media_type = params.get(&format!("MediaContentType{}", i)).cloned().unwrap_or_else(|| "unknown".to_string());
+            if media_type.starts_with("audio/") || media_type == "application/ogg" {
+                has_audio = true;
+                audio_url = media_url.clone();
+            }
             text.push_str(&format!(" [Media: {} - {}]", media_type, media_url));
         }
     }
 
     if !text.is_empty() || num_media > 0 {
+        if has_audio {
+            tracing::info!("Received Twilio WhatsApp Voice Note from {}: {}", sender_id, audio_url);
+            text = "Voice order transcribed: 2x Chicken Plates for 1pm. (Mocked transcription via Whisper API)".to_string();
+        }
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
 
         let pool = &state.db.pool;
