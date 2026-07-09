@@ -14,33 +14,41 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
             info!("Running invoice followup worker sweep");
 
             // Find invoices that are overdue (e.g. past due_date, status = 'Draft' or 'Pending')
+
             // Using different logic for Postgres/Sqlite.
-            let mut overdue_invoices: Vec<(String, String, String)> = vec![]; // (id, tenant_id, customer_id)
+            let mut overdue_invoices: Vec<(String, String, String, f64, i64)> = vec![]; // (id, tenant_id, customer_id, days_past_due, ltv)
 
             match &db.store {
                 DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < extract(epoch from now()) AND (status = 'draft' OR status = 'pending')"
+                    if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>, Option<f64>, Option<i64>)>(
+                        "SELECT id, tenant_id, customer_id,
+                        EXTRACT(EPOCH FROM now() - due_date) / 86400 as days_past_due,
+                        COALESCE((SELECT sum(total_amount_cents) FROM invoices i2 WHERE i2.tenant_id = invoices.tenant_id AND i2.customer_id = invoices.customer_id AND i2.payment_status = 'paid'), 0) as ltv
+                        FROM invoices WHERE payment_status != 'paid' AND due_date < now() AND (status = 'draft' OR status = 'pending')"
                     )
                     .fetch_all(&db.pool).await {
                         for row in rows {
-                            overdue_invoices.push((row.0, row.1, row.2.unwrap_or_default()));
+                            overdue_invoices.push((row.0, row.1, row.2.unwrap_or_default(), row.3.unwrap_or(0.0), row.4.unwrap_or(0)));
                         }
                     }
                 },
                 DbStore::Sqlite(_) => {
-                    if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < strftime('%s', 'now') AND (status = 'draft' OR status = 'pending')"
+                    if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>, Option<f64>, Option<i64>)>(
+                        "SELECT id, tenant_id, customer_id,
+                        (strftime('%s', 'now') - strftime('%s', due_date)) / 86400 as days_past_due,
+                        COALESCE((SELECT sum(total_amount_cents) FROM invoices i2 WHERE i2.tenant_id = invoices.tenant_id AND i2.customer_id = invoices.customer_id AND i2.payment_status = 'paid'), 0) as ltv
+                        FROM invoices WHERE payment_status != 'paid' AND due_date < datetime('now') AND (status = 'draft' OR status = 'pending')"
                     )
                     .fetch_all(&db.pool).await {
                         for row in rows {
-                            overdue_invoices.push((row.0, row.1, row.2.unwrap_or_default()));
+                            overdue_invoices.push((row.0, row.1, row.2.unwrap_or_default(), row.3.unwrap_or(0.0), row.4.unwrap_or(0)));
                         }
                     }
                 }
             }
 
-            for (invoice_id, tenant_id, customer_id) in overdue_invoices {
+            for (invoice_id, tenant_id, customer_id, days_past_due, ltv) in overdue_invoices {
+
                 info!("Triggering Finance Agent for overdue invoice {}", invoice_id);
 
                 // Fetch recent communications from unified customer timeline
