@@ -36,7 +36,7 @@ async fn setup_health_check(
     match crate::services::onboarding::provisioner::check_environment(is_cloud) {
         Ok(_) => Ok(Json(serde_json::json!({ "status": "ready" }))),
         Err(e) => {
-            tracing::info!("Health check failed for environment (cloud: {}): {}. Attempting to provision...", is_cloud, e);
+            tracing::info!("Health check failed for environment (cloud: {}): {}. Attempting to provision...", is_cloud, e); // pii-safe
             match crate::services::onboarding::provisioner::provision_environment(is_cloud) {
                 Ok(_) => {
                     tracing::info!("Successfully provisioned environment (cloud: {})", is_cloud);

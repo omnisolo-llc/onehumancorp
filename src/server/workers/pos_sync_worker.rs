@@ -152,7 +152,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 // Proceed to fulfill inventory below
                             }
                             Err(e) => {
-                                tracing::error!("Failed to capture Stripe intent for offline tap-to-pay: {}", e);
+                                tracing::error!("Failed to capture Stripe intent for offline tap-to-pay: {}", e); // pii-safe
                                 sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
                                     .bind(transaction_id)
                                     .execute(&mut *tx)
@@ -164,7 +164,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Failed to create Stripe intent for offline tap-to-pay: {}", e);
+                        tracing::error!("Failed to create Stripe intent for offline tap-to-pay: {}", e); // pii-safe
                         sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
                             .bind(transaction_id)
                             .execute(&mut *tx)

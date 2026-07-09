@@ -255,8 +255,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm saturate-[210%] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/80 backdrop-blur-xl text-white rounded-br-sm border border-white/20"
-                      : "bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
+                      ? "bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-white/20"
+                      : "bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(
