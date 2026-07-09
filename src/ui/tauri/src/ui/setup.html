@@ -49,13 +49,16 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       .glass-control {
         border-radius: 8px !important;
       }
       @media (prefers-color-scheme: dark) {
-        .container, .glassmorphism {
+        .container,
+        .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -108,7 +111,7 @@
       textarea:focus,
       select:focus {
         outline: none;
-        border-color: #0071E3;
+        border-color: #0071e3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -129,7 +132,10 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
       }
-      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
+      textarea.glass-control,
+      input.glass-control,
+      select.glass-control,
+      button.glass-control {
         border-radius: 8px !important;
       }
       @media (prefers-color-scheme: dark) {
@@ -138,18 +144,25 @@
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
-      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
+      textarea.glass-control,
+      input.glass-control,
+      select.glass-control,
+      button.glass-control {
         border-radius: 8px !important;
         min-height: 44px;
       }
       @media (prefers-color-scheme: dark) {
-        textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
+        textarea.glass-control,
+        input.glass-control,
+        select.glass-control,
+        button.glass-control {
           border-radius: 8px !important;
         }
       }
-      button, .btn-primary {
+      button,
+      .btn-primary {
         min-width: 44px;
-        background-color: #0066FF;
+        background-color: #0066ff;
         color: white;
         border: none;
         padding: 14px 24px;
@@ -162,10 +175,12 @@
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
       }
-      button:hover, .btn-primary:hover {
+      button:hover,
+      .btn-primary:hover {
         background-color: #0052cc;
       }
-      button:active, .btn-primary:active {
+      button:active,
+      .btn-primary:active {
         transform: scale(0.98);
       }
 
@@ -182,22 +197,22 @@
         display: none;
         align-items: center;
         justify-content: flex-start;
-        color: #FF3B30;
+        color: #ff3b30;
         font-size: 14px;
         font-weight: 600;
         text-align: left;
-    }
+      }
 
       .invalid-input {
         background: rgba(255, 59, 48, 0.1) !important;
-        border-color: #FF3B30 !important;
+        border-color: #ff3b30 !important;
       }
 
       .text-\[\#FF3B30\] {
-        color: #FF3B30 !important;
+        color: #ff3b30 !important;
       }
       .border-\[\#FF3B30\] {
-        border-color: #FF3B30 !important;
+        border-color: #ff3b30 !important;
       }
       .border-\[\#FF3B30\]\/30 {
         border-color: rgba(255, 59, 48, 0.3) !important;
@@ -343,7 +358,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066FF;
+          box-shadow: 0 0 0 1px #0066ff;
         }
         body {
           background-color: #16161a;
@@ -372,7 +387,7 @@
         input:focus,
         textarea:focus,
         select:focus {
-          border-color: #0071E3;
+          border-color: #0071e3;
           background: rgba(22, 22, 26, 0.7);
         }
       }
@@ -399,7 +414,7 @@
         top: 50%;
         left: 0;
         height: 2px;
-        background: #0066FF;
+        background: #0066ff;
         z-index: 1;
         transform: translateY(-50%);
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -416,7 +431,7 @@
       }
 
       .btn-instant-build {
-        background: #0066FF;
+        background: #0066ff;
         color: white;
         border: none;
         min-height: 44px;
@@ -479,10 +494,10 @@
           color: #f5f5f7;
           border-radius: 16px;
           border-bottom-left-radius: 4px;
-      }
+        }
       }
       .chat-message.user .chat-bubble {
-        background: #0066FF;
+        background: #0066ff;
         border: 1px solid #0052cc;
         color: white;
         border-radius: 16px;
@@ -525,8 +540,8 @@
       }
 
       .step-indicator.active {
-        background: #0066FF;
-        border-color: #0071E3;
+        background: #0066ff;
+        border-color: #0071e3;
         transform: scale(1.3);
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
@@ -636,7 +651,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066FF;
+          box-shadow: 0 0 0 1px #0066ff;
         }
         .stepper::before {
           background: rgba(22, 22, 26, 0.7);
@@ -646,7 +661,7 @@
           top: 50%;
           left: 0;
           height: 2px;
-          background: #0066FF;
+          background: #0066ff;
           z-index: 1;
           transform: translateY(-50%);
           transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -659,7 +674,6 @@
       }
 
       /* Multi-step logic */
-
 
       @keyframes fadeIn {
         0% {
@@ -705,7 +719,7 @@
       select:focus,
       textarea:focus {
         outline: none;
-        border-color: #0071E3;
+        border-color: #0071e3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -737,10 +751,10 @@
         transform: translateY(-2px);
       }
       .context-card.selected {
-        border-color: #0071E3;
+        border-color: #0071e3;
         background: rgba(0, 102, 255, 0.1);
         box-shadow:
-          0 0 0 1px #0066FF,
+          0 0 0 1px #0066ff,
           0 4px 12px rgba(0, 102, 255, 0.15);
       }
       .context-card input[type="radio"] {
@@ -791,9 +805,9 @@
         background: rgba(255, 255, 255, 0.85);
       }
       .radio-option.selected {
-        border-color: #0066FF;
+        border-color: #0066ff;
         background: rgba(255, 255, 255, 0.65);
-        box-shadow: 0 0 0 1px #0066FF;
+        box-shadow: 0 0 0 1px #0066ff;
       }
       .radio-option input[type="radio"] {
         display: none;
@@ -817,7 +831,9 @@
         min-height: 44px;
       }
       .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         color: #1d1d1f;
       }
       .btn-group {
@@ -846,7 +862,7 @@
         align-items: center;
         border-radius: 8px;
         background: rgba(0, 102, 255, 0.1);
-        color: #0066FF;
+        color: #0066ff;
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
@@ -857,7 +873,7 @@
         background: rgba(0, 102, 255, 0.2);
       }
       .persona-chip.selected {
-        background: #0066FF;
+        background: #0066ff;
         color: white;
       }
 
@@ -975,7 +991,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066FF;
+          box-shadow: 0 0 0 1px #0066ff;
         }
         input,
         select,
@@ -987,7 +1003,7 @@
         input:focus,
         select:focus,
         textarea:focus {
-          border-color: #0071E3;
+          border-color: #0071e3;
           background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
@@ -1003,9 +1019,9 @@
           background: rgba(40, 40, 45, 0.7);
         }
         .radio-option.selected {
-          border-color: #0066FF;
+          border-color: #0066ff;
           background: rgba(22, 22, 26, 0.7);
-          box-shadow: 0 0 0 1px #0066FF;
+          box-shadow: 0 0 0 1px #0066ff;
         }
         .radio-label {
           color: #f5f5f7;
@@ -1055,25 +1071,61 @@
       }
 
       @media (max-width: 414px) {
+        body {
+          padding: 0;
+          margin: 0;
+        }
         .container {
-          padding: 16px;
+          padding: 16px 12px;
           margin: 0;
           width: 100vw;
-          max-width: 375px;
+          max-width: 100%;
           box-sizing: border-box;
           overflow-x: hidden;
           height: auto;
           max-height: 100vh;
+          border-radius: 0;
+          border: none;
         }
-        h1 { font-size: 20px; }
-        p { font-size: 13px; }
-        select, textarea, input, button, .btn-primary {
+        h1 {
+          font-size: 20px;
+        }
+        p {
+          font-size: 13px;
+        }
+        select,
+        textarea,
+        input,
+        button,
+        .btn-primary,
+        .radio-option,
+        .context-card,
+        .persona-chip {
           font-size: 14px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .persona-row {
+          flex-direction: column;
+          width: 100%;
+        }
+        .radio-group {
+          width: 100%;
+        }
+        .work-context-cards {
+          grid-template-columns: 1fr;
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .container {
+          padding: 12px 10px;
         }
       }
 
       *:focus-visible {
-        outline: 3px solid #0066FF;
+        outline: 3px solid #0066ff;
         outline-offset: 2px;
       }
 
@@ -1136,8 +1188,15 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+      #instant-bio {
+        min-height: 44px;
+        box-sizing: border-box;
+        border-radius: 8px;
+      }
+      .context-card {
+        min-height: 44px;
+        box-sizing: border-box;
+      }
 
       /* --- OHC Premium Dark Mode & Animations --- */
       @media (prefers-color-scheme: dark) {
@@ -1145,23 +1204,35 @@
           background-color: #000000;
           color: #f5f5f7;
         }
-        h1, h2, h3, h4, p, label {
+        h1,
+        h2,
+        h3,
+        h4,
+        p,
+        label {
           color: #f5f5f7 !important;
         }
-        .container, .glassmorphism, .context-card, .toggle-row, .ohc-tooltip {
+        .container,
+        .glassmorphism,
+        .context-card,
+        .toggle-row,
+        .ohc-tooltip {
           background: rgba(22, 22, 26, 0.7) !important;
           backdrop-filter: blur(30px) saturate(210%) !important;
           -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: 16px;
-      }
+        }
         .context-card:hover {
           background: rgba(40, 40, 45, 0.7) !important;
         }
-        .context-desc, .toggle-desc {
+        .context-desc,
+        .toggle-desc {
           color: #a1a1a6 !important;
         }
-        input, select, textarea {
+        input,
+        select,
+        textarea {
           background: rgba(30, 30, 30, 0.8) !important;
           border-color: rgba(255, 255, 255, 0.2) !important;
           color: #f5f5f7 !important;
@@ -1172,7 +1243,7 @@
           color: #f5f5f7 !important;
         }
         footer a {
-          color: #0066FF !important;
+          color: #0066ff !important;
         }
       }
 
@@ -1196,10 +1267,15 @@
         animation: stepFadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
       }
       @keyframes fadeIn {
-        0% { opacity: 0; transform: translateY(10px); }
-        100% { opacity: 1; transform: translateY(0); }
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-
     </style>
 
     <style>
@@ -1304,15 +1380,20 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066FF;
+          box-shadow: 0 0 0 1px #0066ff;
         }
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+      #instant-bio {
+        min-height: 44px;
+        box-sizing: border-box;
+        border-radius: 8px;
+      }
+      .context-card {
+        min-height: 44px;
+        box-sizing: border-box;
+      }
     </style>
-
-
-</head>
+  </head>
   <body>
     <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
@@ -1330,7 +1411,7 @@
           "
         >
           <svg
-            style="width: 32px; height: 32px; color: #0066FF"
+            style="width: 32px; height: 32px; color: #0066ff"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -1345,7 +1426,8 @@
         </div>
         <h1>Tell us about your business</h1>
         <p>
-          Type a quick description and our AI will build your entire workspace in seconds.
+          Type a quick description and our AI will build your entire workspace
+          in seconds.
         </p>
 
         <textarea
@@ -1384,23 +1466,52 @@
             aria-label="Generate Storefront"
             title="Generate Storefront"
             data-testid="generate-storefront-btn"
-            class="btn-primary" style="width: 100%;"
+            class="btn-primary"
+            style="width: 100%"
             disabled
           >
             Generate My Workspace
           </button>
 
-          <div style="margin-top: 24px; margin-bottom: 12px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; justify-content: center; min-height: 44px;">
-            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-right: 12px;"></span>
+          <div
+            style="
+              margin-top: 24px;
+              margin-bottom: 12px;
+              font-size: 12px;
+              color: #555;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 44px;
+            "
+          >
+            <span
+              style="
+                flex-grow: 1;
+                height: 1px;
+                background: rgba(0, 0, 0, 0.1);
+                margin-right: 12px;
+              "
+            ></span>
             Or configure manually
-            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-left: 12px;"></span>
+            <span
+              style="
+                flex-grow: 1;
+                height: 1px;
+                background: rgba(0, 0, 0, 0.1);
+                margin-left: 12px;
+              "
+            ></span>
           </div>
 
           <button
             type="button"
             class="btn-secondary"
             onclick="goToStep('step-chat')"
-            style="margin-bottom: 10px; width: 100%;"
+            style="margin-bottom: 10px; width: 100%"
           >
             Conversational Setup
           </button>
@@ -1411,14 +1522,12 @@
             aria-label="Next Step"
             title="Next Step"
             data-next="step-context"
-            style="width: 100%;"
+            style="width: 100%"
           >
             Step-by-Step Setup
           </button>
         </div>
       </div>
-
-
 
       <div class="step" id="step-loading">
         <h1 id="loading-title">Building Your Business...</h1>
@@ -1430,7 +1539,7 @@
             width: 40px;
             height: 40px;
             border-width: 4px;
-            border-top-color: #0066FF;
+            border-top-color: #0066ff;
           "
         ></div>
         <div
@@ -1511,7 +1620,6 @@
         </div>
       </div>
 
-
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
         <button
@@ -1519,7 +1627,7 @@
           style="
             background: none;
             border: none;
-            color: #0066FF;
+            color: #0066ff;
             padding: 0;
             box-shadow: none;
             width: auto;
@@ -1610,7 +1718,7 @@
                 align-items: center;
                 justify-content: center;
                 background: rgba(0, 102, 255, 0.1);
-                color: #0066FF;
+                color: #0066ff;
               "
               onclick="
                 document.getElementById('chat-image-container').style.display =
@@ -1640,7 +1748,6 @@
               data-testid="chat-input"
               class="glass-control glassmorphism"
               placeholder="Type a message..."
-
               autocomplete="off"
               style="
                 margin-bottom: 0;
@@ -1648,7 +1755,8 @@
                 min-height: 44px;
                 border-radius: 8px;
               "
-             enterkeyhint="next" />
+              enterkeyhint="next"
+            />
             <button
               id="chat-send-btn"
               aria-label="Send Chat Message"
@@ -1664,7 +1772,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #0066FF;
+                background: #0066ff;
                 color: white;
               "
             >
@@ -1692,7 +1800,7 @@
           style="
             background: none;
             border: none;
-            color: #0066FF;
+            color: #0066ff;
             padding: 0;
             box-shadow: none;
             width: auto;
@@ -1726,15 +1834,16 @@
         <div
           id="approval-details"
           class="glass-control glassmorphism"
-          style="
-            text-align: left;
-            padding: 16px;
-            margin-bottom: 24px;
-          "
+          style="text-align: left; padding: 16px; margin-bottom: 24px"
         ></div>
 
         <div class="btn-group">
-          <button id="approve-publish-btn" aria-label="Approve and Publish" title="Approve and Publish" data-testid="approve-publish-btn"  >
+          <button
+            id="approve-publish-btn"
+            aria-label="Approve and Publish"
+            title="Approve and Publish"
+            data-testid="approve-publish-btn"
+          >
             Approve & Publish
           </button>
         </div>
@@ -1816,13 +1925,21 @@
             <div class="context-title">Local Service</div>
             <div class="context-desc">Field work, repairs, home services</div>
           </label>
-          <label tabindex="0" class="context-card" data-testid="context-storefront">
+          <label
+            tabindex="0"
+            class="context-card"
+            data-testid="context-storefront"
+          >
             <input type="radio" name="work_context" value="Storefront" />
             <div class="context-icon">🏪</div>
             <div class="context-title">Storefront or Cafe</div>
             <div class="context-desc">Physical location with walk-ins</div>
           </label>
-          <label tabindex="0" class="context-card" data-testid="context-creator">
+          <label
+            tabindex="0"
+            class="context-card"
+            data-testid="context-creator"
+          >
             <input type="radio" name="work_context" value="Online Creator" />
             <div class="context-icon">💻</div>
             <div class="context-title">Online Creator / Tutor</div>
@@ -1865,7 +1982,8 @@
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
         <select
-          id="business-categories" required
+          id="business-categories"
+          required
           data-testid="business-categories"
           class="glass-control glassmorphism"
         >
@@ -1911,14 +2029,18 @@
         <p>We'll use this to set up your workspace.</p>
         <input
           type="text"
-          id="business-name" required autocomplete="organization" enterkeyhint="next"
+          id="business-name"
+          required
+          autocomplete="organization"
+          enterkeyhint="next"
           data-testid="business-name"
           class="glass-control glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
           inputmode="text"
           autocomplete="organization"
           autocapitalize="words"
-           enterkeyhint="next" />
+          enterkeyhint="next"
+        />
         <div id="name-error" class="error-msg" aria-live="polite">
           Business Name is required.
         </div>
@@ -1931,7 +2053,8 @@
           placeholder="Tagline (optional)"
           inputmode="text"
           autocomplete="off"
-           enterkeyhint="next" />
+          enterkeyhint="next"
+        />
 
         <div class="btn-group">
           <button
@@ -1970,30 +2093,57 @@
         <p>Choose an AI agent team and set their tone.</p>
 
         <div class="chat-bubble" id="assistant-intro">
-          "Hi! I'll be your partner in growing this business. What kind of team do you need, and how should we talk?"
+          "Hi! I'll be your partner in growing this business. What kind of team
+          do you need, and how should we talk?"
         </div>
 
         <div class="work-context-cards" id="assistant-team-cards">
           <label tabindex="0" class="context-card" data-testid="team-support">
-            <input type="radio" name="assistant-team" value="Customer Support" onchange="updateAssistantTeam()" />
+            <input
+              type="radio"
+              name="assistant-team"
+              value="Customer Support"
+              onchange="updateAssistantTeam()"
+            />
             <div class="context-icon">🎧</div>
             <div class="context-title">Customer Support</div>
-            <div class="context-desc">Handles inquiries and drafts replies.</div>
+            <div class="context-desc">
+              Handles inquiries and drafts replies.
+            </div>
           </label>
-          <label tabindex="0" class="context-card" data-testid="team-operations">
-            <input type="radio" name="assistant-team" value="Operations Manager" onchange="updateAssistantTeam()" />
+          <label
+            tabindex="0"
+            class="context-card"
+            data-testid="team-operations"
+          >
+            <input
+              type="radio"
+              name="assistant-team"
+              value="Operations Manager"
+              onchange="updateAssistantTeam()"
+            />
             <div class="context-icon">⚙️</div>
             <div class="context-title">Operations Manager</div>
             <div class="context-desc">Coordinates calendar and inventory.</div>
           </label>
           <label tabindex="0" class="context-card" data-testid="team-marketing">
-            <input type="radio" name="assistant-team" value="Marketing Specialist" onchange="updateAssistantTeam()" />
+            <input
+              type="radio"
+              name="assistant-team"
+              value="Marketing Specialist"
+              onchange="updateAssistantTeam()"
+            />
             <div class="context-icon">🚀</div>
             <div class="context-title">Marketing Specialist</div>
             <div class="context-desc">Creates offers and promos.</div>
           </label>
         </div>
-        <input type="hidden" id="assistant-name" data-testid="assistant-name" value="" />
+        <input
+          type="hidden"
+          id="assistant-name"
+          data-testid="assistant-name"
+          value=""
+        />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">
           Please select an AI agent team.
         </div>
@@ -2104,7 +2254,9 @@
 
         <input
           type="text"
-          id="admin-name" autocomplete="name" enterkeyhint="next"
+          id="admin-name"
+          autocomplete="name"
+          enterkeyhint="next"
           data-testid="admin-name"
           class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
@@ -2119,7 +2271,10 @@
 
         <input
           type="email"
-          id="admin-email" inputmode="email" autocomplete="email" enterkeyhint="next"
+          id="admin-email"
+          inputmode="email"
+          autocomplete="email"
+          enterkeyhint="next"
           data-testid="admin-email"
           class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
@@ -2143,7 +2298,9 @@
         >
           <input
             type="password"
-            id="admin-password" autocomplete="new-password" enterkeyhint="next"
+            id="admin-password"
+            autocomplete="new-password"
+            enterkeyhint="next"
             data-testid="admin-password"
             class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
@@ -2338,7 +2495,11 @@
         </div>
 
         <div style="padding-top: 8px">
-          <label tabindex="0" class="toggle-row glass-control glassmorphism" style="cursor: pointer">
+          <label
+            tabindex="0"
+            class="toggle-row glass-control glassmorphism"
+            style="cursor: pointer"
+          >
             <div class="toggle-info">
               <span class="toggle-title">Allow AI to Auto-Respond</span>
             </div>
@@ -2397,7 +2558,7 @@
           inputmode="text"
           autocomplete="off"
           enterkeyhint="next"
-          style="min-height: 128px !important;"
+          style="min-height: 128px !important"
         ></textarea>
         <div id="offer-error" class="error-msg" aria-live="polite">
           Please tell us what you sell.
@@ -2445,7 +2606,8 @@
           placeholder="e.g. Portland, OR"
           inputmode="text"
           autocomplete="address-level2"
-           enterkeyhint="next" />
+          enterkeyhint="next"
+        />
         <div id="location-error" class="error-msg" aria-live="polite">
           Please tell us your location.
         </div>
@@ -2492,7 +2654,8 @@
           placeholder="e.g. Local families, Tech startups"
           inputmode="text"
           autocomplete="off"
-           enterkeyhint="next" />
+          enterkeyhint="next"
+        />
         <div id="target-audience-error" class="error-msg" aria-live="polite">
           Please tell us your target audience.
         </div>
@@ -2531,7 +2694,18 @@
       <div class="step" id="step-domain">
         <h1>Where will your business live?</h1>
         <p>Choose your workspace domain</p>
-        <div class="glass-control glassmorphism" style="display: flex; align-items: center; padding: 0 16px; margin-bottom: 0; width: 100%; box-sizing: border-box; min-height: 44px;">
+        <div
+          class="glass-control glassmorphism"
+          style="
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            margin-bottom: 0;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 44px;
+          "
+        >
           <input
             type="text"
             id="domain-name"
@@ -2542,10 +2716,36 @@
             enterkeyhint="next"
             autocapitalize="none"
             autocorrect="off"
-            style="flex: 1; border: none; background: transparent; outline: none; margin-bottom: 0; padding: 0; font-size: 16px; font-family: inherit; color: inherit; text-align: right; min-width: 0; min-height: 44px; appearance: none; box-shadow: none;"
+            style="
+              flex: 1;
+              border: none;
+              background: transparent;
+              outline: none;
+              margin-bottom: 0;
+              padding: 0;
+              font-size: 16px;
+              font-family: inherit;
+              color: inherit;
+              text-align: right;
+              min-width: 0;
+              min-height: 44px;
+              appearance: none;
+              box-shadow: none;
+            "
             enterkeyhint="next"
           />
-          <span style="font-size: 16px; font-weight: 500; color: #1d1d1f; opacity: 0.8; padding-left: 4px; white-space: nowrap; flex-shrink: 0;">.ohc.app</span>
+          <span
+            style="
+              font-size: 16px;
+              font-weight: 500;
+              color: #1d1d1f;
+              opacity: 0.8;
+              padding-left: 4px;
+              white-space: nowrap;
+              flex-shrink: 0;
+            "
+            >.ohc.app</span
+          >
         </div>
         <div
           id="domain-error"
@@ -2594,7 +2794,7 @@
           id="template-selection"
           data-testid="template-selection"
           class="glass-control glassmorphism"
-          style="min-height: 44px;"
+          style="min-height: 44px"
         >
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
@@ -2716,11 +2916,11 @@
         instant_image_url: document.getElementById("instant-image-url"),
       };
 
-      Object.values(inputs).forEach(inputEl => {
+      Object.values(inputs).forEach((inputEl) => {
         if (inputEl) {
           // If inputEl is a NodeList (like radio buttons)
           if (inputEl.length !== undefined && !inputEl.tagName) {
-            inputEl.forEach(radio => {
+            inputEl.forEach((radio) => {
               radio.addEventListener("change", () => saveCurrentState());
               radio.addEventListener("blur", () => saveCurrentState());
             });
@@ -2762,36 +2962,35 @@
       };
 
       // Auto save draft logic
-      var autoSaveTimer = null;
-      function debouncedAutoSave() {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => {
-          saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
 
-          const backendUrl =
-            window.location.protocol === "file:" ||
-            ["1420", "3000", "8081"].includes(window.location.port)
-              ? "http://127.0.0.1:18789"
-              : "";
+      let autoSaveTimer = null;
+      let isSyncing = false;
+      let pendingSync = false;
+
+      async function syncStateToBackend() {
+        if (isSyncing) {
+          pendingSync = true;
+          return;
+        }
+        isSyncing = true;
+        try {
           const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
           const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
           if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
-              .then(() => {
-                const msg = document.getElementById("draft-saved-msg");
-                if (msg) {
-                  msg.style.display = "block";
-                  setTimeout(() => {
-                    msg.style.display = "none";
-                  }, 2000);
-                }
-              })
-              .catch(console.error);
+            await window.__TAURI__.core.invoke("save_onboarding_state", {
+              state,
+              tenantId,
+              userId,
+            });
           } else {
-            fetch(`${backendUrl}/api/onboarding/draft`, {
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+
+            await fetch(`${backendUrl}/api/onboarding/draft`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -2799,26 +2998,39 @@
                 "X-User-ID": userId,
               },
               body: JSON.stringify(state),
-            })
-              .then((res) => {
-                if (res.ok) {
-                  const msg = document.getElementById("draft-saved-msg");
-                  if (msg) {
-                    msg.style.display = "block";
-                    setTimeout(() => {
-                      msg.style.display = "none";
-                    }, 2000);
-                  }
-                }
-              })
-              .catch(console.error);
+            });
           }
-        }, 500);
+
+          const msg = document.getElementById("draft-saved-msg");
+          if (msg) {
+            msg.style.display = "block";
+            setTimeout(() => {
+              msg.style.display = "none";
+            }, 2000);
+          }
+        } catch (err) {
+          console.warn(
+            "Network error syncing onboarding state, offline fallback active",
+            err,
+          );
+        } finally {
+          isSyncing = false;
+          if (pendingSync) {
+            pendingSync = false;
+            syncStateToBackend();
+          }
+        }
+      }
+
+      function debouncedAutoSave() {
+        saveCurrentState(false);
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(syncStateToBackend, 500);
       }
 
       document.querySelectorAll("input, select, textarea").forEach((el) => {
-        el.addEventListener("input", debouncedAutoSave);
-        el.addEventListener("change", debouncedAutoSave);
+        el.addEventListener("input", () => debouncedAutoSave());
+        el.addEventListener("change", () => debouncedAutoSave());
       });
 
       // Handle radio buttons selection visual state
@@ -2883,11 +3095,14 @@
 
         // Merge backend state, taking priority if it has advanced further or exists
         if (loadedState && Object.keys(loadedState).length > 0) {
-          if (!state.step || (loadedState.step && loadedState.step >= state.step)) {
-              state = { ...state, ...loadedState };
+          if (
+            !state.step ||
+            (loadedState.step && loadedState.step >= state.step)
+          ) {
+            state = { ...state, ...loadedState };
           }
           if (loadedState.businessName && !loadedState.business_name) {
-             state.business_name = loadedState.businessName;
+            state.business_name = loadedState.businessName;
           }
           localStorage.setItem("onboardingState", JSON.stringify(state));
         }
@@ -2910,7 +3125,10 @@
         ];
 
         if (state.step === undefined || state.step === 0) {
-          if (state.step === 0) { const instantBioInputEl = document.getElementById("instant-bio"); if (instantBioInputEl) instantBioInputEl.value = ""; }
+          if (state.step === 0) {
+            const instantBioInputEl = document.getElementById("instant-bio");
+            if (instantBioInputEl) instantBioInputEl.value = "";
+          }
           goToStep("step-initial", false);
         } else if (state.step < steps.length) {
           goToStep(steps[state.step], false);
@@ -2937,7 +3155,9 @@
       });
 
       inputs.admin_email.addEventListener("input", () => {
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
+        if (
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())
+        ) {
           errors.admin_email.style.display = "none";
           inputs.admin_email.classList.remove("invalid-input");
         }
@@ -3019,12 +3239,15 @@
           inputs.admin_password.value = state.admin_password;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
         if (state.location) inputs.location.value = state.location;
-        if (state.target_audience) inputs.target_audience.value = state.target_audience;
+        if (state.target_audience)
+          inputs.target_audience.value = state.target_audience;
         if (state.template_selection)
           inputs.template_selection.value = state.template_selection;
         if (state.domain) inputs.domain_name.value = state.domain;
-        if (state.instant_bio && inputs.instant_bio) inputs.instant_bio.value = state.instant_bio;
-        if (state.instant_image_url && inputs.instant_image_url) inputs.instant_image_url.value = state.instant_image_url;
+        if (state.instant_bio && inputs.instant_bio)
+          inputs.instant_bio.value = state.instant_bio;
+        if (state.instant_image_url && inputs.instant_image_url)
+          inputs.instant_image_url.value = state.instant_image_url;
         if (state.chat_history) {
           chatHistory = state.chat_history;
           const chatMessagesEl = document.getElementById("chat-messages");
@@ -3032,10 +3255,12 @@
             chatMessagesEl.innerHTML = "";
             chatHistory.forEach((msg) => {
               const msgDiv = document.createElement("div");
-              msgDiv.className = "chat-message " + (msg.role === "user" ? "user" : "assistant");
+              msgDiv.className =
+                "chat-message " + (msg.role === "user" ? "user" : "assistant");
               const senderDiv = document.createElement("div");
               senderDiv.className = "chat-sender";
-              senderDiv.textContent = msg.role === "user" ? "You" : "OHC Assistant";
+              senderDiv.textContent =
+                msg.role === "user" ? "You" : "OHC Assistant";
               const bubbleDiv = document.createElement("div");
               bubbleDiv.className = "chat-bubble";
               bubbleDiv.textContent = msg.content;
@@ -3082,7 +3307,7 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-          "step-chat",
+            "step-chat",
           ];
           if (state.step < steps.length) {
             goToStep(steps[state.step]);
@@ -3090,23 +3315,32 @@
         }
       }
 
-      var saveStateTimer = null;
-      function saveCurrentState() {
-        state.categories = inputs.categories.value;
-        state.business_name = inputs.name.value;
-        state.businessName = inputs.name.value; // Sync for E2E
-        state.tagline = inputs.tagline.value;
-        state.assistant_name = inputs.assistant_name.value;
-        state.assistant_tone = inputs.assistant_tone.value;
-        state.admin_name = inputs.admin_name.value;
-        state.first_offer = inputs.first_offer.value;
-        state.location = inputs.location.value;
-        state.target_audience = inputs.target_audience.value;
-        state.template_selection = inputs.template_selection.value;
+      function saveCurrentState(sync = true) {
+        state.categories = inputs.categories ? inputs.categories.value : "";
+        state.business_name = inputs.name ? inputs.name.value : "";
+        state.businessName = inputs.name ? inputs.name.value : ""; // Sync for E2E
+        state.tagline = inputs.tagline ? inputs.tagline.value : "";
+        state.assistant_name = inputs.assistant_name
+          ? inputs.assistant_name.value
+          : "";
+        state.assistant_tone = inputs.assistant_tone
+          ? inputs.assistant_tone.value
+          : "";
+        state.admin_name = inputs.admin_name ? inputs.admin_name.value : "";
+        state.first_offer = inputs.first_offer ? inputs.first_offer.value : "";
+        state.location = inputs.location ? inputs.location.value : "";
+        state.target_audience = inputs.target_audience
+          ? inputs.target_audience.value
+          : "";
+        state.template_selection = inputs.template_selection
+          ? inputs.template_selection.value
+          : "";
         if (inputs.domain_name) state.domain = inputs.domain_name.value;
         if (inputs.instant_bio) state.instant_bio = inputs.instant_bio.value;
-        if (inputs.instant_image_url) state.instant_image_url = inputs.instant_image_url.value;
-        state.chat_history = chatHistory;
+        if (inputs.instant_image_url)
+          state.instant_image_url = inputs.instant_image_url.value;
+        if (typeof chatHistory !== "undefined")
+          state.chat_history = chatHistory;
 
         state.capabilities = {
           draft: document.getElementById("cap-draft")
@@ -3127,8 +3361,6 @@
           state.work_context = selectedContext.value;
         }
 
-        // Increment step if we are moving forward
-
         const activeStep = document.querySelector(".step.active");
         if (activeStep) {
           const stepIndex = [
@@ -3143,50 +3375,22 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-          "step-chat",
+            "step-chat",
           ].indexOf(activeStep.id);
           if (stepIndex !== -1) {
             state.step = stepIndex;
           }
         }
 
-        // Always set localStorage directly
         localStorage.setItem("onboardingState", JSON.stringify(state));
 
-        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
-        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
-
-        clearTimeout(saveStateTimer);
-        saveStateTimer = setTimeout(async () => {
-          localStorage.setItem("onboardingState", JSON.stringify(state));
-          if (window.__TAURI__ && window.__TAURI__.core) {
-            window.__TAURI__.core
-              .invoke("save_onboarding_state", { state, tenantId, userId })
-              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
-          } else {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            try {
-              await fetch(`${backendUrl}/api/onboarding/draft`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": tenantId,
-                  "X-User-ID": userId,
-                },
-                body: JSON.stringify(state),
-              });
-            } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active");
-            }
-          }
-        }, 1000);
+        if (sync) {
+          debouncedAutoSave();
+        }
       }
-      window.addEventListener('online', () => {
-          saveCurrentState();
+
+      window.addEventListener("online", () => {
+        saveCurrentState();
       });
 
       function validateStep(stepId) {
@@ -3222,7 +3426,8 @@
           }
         } else if (stepId === "step-name") {
           if (inputs.name.value.trim().length < 3) {
-            errors.name.innerText = "Business Name must be at least 3 characters.";
+            errors.name.innerText =
+              "Business Name must be at least 3 characters.";
             errors.name.style.display = "flex";
             inputs.name.classList.add("invalid-input");
             isValid = false;
@@ -3323,7 +3528,8 @@
           }
         } else if (stepId === "step-target-audience") {
           if (inputs.target_audience.value.trim() === "") {
-            errors.target_audience.innerText = "Please tell us your target audience.";
+            errors.target_audience.innerText =
+              "Please tell us your target audience.";
             errors.target_audience.style.display = "flex";
             inputs.target_audience.classList.add("invalid-input");
             isValid = false;
@@ -3334,8 +3540,12 @@
           }
         } else if (stepId === "step-domain") {
           const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-          if (inputs.domain_name.value.trim().length < 3 || !domainRegex.test(inputs.domain_name.value.trim())) {
-            document.getElementById("domain-error").innerText = "Domain must be at least 3 characters, contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.";
+          if (
+            inputs.domain_name.value.trim().length < 3 ||
+            !domainRegex.test(inputs.domain_name.value.trim())
+          ) {
+            document.getElementById("domain-error").innerText =
+              "Domain must be at least 3 characters, contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.";
             document.getElementById("domain-error").style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
@@ -3383,20 +3593,24 @@
       }
 
       function updateAssistantTeam() {
-        const selected = document.querySelector('input[name="assistant-team"]:checked');
+        const selected = document.querySelector(
+          'input[name="assistant-team"]:checked',
+        );
         if (selected) {
-          document.getElementById('assistant-name').value = selected.value;
+          document.getElementById("assistant-name").value = selected.value;
           state.assistant_name = selected.value;
-          document.querySelectorAll('#assistant-team-cards .context-card').forEach((el) => el.classList.remove("selected"));
+          document
+            .querySelectorAll("#assistant-team-cards .context-card")
+            .forEach((el) => el.classList.remove("selected"));
           selected.closest(".context-card").classList.add("selected");
           // Clear error if selection made
           const errorMsg = document.getElementById("assistant-name-error");
           const inputEl = document.getElementById("assistant-name");
           if (errorMsg) {
-             errorMsg.style.display = "none";
+            errorMsg.style.display = "none";
           }
           if (inputEl) {
-             inputEl.classList.remove("invalid-input");
+            inputEl.classList.remove("invalid-input");
           }
         }
       }
@@ -3431,7 +3645,8 @@
 
         const stepperProgress = document.getElementById("stepper-progress");
         if (stepperProgress) {
-          stepperProgress.style.width = (currentIndex / (steps.length - 1)) * 100 + "%";
+          stepperProgress.style.width =
+            (currentIndex / (steps.length - 1)) * 100 + "%";
         }
 
         document
@@ -3514,9 +3729,12 @@
       function goToStep(stepId, shouldSave = true) {
         if (stepId === "step-initial") {
           const instantBioInputEl = document.getElementById("instant-bio");
-          const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
+          const generateStorefrontBtn = document.getElementById(
+            "generate-storefront-btn",
+          );
           if (instantBioInputEl && generateStorefrontBtn) {
-            generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
+            generateStorefrontBtn.disabled =
+              instantBioInputEl.value.trim().length === 0;
           }
         }
         if (stepId === "step-categories") {
@@ -3568,7 +3786,6 @@
           e.target.disabled = true;
 
           // Add a small delay to allow browser to render "Saving..."
-
 
           saveCurrentState();
 
@@ -3702,7 +3919,11 @@
           if (data.is_complete && data.intake_data) {
             goToStep("step-loading");
 
-            const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+            const loadingTexts = [
+              "Analyzing request...",
+              "Designing storefront...",
+              "Configuring AI agents...",
+            ];
             let loadingTextIdx = 0;
             const loadingTitle = document.getElementById("loading-title");
             if (loadingTitle) {
@@ -3725,29 +3946,57 @@
 
             if (window.__TAURI__ && window.__TAURI__.core) {
               const startReq = {
-                business_type: data.intake_data.business_type || state.work_context || "Other",
-                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                business_type:
+                  data.intake_data.business_type ||
+                  state.work_context ||
+                  "Other",
+                company_name:
+                  data.intake_data.business_name ||
+                  state.business_name ||
+                  "My Store",
                 company_description: bioInput || state.tagline,
-                selling_categories: data.intake_data.categories || [state.categories || "Other"],
+                selling_categories: data.intake_data.categories || [
+                  state.categories || "Other",
+                ],
                 payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
+                admin_email:
+                  document.getElementById("admin-email")?.value ||
+                  "admin@example.com",
+                admin_name:
+                  document.getElementById("admin-name")?.value || "Owner",
+                admin_password:
+                  document.getElementById("admin-password")?.value ||
+                  "password123",
                 website_template: state.template_selection || "Modern",
-                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
-                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                first_product_name:
+                  data.intake_data.initial_products &&
+                  data.intake_data.initial_products.length > 0
+                    ? data.intake_data.initial_products[0].name
+                    : state.first_offer || "First Offer",
+                first_product_price:
+                  data.intake_data.initial_products &&
+                  data.intake_data.initial_products.length > 0
+                    ? data.intake_data.initial_products[0].price
+                    : "0.00",
                 domain_choice: state.domain || "subdomain",
                 price_type: "fixed",
-                location: data.intake_data.location || state.location || "Global",
-                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
+                location:
+                  data.intake_data.location || state.location || "Global",
+                target_audience:
+                  data.intake_data.target_audience ||
+                  state.target_audience ||
+                  "Everyone",
                 initial_products: data.intake_data.initial_products || [],
                 ai_agents: [],
                 ai_auto_respond: false,
                 deposit_percentage: data.intake_data.deposit_percentage,
-                lead_time_days: data.intake_data.lead_time_days
+                lead_time_days: data.intake_data.lead_time_days,
               };
 
-              const startData = await window.__TAURI__.core.invoke("start_onboarding", { req: startReq });
+              const startData = await window.__TAURI__.core.invoke(
+                "start_onboarding",
+                { req: startReq },
+              );
 
               if (startData && startData.organization_id) {
                 localStorage.setItem("tenant_id", startData.organization_id);
@@ -3761,11 +4010,12 @@
               localStorage.setItem("has_onboarded", "true");
 
               if (window.generateStorefrontLoadingInterval) {
-                  clearInterval(window.generateStorefrontLoadingInterval);
-                  delete window.generateStorefrontLoadingInterval;
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
               }
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href =
+                "dashboard.html#unified-agent-feed-section";
               return;
             }
 
@@ -3779,26 +4029,51 @@
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                business_type: data.intake_data.business_type || state.work_context || "Other",
-                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                business_type:
+                  data.intake_data.business_type ||
+                  state.work_context ||
+                  "Other",
+                company_name:
+                  data.intake_data.business_name ||
+                  state.business_name ||
+                  "My Store",
                 company_description: bioInput || state.tagline,
-                selling_categories: data.intake_data.categories || [state.categories || "Other"],
+                selling_categories: data.intake_data.categories || [
+                  state.categories || "Other",
+                ],
                 payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+                admin_email:
+                  document.getElementById("admin-email")?.value ||
+                  "admin@example.com",
                 website_template: state.template_selection || "Modern",
                 domain_choice: state.domain || "subdomain",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
+                admin_name:
+                  document.getElementById("admin-name")?.value || "Owner",
+                admin_password:
+                  document.getElementById("admin-password")?.value ||
+                  "password123",
                 price_type: "fixed",
-                location: data.intake_data.location || state.location || "Global",
-                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
+                location:
+                  data.intake_data.location || state.location || "Global",
+                target_audience:
+                  data.intake_data.target_audience ||
+                  state.target_audience ||
+                  "Everyone",
                 initial_products: data.intake_data.initial_products || [],
-                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
-                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                first_product_name:
+                  data.intake_data.initial_products &&
+                  data.intake_data.initial_products.length > 0
+                    ? data.intake_data.initial_products[0].name
+                    : state.first_offer || "First Offer",
+                first_product_price:
+                  data.intake_data.initial_products &&
+                  data.intake_data.initial_products.length > 0
+                    ? data.intake_data.initial_products[0].price
+                    : "0.00",
                 ai_agents: [],
                 ai_auto_respond: false,
                 deposit_percentage: data.intake_data.deposit_percentage,
-                lead_time_days: data.intake_data.lead_time_days
+                lead_time_days: data.intake_data.lead_time_days,
               }),
             });
 
@@ -3825,8 +4100,8 @@
             localStorage.setItem("has_onboarded", "true");
 
             if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
+              clearInterval(window.generateStorefrontLoadingInterval);
+              delete window.generateStorefrontLoadingInterval;
             }
 
             window.location.href = "dashboard.html#unified-agent-feed-section";
@@ -3885,7 +4160,6 @@
                   "#0066FF";
               }
 
-
               if (startData && startData.organization_id) {
                 localStorage.setItem("tenant_id", startData.organization_id);
                 localStorage.setItem("tenant", startData.organization_id);
@@ -3894,7 +4168,8 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href =
+                "dashboard.html#unified-agent-feed-section";
               return;
             }
 
@@ -3938,7 +4213,8 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href =
+                "dashboard.html#unified-agent-feed-section";
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -3984,30 +4260,42 @@
           instantErrorEl.style.borderColor = "";
           instantBioInputEl.classList.remove("invalid-input");
           generateStorefrontBtn.disabled = true;
-          const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+          const loadingTexts = [
+            "Analyzing request...",
+            "Designing storefront...",
+            "Configuring AI agents...",
+          ];
           let loadingTextIdx = 0;
-          generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+          generateStorefrontBtn.innerHTML =
+            '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' +
+            loadingTexts[loadingTextIdx];
           window.generateStorefrontLoadingInterval = setInterval(() => {
             loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
-            generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+            generateStorefrontBtn.innerHTML =
+              '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' +
+              loadingTexts[loadingTextIdx];
           }, 3000);
-
 
           goToStep("step-loading");
 
           try {
-
-
             if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
+              clearInterval(window.generateStorefrontLoadingInterval);
+              delete window.generateStorefrontLoadingInterval;
             }
 
             let startReq = null;
-            const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-              const data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+              const data = await window.__TAURI__.core.invoke(
+                "process_intake",
+                { input: bioInput },
+              );
               if (!data) throw new Error("Empty response");
 
               startReq = {
@@ -4016,12 +4304,23 @@
                 company_description: bioInput,
                 selling_categories: data.categories || ["Other"],
                 payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
+                admin_email:
+                  document.getElementById("admin-email")?.value ||
+                  "admin@example.com",
+                admin_name:
+                  document.getElementById("admin-name")?.value || "Owner",
+                admin_password:
+                  document.getElementById("admin-password")?.value ||
+                  "password123",
                 website_template: "Modern",
-                first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+                first_product_name:
+                  data.initial_products && data.initial_products.length > 0
+                    ? data.initial_products[0].name
+                    : "First Offer",
+                first_product_price:
+                  data.initial_products && data.initial_products.length > 0
+                    ? data.initial_products[0].price
+                    : "0.00",
                 domain_choice: "subdomain",
                 price_type: "fixed",
                 location: data.location || "Global",
@@ -4030,46 +4329,64 @@
                 ai_agents: [],
                 ai_auto_respond: false,
                 deposit_percentage: data.deposit_percentage,
-                lead_time_days: data.lead_time_days
+                lead_time_days: data.lead_time_days,
               };
-
             } else {
-                // For web mode, hit the /intake endpoint directly
-                const intakeRes = await fetch(`${backendUrl}/api/onboarding/intake`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ description: bioInput, image_url: imageUrl ? imageUrl : undefined })
-                });
+              // For web mode, hit the /intake endpoint directly
+              const intakeRes = await fetch(
+                `${backendUrl}/api/onboarding/intake`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    description: bioInput,
+                    image_url: imageUrl ? imageUrl : undefined,
+                  }),
+                },
+              );
 
-                if (!intakeRes.ok) {
-                    throw new Error("Failed to process intake data. Please try again.");
-                }
+              if (!intakeRes.ok) {
+                throw new Error(
+                  "Failed to process intake data. Please try again.",
+                );
+              }
 
-                const data = await intakeRes.json();
-                if (!data) throw new Error("Empty intake response");
+              const data = await intakeRes.json();
+              if (!data) throw new Error("Empty intake response");
 
-                startReq = {
-                    business_type: data.business_type || "Other",
-                    company_name: data.business_name || "My Store",
-                    company_description: bioInput,
-                    selling_categories: data.categories || ["Other"],
-                    payment_pref: "online",
-                    admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                    admin_name: document.getElementById("admin-name")?.value || "Owner",
-                    admin_password: document.getElementById("admin-password")?.value || "password123",
-                    website_template: "Modern",
-                    first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                    first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                    domain_choice: "subdomain",
-                    price_type: "fixed",
-                    location: data.location || "Global",
-                    target_audience: data.target_audience || "Everyone",
-                    initial_products: data.initial_products || [],
-                    ai_agents: [],
-                    ai_auto_respond: false,
-                    deposit_percentage: data.deposit_percentage,
-                    lead_time_days: data.lead_time_days
-                };
+              startReq = {
+                business_type: data.business_type || "Other",
+                company_name: data.business_name || "My Store",
+                company_description: bioInput,
+                selling_categories: data.categories || ["Other"],
+                payment_pref: "online",
+                admin_email:
+                  document.getElementById("admin-email")?.value ||
+                  "admin@example.com",
+                admin_name:
+                  document.getElementById("admin-name")?.value || "Owner",
+                admin_password:
+                  document.getElementById("admin-password")?.value ||
+                  "password123",
+                website_template: "Modern",
+                first_product_name:
+                  data.initial_products && data.initial_products.length > 0
+                    ? data.initial_products[0].name
+                    : "First Offer",
+                first_product_price:
+                  data.initial_products && data.initial_products.length > 0
+                    ? data.initial_products[0].price
+                    : "0.00",
+                domain_choice: "subdomain",
+                price_type: "fixed",
+                location: data.location || "Global",
+                target_audience: data.target_audience || "Everyone",
+                initial_products: data.initial_products || [],
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.deposit_percentage,
+                lead_time_days: data.lead_time_days,
+              };
             }
 
             window.pendingOnboardingReq = startReq;
@@ -4077,7 +4394,7 @@
 
             const approvalDetails = document.getElementById("approval-details");
             if (approvalDetails) {
-                approvalDetails.innerHTML = `
+              approvalDetails.innerHTML = `
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
                         <p style="font-size: 14px; text-align: center; color: #1D1D1F;" class="dark:text-[#F5F5F7]"><strong>Suggested Deposit Policy:</strong> Requires a ${startReq.deposit_percentage || 50}% upfront deposit on custom orders.</p>
                         <div style="width: 375px; max-width: 100%; aspect-ratio: 9/16; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -4085,7 +4402,7 @@
                                 ${startReq.company_name}
                             </div>
                             <div style="padding: 16px; color: #333;">
-                                <img src="${imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80'}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />
+                                <img src="${imageUrl || "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80"}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />
                                 <h3 style="margin-top: 0; font-size: 18px; font-weight: 600;">${startReq.first_product_name}</h3>
                                 <p style="font-size: 16px; font-weight: 500; color: #0066FF;">$${startReq.first_product_price}</p>
                                 <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 12px;">Buy Now</button>
@@ -4095,11 +4412,8 @@
                 `;
             }
 
-            goToStep('step-approval');
+            goToStep("step-approval");
             return;
-
-
-
           } catch (err) {
             console.error(err);
             goToStep("step-initial");
@@ -4112,8 +4426,8 @@
             generateStorefrontBtn.disabled = false;
             delete generateStorefrontBtn.dataset.submitting;
             if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
+              clearInterval(window.generateStorefrontLoadingInterval);
+              delete window.generateStorefrontLoadingInterval;
             }
             generateStorefrontBtn.innerHTML = "Generate My Workspace";
           }
@@ -4153,7 +4467,10 @@
                 }, 3000);
               })
               .catch((err) => {
-                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                console.warn(
+                  "Failed to sync onboarding draft with backend (Offline fallback enabled).",
+                  err,
+                );
                 e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
@@ -4182,7 +4499,10 @@
                 }
               })
               .catch((err) => {
-                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                console.warn(
+                  "Failed to sync onboarding draft with backend (Offline fallback enabled).",
+                  err,
+                );
                 e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
@@ -4247,7 +4567,8 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "dashboard.html#unified-agent-feed-section";
+                  window.location.href =
+                    "dashboard.html#unified-agent-feed-section";
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4289,7 +4610,8 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html#unified-agent-feed-section";
+                    window.location.href =
+                      "dashboard.html#unified-agent-feed-section";
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(
@@ -4319,10 +4641,8 @@
           }
         });
       }
-
-      </script>
+    </script>
     <script>
-
       document.addEventListener("DOMContentLoaded", () => {
         // Hybrid Setup Health Check
         fetch("/api/onboarding/setup-health?mode=standalone")
@@ -4331,8 +4651,11 @@
             if (data.status === "error") {
               const errorDiv = document.createElement("div");
               errorDiv.id = "setup-health-error";
-              errorDiv.style.cssText = "background: #FF3B30; color: white; padding: 12px; text-align: center; font-weight: 600; width: 100%; position: absolute; top: 0; left: 0; z-index: 9999;";
-              errorDiv.textContent = "Hybrid Setup Health Check Failed: " + (data.message || "Environment unprovisioned.");
+              errorDiv.style.cssText =
+                "background: #FF3B30; color: white; padding: 12px; text-align: center; font-weight: 600; width: 100%; position: absolute; top: 0; left: 0; z-index: 9999;";
+              errorDiv.textContent =
+                "Hybrid Setup Health Check Failed: " +
+                (data.message || "Environment unprovisioned.");
               document.body.prepend(errorDiv);
             }
           })
@@ -4342,7 +4665,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         // Add keyboard navigation for context cards
         document.querySelectorAll(".context-card").forEach((card) => {
-          card.addEventListener("keydown", function(e) {
+          card.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               e.stopPropagation();
@@ -4353,14 +4676,14 @@
 
         // Add keyboard navigation for toggle rows
         document.querySelectorAll(".toggle-row").forEach((row) => {
-          row.addEventListener("keydown", function(e) {
+          row.addEventListener("keydown", function (e) {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               e.stopPropagation();
               const checkbox = this.querySelector('input[type="checkbox"]');
               if (checkbox) {
                 checkbox.checked = !checkbox.checked;
-                checkbox.dispatchEvent(new Event('change'));
+                checkbox.dispatchEvent(new Event("change"));
               }
             }
           });
@@ -4703,8 +5026,15 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+      #instant-bio {
+        min-height: 44px;
+        box-sizing: border-box;
+        border-radius: 8px;
+      }
+      .context-card {
+        min-height: 44px;
+        box-sizing: border-box;
+      }
     </style>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -4955,7 +5285,7 @@
     href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref=website-builder"
     id="dashboard-footer-viral-link"
     style="
-      color: #0066FF;
+      color: #0066ff;
       text-decoration: none;
       display: flex;
       align-items: center;
@@ -4965,7 +5295,7 @@
   >
     <span
       style="
-        background: #0066FF;
+        background: #0066ff;
         color: white;
         padding: 4px 8px;
         font-size: 10px;
