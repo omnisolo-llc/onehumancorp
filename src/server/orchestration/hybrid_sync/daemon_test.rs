@@ -586,6 +586,24 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = 'stuck_queue_pg'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
+
+        // Verify dead letters were created for missions
+        let dl_sqlite_mission: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_stuck'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_sqlite_mission.0, 1);
+
+        let dl_pg_mission: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_stuck'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_pg_mission.0, 1);
+
+        // Verify dead letters were created for running jobs
+        let dl_sqlite_job: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'job_stuck'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_sqlite_job.0, 1);
+
+        let dl_pg_job: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'job_stuck'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_pg_job.0, 1);
     }
 
     #[tokio::test]
