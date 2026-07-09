@@ -102,4 +102,8 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.selectOption('#template-selection', { label: 'Modern' });
   const finishBtn = page.locator('#finish-btn');
   await expect(finishBtn).toBeVisible();
+
+  await finishBtn.click();
+  await page.waitForURL('**/dashboard.html*');
+  await expect(page.url()).toContain('dashboard.html');
 });

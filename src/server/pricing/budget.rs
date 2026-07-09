@@ -127,18 +127,18 @@ mod tests {
         
         assert_eq!(manager.get_remaining(), 100.0);
         
-        assert!(manager.record_spend(50.0).expect("failed to unwrap"));
+        assert!(manager.record_spend(50.0).unwrap());
         assert_eq!(manager.get_remaining(), 50.0);
         
         // Exceed budget, it's a soft limit so it returns false but updates current
-        assert!(!(manager.record_spend(60.0).expect("failed to unwrap")));
+        assert!(!(manager.record_spend(60.0).unwrap()));
         assert_eq!(manager.get_remaining(), -10.0);
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
         // test cents (soft limit still applies)
-        assert!(!(manager.record_spend_cents(1000).expect("failed to unwrap"))); // spend $10
+        assert!(!(manager.record_spend_cents(1000).unwrap())); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
     }
@@ -149,12 +149,12 @@ mod tests {
         assert_eq!(manager.get_remaining(), 100.0);
 
         // Spend exactly the limit
-        assert!(manager.record_spend(100.0).expect("failed to unwrap"));
+        assert!(manager.record_spend(100.0).unwrap());
         assert_eq!(manager.get_remaining(), 0.0);
         assert_eq!(manager.get_remaining_cents(), 0);
 
         // Even an epsilon more should be over the limit (soft limit handled as false)
-        assert!(!(manager.record_spend(0.01).expect("failed to unwrap")));
+        assert!(!(manager.record_spend(0.01).unwrap()));
         let rem = manager.get_remaining();
         assert!(rem < -0.009 && rem > -0.011);
     }
@@ -166,21 +166,21 @@ mod tests {
         let manager = BudgetManager::new(50.0).with_telemetry("tenant-123".to_string(), store);
         assert!(manager.telemetry_store.is_some());
         // Spend money to hit telemetry path without panic
-        manager.record_spend_cents(1000).expect("failed to unwrap");
+        manager.record_spend_cents(1000).unwrap();
 
         // Ensure struct states updated correctly
         assert_eq!(manager.tenant_id, Some("tenant-123".to_string()));
         assert!(manager.telemetry_store.is_some());
 
         // Spend money to hit telemetry path without panic
-        assert!(manager.record_spend(10.0).expect("failed to unwrap"));
+        assert!(manager.record_spend(10.0).unwrap());
         assert_eq!(manager.get_remaining(), 30.0);
     }
 
     #[test]
     fn test_record_spend_cents_zero() {
         let manager = BudgetManager::new(100.0);
-        assert!(manager.record_spend_cents(0).expect("failed to unwrap"));
+        assert!(manager.record_spend_cents(0).unwrap());
         assert_eq!(manager.get_remaining_cents(), 10000);
     }
 
@@ -192,19 +192,19 @@ mod tests {
         assert!(!manager.check_alert_threshold());
 
         // Spend 50%
-        manager.record_spend(50.0).expect("failed to unwrap");
+        manager.record_spend(50.0).unwrap();
         assert!(!manager.check_alert_threshold());
 
         // Spend up to 80%
-        manager.record_spend(30.0).expect("failed to unwrap");
+        manager.record_spend(30.0).unwrap();
         assert!(manager.check_alert_threshold()); // Default is 80.0
 
         // Custom threshold
         let custom_manager = BudgetManager::new(100.0).with_alert_threshold(90.0);
-        custom_manager.record_spend(85.0).expect("failed to unwrap");
+        custom_manager.record_spend(85.0).unwrap();
         assert!(!custom_manager.check_alert_threshold());
 
-        custom_manager.record_spend(10.0).expect("failed to unwrap"); // 95%
+        custom_manager.record_spend(10.0).unwrap(); // 95%
         assert!(custom_manager.check_alert_threshold());
     }
 
@@ -223,24 +223,24 @@ mod tests {
         assert!(!manager.check_alert_threshold_cents(10000));
 
         // Spend 50%
-        manager.record_spend_cents(5000).expect("failed to unwrap");
+        manager.record_spend_cents(5000).unwrap();
         assert!(!manager.check_alert_threshold_cents(10000));
 
         // Spend up to 80% (8000 cents)
-        manager.record_spend_cents(3000).expect("failed to unwrap");
+        manager.record_spend_cents(3000).unwrap();
         assert!(manager.check_alert_threshold_cents(10000)); // Default is 80.0
 
         // Custom threshold using cents
         let custom_manager = BudgetManager::new(100.0).with_alert_threshold(90.0);
-        custom_manager.record_spend_cents(8500).expect("failed to unwrap");
+        custom_manager.record_spend_cents(8500).unwrap();
         assert!(!custom_manager.check_alert_threshold_cents(10000));
 
-        custom_manager.record_spend_cents(1000).expect("failed to unwrap"); // 95%
+        custom_manager.record_spend_cents(1000).unwrap(); // 95%
         assert!(custom_manager.check_alert_threshold_cents(10000));
 
         // Exact threshold check
         let exact_manager = BudgetManager::new(100.0).with_alert_threshold(80.0);
-        exact_manager.record_spend_cents(8000).expect("failed to unwrap");
+        exact_manager.record_spend_cents(8000).unwrap();
         assert!(exact_manager.check_alert_threshold_cents(10000));
     }
 
@@ -270,25 +270,25 @@ mod tests {
         let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
         let mut manager = BudgetManager::new(50.0);
         manager.telemetry_store = Some(store);
-        assert!(manager.record_spend(10.0).expect("failed to unwrap"));
+        assert!(manager.record_spend(10.0).unwrap());
         assert_eq!(manager.get_remaining(), 40.0);
     }
 
     #[test]
     fn test_budget_manager_edge_cases() {
         let manager = BudgetManager::new(f64::MAX);
-        assert!(manager.record_spend(1.0).expect("failed to unwrap"));
+        assert!(manager.record_spend(1.0).unwrap());
 
         // Check extremely small threshold values
         let threshold_manager = BudgetManager::new(100.0).with_alert_threshold(0.01);
-        threshold_manager.record_spend(0.02).expect("failed to unwrap");
+        threshold_manager.record_spend(0.02).unwrap();
         assert!(threshold_manager.check_alert_threshold());
     }
 
     #[test]
     fn test_is_spend_rate_too_high() {
         let manager = BudgetManager::new(100.0); // $100 limit, 10000 cents
-        manager.record_spend(20.0).expect("failed to unwrap"); // 2000 cents
+        manager.record_spend(20.0).unwrap(); // 2000 cents
         let one_day = std::time::Duration::from_secs(86400);
         let thirty_days = std::time::Duration::from_secs(30 * 86400);
         assert!(manager.is_spend_rate_too_high(one_day, thirty_days)); // 20% in 1 day is way too high

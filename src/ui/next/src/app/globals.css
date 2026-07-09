@@ -691,7 +691,7 @@ html.dark .glass-card {
 }
 
 .glass-control {
-  border-radius: 8px;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -699,7 +699,7 @@ html.dark .glass-card {
 
 @media (prefers-color-scheme: dark) {
   .glass-control {
-    border-radius: 8px;
+    border-radius: 8px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -707,7 +707,7 @@ html.dark .glass-card {
 }
 
 html.dark .glass-control {
-  border-radius: 8px;
+  border-radius: 8px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -776,13 +776,13 @@ input[type="url"],
 input[type="search"],
 textarea,
 select {
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
 
 button,
 .app-button,
 .charge-btn {
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
 
 
@@ -974,7 +974,7 @@ button,
 
 .setup-page #setup-screen button {
   min-height: 44px;
-  border-radius: 8px;
+  border-radius: 8px !important;
   cursor: pointer;
 }
 
@@ -1028,7 +1028,7 @@ button,
   min-height: 44px;
   padding: 12px 14px;
   border: 1px solid #cfd8e3;
-  border-radius: 8px;
+  border-radius: 8px !important;
   background: #ffffff;
   color: #18212f;
   font: inherit;
@@ -1204,4 +1204,11 @@ html.dark .glass-panel {
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
   }
+}
+/* Global border radius to fix UI regression */
+.glassmorphism, .glass-card {
+  border-radius: 16px;
+}
+.glass-control {
+  border-radius: 8px;
 }
