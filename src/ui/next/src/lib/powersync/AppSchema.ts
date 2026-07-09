@@ -81,11 +81,24 @@ const posOfflineTransactions = new Table({
   device_signature: column.text
 });
 
+const posTerminalSessions = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  device_id: column.text,
+  status: column.text,
+  started_at: column.text,
+  last_synced_at: column.text,
+  offline_changes_count: column.integer,
+  sync_status: column.text,
+  pending_reconciliation: column.text
+});
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
   pending_actions: pendingActions,
-  pos_offline_transactions: posOfflineTransactions
+  pos_offline_transactions: posOfflineTransactions,
+  pos_terminal_sessions: posTerminalSessions
 });
