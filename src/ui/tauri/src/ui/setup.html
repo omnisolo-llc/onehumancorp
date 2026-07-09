@@ -1355,8 +1355,9 @@
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
           rows="4"
           style="resize: none; padding: 14px"
-          enterkeyhint="next"
+          enterkeyhint="send"
           autocapitalize="sentences"
+          autofocus
         ></textarea>
 
         <input
@@ -3612,6 +3613,15 @@
           }
           if (generateStorefrontBtn) {
             generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
+          }
+        });
+
+        instantBioInputEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (generateStorefrontBtn && !generateStorefrontBtn.disabled) {
+              generateStorefrontBtn.click();
+            }
           }
         });
       }
