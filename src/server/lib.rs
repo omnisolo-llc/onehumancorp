@@ -6631,6 +6631,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
+        .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
@@ -6653,7 +6654,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
-        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
+        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -6681,8 +6682,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
-        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip))
+        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
@@ -6737,6 +6738,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
+        .route("/birthday-club-generator.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/birthday-club-generator.html"))
         }))
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))

@@ -66,3 +66,4 @@ sh_test(
         "@nodejs//:node",
     ],
 )
+# Adding code-native.spec.ts to exports

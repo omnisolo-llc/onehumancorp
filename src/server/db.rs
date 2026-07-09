@@ -52,7 +52,7 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
-pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 2;
 
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
@@ -70,6 +70,10 @@ pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
                 Ok(true)
             })
         })
+}
+
+pub fn get_sqlite_pool_if_exists() -> Option<sqlx::SqlitePool> {
+    None
 }
 
 pub fn get_pool() -> PgPool {
@@ -764,10 +768,24 @@ impl DB {
 
             match timeout_res {
                 Err(_) => {
-                    return Err(E::from(format!(
-                        "Database operation '{}' timed out",
-                        operation
-                    )));
+                    attempt += 1;
+                    if attempt > max_attempts {
+                        let _ = ::server_telemetry::record_sqlite_retry_exhausted(
+                            &self.pool, operation,
+                        )
+                        .await;
+                        return Err(E::from(format!(
+                            "Database operation '{}' timed out",
+                            operation
+                        )));
+                    }
+                    let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
+                    let jittered_backoff = std::time::Duration::from_secs_f64(
+                        backoff.as_secs_f64() * jitter_factor,
+                    );
+                    tokio::time::sleep(jittered_backoff).await;
+                    backoff *= 2;
+                    continue;
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
@@ -866,7 +884,8 @@ impl DB {
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
@@ -1171,7 +1190,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        device_signature TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS orders (

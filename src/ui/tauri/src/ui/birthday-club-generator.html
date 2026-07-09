@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Birthday Club Widget Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #0052cc;
+      --bg: #F5F5F7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #0A84FF;
+        --bg: #000000;
+        --text: #f5f5f7;
+        --card-bg: rgba(22, 22, 26, 0.7);
+        --border: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .back-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      align-self: flex-start;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+      margin-top: 0;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .preview-section {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .preview-iframe {
+      width: 100%;
+      height: 350px;
+      border: none;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .preview-iframe {
+        background: #1d1d1f;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <div class="container glassmorphism">
+    <h1>Birthday Club Generator</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">Create a birthday club widget to collect emails and reward customers with a special discount on their birthday.</p>
+
+    <div class="form-group">
+      <label>Discount Percentage (%)</label>
+      <input type="number" id="discount-pct" placeholder="e.g. 25" value="25">
+    </div>
+
+    <div class="form-group">
+      <label>Theme</label>
+      <select id="theme-select">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="branding-toggle" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
+      <label for="branding-toggle" style="margin: 0; font-weight: 500;">Include "Powered by OHC" (Earn referral credits)</label>
+    </div>
+
+    <button id="generate-btn" class="btn-primary">Generate Embed Code</button>
+
+    <div id="preview-container" class="preview-section" style="display: none;">
+      <h3>Live Preview</h3>
+
+      <iframe id="preview-iframe" class="preview-iframe" title="Birthday Club Preview"></iframe>
+
+      <div class="form-group" style="margin-top: 24px;">
+        <label>Embed Code</label>
+        <textarea id="embed-code" readonly style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); font-family: monospace; font-size: 13px; color: var(--text-secondary); box-sizing: border-box;"></textarea>
+      </div>
+      <button id="copy-btn" class="btn-primary" style="background: var(--text); color: var(--bg);">Copy Code</button>
+    </div>
+  </div>
+
+  <!-- Soft Paywall Modal -->
+  <div id="paywall-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="glassmorphism" style="max-width: 400px; width: 100%; padding: 32px; text-align: center; position: relative;">
+      <h2 style="margin-bottom: 16px;">Pro Feature ✨</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 24px;">Removing the OHC branding is a Pro feature. Upgrade today to fully white-label your widgets and unlock advanced viral loops.</p>
+      <button onclick="window.location.href='pricing.html'" class="btn-primary" style="margin-bottom: 12px;">Upgrade to Pro</button>
+      <button onclick="document.getElementById('paywall-modal').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer; padding: 8px;">Maybe Later</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const hasPro = localStorage.getItem('has_pro') === 'true';
+      const toggle = document.getElementById('branding-toggle');
+
+      toggle.addEventListener('change', (e) => {
+        if (!e.target.checked && !hasPro) {
+          e.target.checked = true; // Revert
+          document.getElementById('paywall-modal').style.display = 'flex';
+        }
+      });
+
+      document.getElementById('generate-btn').addEventListener('click', () => {
+        const discount = document.getElementById('discount-pct').value || '25';
+        const theme = document.getElementById('theme-select').value;
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+        const includeBranding = toggle.checked;
+
+        // Update preview
+        document.getElementById('preview-container').style.display = 'block';
+
+        // Generate embed code
+        const origin = window.location.origin.includes('localhost') ? 'https://ohc.app' : window.location.origin;
+        const embedUrl = `${origin}/api/v1/growth/birthday-club/embed?tenant=${tenantId}&discount=${encodeURIComponent(discount)}&theme=${encodeURIComponent(theme)}&hide_branding=${!includeBranding}`;
+
+        document.getElementById('preview-iframe').src = embedUrl;
+
+        document.getElementById('embed-code').value = `<iframe src="${embedUrl}" width="100%" height="350" style="border:none; border-radius:12px; overflow:hidden;" title="Birthday Club"></iframe>`;
+      });
+
+      document.getElementById('copy-btn').addEventListener('click', () => {
+        const code = document.getElementById('embed-code').value;
+        navigator.clipboard.writeText(code);
+        const btn = document.getElementById('copy-btn');
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy Code', 2000);
+      });
+    });
+  </script>
+</body>
+</html>

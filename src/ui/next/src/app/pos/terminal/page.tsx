@@ -38,6 +38,7 @@ export default function POSTerminal() {
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [syncSuccess, setSyncSuccess] = useState(false);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
@@ -46,7 +47,13 @@ export default function POSTerminal() {
   useEffect(() => {
     const checkQueue = async () => {
       const qLen = await SyncManager.getInstance().getQueueLength();
-      setPendingSyncCount(qLen);
+      setPendingSyncCount((prev) => {
+        if (navigator.onLine && prev > 0 && qLen === 0) {
+          setSyncSuccess(true);
+          setTimeout(() => setSyncSuccess(false), 3000);
+        }
+        return qLen;
+      });
       if (navigator.onLine && qLen > 0) {
         setSyncing(true);
       } else {
@@ -559,6 +566,12 @@ export default function POSTerminal() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span>{t('Syncing transactions...')}</span>
+          </div>
+        )}
+        {syncSuccess && !isOffline && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#34C759]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            <span>{t('Synced')}</span>
           </div>
         )}
         {offlineConversion && (

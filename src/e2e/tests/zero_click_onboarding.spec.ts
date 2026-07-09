@@ -58,7 +58,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('');
-    await page.locator('button[type="submit"]').click();
+    await page.locator('#chat-send-btn').click();
 
     // Message shouldn't appear in chat history
     const userMessages = page.locator('.chat-message.user');
@@ -97,7 +97,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('This is a test message to ensure history persistence.');
-    await page.locator('button[type="submit"]').click();
+    await page.locator('#chat-send-btn').click();
 
     // Wait for the message to appear
     const userMessages = page.locator('.chat-message.user');
@@ -126,7 +126,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('Testing chat bubble formatting');
-    await page.locator('button[type="submit"]').click();
+    await page.locator('#chat-send-btn').click();
 
     // Check message wrapper layout
     const lastUserMessage = page.locator('.chat-message.user').last();

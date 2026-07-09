@@ -521,7 +521,7 @@ impl Agent {
                 None
             };
 
-            let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
+            let system_prompt = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
                 &phase_cfg,
                 session_tools,
                 agents_md,
@@ -976,7 +976,7 @@ impl Agent {
             }
         }
 
-        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let system_prompt = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
             cfg,
             session_tools,
             agents_md,
@@ -1174,22 +1174,17 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                // C. 4. Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&msg.content, &current_context)
+                    .run_guides_before_action(&msg.content, &current_context)
                     .await
                 {
                     messages.push(crate::types::Message::user(e));
                     continue;
                 }
+                // C. 4. Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
-                    .run_visual_verifiers(&msg.content)
-                    .await
-                {
-                    messages.push(crate::types::Message::user(e));
-                    continue;
-                }
-                if let Err(e) = verification_manager
-                    .run_inferential_sensors(&msg.content, initial_message)
+                    .run_sensors_after_action(&msg.content, initial_message, Some(&msg.content))
                     .await
                 {
                     messages.push(crate::types::Message::user(format!(
@@ -1729,7 +1724,7 @@ impl Agent {
         // or just don't inject AGENTS.md dynamically into the node state setup to avoid async blocking.
         // But since this setup is sync, we use a simple empty string for now, or fetch synchronously.
         // For simplicity, we pass None to avoid panics in setup).
-        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let system_prompt = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
             &cfg_arc,
             &session_tools_arc,
             None,
@@ -2447,7 +2442,7 @@ impl Agent {
             None
         };
 
-        let planner_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let planner_system = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
             &planner_cfg,
             &[],
             agents_md,
@@ -2862,7 +2857,7 @@ impl Agent {
             None
         };
 
-        let replier_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let replier_system = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
             &replier_cfg,
             &[],
             agents_md,
@@ -3642,7 +3637,7 @@ impl Agent {
             }
         }
 
-        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let mut combined_system = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
             &final_cfg,
             &session_tools,
             agents_md,
@@ -3994,8 +3989,9 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
+                // C. 4. Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
-                    .run_computational_guides(&last_assistant_content, &current_context)
+                    .run_guides_before_action(&last_assistant_content, &current_context)
                     .await
                 {
                     let mut user_msg = Message::user(e);
@@ -4003,17 +3999,9 @@ impl Agent {
                     messages.push(user_msg);
                     continue;
                 }
+                // C. 4. Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
-                    .run_visual_verifiers(&last_assistant_content)
-                    .await
-                {
-                    let mut user_msg = Message::user(e);
-                    user_msg.previous_response_id = last_response_id.clone();
-                    messages.push(user_msg);
-                    continue;
-                }
-                if let Err(e) = verification_manager
-                    .run_inferential_sensors(&last_assistant_content, initial_message)
+                    .run_sensors_after_action(&last_assistant_content, initial_message, Some(&last_assistant_content))
                     .await
                 {
                     let mut user_msg = Message::user(format!(
@@ -8119,7 +8107,7 @@ mod tests {
         };
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[tool], None, None)
                 .build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
@@ -8136,7 +8124,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[], None, None)
                 .build();
         assert_eq!(
             prompt,
@@ -8153,7 +8141,7 @@ mod tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[], None, None)
                 .build();
         assert_eq!(
             prompt,
@@ -8165,7 +8153,7 @@ mod tests {
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
         let prompt2 =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg2, &[], None, None)
                 .build();
         assert_eq!(
             prompt2,
@@ -8182,7 +8170,7 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[], None, None)
                 .build();
         assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
@@ -8205,7 +8193,7 @@ mod tests {
         cfg.user_instructions.push('€');
 
         let prompt =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[], None, None)
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[], None, None)
                 .build();
 
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
@@ -10214,7 +10202,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(
@@ -10233,7 +10221,7 @@ mod hierarchical_prompt_tests {
 
         let tools = vec![];
         let builder =
-            crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
         let prompt = builder.build();
 
         assert!(

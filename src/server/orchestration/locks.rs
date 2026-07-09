@@ -13,12 +13,18 @@ pub struct LockGuard {
     redis_client: Option<redis::Client>,
     redis_key: Option<String>,
     redis_val: Option<String>,
+    sqlite_pool: Option<sqlx::SqlitePool>,
+    released: bool,
 }
 
-impl Drop for LockGuard {
-    fn drop(&mut self) {
+impl LockGuard {
+    pub async fn release(&mut self) {
+        if self.released {
+            return;
+        }
+        self.released = true;
         if let (Some(client), Some(key), Some(val)) = (&self.redis_client, &self.redis_key, &self.redis_val) {
-            if let Ok(mut conn) = client.get_connection() {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                 let script = redis::Script::new(
                     r#"
                     if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -28,59 +34,106 @@ impl Drop for LockGuard {
                     end
                     "#,
                 );
-                let _: redis::RedisResult<()> = script.key(key).arg(val).invoke(&mut conn);
+                let _ = script.key(key).arg(val).invoke_async::<()>(&mut conn).await;
+            }
+        } else if let (Some(pool), Some(key), Some(val)) = (&self.sqlite_pool, &self.redis_key, &self.redis_val) {
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2")
+                .bind(key)
+                .bind(val)
+                .execute(pool)
+                .await;
+        }
+        self._local_guard.take();
+    }
+}
+
+impl Drop for LockGuard {
+    fn drop(&mut self) {
+        if !self.released {
+            if self.redis_client.is_some() || self.sqlite_pool.is_some() {
+                // Warning: Dropped without release. The distributed lock will expire via TTL naturally.
             }
         }
     }
 }
 
 pub struct StandaloneLock {
-    pub locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    pool: Option<sqlx::SqlitePool>,
+    pub local_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
 }
 
 impl StandaloneLock {
     pub fn new() -> Self {
         Self {
-            locks: Mutex::new(HashMap::new()),
+            pool: None,
+            local_locks: Mutex::new(HashMap::new()),
         }
+    }
+
+    pub fn with_pool(pool: sqlx::SqlitePool) -> Self {
+        Self {
+            pool: Some(pool),
+            local_locks: Mutex::new(HashMap::new()),
+        }
+    }
+
+    async fn do_acquire(&self, key: &str) -> Result<LockGuard, String> {
+        let val = uuid::Uuid::new_v4().to_string();
+
+        if let Some(pool) = &self.pool {
+            // First cleanup expired locks
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                .execute(pool)
+                .await;
+
+            let result = sqlx::query("INSERT INTO distributed_locks (id, lock_val, expires_at) VALUES ($1, $2, datetime('now', '+15 seconds'))")
+                .bind(key)
+                .bind(&val)
+                .execute(pool)
+                .await;
+
+            if result.is_ok() {
+                return Ok(LockGuard {
+                    _local_guard: None,
+                    redis_client: None,
+                    redis_key: Some(key.to_string()),
+                    redis_val: Some(val),
+                    sqlite_pool: Some(pool.clone()),
+                    released: false,
+                });
+            } else {
+                return Err("Failed to acquire SQLite lock".to_string());
+            }
+        }
+
+        // Fallback to local memory lock if no pool is provided
+        let task_mutex = {
+            let mut locks = self.local_locks.lock().await;
+            locks.entry(key.to_string())
+                .or_insert_with(|| Arc::new(Mutex::new(())))
+                .clone()
+        };
+
+        let guard = task_mutex.lock_owned().await;
+        Ok(LockGuard {
+            _local_guard: Some(guard),
+            redis_client: None,
+            redis_key: None,
+            redis_val: None,
+            sqlite_pool: None,
+            released: false,
+        })
     }
 }
 
 #[async_trait::async_trait]
 impl DistributedLock for StandaloneLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        let task_mutex = {
-            let mut locks = self.locks.lock().await;
-            locks.entry(task_id.to_string())
-                .or_insert_with(|| Arc::new(Mutex::new(())))
-                .clone()
-        };
-
-        let guard = task_mutex.lock_owned().await;
-        Ok(LockGuard {
-            _local_guard: Some(guard),
-            redis_client: None,
-            redis_key: None,
-            redis_val: None,
-        })
+        self.do_acquire(&format!("ohc:lock:task:{}", task_id)).await
     }
 
     async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
-        let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
-        let task_mutex = {
-            let mut locks = self.locks.lock().await;
-            locks.entry(key.clone())
-                .or_insert_with(|| Arc::new(Mutex::new(())))
-                .clone()
-        };
-
-        let guard = task_mutex.lock_owned().await;
-        Ok(LockGuard {
-            _local_guard: Some(guard),
-            redis_client: None,
-            redis_key: None,
-            redis_val: None,
-        })
+        self.do_acquire(&format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id)).await
     }
 }
 
@@ -120,6 +173,8 @@ impl DistributedLock for RedisLock {
             redis_client: Some(self.client.clone()),
             redis_key: Some(key),
             redis_val: Some(val),
+            sqlite_pool: None,
+            released: false,
         })
     }
 
@@ -148,6 +203,8 @@ impl DistributedLock for RedisLock {
             redis_client: Some(self.client.clone()),
             redis_key: Some(key),
             redis_val: Some(val),
+            sqlite_pool: None,
+            released: false,
         })
     }
 }

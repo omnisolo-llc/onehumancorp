@@ -146,7 +146,8 @@ export class SyncManager {
           payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
           device_signature: m.device_signature || `sig_offline_${storedDeviceId}_${m.id}`,
-          mutation_type: m.type
+          mutation_type: m.type,
+          terminal_id: storedDeviceId
         };
       });
 

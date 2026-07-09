@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { test, expect } from '@playwright/test';
-test.describe('OHC Setup Wizard Flow', () => {
+test.describe.serial('OHC Setup Wizard Flow', () => {
   test('should complete the interactive setup wizard flow smoothly on desktop', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {

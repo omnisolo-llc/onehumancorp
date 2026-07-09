@@ -239,6 +239,10 @@ async fn handle_client_intake(
 #[cfg(test)]
 mod tests {
     use super::*;
+<<<<<<< HEAD
+
+=======
+>>>>>>> aa10e8eab (Fix mode parity chaos tests and remove unused imports)
     #[test]
     fn test_client_intake_response_serialize() {
         let resp = ClientIntakeResponse {

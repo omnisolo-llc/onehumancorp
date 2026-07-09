@@ -101,12 +101,14 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              type: 'tap_to_pay',
              product_id: item.product.id,
              quantity: item.quantity,
-             payload: { amount_cents: item.product.price_cents * item.quantity }
+             amount: item.product.price_cents * item.quantity,
+             currency: 'usd',
+             payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity }
           });
        });
 
        setTimeout(() => {
-         setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
+         setStatus('Saved Offline - Will sync when connected');
          if (onSuccess) onSuccess();
        }, 1500);
        return;
@@ -125,21 +127,28 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         });
         const intentData = await intentRes.json();
         intentSecret = intentData.client_secret;
-        if (!intentSecret) { setStatus('Failed to fetch payment intent secret'); return; }
+        if (!intentSecret) {
+            setStatus('Failed to fetch payment intent secret');
+            if (onOptimisticRollback) onOptimisticRollback();
+            return;
+        }
         lockId = intentData.lock_id || '';
     } catch (e) {
         setStatus('Failed to fetch payment intent');
+        if (onOptimisticRollback) onOptimisticRollback();
         return;
     }
 
     const res = await terminal.collectPaymentMethod(intentSecret);
     if (res.error) {
       setStatus('Payment failed: ' + res.error.message);
+      if (onOptimisticRollback) onOptimisticRollback();
     } else {
       setStatus('Processing payment...');
       const processRes = await terminal.processPayment(res.paymentIntent);
       if (processRes.error) {
         setStatus('Payment failed: ' + processRes.error.message);
+        if (onOptimisticRollback) onOptimisticRollback();
       } else {
         setStatus('Payment successful! Capturing...');
         try {
@@ -173,7 +182,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             });
          });
          setTimeout(() => {
-           setStatus('Cash sale saved offline. Will sync when network is restored.');
+           setStatus('Saved Offline - Will sync when connected');
            if (onSuccess) onSuccess();
          }, 500);
          return;
@@ -192,6 +201,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              const reserveData = await reserveRes.json();
              if (!reserveRes.ok || !reserveData.success) {
                  setStatus('Failed to reserve inventory: ' + (reserveData.error_message || ''));
+                 if (onOptimisticRollback) onOptimisticRollback();
                  return;
              }
              lockId = reserveData.lock_id;
@@ -271,8 +281,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    ))}
                  </ul>
                  <div className="flex flex-col gap-3">
-                   <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
-                     Cancel Pending Offline Orders
+                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                     Option A: Refund in-store customer
+                   </button>
+                   <button onClick={() => setPendingReconciliation([])} className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
+                     Option B: Cancel & refund online order
                    </button>
                    <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
                      Decide Later
@@ -311,6 +324,16 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                   });
+                  if (!sessionRes.ok) {
+                     if (sessionRes.status === 409) {
+                         setStatus('Failed to reserve inventory: Item is currently being checked out by another customer.');
+                     } else {
+                         setStatus('Failed to create checkout session.');
+                     }
+                     if (onOptimisticRollback) onOptimisticRollback();
+                     return;
+                  }
+                  if (onOptimisticReserve) onOptimisticReserve();
                   await processPayment();
                 } catch(e: any) {
                   setStatus('Error: ' + e.message);

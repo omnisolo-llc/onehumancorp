@@ -26,8 +26,8 @@
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         padding: 20px;
         padding-bottom: 24px;
         border-radius: 16px;
@@ -46,8 +46,8 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
@@ -57,8 +57,8 @@
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -87,8 +87,8 @@
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         transition:
           border-color 0.2s,
           background 0.2s,
@@ -125,8 +125,8 @@
       .glass-control {
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
       }
       textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
@@ -255,8 +255,8 @@
         align-items: center;
         justify-content: space-between;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
@@ -319,15 +319,15 @@
       @media (prefers-color-scheme: dark) {
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
@@ -350,8 +350,8 @@
         }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow:
             0 4px 6px -1px rgba(0, 0, 0, 0.1),
@@ -463,25 +463,30 @@
         font-size: 14px;
         line-height: 1.5;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
       }
       .chat-message.assistant .chat-bubble {
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-bottom-left-radius: 4px;
         color: #1d1d1f;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
       }
       @media (prefers-color-scheme: dark) {
         .chat-message.assistant .chat-bubble {
           background: rgba(40, 40, 45, 0.8);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
-        }
+          border-radius: 16px;
+          border-bottom-left-radius: 4px;
+      }
       }
       .chat-message.user .chat-bubble {
         background: #0066FF;
         border: 1px solid #0052cc;
-        border-bottom-right-radius: 4px;
         color: white;
+        border-radius: 16px;
+        border-bottom-right-radius: 4px;
       }
       .chat-sender {
         font-size: 11px;
@@ -543,8 +548,8 @@
         align-items: center;
         justify-content: space-between;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
@@ -607,15 +612,15 @@
       @media (prefers-color-scheme: dark) {
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
@@ -689,8 +694,8 @@
           Helvetica,
           Arial,
           sans-serif;
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         transition:
           border-color 0.2s,
           background 0.2s,
@@ -715,8 +720,8 @@
       .context-card {
         min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 16px;
         cursor: pointer;
@@ -770,8 +775,8 @@
         align-items: center;
         gap: 10px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         min-height: 44px;
@@ -812,7 +817,7 @@
         min-height: 44px;
       }
       .btn-secondary:hover {
-        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);
         color: #1d1d1f;
       }
       .btn-group {
@@ -882,8 +887,8 @@
         align-items: center;
         justify-content: space-between;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
@@ -946,15 +951,15 @@
       @media (prefers-color-scheme: dark) {
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
@@ -990,8 +995,8 @@
           min-width: 44px;
           box-sizing: border-box;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .radio-option:hover {
@@ -1148,7 +1153,8 @@
           backdrop-filter: blur(30px) saturate(210%) !important;
           -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
+          border-radius: 16px;
+      }
         .context-card:hover {
           background: rgba(40, 40, 45, 0.7) !important;
         }
@@ -1210,8 +1216,8 @@
         align-items: center;
         justify-content: space-between;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
@@ -1274,15 +1280,15 @@
       @media (prefers-color-scheme: dark) {
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
@@ -2904,6 +2910,7 @@
         ];
 
         if (state.step === undefined || state.step === 0) {
+          if (state.step === 0) { const instantBioInputEl = document.getElementById("instant-bio"); if (instantBioInputEl) instantBioInputEl.value = ""; }
           goToStep("step-initial", false);
         } else if (state.step < steps.length) {
           goToStep(steps[state.step], false);
@@ -3544,23 +3551,6 @@
       });
 
       window.goToStep = goToStep;
-
-      // Enter key support for inputs
-      document.querySelectorAll("select, input").forEach((input) => {
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            if (e.target.id === "chat-input" || e.target.id === "chat-image-url") {
-              return;
-            }
-            e.preventDefault();
-            const step = e.target.closest(".step");
-            const nextBtn =
-              step.querySelector(".next-step-btn") ||
-              step.querySelector("#finish-btn");
-            if (nextBtn) nextBtn.click();
-          }
-        });
-      });
 
       document.querySelectorAll(".prev-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -4330,24 +4320,7 @@
         });
       }
 
-      // Enter key support for text, email, and password inputs
-      document
-        .querySelectorAll(
-          'input[type="text"], input[type="email"], input[type="password"]',
-        )
-        .forEach((input) => {
-          input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const step = e.target.closest(".step");
-              const nextBtn =
-                step.querySelector(".next-step-btn") ||
-                step.querySelector("#finish-btn");
-              if (nextBtn) nextBtn.click();
-            }
-          });
-        });
-    </script>
+      </script>
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -4448,8 +4421,8 @@
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(40px) saturate(220%);
+            -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             padding: 12px 16px;
             color: #1d1d1f;
@@ -4483,8 +4456,8 @@
         align-items: center;
         justify-content: space-between;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
@@ -4547,13 +4520,13 @@
       @media (prefers-color-scheme: dark) {
         .container {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
@@ -4712,8 +4685,8 @@
       .ohc-tooltip {
         position: fixed;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
         padding: 8px 12px;
@@ -4844,7 +4817,7 @@
           bubble.classList.add("ohc-walkthrough-bubble");
           bubble.setAttribute("role", "dialog");
           bubble.style.cssText =
-            "position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
+            "position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
           document.body.appendChild(bubble);
 
           function renderStep() {
@@ -4971,7 +4944,7 @@
     font-size: 14px;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(40px) saturate(220%);
     border-top: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     width: 100%;
@@ -4979,7 +4952,7 @@
   "
 >
   <a
-    href="/setup.html?ref=website-builder"
+    href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref=website-builder"
     id="dashboard-footer-viral-link"
     style="
       color: #0066FF;

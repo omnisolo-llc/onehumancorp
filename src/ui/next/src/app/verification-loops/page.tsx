@@ -46,13 +46,13 @@ export default function VerificationLoopsPage() {
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>
 
-      <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl space-y-6">
+      <div className="glassmorphism bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/50 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-3xl space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Task Context
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/80 backdrop-blur-[30px] saturate-[210%]"
+            className="w-full p-4 border border-white/40 rounded-xl shadow-inner focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all bg-white/50 backdrop-blur-[20px] saturate-[150%]"
             rows={4}
             value={taskContext}
             onChange={(e) => setTaskContext(e.target.value)}
@@ -65,7 +65,7 @@ export default function VerificationLoopsPage() {
             Agent Output / Command / Path
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/80 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
+            className="w-full p-4 border border-white/40 rounded-xl shadow-inner focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all bg-white/50 backdrop-blur-[20px] saturate-[150%] font-mono text-sm"
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
@@ -73,7 +73,7 @@ export default function VerificationLoopsPage() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4 pt-4 border-t">
+        <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-200/50">
           <button
             onClick={() => handleVerify('computational')}
             disabled={loading || !outputText}
