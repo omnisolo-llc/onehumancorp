@@ -3,6 +3,7 @@ use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+use crate::retry::{RetryStrategy, ExponentialBackoffWithJitter};
 
 #[async_trait]
 pub trait LlmClientForParser: Send + Sync {
@@ -143,46 +144,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
 pub struct RetryWithErrorOutputParser<'a, T> {
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
     llm: Arc<dyn LlmClientForParser>,
-}
-
-pub trait RetryStrategy: Send + Sync {
-    fn next_backoff(&self, attempt: usize) -> std::time::Duration;
-}
-
-pub struct ExponentialBackoffWithJitter {
-    base_ms: u64,
-    jitter_max_ms: u64,
-}
-
-impl Default for ExponentialBackoffWithJitter {
-    fn default() -> Self {
-        Self {
-            base_ms: 500,
-            jitter_max_ms: 100,
-        }
-    }
-}
-
-impl ExponentialBackoffWithJitter {
-    pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
-        Self {
-            base_ms,
-            jitter_max_ms,
-        }
-    }
-}
-
-impl RetryStrategy for ExponentialBackoffWithJitter {
-    fn next_backoff(&self, attempt: usize) -> std::time::Duration {
-        let base_backoff = self.base_ms * (1 << attempt);
-        use rand::Rng;
-        let jitter = if self.jitter_max_ms > 0 {
-            rand::thread_rng().gen_range(0..self.jitter_max_ms)
-        } else {
-            0
-        };
-        std::time::Duration::from_millis(base_backoff + jitter)
-    }
 }
 
 impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
@@ -1021,7 +982,7 @@ mod tests_clamped {
 
         // Pass max_retries = 10, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt_and_strategy(req, 10, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await
+            retry_parser.parse_with_prompt_and_strategy(req, 10, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await
         });
 
 
@@ -1093,10 +1054,49 @@ mod tests_clamped {
             RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
 
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await
+            retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await
         });
 
         let result = handle.await.expect("Expected TestOutput in test");
+
+        assert!(result.is_ok());
+        assert_eq!(result.expect("Should be OK").result, "success");
+        assert_eq!(*feedback_client.call_count.lock().await, 2);
+    }
+    struct StructuredOutputFeedbackLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for StructuredOutputFeedbackLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})))
+            } else {
+                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fallback_mechanic_feeds_error_back_structured_output_only() {
+        let feedback_client = Arc::new(StructuredOutputFeedbackLlmClient {
+            call_count: Mutex::new(0),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(AdvancedPydanticOutputParser::new());
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
+
+        let result = retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await;
 
         assert!(result.is_ok());
         assert_eq!(result.expect("Should be OK").result, "success");

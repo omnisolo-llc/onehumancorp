@@ -41,6 +41,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateInvoiceFollowup = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-invoice-followup', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
 
     fetchFeed();
@@ -315,6 +329,8 @@ export default function FeedPage() {
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
             const isInvoiceDraft = item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft';
             const invoicePayload = isInvoiceDraft ? (item.proposed_action || item.context_payload) : null;
+            const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
+            const invoiceFollowupPayload = isInvoiceFollowup ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -323,9 +339,9 @@ export default function FeedPage() {
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
-                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution || isInvoiceFollowup ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution || isInvoiceFollowup ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceFollowup ? 'ACTION REQUIRED' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -335,6 +351,8 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isInvoiceFollowup
+                    ? `Action Required: Overdue Invoice`
                     : isInvoiceDraft
                     ? `Draft Invoice ready for ${invoicePayload?.milestone_name || 'Phase 1'}`
                     : isAmbassador
@@ -432,6 +450,24 @@ export default function FeedPage() {
                           <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                             <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">Total Amount Due</span>
                             <span className="text-[16px] font-bold text-gray-900 dark:text-white">${(invoicePayload?.amount_cents / 100).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    ) : isInvoiceFollowup ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                          <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">Overdue Invoice Detected</p>
+                          <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70">The Finance Agent noticed an overdue invoice and has drafted a reminder via {invoiceFollowupPayload?.suggested_channel || 'email'}.</p>
+                        </div>
+                        <div className="space-y-3 mt-2">
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Status</p>
+                            <p className="text-[13px] font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{invoiceFollowupPayload?.original_message}</p>
+                          </div>
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Reminder</p>
+                            <p className="text-[13px] font-medium text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{invoiceFollowupPayload?.generated_response}</p>
                           </div>
                         </div>
                       </div>
@@ -712,6 +748,13 @@ export default function FeedPage() {
              className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Shift Coverage
+          </button>
+          <button
+             onClick={simulateInvoiceFollowup}
+             data-testid="simulate-invoice-followup-btn"
+             className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Invoice Follow-up
           </button>
           <button
              onClick={simulateBookingDraft}

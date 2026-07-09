@@ -15,25 +15,48 @@ pub trait InventoryLocker: Send + Sync {
     async fn clear(&self, lock_key: &str);
 }
 
-pub struct MemoryLocker {
-    locks: Arc<DashMap<String, (String, Instant)>>,
+pub struct StandaloneInventoryLocker {
+    pool: Option<sqlx::SqlitePool>,
+    memory_fallback: Arc<DashMap<String, (String, Instant)>>,
 }
 
-impl MemoryLocker {
+impl StandaloneInventoryLocker {
     pub fn new() -> Self {
         Self {
-            locks: Arc::new(DashMap::new()),
+            pool: None,
+            memory_fallback: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub fn with_pool(pool: sqlx::SqlitePool) -> Self {
+        Self {
+            pool: Some(pool),
+            memory_fallback: Arc::new(DashMap::new()),
         }
     }
 }
 
 #[async_trait::async_trait]
-impl InventoryLocker for MemoryLocker {
+impl InventoryLocker for StandaloneInventoryLocker {
     async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
+        if let Some(pool) = &self.pool {
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                .execute(pool)
+                .await;
+
+            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, lock_val, expires_at) VALUES ($1, $2, datetime('now', '+{} seconds'))", ttl))
+                .bind(lock_key)
+                .bind(lock_id)
+                .execute(pool)
+                .await;
+
+            return result.is_ok();
+        }
+
         let now = Instant::now();
-        self.locks.retain(|_, (_, expires_at)| *expires_at > now);
-        if !self.locks.contains_key(lock_key) {
-            self.locks.insert(lock_key.to_string(), (lock_id.to_string(), now + Duration::from_secs(ttl as u64)));
+        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        if !self.memory_fallback.contains_key(lock_key) {
+            self.memory_fallback.insert(lock_key.to_string(), (lock_id.to_string(), now + Duration::from_secs(ttl as u64)));
             true
         } else {
             false
@@ -41,11 +64,21 @@ impl InventoryLocker for MemoryLocker {
     }
 
     async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
+        if let Some(pool) = &self.pool {
+            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2")
+                .bind(lock_key)
+                .bind(expected_lock_id)
+                .execute(pool)
+                .await;
+
+            return result.map(|res| res.rows_affected() > 0).unwrap_or(false);
+        }
+
         let now = Instant::now();
-        self.locks.retain(|_, (_, expires_at)| *expires_at > now);
-        if let Some(v) = self.locks.get(lock_key) {
+        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        if let Some(v) = self.memory_fallback.get(lock_key) {
             if v.0 == expected_lock_id {
-                self.locks.remove(lock_key);
+                self.memory_fallback.remove(lock_key);
                 return true;
             }
         }
@@ -53,13 +86,35 @@ impl InventoryLocker for MemoryLocker {
     }
 
     async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
+        if let Some(pool) = &self.pool {
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                .execute(pool)
+                .await;
+
+            let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP")
+                .bind(lock_key)
+                .fetch_optional(pool)
+                .await
+                .unwrap_or(None);
+
+            return lock_val;
+        }
+
         let now = Instant::now();
-        self.locks.retain(|_, (_, expires_at)| *expires_at > now);
-        self.locks.get(lock_key).map(|v| v.0.clone())
+        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        self.memory_fallback.get(lock_key).map(|v| v.0.clone())
     }
 
     async fn clear(&self, lock_key: &str) {
-        self.locks.remove(lock_key);
+        if let Some(pool) = &self.pool {
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1")
+                .bind(lock_key)
+                .execute(pool)
+                .await;
+            return;
+        }
+
+        self.memory_fallback.remove(lock_key);
     }
 }
 
@@ -154,7 +209,11 @@ impl InventoryService {
         let locker: Box<dyn InventoryLocker> = if let Some(ref client) = redis_client {
             Box::new(RedisLocker::new(client.clone()))
         } else {
-            Box::new(MemoryLocker::new())
+            if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                Box::new(StandaloneInventoryLocker::with_pool(pool))
+            } else {
+                Box::new(StandaloneInventoryLocker::new())
+            }
         };
         Self { locker, redis_client }
     }

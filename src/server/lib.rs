@@ -3546,6 +3546,162 @@ pub async fn simulate_ui_triage_item_handler(
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": item_id}))).into_response()
 }
 
+pub async fn simulate_invoice_followup_handler(
+
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+
+) -> axum::response::Response {
+
+    use axum::response::IntoResponse;
+
+    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+
+    let item_id = format!("inv-fup-{}", uuid::Uuid::new_v4());
+
+
+
+    match &db.store {
+
+        crate::db::DbStore::Postgres => {
+
+            if let Err(e) = sqlx::query(
+
+                "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+
+            )
+
+            .bind(item_id.clone())
+
+            .bind(&tenant_id)
+
+            .bind("finance")
+
+            .bind("Draft personalized invoice follow-up for review")
+
+            .bind("DRAFT")
+
+            .bind("DraftForReview")
+
+            .bind(sqlx::types::Json(serde_json::json!({
+
+                "feature_type": "invoice_followup",
+
+                "invoice_id": "INV-1029",
+
+                "original_message": "Invoice INV-1029 is 3 days past due.",
+
+                "generated_response": "Hi Client X, just checking in to see if you received invoice INV-1029. Let us know if you have any questions!",
+
+                "operational_action": "Draft personalized reminder",
+
+                "customer_id": "cust_123",
+
+                "suggested_channel": "email"
+
+            })))
+
+            .execute(&db.pool)
+
+            .await {
+
+                tracing::error!("Failed to insert agent_approvals for invoice_followup: {:?}", e);
+
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+
+            }
+
+        },
+
+        crate::db::DbStore::Sqlite(pool) => {
+
+            if let Err(e) = sqlx::query(
+
+                "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+
+            )
+
+            .bind(item_id.clone())
+
+            .bind(&tenant_id)
+
+            .bind("finance")
+
+            .bind("Draft personalized invoice follow-up for review")
+
+            .bind("DRAFT")
+
+            .bind("DraftForReview")
+
+            .bind(serde_json::json!({
+
+                "feature_type": "invoice_followup",
+
+                "invoice_id": "INV-1029",
+
+                "original_message": "Invoice INV-1029 is 3 days past due.",
+
+                "generated_response": "Hi Client X, just checking in to see if you received invoice INV-1029. Let us know if you have any questions!",
+
+                "operational_action": "Draft personalized reminder",
+
+                "customer_id": "cust_123",
+
+                "suggested_channel": "email"
+
+            }).to_string())
+
+            .execute(pool)
+
+            .await {
+
+                tracing::error!("Failed to insert agent_approvals for invoice_followup: {:?}", e);
+
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+
+            }
+
+        }
+
+    }
+
+
+
+    // Invalidating cache
+
+    let cache_key = format!("ui_approvals:{}:mobile:false", tenant_id);
+
+    let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    let _ = cache.invalidate(&cache_key).await;
+
+
+
+    let cache_key_mobile = format!("ui_approvals:{}:mobile:true", tenant_id);
+
+    let _ = cache.invalidate(&cache_key_mobile).await;
+
+
+
+    let cache_key_unified = format!("ui_unified_agent_feed:{}:mobile:false", tenant_id);
+
+    let cache_unified = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    let _ = cache_unified.invalidate(&cache_key_unified).await;
+
+
+
+    let cache_key_unified_mobile = format!("ui_unified_agent_feed:{}:mobile:true", tenant_id);
+
+    let _ = cache_unified.invalidate(&cache_key_unified_mobile).await;
+
+
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true }))).into_response()
+
+}
+
 pub async fn simulate_agent_feed_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
@@ -6248,6 +6404,7 @@ async fn create_ui_bom_item_handler(
                 .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
         .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
@@ -6631,6 +6788,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
+        .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
@@ -6653,7 +6811,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
-        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
+        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -6681,8 +6839,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
-        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip))
+        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))

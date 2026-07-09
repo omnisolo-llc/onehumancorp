@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WiFi QR Code Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0066FF;
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 32px;
+      font-size: 15px;
+      max-width: 500px;
+      line-height: 1.5;
+    }
+
+    .container {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      box-sizing: border-box;
+    }
+
+    .split-layout {
+      display: flex;
+      gap: 32px;
+    }
+
+    .config-panel {
+      flex: 1;
+    }
+
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.5);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .split-layout {
+        flex-direction: column;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.8);
+      font-size: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+
+    .preview-box {
+      width: 100%;
+      max-width: 300px;
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .qr-image {
+      width: 200px;
+      height: 200px;
+      margin: 16px 0;
+      object-fit: contain;
+    }
+
+    .preview-branding {
+      display: block;
+      margin-top: 16px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .preview-network-name {
+      font-weight: 600;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button.btn-secondary {
+      background-color: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      margin-top: 12px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      padding: 24px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 400px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .back-link {
+      margin-top: 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --card-bg: rgba(30, 30, 30, 0.65);
+        --text-main: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      .form-group input, .form-group select {
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .preview-box {
+        background: #1c1c1e;
+        color: #f5f5f7;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">📶</div>
+    <h1>Viral WiFi QR Generator</h1>
+    <p class="subtitle">Create a "Scan to Connect" WiFi display card. Visitors get instant access, and the "Powered by OHC" watermark helps you earn referral credits.</p>
+
+    <div class="split-layout">
+      <div class="config-panel">
+        <div class="form-group">
+          <label for="network-name">Network Name</label>
+          <input type="text" id="network-name" value="Guest WiFi">
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="remove-branding" style="width: auto;">
+          <label for="remove-branding" style="margin: 0;">Remove "Powered by OHC" Badge (Pro)</label>
+        </div>
+
+        <button id="download-btn">Save Image</button>
+      </div>
+
+      <div class="preview-panel">
+        <div class="preview-box" id="widget-preview">
+          <div>Scan to Connect to</div>
+          <div class="preview-network-name" id="preview-network-name">Guest WiFi</div>
+
+          <img id="qr-image" class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fohc.app%2Fcheckout%3Fproduct%3DGuest%20WiFi" alt="QR Code" />
+
+          <a href="#" class="preview-branding" id="preview-branding">⚡ Powered by OHC</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <!-- Paywall Modal -->
+  <div class="modal" id="paywall-modal">
+    <div class="modal-content">
+      <h3 style="margin-top: 0; font-size: 20px;">Upgrade to Pro</h3>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OHC" watermark is a Pro feature. Upgrade your account to unlock this feature.</p>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="close-paywall" style="margin-top: 0;">Cancel</button>
+        <button id="upgrade-btn">Upgrade to Pro</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // State
+      let state = {
+        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+        networkName: 'Guest WiFi',
+        removeBranding: false
+      };
+
+      // Elements
+      const networkNameInput = document.getElementById('network-name');
+      const removeBrandingCheckbox = document.getElementById('remove-branding');
+
+      const previewNetworkName = document.getElementById('preview-network-name');
+      const previewBranding = document.getElementById('preview-branding');
+      const qrImage = document.getElementById('qr-image');
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const closePaywallBtn = document.getElementById('close-paywall');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+
+      const updatePreview = () => {
+        previewNetworkName.textContent = state.networkName;
+
+        const payload = `https://ohc.app/checkout?product=${encodeURIComponent(state.networkName)}`;
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payload)}`;
+
+        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+      };
+
+      // Events
+      networkNameInput.addEventListener('input', (e) => {
+        state.networkName = e.target.value || 'WiFi';
+        updatePreview();
+      });
+
+      removeBrandingCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !state.hasPro) {
+          e.target.checked = false;
+          paywallModal.classList.add('active');
+          return;
+        }
+        state.removeBranding = e.target.checked;
+        updatePreview();
+      });
+
+      closePaywallBtn.addEventListener('click', () => {
+        paywallModal.classList.remove('active');
+      });
+
+      upgradeBtn.addEventListener('click', () => {
+        window.location.href = '/pricing.html';
+      });
+
+      // Initial render
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
