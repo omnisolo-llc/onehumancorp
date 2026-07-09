@@ -270,6 +270,7 @@ mod chaos_db_tests {
 
     #[tokio::test]
     async fn test_sentry_team_mesh_corruption() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // Shared State Corruption
         // Verification: The worker daemon logs errors gracefully and does not panic when reading offline memory files
         let invalid_path = "/invalid/path/to/agent-lock/";

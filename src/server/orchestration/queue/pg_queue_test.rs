@@ -71,8 +71,6 @@ async fn test_pg_fail_max_retries_dead_letter() {
     // Ensure tables are clean for tests
     sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
     sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
-    sqlx::query("DELETE FROM agents WHERE id = 'agent-1'").execute(&pool).await.unwrap();
-    sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status) VALUES ('agent-1', 'test_org', 'test', 'test', 'ACTIVE')").execute(&pool).await.unwrap();
 
     let job = Job {
         id: "job-fail-pg-dead".to_string(),
