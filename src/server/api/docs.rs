@@ -254,7 +254,16 @@ pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json:
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let _ = mobile_optimized; // Keep parameter for future use
+    if mobile_optimized {
+        let json_videos = videos.into_iter().map(|v| {
+            serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "video_url": v.video_url
+            })
+        }).collect();
+        return Json(json_videos);
+    }
     let json_videos = videos.into_iter().map(|v| {
         serde_json::json!({
             "id": v.id,
