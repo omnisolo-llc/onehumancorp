@@ -911,6 +911,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_ui_ledger_latency() {
+
         super::bench_ui_ledger_latency().await;
     bench_ui_ledger_mobile_payload().await;
     }
@@ -1108,6 +1109,8 @@ mod tests {
     async fn test_bench_get_completed_tasks_latency() {
         bench_get_completed_tasks_latency().await;
     }
+
+
 }
 
 pub async fn bench_dashboard_analytics_briefing_latency() {
@@ -1227,6 +1230,8 @@ pub async fn bench_hybrid_latency() {
     tracing::info!("20. Triage Latency");
     bench_ui_triage_latency().await;
     bench_ui_triage_mobile_payload().await;
+
+    tracing::info!("22. Field Service Routing Latency");
 
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }

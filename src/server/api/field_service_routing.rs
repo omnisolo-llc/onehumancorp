@@ -15,6 +15,7 @@ use chrono::{DateTime, Utc, NaiveDate};
 use uuid::Uuid;
 
 #[derive(Serialize)]
+#[derive(Deserialize, Clone)]
 pub struct JobLocation {
     pub id: String,
     pub customer_id: Option<String>,
@@ -29,6 +30,7 @@ pub struct JobLocation {
 }
 
 #[derive(Serialize)]
+#[derive(Deserialize, Clone)]
 pub struct ServiceRoute {
     pub id: String,
     pub staff_id: Option<String>,
@@ -70,6 +72,9 @@ struct AppState {
     hub: Arc<Hub>,
 }
 
+static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> = std::sync::OnceLock::new();
+static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> = std::sync::OnceLock::new();
+
 async fn get_today_routes(
     State(state): State<AppState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
@@ -77,6 +82,33 @@ async fn get_today_routes(
     let tenant_id = auth_info.org_id;
     if tenant_id.is_empty() {
         return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response();
+    }
+
+    let cache_key = format!("routes_today_{}", tenant_id);
+    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
+        }
+    }
+
+    let cache_key = format!("routes_today_{}", tenant_id);
+    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
+        }
+    }
+
+    let cache_key = format!("routes_today_{}", tenant_id);
+    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
+        }
     }
 
     let pool = state.db.pool.clone();
@@ -195,6 +227,8 @@ async fn get_today_routes(
     }
 
     let _ = tx.commit().await;
+
+    cache.set(&cache_key, routes.clone(), std::time::Duration::from_secs(60)).await;
 
     (StatusCode::OK, Json(TodayRoutesResponse { routes })).into_response()
 }
