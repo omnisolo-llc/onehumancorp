@@ -42,7 +42,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -63,7 +63,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.locator('#step-name')).toBeVisible();
     const nameInput = page.locator('#business-name');
     await expect(nameInput).toBeVisible();
-    await expect(nameInput).toHaveClass(/glass-control/);
+    await expect(nameInput).toHaveClass(/glassmorphism/);
     await expect(nameInput).toHaveAttribute('autocomplete', 'organization');
 
     await nameInput.fill("My Awesome E2E Business");
@@ -77,7 +77,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.goto('/setup.html');
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
     await startButton.click();
     await page.waitForTimeout(500);
 
@@ -124,7 +124,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -141,7 +141,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
     await startButton.click();
     await page.waitForTimeout(500); // Give it time to render the next step
 
@@ -247,7 +247,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     const bioInput = page.locator('#instant-bio');
     await expect(bioInput).toBeVisible();
-    await expect(bioInput).toHaveClass(/glass-control/);
+    await expect(bioInput).toHaveClass(/glassmorphism/);
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 

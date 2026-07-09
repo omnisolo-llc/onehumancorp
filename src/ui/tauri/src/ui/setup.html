@@ -83,7 +83,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -116,14 +116,14 @@
       input,
       select,
       textarea {
-        border-radius: 8px;
+        border-radius: 16px;
         min-height: 44px;
         min-width: 44px;
         box-sizing: border-box;
       }
       /* Added missing glass-control definition */
       .glass-control {
-        border-radius: 8px;
+        border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -154,7 +154,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -174,7 +174,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 59, 48, 0.5);
-        border-radius: 8px;
+        border-radius: 16px;
         padding: 12px;
         margin-top: 8px;
         margin-bottom: 16px;
@@ -296,7 +296,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       .slider:before {
         position: absolute;
@@ -428,7 +428,7 @@
         width: 100%;
         font-size: 16px;
         font-weight: 600;
-        border-radius: 8px;
+        border-radius: 16px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -451,11 +451,11 @@
         animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .chat-message.assistant {
-        border-radius: 16px 16px 16px 0;
+        border-radius: 16px; border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px;
         align-self: flex-start;
       }
       .chat-message.user {
-        border-radius: 16px 16px 0 16px;
+        border-radius: 16px; border-bottom-right-radius: 4px; border-radius: 16px; border-bottom-right-radius: 4px;
         align-self: flex-end;
       }
       .chat-bubble {
@@ -467,7 +467,7 @@
       .chat-message.assistant .chat-bubble {
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-bottom-left-radius: 4px;
+        border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px;
         color: #1d1d1f;
       }
       @media (prefers-color-scheme: dark) {
@@ -480,7 +480,7 @@
       .chat-message.user .chat-bubble {
         background: #0066FF;
         border: 1px solid #0052cc;
-        border-bottom-right-radius: 4px;
+        border-bottom-right-radius: 4px; border-radius: 16px; border-bottom-right-radius: 4px; border-radius: 16px; border-bottom-right-radius: 4px; border-radius: 16px; border-bottom-right-radius: 4px;
         color: white;
       }
       .chat-sender {
@@ -510,6 +510,8 @@
 
       /* Chat Step Styles */
       #chat-messages {
+        border-radius: 16px;
+        border-radius: 16px;
         height: 300px;
         overflow-y: auto;
         padding: 16px;
@@ -584,7 +586,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       .slider:before {
         position: absolute;
@@ -676,7 +678,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -775,7 +777,7 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
         cursor: pointer;
         transition:
           border-color 0.2s,
@@ -839,7 +841,7 @@
         min-height: 44px;
         display: flex;
         align-items: center;
-        border-radius: 8px;
+        border-radius: 16px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
         font-size: 13px;
@@ -860,7 +862,7 @@
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
-        border-bottom-left-radius: 4px;
+        border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px; border-radius: 16px; border-bottom-left-radius: 4px;
         font-size: 14px;
         line-height: 1.4;
         text-align: left;
@@ -923,7 +925,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       .slider:before {
         position: absolute;
@@ -1037,7 +1039,7 @@
           min-width: 44px;
           box-sizing: border-box;
           min-height: 44px;
-          border-radius: 8px;
+          border-radius: 16px;
           min-height: 44px;
         }
         .persona-row {
@@ -1091,7 +1093,7 @@
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
+        border-radius: 16px;
         border: 2px solid transparent;
         background-clip: padding-box;
       }
@@ -1119,7 +1121,7 @@
       button,
       textarea {
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
       }
 
       .context-card {
@@ -1131,7 +1133,7 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 16px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
 
       /* --- OHC Premium Dark Mode & Animations --- */
@@ -1251,7 +1253,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       .slider:before {
         position: absolute;
@@ -1301,7 +1303,7 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 16px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
 
@@ -1345,7 +1347,7 @@
         <textarea
           id="instant-bio"
           data-testid="instant-bio"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
           rows="4"
           style="resize: none; padding: 14px"
@@ -1357,7 +1359,7 @@
           type="url"
           id="instant-image-url"
           data-testid="instant-image-url"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="Image URL (Optional - e.g. logo or storefront)"
           inputmode="url"
           autocomplete="url"
@@ -1366,7 +1368,7 @@
             margin-bottom: 20px;
             width: 100%;
             min-height: 44px;
-            border-radius: 8px;
+            border-radius: 16px;
           "
         />
 
@@ -1546,7 +1548,7 @@
 
         <div
           id="chat-messages"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           style="
             text-align: left;
             display: flex;
@@ -1577,7 +1579,7 @@
               type="url"
               id="chat-image-url"
               data-testid="chat-image-url"
-              class="glass-control glassmorphism"
+              class="glassmorphism"
               placeholder="Image URL (Optional)"
               inputmode="url"
               autocomplete="url"
@@ -1586,7 +1588,7 @@
                 margin-bottom: 0;
                 width: 100%;
                 min-height: 44px;
-                border-radius: 8px;
+                border-radius: 16px;
               "
             />
           </div>
@@ -1594,7 +1596,7 @@
             <button
               type="button"
               id="chat-upload-btn"
-              class="glass-control glassmorphism"
+              class="glassmorphism"
               style="
                 width: 44px;
                 height: 44px;
@@ -1632,7 +1634,7 @@
               type="text"
               id="chat-input"
               data-testid="chat-input"
-              class="glass-control glassmorphism"
+              class="glassmorphism"
               placeholder="Type a message..."
 
               autocomplete="off"
@@ -1640,7 +1642,7 @@
                 margin-bottom: 0;
                 flex-grow: 1;
                 min-height: 44px;
-                border-radius: 8px;
+                border-radius: 16px;
               "
              enterkeyhint="next" />
             <button
@@ -1648,12 +1650,12 @@
               aria-label="Send Chat Message"
               title="Send Chat Message"
               data-testid="chat-send-btn"
-              class="glass-control glassmorphism"
+              class="glassmorphism"
               style="
                 width: 44px;
                 height: 44px;
                 min-width: 44px;
-                border-radius: 8px;
+                border-radius: 16px;
                 padding: 0;
                 display: flex;
                 align-items: center;
@@ -1719,7 +1721,7 @@
 
         <div
           id="approval-details"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           style="
             text-align: left;
             padding: 16px;
@@ -1861,7 +1863,7 @@
         <select
           id="business-categories" required
           data-testid="business-categories"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
         >
           <option value="" disabled selected>Select a category...</option>
         </select>
@@ -1907,7 +1909,7 @@
           type="text"
           id="business-name" required autocomplete="organization" enterkeyhint="next"
           data-testid="business-name"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
           inputmode="text"
           autocomplete="organization"
@@ -1921,7 +1923,7 @@
           type="text"
           id="business-tagline"
           data-testid="business-tagline"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="Tagline (optional)"
           inputmode="text"
           autocomplete="off"
@@ -1995,7 +1997,7 @@
         <select
           id="assistant-tone"
           data-testid="assistant-tone"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           style="margin-bottom: 0"
         >
           <option value="" disabled selected>Select a tone</option>
@@ -2100,7 +2102,7 @@
           type="text"
           id="admin-name" autocomplete="name" enterkeyhint="next"
           data-testid="admin-name"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="Your Name (e.g. Maya)"
           inputmode="text"
           autocomplete="name"
@@ -2115,7 +2117,7 @@
           type="email"
           id="admin-email" inputmode="email" autocomplete="email" enterkeyhint="next"
           data-testid="admin-email"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="admin@mybusiness.com"
           inputmode="email"
           autocomplete="email"
@@ -2139,7 +2141,7 @@
             type="password"
             id="admin-password" autocomplete="new-password" enterkeyhint="next"
             data-testid="admin-password"
-            class="glass-control glassmorphism"
+            class="glassmorphism"
             placeholder="Password (min 8 chars)"
             autocomplete="new-password"
             enterkeyhint="next"
@@ -2242,7 +2244,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 16px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2272,7 +2274,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 16px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2302,7 +2304,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 16px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2386,7 +2388,7 @@
         <textarea
           id="first-offer"
           data-testid="first-offer"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="e.g. I bake custom vegan cakes"
           inputmode="text"
           autocomplete="off"
@@ -2435,7 +2437,7 @@
           type="text"
           id="location-input"
           data-testid="location-input"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="e.g. Portland, OR"
           inputmode="text"
           autocomplete="address-level2"
@@ -2482,7 +2484,7 @@
           type="text"
           id="target-audience"
           data-testid="target-audience"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           placeholder="e.g. Local families, Tech startups"
           inputmode="text"
           autocomplete="off"
@@ -2525,7 +2527,7 @@
       <div class="step" id="step-domain">
         <h1>Where will your business live?</h1>
         <p>Choose your workspace domain</p>
-        <div class="glass-control glassmorphism" style="display: flex; align-items: center; padding: 0 16px; margin-bottom: 0; width: 100%; box-sizing: border-box; min-height: 44px;">
+        <div class="glassmorphism" style="display: flex; align-items: center; padding: 0 16px; margin-bottom: 0; width: 100%; box-sizing: border-box; min-height: 44px;">
           <input
             type="text"
             id="domain-name"
@@ -2587,7 +2589,7 @@
         <select
           id="template-selection"
           data-testid="template-selection"
-          class="glass-control glassmorphism"
+          class="glassmorphism"
           style="min-height: 44px;"
         >
           <option value="" disabled selected>Select a template...</option>
@@ -4095,10 +4097,10 @@
                                 ${startReq.company_name}
                             </div>
                             <div style="padding: 16px; color: #333;">
-                                <img src="${imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80'}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />
+                                <img src="${imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80'}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 16px; margin-bottom: 12px;" />
                                 <h3 style="margin-top: 0; font-size: 18px; font-weight: 600;">${startReq.first_product_name}</h3>
                                 <p style="font-size: 16px; font-weight: 500; color: #0066FF;">$${startReq.first_product_price}</p>
-                                <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 12px;">Buy Now</button>
+                                <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 16px; font-weight: bold; margin-top: 12px;">Buy Now</button>
                             </div>
                         </div>
                     </div>
@@ -4524,7 +4526,7 @@
         bottom: 0;
         background-color: rgba(0,0,0,0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       .slider:before {
         position: absolute;
@@ -4730,7 +4732,7 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 16px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
     <script>
@@ -4889,8 +4891,8 @@
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 16px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 16px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 

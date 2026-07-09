@@ -29,7 +29,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.goto('http://mock/setup.html');
 
     // Step 0 -> Step Context
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('button', { hasText: 'Step-by-Step Setup' }).first().click();
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Step Context
@@ -80,7 +80,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.goto('http://mock/setup.html');
 
     // Step 0 -> Step Context
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('button', { hasText: 'Step-by-Step Setup' }).first().click();
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Try to proceed without selecting context (fails validation)
