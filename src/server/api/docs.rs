@@ -73,7 +73,7 @@ pub async fn get_tooltips(
     let mut tooltips = std::collections::HashMap::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
+            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id.to_string())
                 .fetch_all(&db.pool)
                 .await
             {
@@ -92,7 +92,7 @@ pub async fn get_tooltips(
             }
         },
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?").bind(tenant_id)
+            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?").bind(tenant_id.to_string())
                 .fetch_all(pool)
                 .await
             {

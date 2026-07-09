@@ -6918,6 +6918,19 @@ async fn create_ui_bom_item_handler(
         .route("/pos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
         }))
+
+        .route("/api/ui/help-widget.mjs", axum::routing::get(|| async {
+            axum::response::Response::builder()
+                .header("content-type", "application/javascript")
+                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/help-widget.mjs")))
+                .unwrap()
+        }))
+        .route("/api/ui/voice-assistant.mjs", axum::routing::get(|| async {
+            axum::response::Response::builder()
+                .header("content-type", "application/javascript")
+                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/voice-assistant.mjs")))
+                .unwrap()
+        }))
         .route("/api/ui/assistant.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
