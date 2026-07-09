@@ -313,6 +313,12 @@ export function HelpChat() {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setIsOpen(false);
+                }
+              }}
+              autoFocus={true}
               placeholder="Ask anything..."
               disabled={isLoading}
               className="flex-1 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"

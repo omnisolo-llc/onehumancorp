@@ -10,6 +10,34 @@ type ChangelogSection = {
   screenshot_url?: string;
 };
 
+
+
+function parseLinks(text: string): React.ReactNode {
+  const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+  let match;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={key++}>{text.substring(lastIndex, match.index)}</span>);
+    }
+    parts.push(
+      <a key={key++} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+        {match[1]}
+      </a>
+    );
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(<span key={key++}>{text.substring(lastIndex)}</span>);
+  }
+
+  return parts.length > 0 ? <>{parts}</> : text;
+}
+
 export default function ChangelogPage() {
   const [sections, setSections] = useState<ChangelogSection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,13 +97,13 @@ export default function ChangelogPage() {
                     if (line.startsWith("- ")) {
                       return (
                         <li key={lidx} className="text-gray-600 dark:text-gray-300 ml-5 list-disc pl-1 marker:text-[#0066FF]">
-                          {line.replace("- ", "")}
+                          {parseLinks(line.replace("- ", ""))}
                         </li>
                       );
                     }
                     return (
                       <p key={lidx} className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                        {line}
+                        {parseLinks(line)}
                       </p>
                     );
                   })}
