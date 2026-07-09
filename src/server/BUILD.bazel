@@ -208,6 +208,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/departments:business_advisory_agent.rs",
     "//src/server/orchestration/departments:customer_success_agent.rs",
     "//src/server/orchestration/departments:translation_agent.rs",
+    "//src/server/orchestration/departments:negotiator_agent.rs",
     "//src/server/orchestration/departments:finance_agent.rs",
     "//src/server/orchestration/departments:flow_test.rs",
     "//src/server/orchestration/departments:legal_agent.rs",

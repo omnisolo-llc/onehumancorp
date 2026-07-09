@@ -2633,6 +2633,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
     let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
+    let negotiator_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::negotiator_agent::NegotiatorAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2642,7 +2643,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
         dept_orchestrator.register_department(advisory_agent),
-        dept_orchestrator.register_department(translation_agent)
+        dept_orchestrator.register_department(translation_agent),
+        dept_orchestrator.register_department(negotiator_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());

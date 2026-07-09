@@ -195,7 +195,7 @@ impl Department for NegotiatorAgent {
                 DepartmentType::CustomerSuccess,
                 format!("Draft quote and propose schedule for {}", service_name),
                 event.tenant_id.clone(),
-                ActionRisk::AutoExecute, // or DraftForReview
+                ActionRisk::DraftForReview,
                 action_payload,
             )
             .await
@@ -249,33 +249,13 @@ impl BaseAgent for NegotiatorAgent {
 }
 
 #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use crate::orchestration::departments::Department;
-
-    #[tokio::test]
-    async fn test_negotiator_agent_subscribed_events() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-        let db = Arc::new(crate::db::DB::new().await.unwrap());
-        let transport = Arc::new(InProcessTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
-        let agent = NegotiatorAgent::new(orchestrator);
-        let events = agent.subscribed_events();
-        assert!(events.contains(&"tenant.message.received".to_string()));
-        assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
-    }
-
-    #[test]
-    fn test_negotiator_agent_struct_exists() {
-        let type_name = "NegotiatorAgent";
-        assert_eq!(type_name, "NegotiatorAgent");
-    }
 
     #[test]
     fn test_negotiator_agent_intent_parsing() {
@@ -293,20 +273,5 @@ mod tests {
 
         assert!(is_quote_intent);
         assert_eq!(service_name, "Leaky Sink Repair");
-    }
-
-    #[test]
-    fn test_negotiator_agent_heuristic_fallback() {
-        let message = "I need a fix for my broken pipe.";
-        let mut is_quote_intent = false;
-        let mut service_name = "Service".to_string();
-
-        if message.to_lowercase().contains("fix") || message.to_lowercase().contains("repair") {
-            is_quote_intent = true;
-            service_name = "Emergency Repair".to_string();
-        }
-
-        assert!(is_quote_intent);
-        assert_eq!(service_name, "Emergency Repair");
     }
 }

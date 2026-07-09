@@ -83,6 +83,7 @@ rust_library(
         "//src/server/orchestration/departments:sales_agent.rs",
         "//src/server/orchestration/departments:throttling.rs",
         "//src/server/orchestration/departments:translation_agent.rs",
+        "//src/server/orchestration/departments:negotiator_agent.rs",
         "//src/server/orchestration/departments:types.rs",
         "//src/server/orchestration/departments/memory:e2e_journey_test.rs",
         "//src/server/orchestration/departments/memory:layer.rs",
