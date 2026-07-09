@@ -248,6 +248,10 @@
         <input type="text" id="share-link" class="loyalty-share-link" readonly style="flex: 1; padding: 12px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.65);" />
         <button id="copy-btn" style="width: auto; padding: 12px 20px; min-height: 44px; background-color: #1d1d1f; box-shadow: none;">Copy</button>
       </div>
+      <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <button id="share-twitter-btn" style="flex: 1; padding: 10px; background-color: #1DA1F2; font-size: 14px; box-shadow: none;">Share on X</button>
+        <button id="share-whatsapp-btn" style="flex: 1; padding: 10px; background-color: #25D366; font-size: 14px; box-shadow: none;">WhatsApp</button>
+      </div>
     </div>
   </div>
 
@@ -347,6 +351,18 @@
         } catch (err) {
             console.error('Failed to copy text: ', err);
         }
+    });
+
+    document.getElementById('share-twitter-btn').addEventListener('click', () => {
+        const urlInput = document.getElementById('share-link').value;
+        const text = encodeURIComponent('Join our loyalty program! 🎁');
+        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(urlInput)}`, '_blank');
+    });
+
+    document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
+        const urlInput = document.getElementById('share-link').value;
+        const text = encodeURIComponent('Join our loyalty program! 🎁 ' + urlInput);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
     });
   </script>
 </body>

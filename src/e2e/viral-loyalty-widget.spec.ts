@@ -47,5 +47,11 @@ test.describe('Viral Loyalty Widget', () => {
     // Check share link generated correctly
     const shareLink = page.locator('#share-link');
     await expect(shareLink).toHaveValue(/loyalty\/join\?ref=12345/);
+
+    // Verify social share buttons
+    const twitterBtn = page.locator('#share-twitter-btn');
+    const whatsappBtn = page.locator('#share-whatsapp-btn');
+    await expect(twitterBtn).toBeVisible();
+    await expect(whatsappBtn).toBeVisible();
   });
 });
