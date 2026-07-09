@@ -49,50 +49,30 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
+        let _should_bypass = !is_multitenant;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        if should_bypass {
-            let query = r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
-            "#;
-            sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(roles_json)
-            .bind(user.active)
-            .bind(org_id)
-            .bind(&user.oidc_subject)
-            .bind(user.created_at)
-            .bind(user.updated_at)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-        } else {
-            let query = r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
-            "#;
-            sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(roles_json)
-            .bind(user.active)
-            .bind(org_id)
-            .bind(&user.oidc_subject)
-            .bind(user.created_at)
-            .bind(user.updated_at)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-        }
+        let query = r#"
+        INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
+        "#;
+
+        sqlx::query(query)
+        .bind(&user.id)
+        .bind(&user.username)
+        .bind(&user.email)
+        .bind(&user.password_hash)
+        .bind(roles_json)
+        .bind(user.active)
+        .bind(org_id)
+        .bind(&user.oidc_subject)
+        .bind(user.created_at)
+        .bind(user.updated_at)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 

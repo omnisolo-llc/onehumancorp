@@ -269,17 +269,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       // ignore parse errors
                   }
 
+                  let customerMessage = ti.context || ti.customer_message || "Message requires attention";
+
                   return {
                     id: ti.id,
                     tenant_id: ti.tenant_id || "default",
                     event_source: "triage",
                     context_payload: {
-                      description: ti.context || "Message requires attention",
-                      customer_message: ti.context || "",
+                      description: customerMessage,
+                      customer_message: customerMessage,
                       feature_type: featureType
                     },
                     proposed_action: {
-                      message: ti.action_payload || "Triage item",
+                      message: ti.action_payload || draftReply,
                       draft_reply: draftReply,
                       action_type: ti.action_type || "resolve",
                       feature_type: featureType
@@ -396,51 +398,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         }
 
         if (mounted) {
-          // Listen to SSE updates
-          if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(
-            `/api/agents/approvals/stream?tenant_id=${tenant}`,
-          );
 
-          eventSource.onmessage = (event) => {
-            try {
-              const payload = JSON.parse(event.data);
-
-              if (payload.event_type === "approval_request") {
-                setItems((prev) => {
-                  if (prev.find((a) => a.id === payload.data.id)) return prev;
-                  return [payload.data, ...prev];
-                });
-              } else if (payload.event_type === "approval_decision") {
-                setItems((prev) =>
-                  prev.filter((a) => a.id !== payload.data.request_id),
-                );
-                setActivities((prev) => {
-                  const newActivity = {
-                    id: crypto.randomUUID(),
-                    tenant_id: tenant,
-                    event_type: payload.data.status || "APPROVED",
-                    department: payload.data.department || "general",
-                    payload: payload.data,
-                    created_at: new Date().toISOString(),
-                  };
-                  return [newActivity, ...prev];
-                });
-              }
-            } catch (e) {
-              console.error("Error parsing SSE event", e);
-            }
-          };
-
-          eventSource.onerror = (error) => {
-            console.error("SSE connection error", error);
-            eventSource.close();
-          };
-
-          return () => {
-            eventSource.close();
-            mounted = false;
-          };
         }
       } catch (err: any) {
         if (mounted) {

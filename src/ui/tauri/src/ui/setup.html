@@ -123,7 +123,7 @@
       }
       /* Added missing glass-control definition */
       .glass-control {
-        border-radius: 8px;
+        border-radius: 8px !important;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -3990,19 +3990,9 @@
           window.generateStorefrontLoadingInterval = setInterval(() => {
             loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
             generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          }, 3000);
-
-
-          goToStep("step-loading");
+          }, 500);
 
           try {
-
-
-            if (window.generateStorefrontLoadingInterval) {
-                clearInterval(window.generateStorefrontLoadingInterval);
-                delete window.generateStorefrontLoadingInterval;
-            }
-
             let startReq = null;
             const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
 
@@ -4095,10 +4085,12 @@
                 `;
             }
 
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
+            }
             goToStep('step-approval');
             return;
-
-
 
           } catch (err) {
             console.error(err);

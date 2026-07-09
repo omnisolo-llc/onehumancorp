@@ -6,13 +6,7 @@ export default function AiTimeSavingsWidget() {
   const [hasClaimed, setHasClaimed] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasPro, setHasPro] = useState(false);
-  const [savingsData, setSavingsData] = useState({
-    hours_saved: 12,
-    inquiries_handled: 48,
-    appointments_scheduled: 14,
-    carts_recovered: 2,
-    auto_replied: 40
-  });
+  const [savingsData, setSavingsData] = useState<any>(null);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -67,6 +61,10 @@ export default function AiTimeSavingsWidget() {
       setIsClaiming(false);
     }
   };
+
+  if (!savingsData) {
+    return null;
+  }
 
   if (hasClaimed) {
     return (

@@ -11,8 +11,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
     await expect(page.locator('.ohc-growth-card').first()).toBeVisible();
     await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'AI actions used this month' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Storage used' }).first()).toBeVisible();
+    await expect(page.locator('span', { hasText: 'AI Actions Used' }).first()).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Storage Used' }).first()).toBeVisible();
     await expect(page.locator('h2:has-text("Estimated Next Bill")').first()).toBeVisible();
     await expect(page.locator('button:has-text("Upgrade")').first()).toBeVisible();
 
@@ -37,7 +37,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await context.close();
   });
 
-  test('Cost Dashboard displays AI actions used this month correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard displays AI Actions Used correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
     const context = await browser.newContext();
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
@@ -51,7 +51,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await context.close();
   });
 
-  test('Cost Dashboard displays Storage used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard displays Storage Used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
     const context = await browser.newContext();
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);

@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
+import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
+import { WithTooltip } from '../../components/TooltipRegistry';
 import {
   automations,
   connectors,
@@ -94,6 +96,12 @@ export default function AgentsPage() {
   const [summonMessage, setSummonMessage] = useState('Growth Strategist is ready');
   const [runMessage, setRunMessage] = useState('');
   const [runError, setRunError] = useState('');
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+
+  const walkthroughSteps: import('../../components/Walkthrough').Step[] = [
+    { targetId: 'agents-composer-title', title: 'Task Composer', content: 'Assign tasks to your AI Agent here.' },
+    { targetId: 'activate-agent-btn', title: 'Activate your AI Support Agent', content: 'Click here to activate your AI Support Agent.' }
+  ];
   const [running, setRunning] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([]);
   const [feed, setFeed] = useState<ApprovalItem[]>([]);
@@ -148,22 +156,28 @@ export default function AgentsPage() {
     fetchAll();
   }, []);
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-        setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        if (String(item.status || '').toLowerCase().includes('draft')) {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+
+    let ws: WebSocket | null = null;
+    if (true) {
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (event) => {
+        try {
+          const item = JSON.parse(event.data);
+          if (!item?.id || !item?.description) return;
+          setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          if (String(item.status || '').toLowerCase().includes('draft')) {
+            setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          }
+        } catch (err) {
+          console.error('Failed to parse agent event:', err);
         }
-      } catch (err) {
-        console.error('Failed to parse agent event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
+      };
+      ws.onerror = () => ws?.close();
+    }
+    return () => ws?.close();
   }, []);
   function summon(item: ExpertCatalogItem) {
     setSelected(item);
@@ -240,6 +254,7 @@ export default function AgentsPage() {
   }
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
+      <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
       <header className="border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -247,7 +262,7 @@ export default function AgentsPage() {
               <Link href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
                 ← Back to Dashboard
               </Link>
-              <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1>
+              <div className="flex items-center gap-4"><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1><button id="assistant-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 font-semibold transition-colors mt-2">Start Tour</button></div>
               <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
                 Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
@@ -699,7 +714,7 @@ function ComposerPanel({
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-base font-bold text-zinc-900 dark:text-white">Task Composer</h2>
+          <WalkthroughTarget id="agents-composer-title"><h2 className="text-base font-bold text-zinc-900 dark:text-white">Task Composer</h2></WalkthroughTarget>
           <p className="text-xs font-semibold text-teal-600 dark:text-teal-400">{summonMessage}</p>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-md">
@@ -898,6 +913,8 @@ function ComposerPanel({
       {runError && <p className="mt-3 text-xs font-bold text-red-650 dark:text-red-400">{runError}</p>}
       {runMessage && <p className="mt-3 text-xs font-bold text-emerald-600 dark:text-emerald-400">{runMessage}</p>}
       
+      <WalkthroughTarget id="activate-agent-btn">
+        <WithTooltip id="activate-agent-btn-tooltip" defaultText="Start task to activate your AI Support Agent">
       <button
         type="button"
         onClick={startTask}
@@ -906,6 +923,8 @@ function ComposerPanel({
       >
         {running ? 'Starting...' : 'Start task'}
       </button>
+      </WithTooltip>
+      </WalkthroughTarget>
     </section>
   );
 }

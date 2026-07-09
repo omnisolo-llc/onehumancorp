@@ -227,7 +227,7 @@ async fn ensure_redis_subscription() {
 
         while let Some(msg) = pubsub_stream.next().await {
             let channel_name = msg.get_channel_name().to_string();
-            if channel_name.starts_with("inventory:") || channel_name.starts_with("orders:") {
+            if channel_name.starts_with("inventory:") || channel_name.starts_with("orders:") || channel_name.starts_with("tenant_events:") {
                 if let Ok(payload) = msg.get_payload::<String>() {
                     let wrapped_msg = serde_json::json!({
                         "channel": channel_name,

@@ -90,7 +90,7 @@ export default function HelpCenterPage() {
                 type="text"
                 placeholder="Search for help articles and videos..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)} onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
               />
               <svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
