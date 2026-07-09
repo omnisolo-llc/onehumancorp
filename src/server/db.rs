@@ -72,6 +72,10 @@ pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
         })
 }
 
+pub fn get_sqlite_pool_if_exists() -> Option<sqlx::SqlitePool> {
+    None
+}
+
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL
         .get_or_init(|| {
