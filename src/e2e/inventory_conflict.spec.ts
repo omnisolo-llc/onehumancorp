@@ -122,7 +122,7 @@ test('Persona: Online checkout fails due to offline POS conflict and triggers Cu
     await memberPage.getByRole('button', { name: '4' }).click();
 
     await memberPage.waitForTimeout(500);
-    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 });
     await memberPage.waitForTimeout(500);
 
     // Wait for product catalog to load
