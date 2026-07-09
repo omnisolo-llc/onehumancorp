@@ -211,9 +211,10 @@ impl AgentDB {
 
                     // Shrink connections if exceeded
                     if links_len > max_m {
-                        let e_node = self.vectors.get(&neighbor).unwrap();
-                        let shrunk = self.select_neighbors(e_node, &current_links, max_m);
-                        self.layers[lc].insert(neighbor, shrunk);
+                        if let Some(e_node) = self.vectors.get(&neighbor) {
+                            let shrunk = self.select_neighbors(e_node, &current_links, max_m);
+                            self.layers[lc].insert(neighbor, shrunk);
+                        }
                     }
                 }
             }
@@ -239,16 +240,17 @@ impl AgentDB {
 
         for p in ep {
             v.insert(p.clone());
-            let node = self.vectors.get(p).unwrap();
-            let dist = q.distance(node);
-            c.push(DistNode {
-                dist,
-                id: p.clone(),
-            });
-            w.push(MaxDistNode {
-                dist,
-                id: p.clone(),
-            });
+            if let Some(node) = self.vectors.get(p) {
+                let dist = q.distance(node);
+                c.push(DistNode {
+                    dist,
+                    id: p.clone(),
+                });
+                w.push(MaxDistNode {
+                    dist,
+                    id: p.clone(),
+                });
+            }
         }
 
         while let Some(DistNode {
@@ -265,23 +267,24 @@ impl AgentDB {
                 for e in neighbors {
                     if !v.contains(e) {
                         v.insert(e.clone());
-                        let e_node = self.vectors.get(e).unwrap();
-                        let e_dist = q.distance(e_node);
+                        if let Some(e_node) = self.vectors.get(e) {
+                            let e_dist = q.distance(e_node);
 
-                        let furthest_w_dist = w.peek().map(|n| n.dist).unwrap_or(f32::MAX);
+                            let furthest_w_dist = w.peek().map(|n| n.dist).unwrap_or(f32::MAX);
 
-                        if e_dist < furthest_w_dist || w.len() < ef {
-                            c.push(DistNode {
-                                dist: e_dist,
-                                id: e.clone(),
-                            });
-                            w.push(MaxDistNode {
-                                dist: e_dist,
-                                id: e.clone(),
-                            });
+                            if e_dist < furthest_w_dist || w.len() < ef {
+                                c.push(DistNode {
+                                    dist: e_dist,
+                                    id: e.clone(),
+                                });
+                                w.push(MaxDistNode {
+                                    dist: e_dist,
+                                    id: e.clone(),
+                                });
 
-                            if w.len() > ef {
-                                w.pop(); // Remove the furthest
+                                if w.len() > ef {
+                                    w.pop(); // Remove the furthest
+                                }
                             }
                         }
                     }
@@ -320,12 +323,13 @@ impl AgentDB {
 
     /// KNN search using the HNSW index.
     pub fn search(&self, query: &[f32], top_k: usize) -> Vec<Vector> {
-        if self.enter_point.is_none() {
-            return Vec::new();
-        }
+        let enter_point = match &self.enter_point {
+            Some(ep) => ep.clone(),
+            None => return Vec::new(),
+        };
 
         let q = Vector::new("query".to_string(), query.to_owned(), "".to_string());
-        let mut ep = vec![self.enter_point.clone().unwrap()];
+        let mut ep = vec![enter_point];
 
         // Search down to level 1
         for lc in (1..=self.max_level).rev() {
@@ -334,19 +338,25 @@ impl AgentDB {
 
         // Search in level 0
         let ef = std::cmp::max(top_k, self.ef_construction);
-        let mut candidates = self.search_layer(&q, &ep, ef, 0);
+        let candidates = self.search_layer(&q, &ep, ef, 0);
+
+        // Filter out candidates that don't exist in vectors
+        let mut valid_candidates: Vec<String> = candidates
+            .into_iter()
+            .filter(|id| self.vectors.contains_key(id))
+            .collect();
 
         // Sort by actual distance and take top_k
-        candidates.sort_by(|a, b| {
-            let da = q.distance(self.vectors.get(a).unwrap());
-            let db = q.distance(self.vectors.get(b).unwrap());
+        valid_candidates.sort_by(|a, b| {
+            let da = q.distance(self.vectors.get(a).expect("Verified existence above"));
+            let db = q.distance(self.vectors.get(b).expect("Verified existence above"));
             if da < db { Ordering::Less } else if da > db { Ordering::Greater } else { Ordering::Equal }
         });
 
-        candidates
+        valid_candidates
             .into_iter()
             .take(top_k)
-            .map(|id| self.vectors.get(&id).unwrap().clone())
+            .filter_map(|id| self.vectors.get(&id).cloned())
             .collect()
     }
 }
@@ -425,8 +435,8 @@ mod tests {
         );
 
         // We can serialize and deserialize as JSON because it contains HashMaps, Vecs, and String.
-        let json_str = serde_json::to_string(&db).unwrap();
-        let db_restored: AgentDB = serde_json::from_str(&json_str).unwrap();
+        let json_str = serde_json::to_string(&db).expect("Failed to serialize AgentDB");
+        let db_restored: AgentDB = serde_json::from_str(&json_str).expect("Failed to deserialize AgentDB");
 
         assert_eq!(db_restored.vectors.len(), 1);
         let results = db_restored.search(&vec![1.0, 0.5, 0.0], 1);
