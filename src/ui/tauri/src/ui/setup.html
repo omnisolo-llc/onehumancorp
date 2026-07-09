@@ -3765,7 +3765,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+              window.location.href = "dashboard.html#unified-agent-feed-section";
               return;
             }
 
@@ -3829,7 +3829,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+            window.location.href = "dashboard.html#unified-agent-feed-section";
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -3894,7 +3894,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+              window.location.href = "dashboard.html#unified-agent-feed-section";
               return;
             }
 
@@ -3938,7 +3938,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+              window.location.href = "dashboard.html#unified-agent-feed-section";
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -4247,7 +4247,7 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+                  window.location.href = "dashboard.html#unified-agent-feed-section";
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4289,7 +4289,7 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+                    window.location.href = "dashboard.html#unified-agent-feed-section";
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(
