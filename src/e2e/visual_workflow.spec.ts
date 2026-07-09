@@ -1,7 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Visual Workflow Orchestrator', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, unlimitedAdminUser, loginAs }) => {
+    // Login first to satisfy real E2E standard
+    await loginAs(page, unlimitedAdminUser);
+
     // Navigate to the visual workflow page directly
     await page.goto('/visual-workflow');
     // Ensure the page has fully loaded
@@ -10,7 +13,7 @@ test.describe('Visual Workflow Orchestrator', () => {
 
   test('should display the correct initial layout and canvas state', async ({ page }) => {
     // Verify the page title
-    await expect(page.locator('h1')).toHaveText('Visual Workflow Orchestrator');
+    await expect(page.locator('h1:has-text("Visual Workflow Orchestrator")')).toBeVisible();
     // Verify the translucent canvas classes exist by checking its visual properties
     const canvas = page.locator('h2:has-text("Workspace Canvas")').locator('..');
     await expect(canvas).toBeVisible();

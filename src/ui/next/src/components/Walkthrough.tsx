@@ -155,7 +155,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
         <div className="flex justify-between items-start mb-3">
           <h4 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} id="wt-close" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-full p-1.5 transition-all flex-shrink-0">
+          <button onClick={handleSkip} id="wt-close" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -169,7 +169,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           <button
             id="wt-next"
             onClick={handleNext}
-            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg backdrop-blur-md saturate-[210%] active:scale-95 transition-all"
+            className="bg-blue-600/90 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg backdrop-blur-[30px] saturate-[210%] active:scale-95 transition-all"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>
