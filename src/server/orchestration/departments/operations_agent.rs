@@ -32,11 +32,57 @@ impl Department for OperationsAgent {
             "tenant.quote.requires_scheduling".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:operations:approved".to_string(),
+            "agent:sales:approved".to_string(),
 
             "tenant.pricing.updated".to_string(),]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "agent:sales:approved" {
+            if let Some(payload) = event.payload.get("original_payload") {
+                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+                    if feature_type == "quote_draft" {
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let quote_id = payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let service_name = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Project");
+
+                        let project_id = uuid::Uuid::new_v4().to_string();
+                        let db = crate::db::get_pool();
+
+                        // Create Project
+                        let _ = sqlx::query("INSERT INTO projects (id, tenant_id, quote_id, customer_id, title, status) VALUES ($1, $2, $3, $4, $5, 'Active')")
+                            .bind(&project_id)
+                            .bind(&event.tenant_id)
+                            .bind(quote_id)
+                            .bind(customer_id)
+                            .bind(service_name)
+                            .execute(&db)
+                            .await;
+
+                        // Create Default Tasks
+                        let tasks = vec![
+                            "Kickoff Meeting",
+                            "Initial Design & Prototyping",
+                            "Client Review",
+                            "Implementation",
+                            "Final Delivery & Handoff",
+                        ];
+
+                        for task in tasks {
+                            let task_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query("INSERT INTO project_tasks (id, tenant_id, project_id, title, status) VALUES ($1, $2, $3, $4, 'Pending')")
+                                .bind(&task_id)
+                                .bind(&event.tenant_id)
+                                .bind(&project_id)
+                                .bind(task)
+                                .execute(&db)
+                                .await;
+                        }
+                    }
+                }
+            }
+        }
+
         if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();

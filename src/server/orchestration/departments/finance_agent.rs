@@ -23,11 +23,51 @@ impl Department for FinanceAgent {
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
             "invoice.overdue".to_string(),
-            "project_milestone_completed".to_string()
+            "project_milestone_completed".to_string(),
+            "agent:sales:approved".to_string()
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "agent:sales:approved" {
+            if let Some(payload) = event.payload.get("original_payload") {
+                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+                    if feature_type == "quote_draft" {
+                        let deposit_amount = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0) * 0.20;
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let _quote_id = payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let invoice_id = uuid::Uuid::new_v4().to_string();
+                        let db = crate::db::get_pool();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount)
+                             VALUES ($1, $2, $3, 'Client', 'draft', $4, 'USD', $5) ON CONFLICT DO NOTHING"
+                        )
+                        .bind(&invoice_id)
+                        .bind(&event.tenant_id)
+                        .bind(customer_id)
+                        .bind(chrono::Utc::now().timestamp() + 86400 * 30) // 30 days due
+                        .bind(deposit_amount)
+                        .execute(&db)
+                        .await;
+
+                        let line_item_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+                             VALUES ($1, $2, $3, 'Deposit for Proposal', 1, $4, $4) ON CONFLICT DO NOTHING"
+                        )
+                        .bind(&line_item_id)
+                        .bind(&event.tenant_id)
+                        .bind(&invoice_id)
+                        .bind(deposit_amount)
+                        .execute(&db)
+                        .await;
+                    }
+                }
+            }
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

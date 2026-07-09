@@ -7,3 +7,4 @@ pub mod chat;
 pub mod translation;
 pub mod client_intake;
 pub mod pydantic;
+pub mod code_native;

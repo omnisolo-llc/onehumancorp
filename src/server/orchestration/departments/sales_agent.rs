@@ -423,7 +423,7 @@ impl Department for SalesAgent {
         }
 
 
-                if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+                if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" || event.event_type == "work-intake/submit" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
@@ -522,7 +522,37 @@ impl Department for SalesAgent {
 
                 let db = crate::db::get_pool();
                 let deposit_amount_cents = (price * 0.20 * 100.0) as i64;
+                if event.event_type == "work-intake/submit" {
+                    let db = crate::db::get_pool();
+                    let pr_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query("INSERT INTO project_requests (id, tenant_id, message, status) VALUES ($1, $2, $3, 'NEW')")
+                        .bind(&pr_id)
+                        .bind(&event.tenant_id)
+                        .bind(&intent.original_message)
+                        .execute(&db)
+                        .await;
+                }
                 let price_cents = (price * 100.0) as i64;
+
+
+                let proposal_id = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'DRAFT', $4, $5)")
+                    .bind(uuid::Uuid::parse_str(&proposal_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .bind(&event.tenant_id)
+                    .bind(uuid::Uuid::parse_str(&customer_id_val).ok())
+                    .bind(price_cents)
+                    .bind(deposit_amount_cents)
+                    .execute(&db)
+                    .await;
+
+                let pl_id = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity) VALUES ($1, $2, $3, $4, 1)")
+                    .bind(uuid::Uuid::parse_str(&pl_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .bind(uuid::Uuid::parse_str(&proposal_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                    .bind(&scope)
+                    .bind(price_cents)
+                    .execute(&db)
+                    .await;
 
                 if !service_lead_id.is_empty() {
                     let _ = sqlx::query("INSERT INTO estimates (id, tenant_id, service_lead_id, customer_id, description, min_price_cents, max_price_cents, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft')")
@@ -550,6 +580,7 @@ impl Department for SalesAgent {
                     "customer_id": customer_id_val,
                     "service_lead_id": service_lead_id,
                     "estimate_id": estimate_id,
+                    "proposal_id": proposal_id,
                     "deposit_requirement_id": deposit_requirement_id,
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,

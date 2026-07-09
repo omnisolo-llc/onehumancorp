@@ -355,3 +355,16 @@ proto_library(
     srcs = ["search.proto"],
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "project_request_proto",
+    srcs = ["project_request.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "project_request",
+    proto = ":project_request_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
