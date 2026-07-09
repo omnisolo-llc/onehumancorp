@@ -85,7 +85,7 @@ importers:
         specifier: ^1.28.1
         version: 1.28.1
       '@playwright/test':
-        specifier: ^1.50.1
+        specifier: ^1.61.1
         version: 1.61.1
       '@tailwindcss/postcss':
         specifier: ^4.3.0
