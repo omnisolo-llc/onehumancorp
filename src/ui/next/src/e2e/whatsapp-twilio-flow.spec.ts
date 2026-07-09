@@ -21,11 +21,11 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
     if (btnText?.includes('Connect')) {
       await actionBtn.click();
       await expect(page.getByRole('heading', { name: /Connect Twilio for WhatsApp/i })).toBeVisible();
-      await page.getByPlaceholder('ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX').fill('ACtestaccountsid');
-      await page.getByPlaceholder('your_auth_token').fill('testauthtoken');
-      await page.getByPlaceholder('+1234567890').fill('+1987654321'); // using a unique number for this test suite
+      await page.getByLabel('Account SID').fill('ACtestaccountsid');
+      await page.getByLabel('Auth Token').fill('testauthtoken');
+      await page.getByLabel('WhatsApp Phone Number').fill('+1987654321'); // using a unique number for this test suite
       await page.getByRole('button', { name: /Save & Connect/i }).click();
-      await expect(page.getByText(/Twilio for WhatsApp connected/i)).toBeVisible();
+      await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
     } else {
       expect(btnText).toContain('Manage');
     }
@@ -38,11 +38,11 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
     const actionBtn = whatsappCard.getByRole('button');
     if (await actionBtn.textContent() !== 'Manage') {
       await actionBtn.click();
-      await page.getByPlaceholder('ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX').fill('ACtestaccountsid');
-      await page.getByPlaceholder('your_auth_token').fill('testauthtoken');
-      await page.getByPlaceholder('+1234567890').fill('+1987654321');
+      await page.getByLabel('Account SID').fill('ACtestaccountsid');
+      await page.getByLabel('Auth Token').fill('testauthtoken');
+      await page.getByLabel('WhatsApp Phone Number').fill('+1987654321');
       await page.getByRole('button', { name: /Save & Connect/i }).click();
-      await expect(page.getByText(/Twilio for WhatsApp connected/i)).toBeVisible();
+      await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
     }
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
@@ -66,11 +66,11 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
     const actionBtn = whatsappCard.getByRole('button');
     if (await actionBtn.textContent() !== 'Manage') {
       await actionBtn.click();
-      await page.getByPlaceholder('ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX').fill('ACtestaccountsid');
-      await page.getByPlaceholder('your_auth_token').fill('testauthtoken');
-      await page.getByPlaceholder('+1234567890').fill('+1987654321');
+      await page.getByLabel('Account SID').fill('ACtestaccountsid');
+      await page.getByLabel('Auth Token').fill('testauthtoken');
+      await page.getByLabel('WhatsApp Phone Number').fill('+1987654321');
       await page.getByRole('button', { name: /Save & Connect/i }).click();
-      await expect(page.getByText(/Twilio for WhatsApp connected/i)).toBeVisible();
+      await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
     }
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
