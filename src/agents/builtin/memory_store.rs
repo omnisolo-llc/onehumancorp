@@ -587,14 +587,15 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE AND last_referenced_at < $1)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE AND last_referenced_at < ?)")
+                    .bind(older_than)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -697,6 +698,33 @@ impl VectorRepository {
         if loser.owner_override && !updated_winner.owner_override {
             updated_winner.owner_override = true;
         }
+
+        // Merge metadata conservatively (winner's keys take precedence)
+        let merged_metadata = match (winner.metadata.as_ref(), loser.metadata.as_ref()) {
+            (Some(w_meta), Some(l_meta)) => {
+                let w_val: Result<serde_json::Value, _> = serde_json::from_str(w_meta);
+                let l_val: Result<serde_json::Value, _> = serde_json::from_str(l_meta);
+                if let (
+                    Ok(serde_json::Value::Object(mut w_obj)),
+                    Ok(serde_json::Value::Object(l_obj)),
+                ) = (w_val, l_val)
+                {
+                    for (k, v) in l_obj {
+                        if !w_obj.contains_key(&k) {
+                            w_obj.insert(k, v);
+                        }
+                    }
+                    Some(serde_json::to_string(&w_obj).unwrap_or_default())
+                } else {
+                    winner.metadata.clone()
+                }
+            }
+            (Some(w_meta), None) => Some(w_meta.clone()),
+            (None, Some(l_meta)) => Some(l_meta.clone()),
+            (None, None) => None,
+        };
+        updated_winner.metadata = merged_metadata;
+
         self.upsert(&updated_winner).await?;
         Ok(())
     }
@@ -1143,6 +1171,116 @@ mod tests {
         assert_eq!(record.id, deserialized.id);
         assert_eq!(record.embedding, deserialized.embedding);
         assert_eq!(record.created_at, deserialized.created_at);
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_conservative_logic() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let threshold_date = chrono::Utc::now() - chrono::Duration::days(180);
+        let very_old_date = chrono::Utc::now() - chrono::Duration::days(200);
+        let recent_date = chrono::Utc::now() - chrono::Duration::days(5);
+
+        // Record 1: Should be pruned (old, no override, low ref count, TASK_SUMMARY)
+        let rec1 = EmbeddingRecord {
+            id: "rec1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "task summary old".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: very_old_date,
+            last_referenced_at: very_old_date,
+            reference_count: 1, // <= 1
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 2: Should NOT be pruned (TASK_SUMMARY, but ref count >= 2)
+        let rec2 = EmbeddingRecord {
+            id: "rec2".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "task summary high ref".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: very_old_date,
+            last_referenced_at: very_old_date,
+            reference_count: 2,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 3: Should NOT be pruned (low reliability, but recent)
+        let rec3 = EmbeddingRecord {
+            id: "rec3".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "low reliability recent".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: recent_date,
+            last_referenced_at: recent_date,
+            reference_count: 0,
+            reliability_score: 10,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record 4: Should be pruned (low reliability, old)
+        let rec4 = EmbeddingRecord {
+            id: "rec4".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "low reliability old".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: very_old_date,
+            last_referenced_at: very_old_date,
+            reference_count: 0,
+            reliability_score: 10,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&rec1).await.unwrap();
+        repo.upsert(&rec2).await.unwrap();
+        repo.upsert(&rec3).await.unwrap();
+        repo.upsert(&rec4).await.unwrap();
+
+        repo.prune_stale(threshold_date).await.unwrap();
+
+        assert!(repo.get_by_id("rec1").await.unwrap().is_none());
+        assert!(repo.get_by_id("rec2").await.unwrap().is_some());
+        assert!(repo.get_by_id("rec3").await.unwrap().is_some());
+        assert!(repo.get_by_id("rec4").await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -2151,6 +2289,85 @@ mod get_conflicts_tests {
         assert_eq!(id, "rec4_a");
         // new ref count = r1.reference_count (1) + r2.reference_count (2) = 3
         assert_eq!(ref_count, 3);
+    }
+
+    #[tokio::test]
+    async fn test_resolve_conflict_metadata_merge() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await;
+
+        let repo = VectorRepository::new_sqlite(pool.clone());
+        let now = chrono::Utc::now();
+
+        let winner = EmbeddingRecord {
+            id: "winner_id".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "winner content".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 5,
+            reliability_score: 90,
+            owner_override: false,
+            metadata: Some(r#"{"key1": "winner1", "key2": "winner2"}"#.to_string()),
+        };
+
+        let loser = EmbeddingRecord {
+            id: "loser_id".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "loser content".to_string(),
+            embedding: vec![0.1; 1536],
+            source_type: "NOTES".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 3,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: Some(r#"{"key2": "loser2", "key3": "loser3"}"#.to_string()),
+        };
+
+        repo.upsert(&winner).await.unwrap();
+        repo.upsert(&loser).await.unwrap();
+
+        repo.resolve_conflict(&winner, &loser).await.unwrap();
+
+        let resolved = repo.get_by_id("winner_id").await.unwrap().unwrap();
+
+        let metadata: serde_json::Value = serde_json::from_str(&resolved.metadata.unwrap()).unwrap();
+        assert_eq!(metadata["key1"], "winner1");
+        assert_eq!(metadata["key2"], "winner2");
+        assert_eq!(metadata["key3"], "loser3");
+        assert_eq!(resolved.reference_count, 8); // 5 + 3
+
+        // Ensure loser is deleted
+        let loser_check = repo.get_by_id("loser_id").await.unwrap();
+        assert!(loser_check.is_none());
     }
 
     #[tokio::test]
@@ -4112,9 +4329,9 @@ mod get_and_delete_tests {
             metadata: None,
         };
 
-        // 4. Should be pruned (low reliability score)
-        let prune_unreliable = EmbeddingRecord {
-            id: "prune_unreliable".to_string(),
+        // 4. Should NOT be pruned (low reliability score but recent - NEW CONSERVATIVE LOGIC)
+        let keep_unreliable_recent = EmbeddingRecord {
+            id: "keep_unreliable_recent".to_string(),
             tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "recent unreliable stuff".to_string(),
@@ -4144,11 +4361,28 @@ mod get_and_delete_tests {
             metadata: None,
         };
 
+        // 6. Should be pruned (unreliable and old)
+        let prune_unreliable_old = EmbeddingRecord {
+            id: "prune_unreliable_old".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old unreliable stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 10,
+            reliability_score: 10, // < 20
+            owner_override: false,
+            metadata: None,
+        };
+
         repo.upsert(&prune_stale).await.unwrap();
         repo.upsert(&keep_override).await.unwrap();
         repo.upsert(&keep_ref_count).await.unwrap();
-        repo.upsert(&prune_unreliable).await.unwrap();
+        repo.upsert(&keep_unreliable_recent).await.unwrap();
         repo.upsert(&keep_wrong_type).await.unwrap();
+        repo.upsert(&prune_unreliable_old).await.unwrap();
 
         repo.prune_stale(threshold_time).await.unwrap();
 
@@ -4157,8 +4391,12 @@ mod get_and_delete_tests {
             "Should have pruned stale task summary"
         );
         assert!(
-            repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
-            "Should have pruned unreliable record"
+            repo.get_by_id("prune_unreliable_old").await.unwrap().is_none(),
+            "Should have pruned unreliable and old record"
+        );
+        assert!(
+            repo.get_by_id("keep_unreliable_recent").await.unwrap().is_some(),
+            "Should have kept unreliable but recent record"
         );
 
         assert!(
