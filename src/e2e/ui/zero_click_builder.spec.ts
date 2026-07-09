@@ -68,7 +68,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     await generateBtn.click();
 
     // 5. Wait for the approval screen to appear
-    await expect(page.locator('#step-approval')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 15000 });
 
     // Verify preview and deposit policy text
     await expect(page.locator('#approval-details')).toBeVisible();

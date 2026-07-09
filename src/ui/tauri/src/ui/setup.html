@@ -463,25 +463,30 @@
         font-size: 14px;
         line-height: 1.5;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
       }
       .chat-message.assistant .chat-bubble {
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-bottom-left-radius: 4px;
         color: #1d1d1f;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
       }
       @media (prefers-color-scheme: dark) {
         .chat-message.assistant .chat-bubble {
           background: rgba(40, 40, 45, 0.8);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
-        }
+          border-radius: 16px;
+          border-bottom-left-radius: 4px;
+      }
       }
       .chat-message.user .chat-bubble {
         background: #0066FF;
         border: 1px solid #0052cc;
-        border-bottom-right-radius: 4px;
         color: white;
+        border-radius: 16px;
+        border-bottom-right-radius: 4px;
       }
       .chat-sender {
         font-size: 11px;
@@ -1148,7 +1153,8 @@
           backdrop-filter: blur(30px) saturate(210%) !important;
           -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
+          border-radius: 16px;
+      }
         .context-card:hover {
           background: rgba(40, 40, 45, 0.7) !important;
         }
@@ -3546,23 +3552,6 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for inputs
-      document.querySelectorAll("select, input").forEach((input) => {
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            if (e.target.id === "chat-input" || e.target.id === "chat-image-url") {
-              return;
-            }
-            e.preventDefault();
-            const step = e.target.closest(".step");
-            const nextBtn =
-              step.querySelector(".next-step-btn") ||
-              step.querySelector("#finish-btn");
-            if (nextBtn) nextBtn.click();
-          }
-        });
-      });
-
       document.querySelectorAll(".prev-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const prevStepId = e.target.getAttribute("data-prev");
@@ -4331,24 +4320,7 @@
         });
       }
 
-      // Enter key support for text, email, and password inputs
-      document
-        .querySelectorAll(
-          'input[type="text"], input[type="email"], input[type="password"]',
-        )
-        .forEach((input) => {
-          input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const step = e.target.closest(".step");
-              const nextBtn =
-                step.querySelector(".next-step-btn") ||
-                step.querySelector("#finish-btn");
-              if (nextBtn) nextBtn.click();
-            }
-          });
-        });
-    </script>
+      </script>
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {

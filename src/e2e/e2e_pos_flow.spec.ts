@@ -43,14 +43,6 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Verify unlocked and shows staff name
     await expect(page.locator('h1', { hasText: 'Carlos' })).toBeVisible({ timeout: 10000 });
 
-    // Setup an intercept to the backend transactions sync call to avoid failing
-    await page.route('**/api/v1/payments/terminal/sync_offline', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, failed_transaction_ids: [] }),
-      });
-    });
 
     // Test Centralized Inventory & Distributed POS Architecture
     // Trigger offline conflict generation

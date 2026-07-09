@@ -891,6 +891,7 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_triage_latency() {
         super::bench_ui_triage_latency().await;
+    bench_ui_triage_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -911,6 +912,7 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_ledger_latency() {
         super::bench_ui_ledger_latency().await;
+    bench_ui_ledger_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1026,6 +1028,7 @@ mod tests {
 
         tracing::info!("15. Ledger Latency");
         bench_ui_ledger_latency().await;
+    bench_ui_ledger_mobile_payload().await;
 
         tracing::info!("17. Priority Tasks Latency");
         bench_ui_priority_tasks_latency().await;
@@ -1200,6 +1203,7 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("15. Ledger Latency");
     bench_ui_ledger_latency().await;
+    bench_ui_ledger_mobile_payload().await;
 
     tracing::info!("17. Priority Tasks Latency");
     bench_ui_priority_tasks_latency().await;
@@ -1212,6 +1216,7 @@ pub async fn bench_hybrid_latency() {
     tracing::info!("19. Completed Tasks Latency");
     tracing::info!("20. Triage Latency");
     bench_ui_triage_latency().await;
+    bench_ui_triage_mobile_payload().await;
     tracing::info!("21. Advisory Insights Latency");
     bench_advisory_insights_latency().await;
     tracing::info!("18. Daily Work Latency");
@@ -1221,6 +1226,7 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("20. Triage Latency");
     bench_ui_triage_latency().await;
+    bench_ui_triage_mobile_payload().await;
 
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }

@@ -7,7 +7,7 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
 
 
     await page.goto('/onboarding/zero-click');
-    await page.locator('#instant-bio').click();
+    await page.locator('input[placeholder*="baker"]').click();
 
 
     // Verify mobile-first layout
