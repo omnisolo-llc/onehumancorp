@@ -121,6 +121,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "invoice_draft"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || 'Phase 1'}`
             : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup"
+            ? "Action Required: Overdue Invoice"
+            : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply"
             ? "Action Required: Approve Reply"
             : (approval as any).description ||
@@ -139,6 +142,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "social_post_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
@@ -233,6 +238,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   )
                 }
               />
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                  <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">
+                    {(approval.proposed_action || approval.context_payload)?.original_message}
+                  </p>
+                  <p className="text-[12px] text-amber-600/70 dark:text-amber-400/70 mt-1">
+                    Suggested Channel: <span className="font-semibold uppercase">{(approval.proposed_action || approval.context_payload)?.suggested_channel}</span>
+                  </p>
+                </div>
+                <div className="space-y-3 mt-2">
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Reminder</p>
+                    <p className="text-[13px] font-medium text-gray-800 dark:text-gray-200">
+                      {(approval.proposed_action || approval.context_payload)?.generated_response}
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "invoice_draft" && (
