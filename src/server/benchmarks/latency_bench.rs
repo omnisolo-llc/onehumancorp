@@ -2396,7 +2396,7 @@ pub async fn bench_ui_priority_tasks_mobile_payload() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1 OR tenant_id = $1) AND status IN (PENDING, IN_PROGRESS) ORDER BY created_at DESC LIMIT 20";
+            let query_str = "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1 OR tenant_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT 20";
             let _ = sqlx::query(query_str).bind("test").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();

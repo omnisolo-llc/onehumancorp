@@ -3,9 +3,9 @@ import { expect, test, vi, beforeEach } from 'vitest';
 import AgentsPage from './page';
 
 const mockFetch = vi.fn();
-const eventSources: MockEventSource[] = [];
+const eventSources: MockWebSocket[] = [];
 
-class MockEventSource {
+class MockWebSocket {
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   url: string;
@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   eventSources.length = 0;
   global.fetch = mockFetch;
-  (globalThis as any).EventSource = MockEventSource;
+  (globalThis as any).WebSocket = MockWebSocket;
   mockFetch.mockImplementation((url: string) => {
     if (url.includes('/api/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
@@ -191,7 +191,7 @@ test('preserves approvals and activity feed operations', async () => {
   await act(async () => { render(<AgentsPage />); });
 
   await waitFor(() => {
-    expect(eventSources[0]?.url).toBe('/api/agents/events');
+    expect(eventSources[0]?.url).toBe('ws://127.0.0.1:18789/api/v1/feed/ws');
   });
 
   fireEvent.click(screen.getByRole('button', { name: 'Activity Feed' }));

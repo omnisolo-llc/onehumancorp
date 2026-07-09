@@ -148,22 +148,28 @@ export default function AgentsPage() {
     fetchAll();
   }, []);
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-        setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        if (String(item.status || '').toLowerCase().includes('draft')) {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+
+    let ws: WebSocket | null = null;
+    if (true) {
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (event) => {
+        try {
+          const item = JSON.parse(event.data);
+          if (!item?.id || !item?.description) return;
+          setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          if (String(item.status || '').toLowerCase().includes('draft')) {
+            setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          }
+        } catch (err) {
+          console.error('Failed to parse agent event:', err);
         }
-      } catch (err) {
-        console.error('Failed to parse agent event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
+      };
+      ws.onerror = () => ws?.close();
+    }
+    return () => ws?.close();
   }, []);
   function summon(item: ExpertCatalogItem) {
     setSelected(item);

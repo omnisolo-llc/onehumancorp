@@ -52,7 +52,7 @@ macro_rules! validate_tenant_id_sqlx {
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
-pub const MAX_DB_RETRY_ATTEMPTS: u32 = 2;
+pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
@@ -316,41 +316,26 @@ impl DB {
                     use std::os::unix::fs::PermissionsExt;
 
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                                if !db_path.exists() {
-                                    let file = OpenOptions::new()
-                                        .read(true)
-                                        .write(true)
-                                        .create_new(true)
-                                        .mode(0o600)
-                                        .open(&db_path)?;
-                                    let metadata = file.metadata()?;
-                                    let mut perms = metadata.permissions();
-                                    if (perms.mode() & 0o777) != 0o600 {
-                                        perms.set_mode(0o600);
-                                        file.set_permissions(perms)?;
-                                    }
-                                } else {
-                                    let mut opts = OpenOptions::new();
-                                    opts.read(true).write(true);
-                                    #[cfg(target_os = "linux")]
-                                    opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                    #[cfg(target_os = "macos")]
-                                    opts.custom_flags(0x0100); // O_NOFOLLOW
+                                let mut opts = OpenOptions::new();
+                                opts.read(true).write(true).create(true).mode(0o600);
+                                #[cfg(target_os = "linux")]
+                                opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                #[cfg(target_os = "macos")]
+                                opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                                    let file = opts.open(&db_path)?;
-                                    let metadata = file.metadata()?;
-                                    let mut perms = metadata.permissions();
-                                    if (perms.mode() & 0o777) != 0o600 {
-                                        perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!(
-                                                "Failed to securely update existing standalone database file permissions: {}",
-                                                e
-                                            );
-                                            return Err(e.into());
-                                        }
-                            }
-                        }
+                                let file = opts.open(&db_path)?;
+                                let metadata = file.metadata()?;
+                                let mut perms = metadata.permissions();
+                                if (perms.mode() & 0o777) != 0o600 {
+                                    perms.set_mode(0o600);
+                                    if let Err(e) = file.set_permissions(perms) {
+                                        tracing::error!(
+                                            "Failed to securely update standalone database file permissions: {}",
+                                            e
+                                        );
+                                        return Err(e.into());
+                                    }
+                                }
 
                         // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
                         // to prevent them from inheriting the default umask (e.g. 0644).
@@ -3524,43 +3509,23 @@ mod security_tests_final {
                             use std::fs::OpenOptions;
                             use std::os::unix::fs::OpenOptionsExt;
                             use std::os::unix::fs::PermissionsExt;
-                            if !db_path.exists() {
-                                let file = OpenOptions::new()
-                                    .read(true)
-                                    .write(true)
-                                    .create_new(true)
-                                    .mode(0o600)
-                                    .open(&db_path)
-                                    .expect("Database URL or operation failed in test");
-                                let metadata = file
-                                    .metadata()
-                                    .expect("Database URL or operation failed in test");
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o600 {
-                                    perms.set_mode(0o600);
-                                    file.set_permissions(perms)
-                                        .expect("Database URL or operation failed in test");
-                                }
+                            let mut opts = OpenOptions::new();
+                            opts.read(true).write(true).create(true).mode(0o600);
+                            #[cfg(target_os = "linux")]
+                            opts.custom_flags(0x00020000); // O_NOFOLLOW
+                            #[cfg(target_os = "macos")]
+                            opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                            } else {
-                                let mut opts = OpenOptions::new();
-                                opts.read(true).write(true);
-                                #[cfg(target_os = "linux")]
-                                opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                opts.custom_flags(0x0100); // O_NOFOLLOW
-
-                                let file = opts.open(&db_path)
+                            let file = opts.open(&db_path)
+                                .expect("Database URL or operation failed in test");
+                            let metadata = file
+                                .metadata()
+                                .expect("Database URL or operation failed in test");
+                            let mut perms = metadata.permissions();
+                            if (perms.mode() & 0o777) != 0o600 {
+                                perms.set_mode(0o600);
+                                file.set_permissions(perms)
                                     .expect("Database URL or operation failed in test");
-                                let metadata = file
-                                    .metadata()
-                                    .expect("Database URL or operation failed in test");
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o600 {
-                                    perms.set_mode(0o600);
-                                    file.set_permissions(perms)
-                                        .expect("Database URL or operation failed in test");
-                                }
                             }
                         }
                         #[cfg(not(unix))]
