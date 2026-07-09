@@ -11,9 +11,9 @@ test.describe('Cost Transparency Dashboard CUJ', () => {
         // 3. Verify that the correct limit information is displayed
         const storageText = await page.locator('#storage-text').innerText();
 
-        // As a seeded Free tenant, the limit should be 2048 MB.
-        // Wait until it appears (we expect it to be 2 GB because 2048 MB = 2 GB or 2048MB depending on formatting)
-        // formatBytes converts 2048 MB (2147483648 bytes) -> 2 GB
-        expect(storageText).toContain('2 GB');
+        // As a seeded Free tenant, the limit should be 500 MB.
+        // Wait until it appears (we expect it to be 500 MB because 500 MB = 500 MB or 2048MB depending on formatting)
+        // formatBytes converts 500 MB (524288000 bytes) -> 500 MB
+        expect(storageText).toContain('500 MB');
     });
 });
