@@ -227,7 +227,7 @@ async fn ensure_redis_subscription() {
 
         while let Some(msg) = pubsub_stream.next().await {
             let channel_name = msg.get_channel_name().to_string();
-            if channel_name.starts_with("inventory:") || channel_name.starts_with("orders:") {
+            if channel_name.starts_with("inventory:") || channel_name.starts_with("orders:") || channel_name.starts_with("tenant_events:") {
                 if let Ok(payload) = msg.get_payload::<String>() {
                     let wrapped_msg = serde_json::json!({
                         "channel": channel_name,
@@ -318,6 +318,81 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<St
                         break;
                     }
                 }
+            }
+        }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{routing::get, Router};
+    use std::net::SocketAddr;
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::connect_async;
+    use futures::StreamExt;
+
+    #[tokio::test]
+    async fn test_ws_tenant_events() {
+        if std::env::var("REDIS_URL").is_err() {
+            unsafe {
+                std::env::set_var("REDIS_URL", "redis://127.0.0.1:6379");
+                std::env::set_var("OHC_STANDALONE_MODE", "false");
+            }
+        }
+
+        let mock_claims = ::server_common::Claims {
+            sub: "test_agent".to_string(),
+            email: "test@example.com".to_string(),
+            organization_id: Some("test_tenant_events".to_string()),
+            roles: vec!["owner".to_string()],
+            exp: 9999999999,
+            iat: 0,
+            jti: "test_jti".to_string(),
+            session_id: Some("test_session_id".to_string()),
+            username: "test_user".to_string(),
+        };
+
+        let app = Router::new()
+            .route("/ws", get(ws_sync_handler))
+            .layer(axum::extract::Extension(mock_claims));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if client.get_connection().is_ok() {
+                let ws_url = format!("ws://{}/ws?topics=tenant_events", addr);
+
+                let request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
+                let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
+
+                // Sleep briefly to ensure server has subscribed to the pubsub topic
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+                // Publish mock message
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let topic = "tenant_events:test_tenant_events";
+                let payload = "{\"message\":\"Hello world\"}";
+                let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+
+                let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                    .await
+                    .expect("Timeout")
+                    .expect("Stream closed")
+                    .expect("Error receiving");
+
+                assert!(msg.is_text());
+                assert_eq!(msg.to_text().unwrap(), payload);
             }
         }
     }
