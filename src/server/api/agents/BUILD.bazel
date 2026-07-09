@@ -13,6 +13,7 @@ exports_files(
         "webhook.rs",
         "client_intake.rs",
         "pydantic.rs",
+        "code_native.rs",
 
 
     ],
@@ -34,6 +35,7 @@ rust_library(
         "webhook.rs",
         "client_intake.rs",
         "pydantic.rs",
+        "code_native.rs",
 
 
     ],

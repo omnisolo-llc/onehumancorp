@@ -1,4 +1,5 @@
 use std::any::Any;
+use tracing::{info, error, debug};
 use std::collections::HashMap;
 use std::sync::Arc;
 /// SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state and rich data structures
@@ -143,23 +144,30 @@ impl CodeNativePipeline {
         &self,
         tools: Vec<(Arc<dyn CodeNativeTool>, serde_json::Value)>,
     ) -> Result<Vec<String>, String> {
+        info!("Starting CodeNativePipeline run_sequence with {} tools", tools.len());
+        let start_time = std::time::Instant::now();
         let mut env_lock = self.env.write().await;
         let snapshot_id = env_lock.snapshot();
+        debug!("Created atomic snapshot {} for pipeline", snapshot_id);
         let mut results = Vec::new();
-        for (tool, args) in tools {
+        for (i, (tool, args)) in tools.into_iter().enumerate() {
             match tool.execute_native(&mut env_lock, args.clone()).await {
-                Ok(res) => results.push(res),
+                Ok(res) => {
+                    debug!("Tool {} succeeded", i);
+                    results.push(res);
+                },
                 Err(e) => {
-                    // Rollback on first failure
+                    error!("Tool {} failed with error: {}. Rolling back to snapshot {}", i, e, snapshot_id);
                     let _ = env_lock.rollback(snapshot_id);
                     return Err(format!("Pipeline failed at step {}: {}", results.len(), e));
                 }
             }
         }
-        // All succeeded, commit
         env_lock.commit(snapshot_id);
+        info!("CodeNativePipeline run_sequence completed successfully in {:?}", start_time.elapsed());
         Ok(results)
     }
+
 }
 #[cfg(test)]
 mod tests {
