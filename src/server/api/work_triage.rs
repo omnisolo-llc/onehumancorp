@@ -125,7 +125,7 @@ pub async fn get_daily_work_handler(
                     let cache_t_bg = tenant_id.clone();
             let (work_res, orders_res, env_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL::jsonb as customer_info, NULL::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let mut map = serde_json::Map::new();
@@ -135,8 +135,12 @@ pub async fn get_daily_work_handler(
                         map.insert("status".to_string(), serde_json::json!(r.get::<String, _>("status")));
 
                         if !mobile_optimized {
-                            map.insert("customer_info".to_string(), serde_json::json!(r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten()));
-                            map.insert("suggested_actions".to_string(), serde_json::json!(r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten()));
+                            if let Ok(Some(ci)) = r.try_get::<Option<serde_json::Value>, _>("customer_info") {
+                                map.insert("customer_info".to_string(), ci);
+                            }
+                            if let Ok(Some(sa)) = r.try_get::<Option<serde_json::Value>, _>("suggested_actions") {
+                                map.insert("suggested_actions".to_string(), sa);
+                            }
                         }
 
                         serde_json::Value::Object(map)
@@ -227,7 +231,7 @@ pub async fn get_daily_work_handler(
                     let cache_t_bg = tenant_id.clone();
             let (work_res, orders_res, env_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL as customer_info, NULL as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let mut map = serde_json::Map::new();
@@ -237,13 +241,20 @@ pub async fn get_daily_work_handler(
                         map.insert("status".to_string(), serde_json::json!(r.get::<String, _>("status")));
 
                         if !mobile_optimized {
-                            let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
-                            let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
-
-                            map.insert("customer_info".to_string(), serde_json::json!(customer_info));
-                            map.insert("suggested_actions".to_string(), serde_json::json!(suggested_actions));
+                            if let Ok(Some(v)) = r.try_get::<Option<serde_json::Value>, _>("customer_info") {
+                                map.insert("customer_info".to_string(), v);
+                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("customer_info") {
+                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                                    map.insert("customer_info".to_string(), v);
+                                }
+                            }
+                            if let Ok(Some(v)) = r.try_get::<Option<serde_json::Value>, _>("suggested_actions") {
+                                map.insert("suggested_actions".to_string(), v);
+                            } else if let Ok(Some(s)) = r.try_get::<Option<String>, _>("suggested_actions") {
+                                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&s) {
+                                    map.insert("suggested_actions".to_string(), v);
+                                }
+                            }
                         }
 
                         serde_json::Value::Object(map)
