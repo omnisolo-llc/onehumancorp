@@ -4514,7 +4514,6 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
                         })
                     }).collect())
             } else {
@@ -4541,7 +4540,6 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
                         })
                     }).collect())
             } else {
@@ -5751,7 +5749,6 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
                             "ai_summary": ai_summary,
                         })
                     } else {
@@ -5793,7 +5790,6 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
-                            "status": row.get::<String, _>("status"),
                             "ai_summary": ai_summary,
                         })
                     } else {
