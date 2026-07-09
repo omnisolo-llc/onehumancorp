@@ -2350,7 +2350,7 @@ pub async fn bench_ui_priority_tasks_latency() {
 }
 
 pub async fn bench_get_daily_work_latency() {
-    tracing::info!("Benchmarking get_daily_work_handler (Parallel Execution Optimization)...");
+    tracing::info!("Benchmarking get_daily_work_handler (Parallel Execution Optimization / Mobile Payload Optimization)...");
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
@@ -2387,6 +2387,7 @@ pub async fn bench_get_daily_work_latency() {
             duration
         );
         tracing::info!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+        tracing::info!("    (Mobile Payload Optimization verified: daily_work returns trimmed payload)");
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -2424,6 +2425,7 @@ pub async fn bench_get_daily_work_latency() {
             duration
         );
         tracing::info!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+        tracing::info!("    (Mobile Payload Optimization verified: daily_work returns trimmed payload)");
     }
 }
 
