@@ -30,16 +30,16 @@ test.describe('Onboarding Flow', () => {
       });
     });
 
-    await page.route('**/*success.html*', async route => {
+    await page.route('**/*dashboard.html*', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
 
-    await page.route('**/*success.html', async route => {
+    await page.route('**/*dashboard.html', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
 
     // Navigate to onboarding page
-    await page.goto('http://127.0.0.1:18789/setup.html');
+     await page.goto('http://127.0.0.1:18789/setup.html');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
@@ -97,7 +97,7 @@ test.describe('Onboarding Flow', () => {
 
     // Catch any page navigation and verify success
     await Promise.all([
-      page.waitForNavigation({ url: /.*success\.html.*/, timeout: 15000 }),
+      page.waitForNavigation({ url: /.*dashboard.html.*/, timeout: 15000 }),
       publishButton.click()
     ]);
   });
@@ -129,16 +129,16 @@ test.describe('Onboarding Flow', () => {
       });
     });
 
-    await page.route('**/*success.html*', async route => {
+    await page.route('**/*dashboard.html*', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
 
-    await page.route('**/*success.html', async route => {
+    await page.route('**/*dashboard.html', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
 
     // Navigate to onboarding page
-    await page.goto('http://127.0.0.1:18789/setup.html');
+     await page.goto('http://127.0.0.1:18789/setup.html');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
@@ -196,7 +196,7 @@ test.describe('Onboarding Flow', () => {
 
     // Catch any page navigation and verify success
     await Promise.all([
-      page.waitForNavigation({ url: /.*success.html.*/, timeout: 15000 }),
+      page.waitForNavigation({ url: /.*dashboard.html.*/, timeout: 15000 }),
       publishButton.click()
     ]);
   });
