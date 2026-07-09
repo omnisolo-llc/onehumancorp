@@ -304,6 +304,19 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ?.feature_type === "ambassador_reply" && (
               <AmbassadorReplyCard
                 approval={approval}
+                isEditing={editingId === approval.id}
+                editContent={editContent}
+                setEditContent={setEditContent}
+                onEdit={() => {
+                  setEditingId(approval.id);
+                  const textToEdit = approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "";
+                  setEditContent(textToEdit);
+                }}
+                onCancelEdit={() => setEditingId(null)}
+                onSaveEdit={() => {
+                  handleDecision(approval.id, true, editContent, approval.event_source);
+                  setEditingId(null);
+                }}
                 onApprove={() =>
                   wrapDecision(
                     approval.id,
