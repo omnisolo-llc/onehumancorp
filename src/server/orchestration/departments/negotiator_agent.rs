@@ -185,8 +185,10 @@ impl Department for NegotiatorAgent {
             ],
             "proposed_slot_id": proposed_slot_id,
             "require_deposit": true,
+            "total_amount_cents": (price * 100.0) as i64,
             "deposit_amount_cents": (price * 100.0) as i64,
             "inbox_message_id": inbox_id,
+            "customer_id": customer_id,
             "generated_response": drafted_message,
         });
 
