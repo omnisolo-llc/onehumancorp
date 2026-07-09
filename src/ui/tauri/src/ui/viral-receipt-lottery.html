@@ -289,7 +289,7 @@
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
         let refId = tenantId;
 
-        // Simulate backend generation logic using the standard growth referral endpoint
+        // Fetch the referral link from the backend
         try {
           const res = await fetch('/api/v1/growth/referrals/generate', {
               method: 'POST',
@@ -308,7 +308,8 @@
               refId = data.referral_link.split('/').pop();
           }
         } catch (fetchErr) {
-            console.warn("API not available, using fallback", fetchErr);
+            console.error("API error", fetchErr);
+            throw fetchErr;
         }
 
         const baseUrl = window.location.origin;

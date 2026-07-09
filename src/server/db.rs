@@ -344,7 +344,13 @@ impl DB {
 
                         for ext_path in [&wal_path, &shm_path] {
                                     if !std::path::Path::new(ext_path).exists() {
-                                        if let Ok(file) = OpenOptions::new().read(true).write(true).create_new(true).mode(0o600).open(ext_path) {
+                                        let mut aux_opts = OpenOptions::new();
+                                        aux_opts.read(true).write(true).create_new(true).mode(0o600);
+                                        #[cfg(target_os = "linux")]
+                                        aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                        #[cfg(target_os = "macos")]
+                                        aux_opts.custom_flags(0x0100); // O_NOFOLLOW
+                                        if let Ok(file) = aux_opts.open(ext_path) {
                                             if let Ok(metadata) = file.metadata() {
                                                 let mut p = metadata.permissions();
                                                 if (p.mode() & 0o777) != 0o600 {

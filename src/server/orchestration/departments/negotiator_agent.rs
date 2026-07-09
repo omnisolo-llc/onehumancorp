@@ -71,7 +71,7 @@ impl Department for NegotiatorAgent {
 
         // We use LLM to parse intent.
         let prompt = format!(
-            "Parse this customer message into JSON with keys: intent (quote or other), service_name, confidence, original_message. Message: {}",
+            "Parse this customer message into JSON with keys: intent (quote, agree, or other), service_name, confidence, original_message. Message: {}",
             message
         );
         let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
@@ -90,6 +90,7 @@ impl Department for NegotiatorAgent {
         };
 
         let mut is_quote_intent = false;
+        let mut is_agree_intent = false;
         let mut service_name = "Service".to_string();
 
         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
@@ -97,16 +98,66 @@ impl Department for NegotiatorAgent {
             if intent == "quote" {
                 is_quote_intent = true;
                 service_name = parsed.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service").to_string();
+            } else if intent == "agree" {
+                is_agree_intent = true;
             }
         } else if message.to_lowercase().contains("fix") || message.to_lowercase().contains("repair") {
             is_quote_intent = true;
             service_name = "Emergency Repair".to_string();
+        } else if message.to_lowercase().contains("sounds good") || message.to_lowercase().contains("yes") || message.to_lowercase().contains("works for me") {
+            is_agree_intent = true;
         }
 
-        if !is_quote_intent {
+        if !is_quote_intent && !is_agree_intent {
             return Ok(()); // Handled by other agents (e.g. SalesAgent or CustomerSuccessAgent)
         }
 
+        if is_agree_intent {
+            // Check if there's a pending quote_sent for this customer
+            use sqlx::Row;
+            let pending_intake = sqlx::query("SELECT id, service_name, suggested_price, suggested_time FROM conversational_intakes WHERE tenant_id = $1 AND customer_id = $2 AND status = 'quote_sent' ORDER BY created_at DESC LIMIT 1")
+                .bind(&event.tenant_id)
+                .bind(&customer_id)
+                .fetch_optional(&pool)
+                .await;
+
+            if let Ok(Some(row)) = pending_intake {
+                let intake_id: String = row.get("id");
+                let pending_service_name: String = row.get("service_name");
+                let suggested_price: f64 = row.get("suggested_price");
+                let suggested_time: String = row.get("suggested_time");
+
+                // Transition state
+                let _ = sqlx::query("UPDATE conversational_intakes SET status = 'payment_pending', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&intake_id)
+                    .execute(&pool)
+                    .await;
+
+                let action_payload = serde_json::json!({
+                    "feature_type": "autonomous_quote_agreed",
+                    "service": pending_service_name,
+                    "customer_inquiry": message,
+                    "suggested_price": suggested_price,
+                    "suggested_time": suggested_time,
+                    "deposit_amount_cents": (suggested_price * 100.0) as i64,
+                    "inbox_message_id": inbox_id,
+                });
+
+                self.orchestrator
+                    .execute_action(
+                        DepartmentType::CustomerSuccess,
+                        format!("Finalize booking and send deposit link for {}", pending_service_name),
+                        event.tenant_id.clone(),
+                        ActionRisk::AutoExecute,
+                        action_payload,
+                    )
+                    .await
+                    .map(|_| ())?;
+                return Ok(());
+            }
+        }
+
+        // Generate quote (is_quote_intent)
         // Fetch Dynamic Pricing based on tenant's heuristics instead of hardcoding
         let mut price = 120.0;
         let heuristics_res = sqlx::query("SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1")
@@ -175,7 +226,7 @@ impl Department for NegotiatorAgent {
             .execute(&pool).await;
 
         let action_payload = serde_json::json!({
-            "feature_type": "autonomous_quote",
+            "feature_type": "autonomous_quote_draft",
             "service": service_name,
             "customer_inquiry": message,
             "suggested_price": price,
@@ -185,8 +236,10 @@ impl Department for NegotiatorAgent {
             ],
             "proposed_slot_id": proposed_slot_id,
             "require_deposit": true,
+            "total_amount_cents": (price * 100.0) as i64,
             "deposit_amount_cents": (price * 100.0) as i64,
             "inbox_message_id": inbox_id,
+            "customer_id": customer_id,
             "generated_response": drafted_message,
         });
 
@@ -195,7 +248,7 @@ impl Department for NegotiatorAgent {
                 DepartmentType::CustomerSuccess,
                 format!("Draft quote and propose schedule for {}", service_name),
                 event.tenant_id.clone(),
-                ActionRisk::AutoExecute, // or DraftForReview
+                ActionRisk::AutoExecute,
                 action_payload,
             )
             .await
@@ -293,6 +346,21 @@ mod tests {
 
         assert!(is_quote_intent);
         assert_eq!(service_name, "Leaky Sink Repair");
+    }
+
+    #[test]
+    fn test_negotiator_agent_intent_parsing_agree() {
+        let raw_response = r#"{"intent":"agree", "confidence":0.99}"#;
+        let mut is_agree_intent = false;
+
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
+            let intent = parsed.get("intent").and_then(|v| v.as_str()).unwrap_or("");
+            if intent == "agree" {
+                is_agree_intent = true;
+            }
+        }
+
+        assert!(is_agree_intent);
     }
 
     #[test]
