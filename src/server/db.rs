@@ -3926,4 +3926,3 @@ mod e2e_search_workspace_tests {
         }
     }
 }
-// Proactive optimization: remove unused dead code.
