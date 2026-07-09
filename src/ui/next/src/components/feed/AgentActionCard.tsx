@@ -118,7 +118,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
         </div>
         <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide break-words">
           {(approval.proposed_action || approval.context_payload)
-            ?.feature_type === "invoice_draft"
+            ?.feature_type === "invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
+          (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || 'Phase 1'}`
             : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply"
@@ -249,7 +252,26 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">Total Amount Due</span>
-                    <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}</span>
+                    <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                  <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">Overdue Invoice Follow-up</p>
+                  <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70">Review the drafted reminder. Select "Approve & Send" to dispatch to the client.</p>
+                </div>
+                <div className="space-y-3 mt-2">
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Draft Message ({(approval.proposed_action || approval.context_payload)?.suggested_channel || "email"})</p>
+                    <p className="text-[13px] font-medium text-gray-800 dark:text-gray-200">{(approval.proposed_action || approval.context_payload)?.generated_response}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Original Invoice Details</p>
+                    <p className="text-[12px] text-gray-600 dark:text-gray-400">{(approval.proposed_action || approval.context_payload)?.original_message}</p>
+                  </div>
+                </div>
+              </div>
+            )}</span>
                   </div>
                 </div>
               </div>
@@ -1875,6 +1897,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
+        (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button

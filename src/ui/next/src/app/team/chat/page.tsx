@@ -194,7 +194,21 @@ export default function TeamChatPage() {
                       )}
                     </div>
 
-                    {msg.card.feature_type === 'quote_draft' ? (
+                    {msg.card.feature_type === 'invoice_followup' ? (
+                      <div data-testid="invoice-followup-card">
+                        <div className="flex items-center gap-2 mb-2">
+                           <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-200">
+                             Action Required
+                           </span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 mb-1">Overdue Invoice Follow-up</p>
+                        <p className="text-xs text-gray-600 mb-2">{msg.card.original_message}</p>
+                        <div className="bg-white/50 p-2 rounded-lg border border-gray-100 mb-4">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Drafted {msg.card.suggested_channel || "Email"}</p>
+                          <p className="text-xs text-gray-800 italic">"{msg.card.generated_response}"</p>
+                        </div>
+                      </div>
+                    ) : {msg.card.feature_type === 'quote_draft' ? (
                       <div data-testid="quote-draft-card">
                         <p className="text-sm font-semibold text-gray-900 mb-1">Draft Quote: {msg.card.department} for Customer</p>
                         <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
@@ -214,7 +228,7 @@ export default function TeamChatPage() {
                           className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
                           data-testid="approve-action-btn"
                         >
-                          {msg.card.feature_type === 'quote_draft' ? 'Approve & Send' : 'Approve & Execute'}
+                          {msg.card.feature_type === \'quote_draft\' || msg.card.feature_type === \'invoice_followup\' ? \'Approve & Send\' : \'Approve & Execute\'}
                         </button>
                         <button
                           type="button"
@@ -223,7 +237,7 @@ export default function TeamChatPage() {
                         >
                           Edit Details
                         </button>
-                        {msg.card.feature_type === 'quote_draft' && (
+                        {(msg.card.feature_type === \'quote_draft\' || msg.card.feature_type === \'invoice_followup\') && (
                            <button
                              type="button"
                              onClick={() => setMessages(prev => prev.filter(m => m.id !== msg.id))}

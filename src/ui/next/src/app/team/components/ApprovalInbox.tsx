@@ -587,6 +587,24 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+                  {req.payload?.feature_type === "invoice_followup" && (
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3 max-w-full break-words">
+                      <div className="flex items-center gap-2 text-amber-600 font-semibold text-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Overdue Invoice Follow-up
+                      </div>
+                      <div className="text-xs text-gray-700 font-medium break-words">
+                        {req.payload.original_message}
+                      </div>
+                      <div className="bg-white/50 p-3 rounded-lg relative mt-2 text-sm text-gray-800">
+                         <p className="font-bold mb-1 text-xs text-gray-500 uppercase">Drafted {req.payload.suggested_channel || "Email"}</p>
+                         <p className="italic">"{req.payload.generated_response}"</p>
+                      </div>
+                    </div>
+                  )}
+
                   {req.payload?.feature_type === "low_stock_restock" && (
                     <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
@@ -670,7 +688,7 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")) {
+                        if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply" || payload.feature_type === "invoice_followup")) {
                           setSelectedReview(req);
                           if (payload.feature_type === "quote_draft") {
                             setEditedQuote({
@@ -684,7 +702,7 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
-                      {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")
+                      {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply" || payload.feature_type === "invoice_followup")
                         ? "Edit"
                         : "Reject / Edit"}
                     </button>
@@ -696,6 +714,7 @@ export default function ApprovalInbox({
                              suggested_price: parseFloat(editedQuote.suggested_price) || 0,
                              scope: editedQuote.scope
                            });
+                      }
                         } else {
                            onApprove(req.id);
                         }
@@ -707,6 +726,8 @@ export default function ApprovalInbox({
                         : req.payload?.feature_type === "social_post_draft"
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
+                        ? "Approve & Send"
+                        : req.payload?.feature_type === "invoice_followup"
                         ? "Approve & Send"
                         : req.payload?.feature_type === "ambassador_reply"
                         ? "Send Draft"
@@ -742,7 +763,18 @@ export default function ApprovalInbox({
                 </div>
               </div>
 
-              {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? (
+              {extractPayload(selectedReview.description).payload?.feature_type === "invoice_followup" ? (
+                <div className="mb-6 space-y-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Edit Message</label>
+                    <textarea
+                      value={editedQuote?.scope || extractPayload(selectedReview.description).payload?.generated_response || ''}
+                      onChange={(e) => setEditedQuote(prev => prev ? { ...prev, scope: e.target.value } : { suggested_price: '0', scope: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 bg-white min-h-[100px]"
+                    />
+                  </div>
+                </div>
+              ) : extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? (
                 <div className="mb-6 space-y-4">
                   <div>
                     <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Suggested Price ($)</label>
@@ -799,8 +831,14 @@ export default function ApprovalInbox({
                 </button>
                 <button
                   onClick={() => {
-                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote) {
-                      onApprove(selectedReview.id, {
+                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote || (extractPayload(selectedReview.description).payload?.feature_type === "invoice_followup" && editedQuote)) {
+                      if (extractPayload(selectedReview.description).payload?.feature_type === "invoice_followup") {
+                         onApprove(selectedReview.id, {
+                            ...extractPayload(selectedReview.description).payload,
+                            generated_response: editedQuote.scope
+                         });
+                      } else {
+                         onApprove(selectedReview.id, {
                          ...extractPayload(selectedReview.description).payload,
                          suggested_price: parseFloat(editedQuote.suggested_price) || 0,
                          scope: editedQuote.scope
@@ -814,7 +852,7 @@ export default function ApprovalInbox({
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                   data-testid="modal-approve-btn"
                 >
-                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
+                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : extractPayload(selectedReview.description).payload?.feature_type === "invoice_followup" ? "Approve & Send" : "Send Draft"}
                 </button>
               </div>
             </div>
