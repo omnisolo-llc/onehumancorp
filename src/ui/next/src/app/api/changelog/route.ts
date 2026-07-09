@@ -15,11 +15,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ error: "Backend unavailable" }, { status: 502 });
+    return NextResponse.json([], { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
       console.error("Failed to fetch changelog from backend:", e);
     }
-    return NextResponse.json({ error: "Backend unavailable" }, { status: 502 });
+    return NextResponse.json([], { status: 200 });
   }
 }
