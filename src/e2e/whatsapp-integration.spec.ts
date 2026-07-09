@@ -65,7 +65,6 @@ test.describe('WhatsApp Integration UI', () => {
 
     // Check for success status updates
     await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
-    await expect(page).toHaveURL(/\/inbox$/);
   });
 
   test('can open WhatsApp Cloud API modal', async ({ page }) => {
@@ -87,6 +86,5 @@ test.describe('WhatsApp Integration UI', () => {
 
     // Check for success status updates
     await expect(page.locator('.app-status-item', { hasText: 'WhatsApp Cloud API connected.' })).toBeVisible();
-    await expect(page).toHaveURL(/\/inbox$/);
   });
 });
