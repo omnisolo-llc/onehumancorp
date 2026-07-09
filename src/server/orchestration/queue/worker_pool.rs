@@ -30,6 +30,7 @@ impl WorkerPool {
 
             let handle = tokio::spawn(async move {
                 tracing::info!("Worker {} started listening for {:?}", i, types_clone);
+                let mut current_sleep_ms = 10;
 
                 loop {
                     tokio::select! {
@@ -39,10 +40,11 @@ impl WorkerPool {
                         }
 
                         // Wait a bit before polling again to avoid busy-waiting loop without jobs
-                        _ = tokio::time::sleep(Duration::from_millis(500)) => {
+                        _ = tokio::time::sleep(Duration::from_millis(current_sleep_ms)) => {
                             let type_strs: Vec<&str> = types_clone.iter().map(AsRef::as_ref).collect();
                             match queue_clone.dequeue(type_strs).await {
                                 Ok(Some(job)) => {
+                                    current_sleep_ms = 10;
                                     tracing::debug!("Worker {} processing job {}", i, job.id);
                                     let job_id = job.id.clone();
 
@@ -85,11 +87,13 @@ impl WorkerPool {
                                     }
                                 }
                                 Ok(None) => {
-                                    // No jobs, loop back and sleep
+                                    // No jobs, loop back and sleep with backoff
+                                    current_sleep_ms = std::cmp::min(current_sleep_ms * 2, 500);
                                 }
                                 Err(e) => {
                                     ::server_telemetry::record_error_signal("[bug] Worker failed to dequeue");
                                     tracing::trace!("Worker {} failed to dequeue: {}", i, e);
+                                    current_sleep_ms = std::cmp::min(current_sleep_ms * 2, 500);
                                 }
                             }
                         }
