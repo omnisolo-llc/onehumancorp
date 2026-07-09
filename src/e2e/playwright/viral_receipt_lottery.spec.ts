@@ -1,13 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Viral Receipt Lottery Generator', () => {
   test('should load the generator and generate a lottery link', async ({ page }) => {
-    // 1. We mock the backend response specifically because this is a static UI page
-    // in the tauri bundle that simulates growth mechanics.
-    await page.route('/api/v1/growth/referrals/generate', async route => {
-      await route.fulfill({ json: { referral_link: 'http://example.com/ref/lottery-test-123' } });
-    });
-
     // 2. Navigate to dashboard and click the new link
     await page.goto('/ui/dashboard.html');
     const link = page.locator('#viral-receipt-lottery-link');
@@ -32,10 +26,10 @@ test.describe('Viral Receipt Lottery Generator', () => {
 
     // 7. Check share link generated correctly
     const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/win\/lottery-test-123/);
+    await expect(shareLink).toHaveValue(/win\/[\w-]+/);
 
     // 8. Check that preview URL updated
     const previewUrl = page.locator('#preview-url');
-    await expect(previewUrl).toHaveText('ohc.app/win/lottery-test-123');
+    await expect(previewUrl).toHaveText(/ohc.app\/win\/[\w-]+/);
   });
 });

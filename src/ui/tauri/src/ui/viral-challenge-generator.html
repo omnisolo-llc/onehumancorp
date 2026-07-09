@@ -362,22 +362,39 @@
             generateBtn.textContent = 'Generating...';
 
             try {
-                // Simulate backend API call or use local URL construction
                 const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+                let generatedUrl = '';
 
-                // For a static client-side generator without requiring a backend endpoint in the mockup:
-                const baseUrl = window.location.origin;
-                const params = new URLSearchParams({
-                    name: name,
-                    days: duration,
-                    reward: reward,
-                    tenant: tenantId
-                });
+                try {
+                    const res = await fetch('/api/v1/growth/referrals/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                        }
+                    });
 
-                // Pretend network delay
-                await new Promise(resolve => setTimeout(resolve, 500));
+                    if (!res.ok) {
+                        throw new Error("API returned " + res.status);
+                    }
+                    const data = await res.json();
+                    let refId = tenantId;
+                    if (data.referral_link) {
+                        refId = data.referral_link.split('/').pop();
+                    }
+                    const baseUrl = window.location.origin;
+                    const params = new URLSearchParams({
+                        name: name,
+                        days: duration,
+                        reward: reward,
+                        ref: refId
+                    });
+                    generatedUrl = `${baseUrl}/challenge/join?${params.toString()}`;
+                } catch (fetchErr) {
+                    console.error("API error", fetchErr);
+                    throw fetchErr;
+                }
 
-                const generatedUrl = `${baseUrl}/challenge/join?${params.toString()}`;
                 generatedUrlInput.value = generatedUrl;
                 resultArea.style.display = 'block';
 
