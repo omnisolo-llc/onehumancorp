@@ -4084,5 +4084,79 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+    // --- Autonomous Proposal Modal ---
+    let currentProposalId = null;
+    function openProposalModal(id, price, scope) {
+        currentProposalId = id;
+        const modal = document.getElementById('proposal-modal');
+        document.getElementById('modal-price-input').value = price;
+        document.getElementById('modal-quote-total-span').innerText = '$' + parseFloat(price).toFixed(2);
+        modal.classList.remove('hidden');
+    }
+
+    function closeProposalModal() {
+        document.getElementById('proposal-modal').classList.add('hidden');
+        currentProposalId = null;
+    }
+
+    function updateProposalTotal(val) {
+        const num = parseFloat(val);
+        if (!isNaN(num)) {
+            document.getElementById('modal-quote-total-span').innerText = '$' + num.toFixed(2);
+        }
+    }
+
+    function toggleDeposit() {
+        const sw = document.getElementById('modal-deposit-switch');
+        const current = sw.getAttribute('aria-checked') === 'true';
+        sw.setAttribute('aria-checked', !current);
+    }
+
+    async function approveProposalModal() {
+        if (!currentProposalId) return;
+        try {
+            await fetch(`http://127.0.0.1:18789/${currentProposalId}/approve`, { method: 'POST' });
+
+            closeProposalModal();
+            document.querySelectorAll('[data-testid="quote-draft-card"]').forEach(e => e.style.display = 'none');
+
+            // push an activity feed item
+            const feedContainer = document.getElementById('feed-items');
+            if (feedContainer) {
+              const item = document.createElement('div');
+              item.innerHTML = `<div style="padding: 12px; border-bottom: 1px solid #eee;">Draft proposal for new intake: Plumbing Fix - APPROVED</div>`;
+              feedContainer.prepend(item);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+</script>
+
+  <!-- Autonomous Proposal Modal -->
+  <div id="proposal-modal" role="dialog" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+    <div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4);">
+      <h2 style="margin: 0 0 16px 0; font-size: 20px; color: #1D1D1F;">Review Quote</h2>
+      <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 14px; margin-bottom: 4px; color: #1d1d1f; font-weight: 600;">Price ($)</label>
+          <input type="number" id="modal-price-input" onchange="updateProposalTotal(this.value)" oninput="updateProposalTotal(this.value)" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <span style="font-size: 16px; font-weight: 600; color: #1d1d1f;">Require Deposit</span>
+          <button id="modal-deposit-switch" role="switch" aria-checked="false" onclick="toggleDeposit()" style="width: 44px; height: 24px; border-radius: 12px; background: #ccc; border: none; cursor: pointer; position: relative; min-height: 44px; min-width: 44px;"></button>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; font-size: 18px; font-weight: 700; color: #1d1d1f;">
+          <span>Total:</span>
+          <span data-testid="modal-quote-total" id="modal-quote-total-span">$0.00</span>
+      </div>
+      <div style="display: flex; gap: 12px;">
+          <button onclick="closeProposalModal()" style="flex: 1; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.05); border: none; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Cancel</button>
+          <button data-testid="modal-approve-btn" onclick="approveProposalModal()" style="flex: 1; padding: 12px; border-radius: 8px; background: #0066FF; color: white; border: none; font-weight: 700; cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Send</button>
+      </div>
+    </div>
+  </div>
+  <style>.hidden { display: none !important; }</style>
+
 </body>
 </html>

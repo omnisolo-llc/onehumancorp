@@ -105,6 +105,23 @@ async fn draft_agent(
     State(pool): State<PgPool>,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
+    let request_id = Uuid::new_v4().to_string();
+
+    let insert_req_res = sqlx::query(
+        "INSERT INTO project_requests (id, tenant_id, customer_name, customer_email, details, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PROPOSAL_DRAFTED', NOW(), NOW())"
+    )
+    .bind(&request_id)
+    .bind(&payload.tenant_id)
+    .bind("Client") // simplified
+    .bind("client@example.com")
+    .bind(&payload.inquiry)
+    .execute(&pool)
+    .await;
+
+    if let Err(e) = insert_req_res {
+        tracing::error!("Failed to insert project request: {}", e);
+    }
+
     let llm = Arc::new(AdapterLlm {});
     let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
 
@@ -181,6 +198,44 @@ async fn draft_agent(
 
         if let Err(e) = res {
             tracing::error!("Failed to insert new proposal line item: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
+    let project_id = Uuid::new_v4().to_string();
+    let project_title = format!("Proposal #{} Project", proposal.id);
+
+    let insert_proj_res = sqlx::query(
+        "INSERT INTO projects (id, tenant_id, customer_id, title, status, proposal_id, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Active', $5, NOW(), NOW())"
+    )
+    .bind(&project_id)
+    .bind(&proposal.tenant_id)
+    .bind(&proposal.customer_id)
+    .bind(&project_title)
+    .bind(&proposal.id)
+    .execute(&mut *tx)
+    .await;
+
+    if let Err(e) = insert_proj_res {
+        tracing::error!("Failed to auto-generate project: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    let standard_tasks = vec!["Initial Review", "Design", "Implementation", "Testing", "Delivery"];
+    for task_title in standard_tasks {
+        let task_id = Uuid::new_v4().to_string();
+        let res = sqlx::query(
+            "INSERT INTO project_tasks (id, tenant_id, project_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())"
+        )
+        .bind(&task_id)
+        .bind(&proposal.tenant_id)
+        .bind(&project_id)
+        .bind(task_title)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = res {
+            tracing::error!("Failed to auto-generate project task: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }
