@@ -303,6 +303,7 @@ pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json:
             serde_json::json!({
                 "id": v.id,
                 "title": v.title,
+                "duration": v.duration,
                 "video_url": v.video_url
             })
         }).collect();
