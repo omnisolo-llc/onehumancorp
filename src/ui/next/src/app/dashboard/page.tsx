@@ -734,6 +734,17 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link href="/viral-tier-list-generator" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-purple-200/40 dark:border-purple-800/20 bg-gradient-to-br from-purple-50/40 to-fuchsia-50/40 dark:from-purple-900/10 dark:to-fuchsia-900/10" id="tier-list-generator-link">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
+                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Viral</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Tier List Generator</h3>
+              <p className="text-sm text-[#86868B] font-medium leading-relaxed">
+                Rank your favorites and capture leads while going viral.
+              </p>
+            </Link>
+
             <Link href="/feed" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
