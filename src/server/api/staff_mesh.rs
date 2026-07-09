@@ -883,6 +883,7 @@ pub async fn escalate_issue_handler(
 
 pub async fn get_staff_tasks_handler(
     headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -890,6 +891,7 @@ pub async fn get_staff_tasks_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let pool = crate::db::get_pool();
     let rows = sqlx::query(
         "SELECT id, tenant_id, staff_id, description, status, priority, created_at, updated_at FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC"
@@ -900,16 +902,27 @@ pub async fn get_staff_tasks_handler(
 
     let tasks = rows.map(|rows| rows.into_iter().map(|row| {
         use sqlx::Row;
-        serde_json::json!({
-            "id": row.get::<String, _>("id"),
-            "tenant_id": row.get::<String, _>("tenant_id"),
-            "staff_id": row.get::<String, _>("staff_id"),
-            "description": row.get::<String, _>("description"),
-            "status": row.get::<String, _>("status"),
-            "priority": row.get::<String, _>("priority"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
-            "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
-        })
+        if mobile_optimized {
+            serde_json::json!({
+                "id": row.get::<String, _>("id"),
+                "tenant_id": row.get::<String, _>("tenant_id"),
+                "staff_id": row.get::<String, _>("staff_id"),
+                "status": row.get::<String, _>("status"),
+                "priority": row.get::<String, _>("priority"),
+                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+            })
+        } else {
+            serde_json::json!({
+                "id": row.get::<String, _>("id"),
+                "tenant_id": row.get::<String, _>("tenant_id"),
+                "staff_id": row.get::<String, _>("staff_id"),
+                "description": row.get::<String, _>("description"),
+                "status": row.get::<String, _>("status"),
+                "priority": row.get::<String, _>("priority"),
+                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+            })
+        }
     }).collect::<Vec<_>>()).unwrap_or_default();
 
     (axum::http::StatusCode::OK, Json(serde_json::json!({ "tasks": tasks }))).into_response()
@@ -917,6 +930,7 @@ pub async fn get_staff_tasks_handler(
 
 pub async fn get_shift_summaries_handler(
     headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -924,6 +938,7 @@ pub async fn get_shift_summaries_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let pool = crate::db::get_pool();
     let rows = sqlx::query(
         "SELECT id, tenant_id, shift_date, summary_text, metrics, created_at, updated_at FROM shift_summaries WHERE tenant_id = $1 ORDER BY shift_date DESC LIMIT 30"
@@ -934,15 +949,26 @@ pub async fn get_shift_summaries_handler(
 
     let summaries = rows.map(|rows| rows.into_iter().map(|row| {
         use sqlx::Row;
-        serde_json::json!({
-            "id": row.get::<String, _>("id"),
-            "tenant_id": row.get::<String, _>("tenant_id"),
-            "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
-            "summary_text": row.get::<String, _>("summary_text"),
-            "metrics": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("metrics"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
-            "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
-        })
+        if mobile_optimized {
+            serde_json::json!({
+                "id": row.get::<String, _>("id"),
+                "tenant_id": row.get::<String, _>("tenant_id"),
+                "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
+                "summary_text": row.get::<String, _>("summary_text"),
+                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+            })
+        } else {
+            serde_json::json!({
+                "id": row.get::<String, _>("id"),
+                "tenant_id": row.get::<String, _>("tenant_id"),
+                "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
+                "summary_text": row.get::<String, _>("summary_text"),
+                "metrics": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("metrics"),
+                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+            })
+        }
     }).collect::<Vec<_>>()).unwrap_or_default();
 
     (axum::http::StatusCode::OK, Json(serde_json::json!({ "summaries": summaries }))).into_response()
