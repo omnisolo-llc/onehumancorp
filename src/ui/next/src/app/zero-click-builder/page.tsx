@@ -48,7 +48,7 @@ export default function ZeroClickBuilderPage() {
           .page-bg { background-color: #000000; }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 relative overflow-hidden">
+      <div className="w-full max-w-[375px] mx-auto glassmorphism p-6  border border-white/40 dark:border-white/10 relative overflow-hidden">
 
         {builderState === 'idle' && (
           <div className="flex flex-col gap-6 relative z-10">
