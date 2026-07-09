@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { e2eAdmin as adminPage } from './fixtures';
+import { adminPage } from './fixtures';
 
 test.describe('Memory Consolidation E2E', () => {
   test('Agent remembers custom preference over time', async ({ page }) => {

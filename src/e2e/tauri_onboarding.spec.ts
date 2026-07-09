@@ -413,7 +413,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     });
 
     await startBtn.click();
-    await expect(page).toHaveURL(/.*success.html.*/);
+    await expect(page.locator('#step-approval')).toBeVisible();
   });
 
 

@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 import { test as adminTest } from './fixtures';
 
 adminTest.describe('Viral Event RSVP Builder Loop', () => {
-  adminTest('User can configure event RSVP and see embed code with viral loop', async ({ adminPage }) => {
-    const page = adminPage;
+  adminTest('User can configure event RSVP and see embed code with viral loop', async ({ page }) => {
+
     // Navigate to the Dashboard
     await page.goto('/dashboard');
 
