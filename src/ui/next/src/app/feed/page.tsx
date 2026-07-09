@@ -214,6 +214,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateInvoiceFollowup = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-invoice-followup', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setFeed(data.items || []);
+      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      setLoading(false);
+    }
+  };
+
   const simulateBookingDraft = async () => {
     try {
       setLoading(true);
@@ -712,6 +726,13 @@ export default function FeedPage() {
              className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Shift Coverage
+          </button>
+          <button
+             onClick={simulateInvoiceFollowup}
+             data-testid="simulate-invoice-followup-btn"
+             className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Invoice Followup
           </button>
           <button
              onClick={simulateBookingDraft}
