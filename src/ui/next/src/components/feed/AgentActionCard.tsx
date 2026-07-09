@@ -140,6 +140,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "incident_resolution" ||
@@ -251,6 +253,23 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">Total Amount Due</span>
                     <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}</span>
                   </div>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                  <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">
+                    {(approval.proposed_action || approval.context_payload)?.original_message}
+                  </p>
+                  <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70">
+                    Drafted a reminder for {(approval.proposed_action || approval.context_payload)?.suggested_channel || 'email'}.
+                  </p>
+                </div>
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm relative group">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Message</span>
+                  <p className="text-[13px] text-gray-800 dark:text-gray-200 mt-1">{(approval.proposed_action || approval.context_payload)?.generated_response}</p>
                 </div>
               </div>
             )}
