@@ -1,5 +1,6 @@
 
 exports_files([
+        "project_request.rs",
         "work_triage.rs",
         "perplexity.rs","chaos.rs", "sync_gateway.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
@@ -56,6 +57,7 @@ exports_files(
         "invoice.rs",
     "quotes.rs",
         "tool_integrations.rs",
+        "project_request.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -113,6 +115,7 @@ rust_library(
         "invoice.rs",
     "quotes.rs",
         "tool_integrations.rs",
+        "project_request.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
     "//src/server/api/ohc_job_queue:srcs",

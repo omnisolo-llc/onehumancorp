@@ -315,6 +315,55 @@ impl Department for SalesAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+
+        if event.event_type == "agent_tasks" {
+            let action = event.payload.get("action").and_then(|v| v.as_str()).unwrap_or("");
+            if action == "draft_proposal" {
+                let project_request_id = event.payload.get("project_request_id").and_then(|v| v.as_str()).unwrap_or("");
+                let tenant_id = event.payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                tracing::info!("Sales Agent drafting proposal for project request: {} (tenant: {})", project_request_id, tenant_id);
+
+                // Fetch the project request details from the database
+                // Since this is a demonstration of the flow, we'll construct the action to create the draft proposal.
+                // A real implementation would query the db to get the raw_intent and prompt the LLM to generate line items.
+
+                // Proposal Draft Action Payload
+                let proposed_action = serde_json::json!({
+                    "action_type": "Create Draft Proposal",
+                    "project_request_id": project_request_id,
+                    "draft_proposal": {
+                        "title": "Custom Project Proposal",
+                        "description": "Based on your request, we have drafted the following proposal.",
+                        "line_items": [
+                            {
+                                "description": "Consultation & Planning",
+                                "unit_price_cents": 15000,
+                                "quantity": 1,
+                                "is_optional": false
+                            },
+                            {
+                                "description": "Implementation & Delivery",
+                                "unit_price_cents": 40000,
+                                "quantity": 1,
+                                "is_optional": false
+                            }
+                        ],
+                        "required_deposit_cents": 15000
+                    }
+                });
+
+                self.orchestrator.execute_action(
+                    DepartmentType::Sales,
+                    "Draft Proposal for Review".to_string(),
+                    tenant_id.to_string(),
+                    ActionRisk::DraftForReview,
+                    proposed_action,
+                ).await.map_err(|e| e.to_string())?;
+
+                return Ok(());
+            }
+        }
         if event.event_type == "tenant.order.created" {
             let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
             let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -349,6 +398,45 @@ impl Department for SalesAgent {
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+
+                    if feature_type == "draft_proposal" {
+                        let project_request_id = payload.get("project_request_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or("Project");
+                        tracing::info!("Sales proposal approved for request: {}", project_request_id);
+
+                        // Trigger Operations Agent to create a project
+                        let ops_action = serde_json::json!({
+                            "action_type": "Convert Proposal to Project",
+                            "project_request_id": project_request_id,
+                            "title": title
+                        });
+
+                        self.orchestrator.execute_action(
+                            DepartmentType::Operations,
+                            "Convert Approved Proposal".to_string(),
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            ops_action,
+                        ).await.map_err(|e| e.to_string())?;
+
+                        // Trigger Finance Agent to issue an invoice
+                        let finance_action = serde_json::json!({
+                            "action_type": "Issue Deposit Invoice",
+                            "project_request_id": project_request_id,
+                            "title": title
+                        });
+
+                        self.orchestrator.execute_action(
+                            DepartmentType::Finance,
+                            "Issue Initial Invoice".to_string(),
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            finance_action,
+                        ).await.map_err(|e| e.to_string())?;
+
+                        return Ok(());
+                    }
+
                     if feature_type == "quote_draft" {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");

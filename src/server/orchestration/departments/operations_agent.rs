@@ -158,6 +158,18 @@ impl Department for OperationsAgent {
         if event.event_type == "agent:operations:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+
+                    if feature_type == "Convert Proposal to Project" || payload.get("action_type").and_then(|v| v.as_str()) == Some("Convert Proposal to Project") {
+                        let project_request_id = payload.get("project_request_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or("Project");
+                        tracing::info!("Operations Agent creating project for request: {}", project_request_id);
+
+                        // In a real implementation, insert into projects and project_tasks tables here.
+                        // We simulate the execution logic.
+
+                        return Ok(());
+                    }
+
                     if feature_type == "shift_reassignment" {
                         let shift_id = payload.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
                         let proposed_staff_id = payload.get("proposed_staff_id").and_then(|v| v.as_str()).unwrap_or("");

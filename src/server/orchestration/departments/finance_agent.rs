@@ -28,6 +28,21 @@ impl Department for FinanceAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+
+        if event.event_type == "agent:finance:approved" {
+            if let Some(payload) = event.payload.get("original_payload") {
+                if let Some(action_type) = payload.get("action_type").and_then(|v| v.as_str()) {
+                    if action_type == "Issue Deposit Invoice" {
+                        let project_request_id = payload.get("project_request_id").and_then(|v| v.as_str()).unwrap_or("");
+                        tracing::info!("Finance Agent issuing deposit invoice for request: {}", project_request_id);
+
+                        // Simulate creating an invoice and sending an email
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

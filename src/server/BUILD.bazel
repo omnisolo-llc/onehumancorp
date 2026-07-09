@@ -43,6 +43,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:billing_api.rs",
     "//src/server/api:work_triage.rs",
     "//src/server/api:tool_integrations.rs",
+    "//src/server/api:project_request.rs",
     "//src/server/api:billing_webhook.rs",
     "//src/server/api:billing_webhook_test.rs",
     "//src/server/api:billing_api_test.rs",

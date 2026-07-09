@@ -6660,6 +6660,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest("/api/v1/project-requests", api::project_request::router(db.pool.clone(), hub.clone(), mesh_transport.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()))
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))
