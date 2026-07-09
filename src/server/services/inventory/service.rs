@@ -44,9 +44,7 @@ impl InventoryLocker for StandaloneInventoryLocker {
                 .execute(pool)
                 .await;
 
-            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, lock_val, expires_at) VALUES ($1, $2, datetime('now', '+{} seconds'))", ttl))
-                .bind(lock_key)
-                .bind(lock_id)
+            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+{} seconds'))", ttl)).bind(lock_key).bind("system").bind(lock_id)
                 .execute(pool)
                 .await;
 
@@ -65,9 +63,7 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
     async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
         if let Some(pool) = &self.pool {
-            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2")
-                .bind(lock_key)
-                .bind(expected_lock_id)
+            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2 AND tenant_id = $3").bind(lock_key).bind(expected_lock_id).bind("system")
                 .execute(pool)
                 .await;
 
@@ -91,8 +87,7 @@ impl InventoryLocker for StandaloneInventoryLocker {
                 .execute(pool)
                 .await;
 
-            let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP")
-                .bind(lock_key)
+            let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2").bind(lock_key).bind("system")
                 .fetch_optional(pool)
                 .await
                 .unwrap_or(None);
@@ -107,8 +102,7 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
     async fn clear(&self, lock_key: &str) {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1")
-                .bind(lock_key)
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND tenant_id = $2").bind(lock_key).bind("system")
                 .execute(pool)
                 .await;
             return;

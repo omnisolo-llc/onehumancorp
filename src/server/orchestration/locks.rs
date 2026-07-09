@@ -77,7 +77,7 @@ impl StandaloneLock {
         }
     }
 
-    async fn do_acquire(&self, key: &str) -> Result<LockGuard, String> {
+    async fn do_acquire(&self, key: &str, tenant_id: &str) -> Result<LockGuard, String> {
         let val = uuid::Uuid::new_v4().to_string();
 
         if let Some(pool) = &self.pool {
@@ -86,8 +86,9 @@ impl StandaloneLock {
                 .execute(pool)
                 .await;
 
-            let result = sqlx::query("INSERT INTO distributed_locks (id, lock_val, expires_at) VALUES ($1, $2, datetime('now', '+15 seconds'))")
+            let result = sqlx::query("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+15 seconds'))")
                 .bind(key)
+                .bind(tenant_id)
                 .bind(&val)
                 .execute(pool)
                 .await;
@@ -129,11 +130,11 @@ impl StandaloneLock {
 #[async_trait::async_trait]
 impl DistributedLock for StandaloneLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        self.do_acquire(&format!("ohc:lock:task:{}", task_id)).await
+        self.do_acquire(&format!("ohc:lock:task:{}", task_id), "system").await
     }
 
     async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
-        self.do_acquire(&format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id)).await
+        self.do_acquire(&format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id), tenant_id).await
     }
 }
 
