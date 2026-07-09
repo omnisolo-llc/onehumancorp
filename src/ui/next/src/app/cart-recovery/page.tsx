@@ -57,10 +57,6 @@ export default function CartRecoveryPage() {
   };
 
   const handleGenerate = () => {
-    if (!hasPro) {
-      setShowSoftPaywall(true);
-      return;
-    }
     generateDraft();
   };
 
@@ -87,6 +83,10 @@ export default function CartRecoveryPage() {
   };
 
   const handleSend = async () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
 
     try {
       const res = await fetch('/api/v1/growth/campaign/send', {

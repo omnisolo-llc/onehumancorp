@@ -753,12 +753,15 @@ where
         .await
         .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
 
-    if job_type == "cart_recovery_agent" {
-        let customer_name = payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer").to_string();
-        let cart_value = payload.get("cart_value").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
+    if job_type == CART_RECOVERY_JOB_TYPE || job_type == "cart_recovery_agent" {
+        let customer_name = payload.get("to").and_then(|v| v.as_str()).unwrap_or("Customer").to_string();
+        let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        let cart_value = format!("${:.2}", amount_cents as f64 / 100.0);
+        let body = payload.get("body").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let id = uuid::Uuid::new_v4().to_string();
         let proposed_action = serde_json::json!({
-            "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name)
+            "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name),
+            "response": body
         });
 
         let mut completion_tx = pool
