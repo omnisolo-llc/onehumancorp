@@ -3328,26 +3328,39 @@ pub async fn update_ui_omni_inbox_action_handler(
                             let reply_clone = reply.clone();
                             tokio::spawn(async move {
                                 let pool = crate::db::get_pool();
-                                let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool)
-                                    .await;
+                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as(
+                                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1"
+                                )
+                                .bind(&tenant_id_clone)
+                                .fetch_one(&pool)
+                                .await;
 
-                                if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
-                                    if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
+                                if let Ok((integration_id, bot_token, api_token, from_phone)) = integration_row {
+                                    if integration_id == "whatsapp_cloud_api" {
+                                        if !api_token.is_empty() {
+                                            let provider = crate::integrations::meta::provider::MetaProvider::new(api_token);
+                                            // The to needs to just be the number for Meta, no "whatsapp:" prefix
+                                            let meta_to = sender_id.trim_start_matches("whatsapp:");
+                                            let _ = provider.send_message("whatsapp", meta_to, &reply_clone).await;
                                         }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                    } else {
+                                        let account_sid = bot_token;
+                                        let auth_token = api_token;
+                                        if !account_sid.is_empty() && !auth_token.is_empty() {
+                                            use crate::integrations::twilio::provider::TwilioProvider;
+                                            let provider = TwilioProvider::new(account_sid, auth_token);
+
+                                            if from_phone.is_empty() {
+                                                tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                                return;
+                                            }
+                                            let twilio_from = from_phone;
+                                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                                            if source == "whatsapp" {
+                                                let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
+                                            } else {
+                                                let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                            }
                                         }
                                     }
                                 }
@@ -3396,26 +3409,39 @@ pub async fn update_ui_omni_inbox_action_handler(
                             let reply_clone = reply.clone();
                             let pool_clone = pool.clone();
                             tokio::spawn(async move {
-                                let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = ? ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool_clone)
-                                    .await;
+                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as(
+                                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = ? ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1"
+                                )
+                                .bind(&tenant_id_clone)
+                                .fetch_one(&pool_clone)
+                                .await;
 
-                                if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
-                                    if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
+                                if let Ok((integration_id, bot_token, api_token, from_phone)) = integration_row {
+                                    if integration_id == "whatsapp_cloud_api" {
+                                        if !api_token.is_empty() {
+                                            let provider = crate::integrations::meta::provider::MetaProvider::new(api_token);
+                                            // The to needs to just be the number for Meta, no "whatsapp:" prefix
+                                            let meta_to = sender_id.trim_start_matches("whatsapp:");
+                                            let _ = provider.send_message("whatsapp", meta_to, &reply_clone).await;
                                         }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                    } else {
+                                        let account_sid = bot_token;
+                                        let auth_token = api_token;
+                                        if !account_sid.is_empty() && !auth_token.is_empty() {
+                                            use crate::integrations::twilio::provider::TwilioProvider;
+                                            let provider = TwilioProvider::new(account_sid, auth_token);
+
+                                            if from_phone.is_empty() {
+                                                tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                                return;
+                                            }
+                                            let twilio_from = from_phone;
+                                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                                            if source == "whatsapp" {
+                                                let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
+                                            } else {
+                                                let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                            }
                                         }
                                     }
                                 }
