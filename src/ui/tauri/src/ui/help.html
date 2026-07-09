@@ -354,30 +354,7 @@
         .video-card { border-color: rgba(255,255,255,0.1); }
       }
 
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(220%);
-            -webkit-backdrop-filter: blur(40px) saturate(220%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: #1d1d1f;
-            padding: 8px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            z-index: 100000;
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 250px;
-            line-height: 1.4;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
                 background: rgba(22, 22, 26, 0.7);
@@ -386,6 +363,7 @@
             }
         }
 </style>
+      <link rel="stylesheet" href="docs-shared.css">
   </head>
   <body>
     <div class="container glassmorphism">
@@ -479,58 +457,14 @@
 
     <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
+
 
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
+
     }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    let hideTimeout;
-
-    function showTooltip(e, text) {
-        clearTimeout(hideTimeout);
-        tooltipEl.textContent = text;
-
-        const targetRect = e.target.getBoundingClientRect();
-
-        // Position below the element by default
-        let top = targetRect.bottom + 10;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        // Adjust if it goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            // Position above if it doesn't fit below
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
-            tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
+    , 100); // slight delay to prevent flicker
     }
 
     // Desktop hover
@@ -823,47 +757,9 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
     }
 
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip], [id]');
@@ -912,62 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-
-        let currentStep = 0;
-
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
-
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
-
-        function renderStep() {
-            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
-
-            // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-                el.style.pointerEvents = '';
-            });
-
-            // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
-
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
-                }
-            };
+    ;
 
             if (target) {
                 target.classList.add('walkthrough-highlight');
@@ -1404,46 +1245,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
     }
 
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip], [id]');
@@ -1489,57 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Walkthroughs
     if (!window.startWalkthrough) {
-        window.startWalkthrough = function(steps) {
-            if (!steps || steps.length === 0) return;
-
-            let currentStep = 0;
-
-            const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-            document.body.appendChild(overlay);
-
-            const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-            document.body.appendChild(bubble);
-
-            function renderStep() {
-                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
-
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                    el.style.background = '';
-                el.style.pointerEvents = '';
-                });
-
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
-
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
+        ;
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
@@ -1580,5 +1334,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
   <script src="help-widget.mjs" type="module"></script>
-</body>
+    <script src="docs-shared.js"></script>
+  </body>
 </html>

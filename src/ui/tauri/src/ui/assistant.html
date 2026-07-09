@@ -254,6 +254,7 @@
         }
       }
     </style>
+      <link rel="stylesheet" href="docs-shared.css">
   </head>
   <body>
     <!-- Top Bar -->
@@ -329,38 +330,9 @@
     // Inject walkthrough CSS
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-walkthrough-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(40px) saturate(220%);
-            z-index: 10000;
-            pointer-events: auto;
-        }
-        .ohc-walkthrough-highlight {
-            position: absolute;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-            border-radius: 8px;
-            pointer-events: none;
-            z-index: 10001;
-            transition: all 0.3s ease;
-        }
-        .ohc-walkthrough-bubble {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(220%);
-            border: 1px solid rgba(0, 102, 255, 0.3);
-            border-radius: 16px;
-            padding: 20px;
-            width: 280px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            z-index: 10002;
-            font-family: "Outfit", sans-serif;
-            color: #1d1d1f;
-            transition: all 0.3s ease;
-            opacity: 0;
-            transform: translateY(10px);
-        }
+
+
+
         .ohc-walkthrough-bubble.visible {
             opacity: 1;
             transform: translateY(0);
@@ -407,11 +379,7 @@
             background: none; border: none; color: #86868b; cursor: pointer;
         }
         @media (prefers-color-scheme: dark) {
-            .ohc-walkthrough-bubble {
-                background: rgba(22, 22, 26, 0.95);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
+
             .ohc-walkthrough-btn-secondary {
                 background: rgba(22, 22, 26, 0.7);
                 color: #f5f5f7;
@@ -515,43 +483,7 @@
         currentStepIndex = 0;
     }
 
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-        currentSteps = steps;
-        currentStepIndex = 0;
-
-        endWalkthrough();
-
-        overlayEl = document.createElement('div');
-        overlayEl.className = 'ohc-walkthrough-overlay';
-
-        highlightEl = document.createElement('div');
-        highlightEl.className = 'ohc-walkthrough-highlight';
-
-        bubbleEl = document.createElement('div');
-        bubbleEl.className = 'ohc-walkthrough-bubble';
-
-        document.body.appendChild(overlayEl);
-        document.body.appendChild(highlightEl);
-        document.body.appendChild(bubbleEl);
-
-        renderStep();
-    };
-
-})();
-</script>
-
-<script>
-      // Load assistant name from state if available
-      document.addEventListener('DOMContentLoaded', () => {
-        const headerTitle = document.getElementById('assistant-header-title');
-
-        if (window.__TAURI__ && window.__TAURI__.core) {
-          window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-            if (state && state.assistantName) {
-              headerTitle.innerText = `${state.assistantName} Workspace`;
-            }
-          }).catch(console.error);
+    ).catch(console.error);
         } else {
           const storedName = localStorage.getItem('assistantName');
           if (storedName) {
@@ -566,227 +498,20 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
+
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(220%);
-            -webkit-backdrop-filter: blur(40px) saturate(220%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-            padding: 12px 16px;
-            color: #1d1d1f;
-            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 250px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+
         @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-        }
-    `;
-    document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const rect = e.target.getBoundingClientRect();
-
-        // Position above the element
-        let top = rect.top - tooltipEl.offsetHeight - 10;
-        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        // Adjust if out of bounds
-        if (top < 10) {
-            top = rect.bottom + 10; // show below if not enough space above
-        }
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
-
-        tooltipEl.style.top = top + 'px';
-        tooltipEl.style.left = left + 'px';
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    // Hover (desktop)
-    document.addEventListener('mouseover', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
-
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
-</script>
-
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(40px) saturate(220%);
-    -webkit-backdrop-filter: blur(40px) saturate(220%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #1d1d1f;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
     }
 
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
@@ -830,62 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-
-        let currentStep = 0;
-
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
-
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
-
-        function renderStep() {
-            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
-
-            // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-                el.style.pointerEvents = '';
-            });
-
-            // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
-
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
-                }
-            };
+    ;
 
             if (target) {
                 target.classList.add('walkthrough-highlight');
@@ -931,6 +601,7 @@ initWalkthrough();
 
   <script src="help-widget.mjs" type="module"></script>
     <script src="voice-assistant.mjs" type="module"></script>
+      <script src="docs-shared.js"></script>
   </body>
 </html>
 
