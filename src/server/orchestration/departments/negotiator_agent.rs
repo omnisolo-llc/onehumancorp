@@ -188,6 +188,7 @@ impl Department for NegotiatorAgent {
             "deposit_amount_cents": (price * 100.0) as i64,
             "inbox_message_id": inbox_id,
             "generated_response": drafted_message,
+            "checkout_url": format!("/api/v1/booking/conversational_checkout?session_id={}", proposed_slot_id),
         });
 
         self.orchestrator

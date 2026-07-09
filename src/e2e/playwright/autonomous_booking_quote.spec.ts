@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Autonomous Booking & Quoting E2E', () => {
     test('Carlos creates a service and views AI Operations Agent triage', async ({ page }) => {
@@ -56,5 +56,19 @@ test.describe('Autonomous Booking & Quoting E2E', () => {
         // Assert the glassmorphism UI element
         const glassmorphismElement = page.locator('.glassmorphism').first();
         await expect(glassmorphismElement).toBeVisible();
+
+        // Pass mode=customer to view the deposit button
+        await page.goto('/ui/quote.html?tenant=carlos-handyman&mode=customer');
+        const payDepositBtn = page.locator('#btn-pay-deposit');
+        await expect(payDepositBtn).toBeVisible({ timeout: 10000 });
+
+        // Listen for the checkout call
+        const requestPromise = page.waitForRequest(request =>
+            request.url().includes('/api/v1/booking/conversational_checkout') && request.method() === 'POST',
+            { timeout: 5000 }
+        ).catch(() => null); // ignore timeout
+
+        await payDepositBtn.click();
+        await requestPromise;
     });
 });

@@ -651,7 +651,8 @@ async fn simulate_autonomous_booking_quote(
         "proposed_slot_id": proposed_slot_id,
         "require_deposit": true,
         "deposit_amount_cents": 9000,
-        "inbox_message_id": "msg_simulated_quote_123"
+        "inbox_message_id": "msg_simulated_quote_123",
+        "checkout_url": "/api/v1/booking/conversational_checkout"
     });
 
     match orchestrator.execute_action(
