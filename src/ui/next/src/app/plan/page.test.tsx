@@ -54,11 +54,9 @@ describe('MyPlanPage', () => {
   });
 
   it('renders the plan page', async () => {
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
-    expect(screen.getByText('My Plan')).toBeDefined();
+    expect(await screen.findByText('My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     expect(screen.getByText('$29.00')).toBeDefined();
   });
@@ -83,19 +81,15 @@ describe('MyPlanPage', () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
-    expect(screen.getByText("You've reached your Starter tier limit of 1000 AI actions. Upgrade to unlock more power!")).toBeDefined();
+    expect(await screen.findByText("You've reached your Starter tier limit of 1000 AI actions. Upgrade to unlock more power!")).toBeDefined();
   });
 
   it('navigates to pricing on upgrade click', async () => {
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
-    const upgradeButton = screen.getByText('Upgrade');
+    const upgradeButton = await screen.findByText('Upgrade');
     await act(async () => {
       fireEvent.click(upgradeButton);
     });
@@ -120,21 +114,17 @@ describe('MyPlanPage', () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
     // Check if it renders '/ Unlimited' for both limits
-    const unlimitedTexts = screen.getAllByText(/\/ Unlimited/);
+    const unlimitedTexts = await screen.findAllByText(/\/ Unlimited/);
     expect(unlimitedTexts.length).toBeGreaterThan(0);
   });
 
   it('navigates to cost-dashboard on details click', async () => {
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
-    const detailsButton = screen.getByText('View Detailed Costs');
+    const detailsButton = await screen.findByText('View Detailed Costs');
     await act(async () => {
       fireEvent.click(detailsButton);
     });
@@ -143,22 +133,6 @@ describe('MyPlanPage', () => {
 
   it('initiates manage billing flow', async () => {
     const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
-    (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
-        return {
-          ok: true,
-          json: async () => ({ current_plan: 'Starter' }),
-        };
-      }
-      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
-        return {
-          ok: true,
-          json: async () => ({ url: mockPortalUrl }),
-        };
-      }
-      return { ok: true, json: async () => ({}) };
-    });
-
     let resolvePortal: any;
     const portalPromise = new Promise((resolve) => {
       resolvePortal = resolve;
@@ -180,11 +154,9 @@ describe('MyPlanPage', () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    await act(async () => {
-      render(<MyPlanPage />);
-    });
+    render(<MyPlanPage />);
 
-    const manageButton = screen.getByText('Manage Billing');
+    const manageButton = await screen.findByText('Manage Billing');
 
     // Fire click but don't await the full act yet to check intermediate state
     fireEvent.click(manageButton);

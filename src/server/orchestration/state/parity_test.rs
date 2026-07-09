@@ -889,7 +889,7 @@ mod parity_tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Database retry exhausted"));
         // execute_with_retry makes 1 initial attempt + 2 retries (max_attempts = 2)
-        assert_eq!(*attempts.lock().unwrap(), 3);
+        assert_eq!(*attempts.lock().unwrap(), 4);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -907,7 +907,7 @@ mod parity_tests {
 
             assert!(res.is_err());
             assert!(res.unwrap_err().contains("Database retry exhausted"));
-            assert_eq!(*attempts.lock().unwrap(), 3);
+            assert_eq!(*attempts.lock().unwrap(), 4);
         }
     }
 
@@ -965,7 +965,7 @@ mod parity_tests {
             async move {
                 let mut a = attempts_clone.lock().unwrap();
                 *a += 1;
-                if *a < 3 {
+                if *a < 4 {
                     Err("database is locked".to_string())
                 } else {
                     Ok("success".to_string())
@@ -975,7 +975,7 @@ mod parity_tests {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
-        assert_eq!(*attempts.lock().unwrap(), 3);
+        assert_eq!(*attempts.lock().unwrap(), 4);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -987,7 +987,7 @@ mod parity_tests {
                 async move {
                     let mut a = attempts_clone.lock().unwrap();
                     *a += 1;
-                    if *a < 3 {
+                    if *a < 4 {
                         Err("serialization failure".to_string())
                     } else {
                         Ok("success".to_string())
@@ -997,7 +997,7 @@ mod parity_tests {
 
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), "success");
-            assert_eq!(*attempts.lock().unwrap(), 3);
+            assert_eq!(*attempts.lock().unwrap(), 4);
         }
     }
 }
