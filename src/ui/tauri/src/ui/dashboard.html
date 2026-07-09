@@ -1884,6 +1884,8 @@
             renderTriageItems(agentFeedItems);
           }
           connectAgentFeedWebSocket();
+
+
         } catch (err) {
           console.error("Unified Feed load error:", err);
           // Show fallback onboarding welcome card for the "Day One" experience if API fails
@@ -1955,6 +1957,57 @@
 
       // Call it after loading initial items
       connectAgentFeedWebSocket();
+
+
+      let activeTenantEventsWs = null;
+      window.connectTenantEventsWebSocket = function connectTenantEventsWebSocket() {
+        if (activeTenantEventsWs && (activeTenantEventsWs.readyState === WebSocket.CONNECTING || activeTenantEventsWs.readyState === WebSocket.OPEN)) {
+            return;
+        }
+
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = localStorage.getItem('token') || '';
+        const wsUrl = `${protocol}//${window.location.host}/api/v1/tenant/events/ws`;
+
+        let ws;
+        try {
+            ws = new WebSocket(wsUrl, ["access_token", token]);
+        } catch(e) {
+            ws = new WebSocket(wsUrl);
+        }
+
+        activeTenantEventsWs = ws;
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.error) {
+                console.error("Tenant Events WS Error:", data.error);
+                return;
+            }
+
+            console.log("Tenant event received:", data);
+
+            // Re-fetch feed to ensure sync
+            loadUnifiedFeed();
+          } catch(e) {
+            console.error("Error parsing Tenant Events WS message:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          activeTenantEventsWs = null;
+          setTimeout(connectTenantEventsWebSocket, 5000);
+        };
+      }
+
+      connectTenantEventsWebSocket();
+
+
+
+
+
 
       function renderTriageItems(items) {
         if (currentTriageTab === 'proposals') {
