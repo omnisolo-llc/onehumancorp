@@ -21,6 +21,7 @@ rust_library(
         "output_parser.rs",
         "human_in_loop.rs",
         "pubsub.rs",
+        "retry.rs",
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
