@@ -1102,6 +1102,45 @@ mod tests_clamped {
         assert_eq!(result.expect("Should be OK").result, "success");
         assert_eq!(*feedback_client.call_count.lock().await, 2);
     }
+    struct StructuredOutputFeedbackLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for StructuredOutputFeedbackLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})))
+            } else {
+                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fallback_mechanic_feeds_error_back_structured_output_only() {
+        let feedback_client = Arc::new(StructuredOutputFeedbackLlmClient {
+            call_count: Mutex::new(0),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(AdvancedPydanticOutputParser::new());
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
+
+        let result = retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.expect("Should be OK").result, "success");
+        assert_eq!(*feedback_client.call_count.lock().await, 2);
+    }
 }
 
 fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::Value) -> Result<T, String> {
