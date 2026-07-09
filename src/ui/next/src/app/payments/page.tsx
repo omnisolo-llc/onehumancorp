@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function PaymentLedger() {
   const [revenue, setRevenue] = useState(0);
   const [amount, setAmount] = useState(50);
   const [status, setStatus] = useState("idle");
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+
+  const walkthroughSteps: import("../../components/Walkthrough").Step[] = [
+    { targetId: "payments-title", title: "Payments", content: "Track your revenue and manage transactions." },
+    { targetId: "request-payment-btn", title: "Accept Payment", content: "Click here to accept payments." }
+  ];
 
   useEffect(() => {
     fetchBalance();
@@ -57,7 +65,9 @@ export default function PaymentLedger() {
 
   return (
     <div className="max-w-[375px] mx-auto p-4 md:p-6 space-y-6">
-      <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Dashboard</h2>
+      <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
+      <WalkthroughTarget id="payments-title"><h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Dashboard</h2></WalkthroughTarget>
+      <button id="pos-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors mt-2">Start Tour</button>
 
       <div className="glassmorphism p-6 flex flex-col space-y-2">
         <p className="m-0 text-gray-500 dark:text-gray-400 font-inter text-sm uppercase tracking-wide">Today's Revenue</p>
@@ -69,6 +79,7 @@ export default function PaymentLedger() {
       <div className="glassmorphism p-6 space-y-4">
         <h3 className="text-lg font-semibold font-outfit text-gray-900 dark:text-gray-100 mb-2">Request Payment</h3>
 
+        <WithTooltip id="payment-amount-input-tooltip" defaultText="Enter the exact amount to charge your customer">
         <input
           type="number"
           value={amount}
@@ -77,7 +88,10 @@ export default function PaymentLedger() {
           data-testid="payment-amount-input"
           aria-label="Payment Amount"
         />
+        </WithTooltip>
 
+        <WalkthroughTarget id="request-payment-btn">
+          <WithTooltip id="request-payment-btn-tooltip" defaultText="Click here to process a payment">
         <button
           onClick={handleRequestPayment}
           disabled={status === "Processing..."}
@@ -90,6 +104,8 @@ export default function PaymentLedger() {
         >
           {status === "Processing..." ? "Waiting for card..." : "Tap to Pay"}
         </button>
+        </WithTooltip>
+        </WalkthroughTarget>
 
         {status !== "idle" && status !== "Processing..." && (
           <p
