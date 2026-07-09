@@ -99,10 +99,13 @@ export default function FeedPage() {
     setEditingId(item.id);
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
             const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
+    const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
             const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
     const textToEdit = isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
-        (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+        isInvoiceFollowup
+            ? ((item.proposed_action || item.context_payload)?.generated_response || 'A reminder has been drafted.')
+            : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
     setEditValue(textToEdit || "");
   };
 
@@ -112,12 +115,13 @@ export default function FeedPage() {
 
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
             const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
-            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
+    const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
+    const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
 
     const updatedProposed = {
         ...item.proposed_action,
-        description: isAmbassador ? item.proposed_action?.description : editValue,
-        generated_response: isAmbassador ? editValue : item.proposed_action?.generated_response,
+        description: isAmbassador || isInvoiceFollowup ? item.proposed_action?.description : editValue,
+        generated_response: isAmbassador || isInvoiceFollowup ? editValue : item.proposed_action?.generated_response,
     };
 
     const updatedContext = {
@@ -314,6 +318,8 @@ export default function FeedPage() {
             const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
             const isInvoiceDraft = item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft';
+            const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
+            const invoiceFollowupPayload = isInvoiceFollowup ? (item.proposed_action || item.context_payload) : null;
             const invoicePayload = isInvoiceDraft ? (item.proposed_action || item.context_payload) : null;
 
             return (
@@ -325,7 +331,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
                     <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceFollowup ? 'OVERDUE INVOICE' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -335,6 +341,8 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isInvoiceFollowup
+                    ? (invoiceFollowupPayload?.original_message || 'Overdue Invoice')
                     : isInvoiceDraft
                     ? `Draft Invoice ready for ${invoicePayload?.milestone_name || 'Phase 1'}`
                     : isAmbassador
@@ -413,6 +421,20 @@ export default function FeedPage() {
                                 <span className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">{disputePayload?.operational_action}</span>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      </div>
+
+                    ) : isInvoiceFollowup ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
+                          <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">Action Required: Overdue Invoice</p>
+                          <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70">The Finance Agent has drafted a context-aware follow-up for {invoiceFollowupPayload?.customer_id || 'the customer'} via {invoiceFollowupPayload?.suggested_channel || 'email'}.</p>
+                        </div>
+                        <div className="space-y-3 mt-2">
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Proposed Message ({invoiceFollowupPayload?.suggested_channel || 'email'})</p>
+                            <p className="text-[13px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{invoiceFollowupPayload?.generated_response}</p>
                           </div>
                         </div>
                       </div>
@@ -509,6 +531,8 @@ export default function FeedPage() {
                           ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
                           : item.proposed_action?.action_type === 'Reassign Shift'
                           ? (item.context_payload?.context || 'AI has proposed a shift reassignment.')
+                          : isInvoiceFollowup
+                          ? (invoiceFollowupPayload?.generated_response || 'A reminder has been drafted.')
                           : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
                       </p>
                     )}
@@ -541,6 +565,33 @@ export default function FeedPage() {
                         disabled={isProcessing}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+
+                    ) : isInvoiceFollowup ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#FF9500] text-white font-medium hover:bg-[#E68600] transition-all duration-200 shadow-md flex items-center justify-center"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Send'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-red-600 dark:text-red-400 font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 flex items-center justify-center"
                         data-testid="feed-dismiss-btn"
                       >
                         Dismiss
@@ -655,7 +706,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
+                        {isProcessing ? 'Processing...' : isInvoiceFollowup ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}
