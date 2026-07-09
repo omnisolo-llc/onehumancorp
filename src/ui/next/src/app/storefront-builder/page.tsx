@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock, ActionSheet } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");
@@ -17,6 +18,12 @@ export default function StorefrontBuilderPage() {
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [editingBlockContent, setEditingBlockContent] = useState<any>(null);
   const [saveMessage, setSaveMessage] = useState("");
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+
+  const walkthroughSteps: import("../../components/Walkthrough").Step[] = [
+    { targetId: "storefront-title", title: "Storefront Builder", content: "This is where you can build and customize your storefront." },
+    { targetId: "bio-input-target", title: "Storefront Bio", content: "Tell your customers about your store." }
+  ];
   const [chatMessage, setChatMessage] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
@@ -277,14 +284,16 @@ export default function StorefrontBuilderPage() {
             {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in">{saveMessage}</span>}
           </div>
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
+            <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
+            <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1>
+              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1></WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
 
               <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
-              <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+              <WalkthroughTarget id="bio-input-target"><WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
                   enterKeyHint="done"
@@ -303,7 +312,7 @@ export default function StorefrontBuilderPage() {
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
                   rows={6}
                 />
-              </WithTooltip>
+              </WithTooltip></WalkthroughTarget>
 
               <div className="flex gap-4">
                 <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
