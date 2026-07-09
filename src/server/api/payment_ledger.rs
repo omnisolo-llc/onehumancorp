@@ -328,34 +328,38 @@ async fn get_safe_to_spend(
 
     let pool = crate::db::get_pool();
 
-    // Money In (Sum of CREDIT entries for default_revenue)
-    let credit_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT' AND account_id = 'default_revenue'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
+    let (credit_res, debit_res, tax_res) = tokio::join!(
+        async {
+            sqlx::query_as::<_, (f64,)>("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT' AND account_id = 'default_revenue'")
+                .bind(&tenant_id)
+                .fetch_optional(&pool)
+                .await.unwrap_or(None)
+        },
+        async {
+            sqlx::query_as::<_, (f64,)>("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'DEBIT' AND account_id = 'default_expense'")
+                .bind(&tenant_id)
+                .fetch_optional(&pool)
+                .await.unwrap_or(None)
+        },
+        async {
+            sqlx::query_as::<_, (f64,)>("SELECT SUM(balance) FROM ledger_reserves WHERE tenant_id = $1 AND envelope_type = 'tax'")
+                .bind(&tenant_id)
+                .fetch_optional(&pool)
+                .await.unwrap_or(None)
+        }
+    );
 
-    let money_in = match credit_balance {
+    let money_in = match credit_res {
         Some((b,)) => b,
         None => 0.0
     };
 
-    // Money Out (Sum of DEBIT entries for default_expense)
-    let debit_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'DEBIT' AND account_id = 'default_expense'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let money_out = match debit_balance {
+    let money_out = match debit_res {
         Some((b,)) => b,
         None => 0.0
     };
 
-    let tax_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(balance) FROM ledger_reserves WHERE tenant_id = $1 AND envelope_type = 'tax'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let tax_safe = match tax_balance {
+    let tax_safe = match tax_res {
         Some((b,)) => b,
         None => 0.0
     };
