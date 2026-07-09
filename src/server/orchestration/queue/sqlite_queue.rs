@@ -154,7 +154,10 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
 
         if let Some(row) = job_opt {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
-            let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
+            let created_at: chrono::DateTime<chrono::Utc> = match row.try_get::<String, _>("created_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
+            };
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
 
@@ -166,10 +169,16 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 status: row.get("status"),
                 retry_count: row.get("retry_count"),
                 max_retries: row.get("max_retries"),
-                next_retry_at: row.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
+                next_retry_at: match row.try_get::<String, _>("next_retry_at") {
+                    Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                    Err(_) => row.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
+                },
                 locked_until: row.try_get("locked_until").unwrap_or(None),
                 created_at,
-                updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                updated_at: match row.try_get::<String, _>("updated_at") {
+                    Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                    Err(_) => row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                },
                 tenant_id: row.try_get("tenant_id").unwrap_or_default(),
             };
 
@@ -197,8 +206,14 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if let Some(r) = row {
             ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             use sqlx::Row;
-            let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
-            let next_retry_at: chrono::DateTime<chrono::Utc> = r.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now());
+            let updated: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("updated_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+            };
+            let next_retry_at: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("next_retry_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => r.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
+            };
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
@@ -233,6 +248,18 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                // Notify owner/operator that the agent is PAUSED due to failure
+                let _ = sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                    VALUES (?, ?, 'AI Agent Paused: System Queue', 'A background agent job failed permanently and is paused.', 'PENDING', 'P1', 'LOW', 'PAUSED', 'System is paused. Please manually check business performance or wait for the system to recover.')
+                    "#
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
 
                 sqlx::query("UPDATE agents SET status = 'PAUSED' WHERE tenant_id = ? AND status != 'PAUSED'")
                     .bind(&tenant_id)
