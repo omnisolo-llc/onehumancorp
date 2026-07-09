@@ -207,7 +207,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Assert that we are back at Target Audience step
     await expect(page.locator('body')).toContainText('Who is your target audience?');
-    await expect(page.locator('#step-target-audience')).toBeVisible();
+    await expect(page.locator('#step-target-audience')).toHaveClass(/active/);
     await expect(page.locator('#step-domain')).toBeHidden();
   });
 
@@ -248,7 +248,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Assert that we are back at Offer step
     await expect(page.locator('body')).toContainText('What do you sell?');
-    await expect(page.locator('#step-offer')).toBeVisible();
+    await expect(page.locator('#step-offer')).toHaveClass(/active/);
     await expect(page.locator('#step-location')).toBeHidden();
   });
 });
