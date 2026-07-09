@@ -62,28 +62,53 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
     Json(steps)
 }
 
-pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
+pub async fn get_tooltips(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap
+) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("default");
-    let pool = crate::db::get_pool();
     let mut tooltips = std::collections::HashMap::new();
-    match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
-        .fetch_all(&pool)
-        .await
-    {
-        Ok(rows) => {
-            for row in rows {
-                use sqlx::Row;
-                let id: String = row.get("id");
-                let text: String = row.get("text");
-                tooltips.insert(id, text);
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
+                .fetch_all(&db.pool)
+                .await
+            {
+                Ok(rows) => {
+                    for row in rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let text: String = row.get("text");
+                        tooltips.insert(id, text);
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to fetch tooltips: {}", e);
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
             }
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch tooltips: {}", e);
-            return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?").bind(tenant_id)
+                .fetch_all(pool)
+                .await
+            {
+                Ok(rows) => {
+                    for row in rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let text: String = row.get("text");
+                        tooltips.insert(id, text);
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to fetch tooltips: {}", e);
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
         }
     }
 
@@ -113,20 +138,39 @@ pub struct SuccessResponse {
     pub success: bool,
 }
 
-pub async fn update_tooltip(headers: axum::http::HeaderMap, axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
+pub async fn update_tooltip(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap,
+    axum::extract::Json(payload): axum::extract::Json<TooltipPayload>
+) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("default");
-    let pool = crate::db::get_pool();
-    match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
-        .execute(&pool)
-        .await
-    {
-        Ok(_) => Ok(Json(SuccessResponse { success: true })),
-        Err(e) => {
-            tracing::error!("Failed to update tooltip: {}", e);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
+                .execute(&db.pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to update tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES (?, ?, ?) ON CONFLICT (tenant_id, id) DO UPDATE SET text = excluded.text").bind(payload.id).bind(tenant_id).bind(payload.text)
+                .execute(pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to update tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
         }
     }
 }
@@ -254,7 +298,16 @@ pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json:
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let _ = mobile_optimized; // Keep parameter for future use
+    if mobile_optimized {
+        let json_videos = videos.into_iter().map(|v| {
+            serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "video_url": v.video_url
+            })
+        }).collect();
+        return Json(json_videos);
+    }
     let json_videos = videos.into_iter().map(|v| {
         serde_json::json!({
             "id": v.id,
@@ -979,6 +1032,11 @@ mod tests {
     #[tokio::test]
     #[ignore] // Ignoring since it requires a real database
     async fn test_tooltips_api() {
+        let db_pool = crate::db::create_sqlite_pool_for_test().await;
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        sqlx::query("CREATE TABLE IF NOT EXISTS tooltips (id TEXT, tenant_id TEXT, text TEXT, PRIMARY KEY (tenant_id, id))").execute(&db_pool).await.unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+
         // Prepare the payload to update a tooltip
         let payload = TooltipPayload {
             id: "test-tooltip-id".to_string(),
@@ -988,11 +1046,11 @@ mod tests {
         // Update the tooltip
         let mut headers = axum::http::HeaderMap::new();
         headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
-        let res = update_tooltip(headers.clone(), AxumJson(payload)).await.unwrap();
+        let res = update_tooltip(axum::extract::Extension(db.clone()), headers.clone(), AxumJson(payload)).await.unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the update
-        let tooltips_res = get_tooltips(headers).await.unwrap();
+        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
         let tooltips = tooltips_res.0;
 
         assert_eq!(

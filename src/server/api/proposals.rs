@@ -202,44 +202,6 @@ async fn draft_agent(
         }
     }
 
-    let project_id = Uuid::new_v4().to_string();
-    let project_title = format!("Proposal #{} Project", proposal.id);
-
-    let insert_proj_res = sqlx::query(
-        "INSERT INTO projects (id, tenant_id, customer_id, title, status, proposal_id, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Active', $5, NOW(), NOW())"
-    )
-    .bind(&project_id)
-    .bind(&proposal.tenant_id)
-    .bind(&proposal.customer_id)
-    .bind(&project_title)
-    .bind(&proposal.id)
-    .execute(&mut *tx)
-    .await;
-
-    if let Err(e) = insert_proj_res {
-        tracing::error!("Failed to auto-generate project: {}", e);
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let standard_tasks = vec!["Initial Review", "Design", "Implementation", "Testing", "Delivery"];
-    for task_title in standard_tasks {
-        let task_id = Uuid::new_v4().to_string();
-        let res = sqlx::query(
-            "INSERT INTO project_tasks (id, tenant_id, project_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())"
-        )
-        .bind(&task_id)
-        .bind(&proposal.tenant_id)
-        .bind(&project_id)
-        .bind(task_title)
-        .execute(&mut *tx)
-        .await;
-
-        if let Err(e) = res {
-            tracing::error!("Failed to auto-generate project task: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    }
-
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit tx: {}", e);
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -387,6 +349,44 @@ async fn approve_proposal(
 
         if let Err(e) = res {
             tracing::error!("Failed to auto-generate invoice line item: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
+    let project_id = Uuid::new_v4().to_string();
+    let project_title = format!("Proposal #{} Project", proposal.id);
+
+    let insert_proj_res = sqlx::query(
+        "INSERT INTO projects (id, tenant_id, customer_id, title, status, proposal_id, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Active', $5, NOW(), NOW())"
+    )
+    .bind(&project_id)
+    .bind(&proposal.tenant_id)
+    .bind(&proposal.customer_id)
+    .bind(&project_title)
+    .bind(&proposal.id)
+    .execute(&mut *tx)
+    .await;
+
+    if let Err(e) = insert_proj_res {
+        tracing::error!("Failed to auto-generate project: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    let standard_tasks = vec!["Initial Review", "Design", "Implementation", "Testing", "Delivery"];
+    for task_title in standard_tasks {
+        let task_id = Uuid::new_v4().to_string();
+        let res = sqlx::query(
+            "INSERT INTO project_tasks (id, tenant_id, project_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())"
+        )
+        .bind(&task_id)
+        .bind(&proposal.tenant_id)
+        .bind(&project_id)
+        .bind(task_title)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = res {
+            tracing::error!("Failed to auto-generate project task: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }

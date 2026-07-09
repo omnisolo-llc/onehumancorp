@@ -173,15 +173,23 @@ pub async fn offline_sync_handler(
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
             let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
-                Box::new(crate::orchestration::locks::StandaloneLock::new())
+                if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                    Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
+                } else {
+                    Box::new(crate::orchestration::locks::StandaloneLock::new())
+                }
             } else {
                 if let Some(client) = crate::get_redis_client() {
                     Box::new(crate::orchestration::locks::RedisLock::new(client))
                 } else {
-                    Box::new(crate::orchestration::locks::StandaloneLock::new())
+                    if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                        Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
+                    } else {
+                        Box::new(crate::orchestration::locks::StandaloneLock::new())
+                    }
                 }
             };
-            let _lock_guard = match locker.acquire_resource(&tenant_id_clone, "inventory", &mutation.product_id).await {
+            let mut _lock_guard = match locker.acquire_resource(&tenant_id_clone, "inventory", &mutation.product_id).await {
                 Ok(guard) => guard,
                 Err(_) => {
                     tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", mutation.product_id);
