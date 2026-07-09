@@ -372,6 +372,7 @@ where
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
         .route("/waitlist/embed", get(handle_waitlist_embed))
+        .route("/community-goal/embed", get(handle_community_goal_embed))
         .route("/countdown/generate", post(handle_countdown_generate))
         .route("/countdown/embed", get(handle_countdown_embed))
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
@@ -3949,6 +3950,41 @@ mod cloud_bridge_tests {
     }
 
     #[tokio::test]
+    async fn test_community_goal_embed() {
+        let pool = setup_db().await;
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let query = super::CommunityGoalEmbedQuery {
+            tenant: Some("test-tenant".to_string()),
+            target: Some("1000".to_string()),
+            reward: Some("Free Coffee".to_string()),
+        };
+        let res = super::handle_community_goal_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(bytes.to_vec()).unwrap();
+
+        assert!(html.contains("test-tenant"));
+        assert!(html.contains("1000"));
+        assert!(html.contains("Free Coffee"));
+        assert!(html.contains("Community Goal"));
+
+        let query_default = super::CommunityGoalEmbedQuery {
+            tenant: None,
+            target: None,
+            reward: None,
+        };
+        let res_default = super::handle_community_goal_embed(Extension(state.clone()), axum::extract::Query(query_default)).await.into_response();
+        let bytes_default = axum::body::to_bytes(res_default.into_body(), usize::MAX).await.unwrap();
+        let html_default = String::from_utf8(bytes_default.to_vec()).unwrap();
+
+        assert!(html_default.contains("embed"));
+        assert!(html_default.contains("500"));
+        assert!(html_default.contains("50% off for everyone!"));
+    }
+
+    #[tokio::test]
     async fn test_viral_widget_embed() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -4035,6 +4071,13 @@ pub struct ViralWidgetEmbedQuery {
     pub theme: Option<String>,
     pub title: Option<String>,
     pub branding: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CommunityGoalEmbedQuery {
+    pub tenant: Option<String>,
+    pub target: Option<String>,
+    pub reward: Option<String>,
 }
 
 fn escape_html(s: &str) -> String {
@@ -4420,6 +4463,163 @@ async fn handle_spin_to_win_embed(
 
 
 
+
+pub async fn handle_community_goal_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<CommunityGoalEmbedQuery>
+) -> impl IntoResponse {
+    let raw_tenant = query.tenant.clone().unwrap_or_else(|| "embed".to_string());
+    let tenant_encoded = urlencoding::encode(&raw_tenant);
+    let target_str = escape_html(query.target.as_deref().unwrap_or("500"));
+    let target: i64 = target_str.parse().unwrap_or(500);
+    let reward = escape_html(query.reward.as_deref().unwrap_or("50% off for everyone!"));
+
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&raw_tenant)
+        .fetch_one(&state.pool)
+        .await;
+
+    let mut conversions: i64 = 0;
+    if let Ok(r) = row {
+        use sqlx::Row;
+        conversions = r.try_get::<i64, _>(0).unwrap_or(0);
+    }
+
+    let progress_percent = if target > 0 {
+        ((conversions as f64 / target as f64) * 100.0).min(100.0) as i32
+    } else {
+        100
+    };
+
+    let bg_color = "#ffffff";
+    let text_color = "#1d1d1f";
+    let border_color = "#e5e7eb";
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: {bg_color};
+            color: {text_color};
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }}
+        .card {{
+            background: {bg_color};
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 400px;
+            width: 100%;
+        }}
+        h2 {{
+            margin-top: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }}
+        p {{
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }}
+        .progress-container {{
+            background: #e5e7eb;
+            border-radius: 9999px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }}
+        .progress-bar {{
+            background: #0066FF;
+            height: 100%;
+            width: {progress_percent}%;
+            border-radius: 9999px;
+            transition: width 0.5s ease-in-out;
+        }}
+        .stats {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 24px;
+        }}
+        .reward {{
+            background: rgba(0, 102, 255, 0.1);
+            color: #0066FF;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }}
+        .btn {{
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }}
+        .btn:hover {{ opacity: 0.9; }}
+        .footer {{
+            margin-top: 16px;
+            font-size: 12px;
+        }}
+        .footer a {{
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 600;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Community Goal 🎯</h2>
+        <p>Help us reach our goal to unlock a special reward for everyone!</p>
+
+        <div class="reward">
+            🎁 Reward: {reward}
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+
+        <div class="stats">
+            <span>{conversions} reached</span>
+            <span>Goal: {target}</span>
+        </div>
+
+        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}" target="_blank" class="btn" style="display: inline-block; text-decoration: none; text-align: center; box-sizing: border-box;">Share to reach goal</a>
+
+        <div class="footer">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}&source=community_goal_embed" target="_blank">⚡ Powered by OHC</a>
+        </div>
+    </div>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html)
+}
 
 pub async fn handle_viral_widget_embed(
     Extension(_state): Extension<GrowthState>,
