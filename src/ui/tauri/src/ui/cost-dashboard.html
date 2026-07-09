@@ -123,19 +123,21 @@
       .progress-bar-bg {
         width: 100%;
         height: 8px;
-        background: rgba(0,0,0,0.1);
-        border-radius: 4px;
+        background: rgba(0,0,0,0.05);
+        border-radius: 8px;
         margin-top: 8px;
         overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
       }
       .progress-bar-fill {
         height: 100%;
-        background: #0066FF;
-        border-radius: 4px;
+        background: linear-gradient(90deg, #0066FF, #3385ff);
+        border-radius: 8px;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .btn-primary {
-        background-color: #0066FF;
+        background: linear-gradient(90deg, #0066FF, #3385ff);
         color: white;
         border: none;
         padding: 14px 24px;
@@ -144,7 +146,7 @@
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
         display: flex;
         justify-content: center;
@@ -153,21 +155,22 @@
         min-height: 44px;
       }
       .btn-primary:disabled {
-        background-color: #0066FF;
+        background: #aab;
         color: white;
         border: none;
         padding: 14px 24px;
         border-radius: 20px;
         font-size: 15px;
         font-weight: 600;
-        cursor: pointer;
+        cursor: not-allowed;
         width: 100%;
         margin-top: 20px;
-        transition: background-color 0.2s, transform 0.1s;
+        transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
         min-height: 44px;
         box-sizing: border-box;
+        box-shadow: none;
       }
-      .btn-primary:hover { background-color: #0052cc; }
+      .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 18px 0 rgba(0, 102, 255, 0.5); transform: translateY(-1px); }
 
       .back-link {
         display: inline-block;
@@ -214,7 +217,7 @@
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
         display: flex;
         justify-content: center;
         align-items: center;
