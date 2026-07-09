@@ -126,10 +126,10 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('My Plan')).toBeDefined();
     expect(screen.getByText('Back to My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
-    // AI actions used this month: 150 / 1000. Text split.
+    // AI Actions Used: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
-    // Storage used
+    // Storage Used
     expect(screen.getAllByText(/2 MB/)[0]).toBeDefined();
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100

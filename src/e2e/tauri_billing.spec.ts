@@ -19,10 +19,10 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
 
     // Verify AI Actions element
-    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
 
     // Verify Storage element
-    await expect(page.locator('.stat-title', { hasText: 'Storage used' })).toBeVisible();
+    await expect(page.locator('.stat-title', { hasText: 'Storage Used' })).toBeVisible();
 
     // Verify Estimated Next Bill
     await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();

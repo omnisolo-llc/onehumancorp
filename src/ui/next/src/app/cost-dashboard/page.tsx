@@ -194,7 +194,7 @@ export default function CostDashboardPage() {
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header glass-panel px-6 py-4">
-                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Advisory Summary</h2>
+                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Advisory Summary</h2>
             </div>
             <div className="app-panel-body p-6">
                 <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
@@ -206,7 +206,7 @@ export default function CostDashboardPage() {
         {/* My Plan Section */}
         <section id="my-plan-section" className="app-panel glass-panel">
           <div className="app-panel-header glass-panel px-6 py-4 flex justify-between items-center">
-             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">My Plan</h2>
+             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
                className="min-h-[44px] px-6 py-2 bg-[#0071E3] hover:bg-[#147ce5] active:bg-[#0062c2] text-white rounded-full text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer">
@@ -217,19 +217,19 @@ export default function CostDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="p-4 app-card ohc-growth-card">
                       <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                      <p id="cost-dashboard-plan-name" className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.current_plan || 'Free'}</p>
+                      <p id="cost-dashboard-plan-name" className="text-2xl font-bold text-gray-900  mt-1">{myPlanData?.current_plan || 'Free'}</p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">AI actions used this month</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null && myPlanData.ai_actions_limit > 0 ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
+                      <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                      <p className="text-2xl font-bold text-gray-900  mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null && myPlanData.ai_actions_limit > 0 ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">Storage used</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null && myPlanData.storage_limit_bytes > 0 ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
+                      <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                      <p className="text-2xl font-bold text-gray-900  mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null && myPlanData.storage_limit_bytes > 0 ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card">
-                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill:</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
+                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                      <p className="text-2xl font-bold text-gray-900  mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
                   {myPlanData?.storage_limit_bytes && myPlanData?.storage_used_bytes != null && (
                       <div className="p-4 app-card ohc-growth-card md:col-span-2 lg:col-span-4">
@@ -286,7 +286,7 @@ export default function CostDashboardPage() {
             <div className="app-panel-header glass-panel px-6 py-4">
                <div className="flex justify-between items-center">
                    <div>
-                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h1>
+                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Transparency Dashboard</h1>
                        <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
                    </div>
                    <button id="download-invoice-btn" onClick={handleDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
@@ -299,7 +299,7 @@ export default function CostDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
-                        <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">{formatCurrency(data?.total_costs || 0)}</p>
+                        <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 ">{formatCurrency(data?.total_costs || 0)}</p>
                     </div>
                     <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
@@ -334,12 +334,12 @@ export default function CostDashboardPage() {
         {/* Breakdown Section */}
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header glass-panel px-6 py-4">
-                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Breakdown</h2>
+                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Breakdown</h2>
             </div>
 
             <div className="app-panel-body p-6 space-y-4">
                 <div className="flex flex-col app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
-                    <h3 className="font-medium text-gray-950 dark:text-white mb-4">7-Day Trend</h3>
+                    <h3 className="font-medium text-gray-950  mb-4">7-Day Trend</h3>
                     {data?.trend && data.trend.length > 0 ? (
                         <div className="flex items-end h-32 gap-2 mt-4" id="cost-dashboard-trend">
                             {data.trend.map((daily, index) => {
@@ -365,7 +365,7 @@ export default function CostDashboardPage() {
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="font-medium text-gray-900  flex items-center gap-2">
                             LLM Usage
                             {data?.department_tier_usage?.departments?.some(d => d.action_limit !== null && d.actions_used / d.action_limit >= 0.8) || data?.budget_health_alert ? (
                                 <span id="budget-alert-badge" className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50/70 backdrop-blur-[30px] saturate-[210%] border border-amber-200 text-amber-800">
@@ -379,20 +379,20 @@ export default function CostDashboardPage() {
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
                     <div className="text-left sm:text-right w-full sm:w-auto">
-                        <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 dark:text-white block">{formatCurrency(data?.llm_cost || 0)}</span>
+                        <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900  block">{formatCurrency(data?.llm_cost || 0)}</span>
                         <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens?.toFixed(4) || "0.0000"}/1k tokens</span>
                     </div>
                 </div>
 
                 {/* Per-Agent / Per-Feature Costs */}
                 <div className="flex flex-col app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
-                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Agent & Feature Costs</h3>
+                    <h3 className="font-medium text-gray-900  mb-2">Agent & Feature Costs</h3>
                     {data?.agent_costs && data.agent_costs.length > 0 ? (
                         <ul id="cost-dashboard-agent-costs" className="space-y-2">
                             {data.agent_costs.map((agent, index) => (
                                 <li key={index} className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 last:border-b-0 last:pb-0">
                                     <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(agent.cost_cents)}</span>
+                                    <span className="text-sm font-medium text-gray-900 ">{formatCurrency(agent.cost_cents)}</span>
                                 </li>
                             ))}
                         </ul>
@@ -403,50 +403,50 @@ export default function CostDashboardPage() {
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Storage</span>
+                        <span className="font-medium text-gray-900 ">Storage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
                     </div>
-                    <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.storage_cost || 0)}</span>
+                    <span id="cost-dashboard-storage" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Payment Fees</span>
+                        <span className="font-medium text-gray-900 ">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
                     </div>
-                    <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.payment_fees || 0)}</span>
+                    <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Compute Usage</span>
+                        <span className="font-medium text-gray-900 ">Compute Usage</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
                     </div>
-                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.compute_cost || 0)}</span>
+                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.compute_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Network & Bandwidth</span>
+                        <span className="font-medium text-gray-900 ">Network & Bandwidth</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
                     </div>
-                    <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.network_cost || 0)}</span>
+                    <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.network_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Email Sends</span>
+                        <span className="font-medium text-gray-900 ">Email Sends</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of transactional and marketing email delivery.</p>
                     </div>
-                    <span id="cost-dashboard-email" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.email_cost || 0)}</span>
+                    <span id="cost-dashboard-email" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.email_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
                     <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Outbound API Calls</span>
+                        <span className="font-medium text-gray-900 ">Outbound API Calls</span>
                         <p className="text-sm text-gray-500 mt-1">Cost of third-party integration usage.</p>
                     </div>
-                    <span id="cost-dashboard-api" className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(data?.api_cost || 0)}</span>
+                    <span id="cost-dashboard-api" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.api_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl">
@@ -461,7 +461,7 @@ export default function CostDashboardPage() {
 
         <section className="app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:shadow-2xl transition-shadow duration-300 p-6 md:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Department Tier Usage</h2>
+                <h2 className="text-xl font-bold font-outfit text-gray-900 ">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
                   {data?.department_tier_usage?.current_plan ? `${data.department_tier_usage.current_plan} plan` : 'Loading...'} · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
                 </span>
@@ -473,11 +473,11 @@ export default function CostDashboardPage() {
                         <div key={department.id} className="p-5 app-card ohc-growth-card">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white">{department.department_type}</h3>
+                                    <h3 className="font-semibold text-gray-900 ">{department.department_type}</h3>
                                     <p className="text-sm text-gray-500 mt-1">{department.agent_id}</p>
                                 </div>
                                 <div className="text-left sm:text-right">
-                                    <p className="font-semibold text-gray-900 dark:text-white">
+                                    <p className="font-semibold text-gray-900 ">
                                       {department.action_limit === null
                                         ? `${department.actions_used} actions`
                                         : `${department.actions_used} / ${department.action_limit} actions`}
