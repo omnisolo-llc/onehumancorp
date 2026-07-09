@@ -107,7 +107,6 @@ mod tests {
         }
 
         // We use casting to bypass postgres/sqlite types to instantiate a generic hub for test
-        // Since Hub takes a PgPool, we have to supply one to construct it, even if unused in this isolated test
         let pg_pool = crate::db::secure_pg_pool_options()
             .connect_lazy("postgres://dummy")
             .unwrap();
