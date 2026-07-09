@@ -74,7 +74,7 @@ pub struct WorkflowExecutor {
     pub sub_agents: HashMap<String, Arc<Agent>>,
     pub config: AgentRunConfig,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-
+    pub cache: Option<Arc<tokio::sync::Mutex<HashMap<String, String>>>>,
 }
 
 fn evaluate_condition(expr: &str) -> bool {
@@ -133,7 +133,6 @@ impl WorkflowExecutor {
         sub_agents: HashMap<String, Arc<Agent>>,
         config: AgentRunConfig,
         checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-
     ) -> Self {
         Self {
             graph,
@@ -142,8 +141,13 @@ impl WorkflowExecutor {
             sub_agents,
             config,
             checkpointer,
-
+            cache: None,
         }
+    }
+
+    pub fn with_cache(mut self, cache: Arc<tokio::sync::Mutex<HashMap<String, String>>>) -> Self {
+        self.cache = Some(cache);
+        self
     }
 
     pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
@@ -269,12 +273,32 @@ impl WorkflowExecutor {
                             prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
                         }
 
-                        let mut on_event = |_| {};
-                        let result = self
-                            .agent
-                            .run(&self.config, &prompt, &mut on_event)
-                            .await
-                            .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
+                        let cache_key = format!("llm:{}", prompt);
+                        let mut cached_result = None;
+
+                        if let Some(c) = &self.cache {
+                            let lock = c.lock().await;
+                            if let Some(val) = lock.get(&cache_key) {
+                                cached_result = Some(val.clone());
+                            }
+                        }
+
+                        let result = if let Some(val) = cached_result {
+                            val
+                        } else {
+                            let mut on_event = |_| {};
+                            let res = self
+                                .agent
+                                .run(&self.config, &prompt, &mut on_event)
+                                .await
+                                .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
+
+                            if let Some(c) = &self.cache {
+                                let mut lock = c.lock().await;
+                                lock.insert(cache_key, res.clone());
+                            }
+                            res
+                        };
 
                         state.insert(node.id.clone(), result);
                     }
@@ -1337,6 +1361,94 @@ mod tests {
 #[cfg(test)]
 mod additional_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_visual_workflow_llm_node_cache() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Cache test: {{in}}".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
+        };
+
+        struct CallCountingLlmClient {
+            call_count: Arc<tokio::sync::Mutex<usize>>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for CallCountingLlmClient {
+            async fn chat(
+                &self,
+                _req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("From LLM"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            }
+        }
+
+        let call_count = Arc::new(tokio::sync::Mutex::new(0));
+        let llm_client = Arc::new(CallCountingLlmClient { call_count: call_count.clone() });
+        let agent = Arc::new(Agent::new(llm_client, vec![]));
+        let config = AgentRunConfig::default();
+        let cache = Arc::new(tokio::sync::Mutex::new(HashMap::new()));
+
+        // Run 1: Should call LLM
+        let executor1 = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], HashMap::new(), config.clone(), None)
+            .with_cache(cache.clone());
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "data1".to_string());
+
+        let res1 = executor1.execute(inputs.clone()).await.unwrap();
+        assert_eq!(res1, "From LLM");
+        let count1 = *call_count.lock().await;
+        assert_eq!(count1, 1);
+
+        // We inject a fake response into the cache for the exact same prompt to prove cache hit works
+        {
+            let mut cache_lock = cache.lock().await;
+            cache_lock.insert("llm:Cache test: data1".to_string(), "From Cache".to_string());
+        }
+
+        // Run 2: Should hit cache, not the LLM
+        let executor2 = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], HashMap::new(), config.clone(), None)
+            .with_cache(cache.clone());
+
+        let res2 = executor2.execute(inputs).await.unwrap();
+        assert_eq!(res2, "From Cache");
+        let count2 = *call_count.lock().await;
+        // Call count should remain 1
+        assert_eq!(count2, 1);
+    }
 
     #[tokio::test]
     async fn test_visual_workflow_deep_nesting_and_json_parsing() {

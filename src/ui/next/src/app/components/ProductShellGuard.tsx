@@ -16,9 +16,18 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
     title: "LangGraph",
     subtitle: "Explicit state graph workflows.",
   },
+  "/visual-workflow": {
+    title: "Visual Workflow",
+    subtitle: "Block-based visual workflow construction.",
+  },
+  "/agent-protocol": {
+    title: "Agent Protocol",
+    subtitle: "Standardized Agent Protocol interactions.",
+  }
 };
 
 const routesWithOwnShell = new Set([
+  "/agent-protocol",
   "/action-center",
   "/agents",
   "/ai-usage-paywall",
@@ -43,6 +52,7 @@ const routesWithOwnShell = new Set([
   "/services",
   "/settings",
   "/triage",
+  "/visual-workflow",
 ]);
 
 const standaloneRoutes = new Set([
@@ -116,6 +126,7 @@ const titleOverrides: Record<string, string> = {
   "/trial-extension": "Trial Extension",
   "/upgrade-roi": "Upgrade ROI",
   "/verification-loops": "Verification Loops",
+  "/visual-workflow": "Visual Workflow",
   "/pydantic-validation": "Pydantic Tool Schema Validation",
   "/website-builder": "Website Builder",
   "/whatsapp-link-generator": "WhatsApp Link Generator",
