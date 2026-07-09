@@ -195,8 +195,8 @@ mod batching_cost_tests {
         let batcher = PayoutBatcher::new(pool, threshold);
 
         // Simulating the routing check directly as that's what prevents unbatched fees
-        assert_eq!(crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(1000), true);
-        assert_eq!(crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(10000), false); // Threshold reached
+        assert!(crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(1000));
+        assert!(!crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(10000)); // Threshold reached
 
         // Verification that the batcher initializes correctly with the correct threshold.
         assert_eq!(batcher.batch_threshold_cents, 10000);
