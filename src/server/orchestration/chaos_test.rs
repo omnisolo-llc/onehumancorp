@@ -679,7 +679,7 @@ mod chaos_tests {
         let standalone_tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
             tokio::time::timeout(std::time::Duration::from_millis(250), standalone_state_manager.pull_available_tasks(10)).await.expect("Test hung")
         }).await;
-        let elapsed_standalone = start_standalone.elapsed();
+        let _elapsed_standalone = start_standalone.elapsed();
 
         // Parity verification: both should gracefully fallback (likely to empty lists or error, but must not panic)
         // Cloud and Standalone should behave identically at the API boundary
