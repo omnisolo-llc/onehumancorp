@@ -93,7 +93,7 @@ async fn get_onboarding_state(tenant_id: Option<String>, user_id: Option<String>
     let u_id = user_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string()));
 
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/onboarding/state", backend_url);
+    let url = format!("{}/api/onboarding/draft", backend_url);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
@@ -203,7 +203,7 @@ async fn save_onboarding_state(state: serde_json::Value, tenant_id: Option<Strin
     let u_id = user_id.unwrap_or_else(|| std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string()));
 
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/onboarding/state", backend_url);
+    let url = format!("{}/api/onboarding/draft", backend_url);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
