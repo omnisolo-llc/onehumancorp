@@ -418,14 +418,22 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(qty).bind(total_amount).execute(&mut *tx).await;
 
                         let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
-                            Box::new(crate::orchestration::locks::StandaloneLock::new())
+                            if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
+                            } else {
+                                Box::new(crate::orchestration::locks::StandaloneLock::new())
+                            }
                         } else {
-                            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-                            let client = redis::Client::open(redis_url).unwrap();
-                            Box::new(crate::orchestration::locks::RedisLock::new(client))
+                            if let Ok(client) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())) {
+                                Box::new(crate::orchestration::locks::RedisLock::new(client))
+                            } else if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
+                            } else {
+                                Box::new(crate::orchestration::locks::StandaloneLock::new())
+                            }
                         };
 
-                        let _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
+                        let mut _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
                             Ok(guard) => guard,
                             Err(_) => {
                                 tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", product_id);

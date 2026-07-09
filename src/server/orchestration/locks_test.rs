@@ -5,12 +5,12 @@ async fn test_standalone_lock_acquire() {
     let lock = StandaloneLock::new();
     let task_id = "test_task_1";
 
-    let guard1 = lock.acquire(task_id).await.unwrap();
+    let mut guard1 = lock.acquire(task_id).await.unwrap();
     // Should be locked now
-    drop(guard1);
+    guard1.release().await;
 
-    let guard2 = lock.acquire(task_id).await.unwrap();
-    drop(guard2);
+    let mut guard2 = lock.acquire(task_id).await.unwrap();
+    guard2.release().await;
 }
 
 #[tokio::test]
@@ -20,10 +20,10 @@ async fn test_acquire_resource_standalone_lock() {
     let resource_type = "inventory";
     let resource_id = "item-123";
 
-    let _guard1 = lock.acquire_resource(tenant_id, resource_type, resource_id).await.unwrap();
+    let mut _guard1 = lock.acquire_resource(tenant_id, resource_type, resource_id).await.unwrap();
 
     // The resource should be locked
-    let lock_clone = lock.locks.lock().await;
+    let lock_clone = lock.local_locks.lock().await;
     let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
     assert!(lock_clone.contains_key(&key));
     drop(lock_clone);
@@ -52,7 +52,7 @@ async fn test_redis_lock_guard_drop_safety() {
     // Clean up before test
     let _: () = redis::cmd("DEL").arg(&key).query_async(&mut conn).await.unwrap();
 
-    let guard = lock.acquire(task_id).await.unwrap();
+    let mut guard = lock.acquire(task_id).await.unwrap();
 
     // Verify it is locked in Redis
     let val1: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut conn).await.unwrap();
@@ -63,7 +63,7 @@ async fn test_redis_lock_guard_drop_safety() {
     let _: () = redis::cmd("SET").arg(&key).arg(other_val).query_async(&mut conn).await.unwrap();
 
     // Now drop the guard. It should try to delete the lock, but fail because the value doesn't match
-    drop(guard);
+    guard.release().await;
 
     // Verify the other process's lock is still there
     let val2: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut conn).await.unwrap();
