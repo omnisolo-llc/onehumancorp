@@ -548,6 +548,11 @@ mod tests {
             let res = repo.update_user(dummy_user, "system").await;
             assert!(res.is_err(), "Must reject system org_id");
             assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+
+            // Wait, also check `get_by_id` here
+            let res2 = repo.get_by_id("dummy_id", "system").await;
+            assert!(res2.is_err(), "Must reject system id in multitenant mode");
+            assert_eq!(res2.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
         }).await;
     }
 }
