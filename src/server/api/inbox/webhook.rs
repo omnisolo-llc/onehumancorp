@@ -235,7 +235,7 @@ pub async fn handle_omnichannel_webhook(
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'work_triage', $3, 'PENDING')")
                 .bind(&job_id)
                 .bind(&payload.tenant_id)
                 .bind(payload_json.to_string())
@@ -244,7 +244,7 @@ pub async fn handle_omnichannel_webhook(
                 .map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'work_triage', ?, 'PENDING')")
                 .bind(&job_id)
                 .bind(&payload.tenant_id)
                 .bind(payload_json.to_string())
@@ -255,7 +255,7 @@ pub async fn handle_omnichannel_webhook(
     };
 
     if let Err(e) = enqueue_result {
-        tracing::error!("Failed to enqueue message_triage job: {}", e);
+        tracing::error!("Failed to enqueue work_triage job: {}", e);
     }
 
     let event = DepartmentEvent {

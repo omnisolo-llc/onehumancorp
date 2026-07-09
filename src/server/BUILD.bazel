@@ -351,7 +351,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:pos_conflict_worker.rs",
     "//src/server/workers:proactive_analysis_job.rs",
     "//src/server/workers:proactive_operations_worker.rs",
-    "//src/server/workers:message_triage_worker.rs",
+    "//src/server/workers:work_triage_agent.rs",
     "//src/server/workers:pricing_analysis_worker.rs",
     "//src/server/workers:deposit_follow_up_worker.rs",
     "//src/server/workers:missed_lead_recovery_worker.rs",

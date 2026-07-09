@@ -167,22 +167,12 @@ export default function TriagePage() {
   }
 
   return (
-    <AppShell
-      title="Work Triage"
-      subtitle="AI-prioritized inbox and action center."
-      statusItems={[
-        {
-          label: "Active",
-          value: String(activeCount),
-          tone: activeCount > 0 ? "warn" : "good",
-        },
-        {
-          label: "Urgent",
-          value: String(urgentCount),
-          tone: urgentCount > 0 ? "bad" : "neutral",
-        },
-      ]}
-    >
+    <AppShell title="Work Triage">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Good morning.</h1>
+        <p className="text-md text-gray-600 dark:text-gray-300">{items.length} things need attention.</p>
+      </div>
+
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
@@ -358,7 +348,7 @@ export default function TriagePage() {
                                 setEditValue(item.action_payload || "");
                               }}
                             >
-                              Review Draft
+                              Review & Send
                             </button>
                             <button
                               disabled={isProcessing}
@@ -366,7 +356,7 @@ export default function TriagePage() {
                               data-testid={`triage-approve-${item.id}`}
                               onClick={() => handleDecision(item.id, true)}
                             >
-                              {isProcessing ? "Processing..." : "Approve as-is"}
+                              {isProcessing ? "Processing..." : "Approve & Send"}
                             </button>
                           </>
                         ) : (
@@ -376,7 +366,7 @@ export default function TriagePage() {
                             data-testid={`triage-approve-${item.id}`}
                             onClick={() => handleDecision(item.id, true)}
                           >
-                            {isProcessing ? "Processing..." : "Approve & Send"}
+                            {isProcessing ? "Processing..." : item.action_type === "Send Reminder" ? "Send Reminder" : "Review & Send"}
                           </button>
                         )}
                         <button

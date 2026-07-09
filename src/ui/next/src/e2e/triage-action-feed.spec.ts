@@ -52,7 +52,7 @@ test.describe('Triage Action Feed UI', () => {
 
     // 3. Navigate to Triage Feed
     await page.goto('/triage');
-    await expect(page.locator('body')).toContainText(/Work Triage/, { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/Good morning./, { timeout: 15000 });
 
     const listItems = page.locator('div[data-testid^="triage-card-"]');
 

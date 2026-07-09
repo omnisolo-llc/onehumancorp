@@ -4,18 +4,18 @@ use crate::db::DB;
 use sqlx::Row;
 use uuid::Uuid;
 
-pub struct MessageTriageWorker {
+pub struct WorkTriageAgent {
     db: Arc<DB>,
 }
 
-impl MessageTriageWorker {
+impl WorkTriageAgent {
     pub fn new(db: Arc<DB>) -> Self {
         Self { db }
     }
 
     pub fn start(self: Arc<Self>) {
         tokio::spawn(async move {
-            tracing::info!("Starting MessageTriageWorker for Agentic Work Triage feature...");
+            tracing::info!("Starting WorkTriageAgent for Agentic Work Triage feature...");
             loop {
                 match self.poll().await {
                     Ok(true) => {
@@ -27,7 +27,7 @@ impl MessageTriageWorker {
                         tokio::time::sleep(Duration::from_millis(1000)).await;
                     }
                     Err(e) => {
-                        tracing::error!("MessageTriageWorker error: {}", e);
+                        tracing::error!("WorkTriageAgent error: {}", e);
                         tokio::time::sleep(Duration::from_millis(5000)).await;
                     }
                 }
@@ -43,7 +43,7 @@ impl MessageTriageWorker {
                     r#"
                     SELECT id, tenant_id, payload
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type = 'work_triage'
                     ORDER BY next_retry_at ASC, created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -76,7 +76,7 @@ impl MessageTriageWorker {
                     r#"
                     SELECT id, tenant_id, payload
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type = 'work_triage'
                     ORDER BY next_retry_at ASC, created_at ASC
                     LIMIT 1
                     "#
@@ -112,8 +112,8 @@ impl MessageTriageWorker {
 
             // Extract intent & context using LLM
             let prompt = format!(
-                "You are an AI order and task triage assistant for a business.
-Analyze the following incoming customer message.
+                "You are the WorkTriageAgent for a business.
+Analyze the following incoming customer messages, form fills, and failed payments.
 Message from {}: '{}'
 Source: {}
 
@@ -191,21 +191,21 @@ Output JSON format:
                             }
                         }
                         retry_count += 1;
-                        tracing::warn!("LLM returned invalid format in MessageTriageWorker (attempt {}/{})", retry_count, max_retries);
+                        tracing::warn!("LLM returned invalid format in WorkTriageAgent (attempt {}/{})", retry_count, max_retries);
                         if retry_count < max_retries {
                             tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
                     Ok(Err(e)) => {
                         retry_count += 1;
-                        tracing::warn!("LLM error in MessageTriageWorker (attempt {}/{}): {}", retry_count, max_retries, e);
+                        tracing::warn!("LLM error in WorkTriageAgent (attempt {}/{}): {}", retry_count, max_retries, e);
                         if retry_count < max_retries {
                             tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
                     Err(_) => {
                         retry_count += 1;
-                        tracing::warn!("LLM timeout in MessageTriageWorker (attempt {}/{}): 60s exceeded", retry_count, max_retries);
+                        tracing::warn!("LLM timeout in WorkTriageAgent (attempt {}/{}): 60s exceeded", retry_count, max_retries);
                         if retry_count < max_retries {
                             tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
