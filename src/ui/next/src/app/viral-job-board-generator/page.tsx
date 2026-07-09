@@ -59,8 +59,8 @@ export default function ViralJobBoardGeneratorPage() {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300/50 rounded-lg bg-white/50 backdrop-blur-sm min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                 rows={3}
+                className="w-full px-3 py-2 border border-gray-300/50 rounded-lg bg-white/50 backdrop-blur-sm min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                 placeholder="e.g. Join our team and help us build the future."
               />
             </div>
@@ -82,20 +82,17 @@ export default function ViralJobBoardGeneratorPage() {
                 </button>
               </div>
             </div>
+
           </div>
 
           <div className="p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-indigo-50/70 backdrop-blur-[40px] border border-indigo-100/50 rounded-2xl mt-6">
             <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
               <span className="text-xl">🚀</span> Share Your Board
             </h3>
-            <p className="text-sm text-indigo-800 mb-4">
-              Post this link on social media. People can apply and refer friends to get a bonus!
-            </p>
+            <p className="text-sm text-indigo-800 mb-4">Post this link on social media. People can apply and refer friends to get a bonus!</p>
 
             <div className="flex items-center gap-2 bg-white min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">
-              <div className="px-2 py-1 text-xs text-gray-500 truncate flex-1 font-mono">
-                {generatedLink}
-              </div>
+              <div className="px-2 py-1 text-xs text-gray-500 truncate flex-1 font-mono">{generatedLink}</div>
             </div>
 
             <button
@@ -109,65 +106,78 @@ export default function ViralJobBoardGeneratorPage() {
 
         <div className="w-full md:w-2/3 flex flex-col">
           <div className="flex-1 shadow-[0_20px_40px_rgb(0,0,0,0.15)] overflow-hidden flex flex-col bg-white/40 backdrop-blur-[40px] saturate-[200%] border border-white/50 rounded-2xl relative">
+            {/* Browser Header */}
             <div className="bg-gray-200 py-3 px-4 flex items-center gap-2 border-b border-gray-300">
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-green-400" />
               </div>
-              <div className="mx-auto bg-white/60 text-xs text-gray-500 px-4 py-1 rounded-full w-1/2 text-center truncate">
-                Preview: Your Job Board Page
+              <div className="flex-1 text-center">
+                <div className="inline-block bg-white text-gray-500 text-xs py-1 px-32 rounded-full font-mono shadow-inner min-w-[200px]">
+                  {generatedLink}
+                </div>
               </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center p-8 bg-black/5 overflow-y-auto">
-              <div
-                className="w-full max-w-sm shadow-[0_8px_30px_rgb(0,0,0,0.1)] p-8 flex flex-col items-center relative overflow-hidden transition-all duration-300 rounded-3xl border"
-                style={getThemeStyles()}
-              >
-                <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mb-6 shadow-inner">
-                  💼
-                </div>
-                <h2 className="text-2xl font-bold font-outfit text-center mb-2">
-                  {boardTitle || 'We are hiring!'}
-                </h2>
-                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                  {description || 'Join our team.'}
-                </p>
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 overflow-y-auto">
+              {/* Device Frame */}
+              <div className="w-full max-w-[375px] h-[667px] shadow-2xl overflow-hidden flex flex-col border-[8px] border-gray-900 bg-white" style={getThemeStyles()}>
+                 {/* Widget Header */}
+                 <div className="p-6 text-center border-b" style={{ borderColor: getThemeStyles().borderColor }}>
+                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center text-2xl font-bold text-gray-400">LOGO</div>
+                    <h2 className="text-xl font-bold font-outfit mb-2">{boardTitle}</h2>
+                    <p className="text-sm opacity-80">{description}</p>
+                 </div>
 
-                <div className="w-full space-y-3 mb-6">
-                  <div className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50/10 transition-colors" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                    <h4 className="font-bold text-sm">Senior Developer</h4>
-                    <p className="text-xs mt-1 opacity-70">Remote • Full-time</p>
-                  </div>
-                  <div className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50/10 transition-colors" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                    <h4 className="font-bold text-sm">Marketing Manager</h4>
-                    <p className="text-xs mt-1 opacity-70">New York • Full-time</p>
-                  </div>
-                </div>
+                 {/* Jobs List */}
+                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
 
-                <div className="w-full p-4 rounded-lg bg-green-50 border border-green-200 text-center mb-4">
-                  <p className="text-green-800 text-sm font-bold">Know someone?</p>
-                  <p className="text-green-700 text-xs mt-1">Refer a friend and get $500 if they are hired!</p>
-                  <button className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
-                    Refer a Friend
-                  </button>
-                </div>
+                    {/* Job Card 1 */}
+                    <div className="p-4 border rounded-xl" style={{ borderColor: getThemeStyles().borderColor }}>
+                        <div className="flex justify-between items-start mb-2">
+                           <h4 className="font-bold text-sm">Senior Frontend Engineer</h4>
+                           <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold uppercase tracking-wider">$1K Bonus</span>
+                        </div>
+                        <p className="text-xs opacity-70 mb-3">Remote • Full-time</p>
+                        <div className="flex gap-2">
+                            <button className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
+                                Apply
+                            </button>
+                            <button className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
+                                Refer
+                            </button>
+                        </div>
+                    </div>
 
-                <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                  <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>⚡ Powered by OHC</span>
-                </div>
+                    {/* Job Card 2 */}
+                    <div className="p-4 border rounded-xl" style={{ borderColor: getThemeStyles().borderColor }}>
+                        <div className="flex justify-between items-start mb-2">
+                           <h4 className="font-bold text-sm">Growth Marketing Manager</h4>
+                           <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold uppercase tracking-wider">$500 Bonus</span>
+                        </div>
+                        <p className="text-xs opacity-70 mb-3">New York • Hybrid</p>
+                        <div className="flex gap-2">
+                            <button className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
+                                Apply
+                            </button>
+                            <button className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
+                                Refer
+                            </button>
+                        </div>
+                    </div>
+                 </div>
+
+                 {/* Footer Sticky */}
+                 <div className="p-4 border-t text-center text-xs opacity-50" style={{ borderColor: getThemeStyles().borderColor }}>
+                    Powered by OHC
+                 </div>
               </div>
             </div>
           </div>
         </div>
       </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}} />
     </div>
   );
 }
