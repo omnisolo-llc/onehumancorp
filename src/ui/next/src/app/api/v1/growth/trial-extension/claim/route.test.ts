@@ -18,7 +18,7 @@ describe('Trial Extension API', () => {
     const response = await POST(req);
     const data = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(data.error).toBe('Internal Server Error');
+    expect(response.status).toBe(502);
+    expect(data.error).toBe('Failed to claim trial extension');
   });
 });

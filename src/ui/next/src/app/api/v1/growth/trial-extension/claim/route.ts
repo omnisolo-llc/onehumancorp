@@ -21,19 +21,11 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       if (process.env.NODE_ENV !== "test") {
-         console.warn("Backend unavailable, mocking trial extension success for growth loop:", e);
-      }
-
-      // Fallback for tests if the test specifically expects a 500
-      if (process.env.NODE_ENV === "test") {
-          throw e;
+         console.warn("Backend unavailable, failing trial extension:", e);
       }
     }
 
-    // Mock sleep to allow "Verifying Share..." to show for at least 500ms
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // Fallback success response for the growth loop UI
-    return NextResponse.json({ success: true, extended_days: 7 });
+    return NextResponse.json({ error: 'Failed to claim trial extension' }, { status: 502 });
   } catch (error) {
     if (process.env.NODE_ENV !== "test") console.error("Error extending trial:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

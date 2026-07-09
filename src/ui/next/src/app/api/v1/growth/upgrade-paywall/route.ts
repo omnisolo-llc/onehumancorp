@@ -24,12 +24,11 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       if (process.env.NODE_ENV !== "test") {
-        console.warn("Backend unavailable, falling back to local static representation for growth loop:", e);
+        console.warn("Backend unavailable, failing upgrade paywall request:", e);
       }
     }
 
-    // Static fallback without mock delays
-    return NextResponse.json({ progress: 1, target: 3, tenant_id: tenantId });
+    return NextResponse.json({ error: 'Failed to fetch upgrade paywall status' }, { status: 502 });
   } catch (error) {
     if (process.env.NODE_ENV !== "test") console.error("Error fetching upgrade paywall status:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
