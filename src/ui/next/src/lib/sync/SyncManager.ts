@@ -18,11 +18,23 @@ export class SyncManager {
     if (typeof window === 'undefined') return;
     const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?tenant_id=${tenantId}`;
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?tenant_id=${tenantId}&topics=inventory,orders,tenant_events`;
 
     const ws = new WebSocket(wsUrl);
     ws.onmessage = (event) => {
       if (typeof window !== 'undefined') {
+        try {
+          const payload = JSON.parse(event.data);
+          // sync_gateway wraps messages in { channel: "...", payload: "..." }
+          if (payload && payload.channel && payload.channel.startsWith('tenant_events:')) {
+            window.dispatchEvent(new CustomEvent('ohc_event_received', { detail: payload.payload }));
+          }
+        } catch (e) {
+          // Fallback if the payload is not JSON or wrapped
+          if (typeof event.data === 'string' && event.data.includes('tenant_events')) {
+             window.dispatchEvent(new CustomEvent('ohc_event_received', { detail: event.data }));
+          }
+        }
         window.dispatchEvent(new Event('ohc_queue_updated'));
       }
     };

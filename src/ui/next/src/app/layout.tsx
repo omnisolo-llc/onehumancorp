@@ -8,6 +8,7 @@ import { HelpChat } from "../components/HelpChat";
 import { VoiceAssistant } from "../components/VoiceAssistant";
 import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
+import { NotificationManager } from "../components/NotificationManager";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 import { ProductShellGuard } from './components/ProductShellGuard';
 
@@ -43,6 +44,7 @@ export default function RootLayout({
               <VoiceAssistant />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
+              <NotificationManager />
             </WalkthroughProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>
