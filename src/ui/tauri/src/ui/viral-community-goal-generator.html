@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Viral Community Goal Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0066FF;
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 414px;
+      padding: 24px;
+      margin-top: 40px;
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      text-align: center;
+      margin: 0 0 24px 0;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.8);
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    .preview-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #result-area {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background-color: #333;
+    }
+
+    .back-link {
+      margin-top: 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --card-bg: rgba(30, 30, 30, 0.65);
+        --text-main: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      .preview-box {
+        background: #1c1c1e;
+      }
+      input[type="text"], input[type="number"] {
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+      }
+      .code-block {
+        background: #000;
+        border: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">🎯</div>
+    <h1>Community Goal Generator</h1>
+    <p class="subtitle">Set a community target (like 500 pre-orders) to unlock a shared reward. Customers will share to reach the goal.</p>
+
+    <div class="form-group">
+      <label for="goal-target">Target Number (e.g. 500)</label>
+      <input type="number" id="goal-target" value="500" />
+    </div>
+
+    <div class="form-group">
+      <label for="goal-reward">Reward (e.g. "50% off for everyone!")</label>
+      <input type="text" id="goal-reward" value="50% off for everyone!" />
+    </div>
+
+    <div class="preview-box" id="preview-container">
+      <p style="text-align:center; color: var(--text-secondary);">Loading preview...</p>
+    </div>
+
+    <button id="generate-btn">Generate Embed Code</button>
+
+    <div id="result-area">
+      <h2 style="font-size: 16px; margin: 0 0 12px 0;">Your Embed Code</h2>
+      <p style="font-size: 14px; color: var(--text-secondary); margin: 0 0 12px 0;">Paste this snippet anywhere on your site to display the tracker.</p>
+
+      <div class="code-block" id="embed-code"></div>
+
+      <button id="copy-btn" class="copy-btn">Copy Code</button>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    const targetInput = document.getElementById('goal-target');
+    const rewardInput = document.getElementById('goal-reward');
+    const previewContainer = document.getElementById('preview-container');
+
+    function getHostUrl() {
+        if (window.location.protocol === 'file:' || window.location.hostname === 'tauri.localhost') {
+             return 'https://ohc.network';
+        }
+        return window.location.origin;
+    }
+
+    async function updatePreview() {
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+      const target = encodeURIComponent(targetInput.value || '500');
+      const reward = encodeURIComponent(rewardInput.value || '50% off for everyone!');
+      const hostUrl = getHostUrl();
+
+      const iframeUrl = `${hostUrl}/api/v1/growth/community-goal/embed?tenant=${tenantId}&target=${target}&reward=${reward}`;
+      previewContainer.innerHTML = `<iframe src="${iframeUrl}" style="width:100%; height:250px; border:none; border-radius:12px;" scrolling="no"></iframe>`;
+    }
+
+    targetInput.addEventListener('input', updatePreview);
+    rewardInput.addEventListener('input', updatePreview);
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        const target = encodeURIComponent(targetInput.value || '500');
+        const reward = encodeURIComponent(rewardInput.value || '50% off for everyone!');
+        const hostUrl = getHostUrl();
+
+        const iframeUrl = `${hostUrl}/api/v1/growth/community-goal/embed?tenant=${tenantId}&target=${target}&reward=${reward}`;
+
+        const snippet = `<!-- OHC Viral Community Goal Widget -->
+<iframe src="${iframeUrl}" style="width:100%; max-width:400px; height:250px; border:none; border-radius:12px; display:block; margin:0 auto;" scrolling="no"></iframe>`;
+
+        document.getElementById('embed-code').textContent = snippet;
+
+        await new Promise(r => setTimeout(r, 400));
+
+        document.getElementById('result-area').style.display = 'block';
+        btn.style.display = 'none';
+
+      } catch (err) {
+        console.error(err);
+        btn.textContent = 'Error. Try Again.';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      const code = document.getElementById('embed-code').textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    });
+
+    // Initial preview load
+    updatePreview();
+  </script>
+</body>
+</html>

@@ -462,7 +462,7 @@ mod tests {
         }
     }
 
-    fn create_tool_call_resp(tool_name: &str, args: serde_json::Value) -> ChatResponse {
+    pub(crate) fn create_tool_call_resp(tool_name: &str, args: serde_json::Value) -> ChatResponse {
         ChatResponse {
             message: Message {
                 role: crate::types::Role::Assistant,
@@ -1077,9 +1077,9 @@ mod tests_clamped {
             *count += 1;
 
             if *count == 1 {
-                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})))
+                Ok(super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})))
             } else {
-                Ok(create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})))
+                Ok(super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})))
             }
         }
     }
