@@ -43,6 +43,7 @@ function badgeTone(priority?: string) {
 const getSourceIcon = (source: string) => {
   const s = source.toLowerCase();
   if (s.includes("instagram")) return "📸";
+  if (s.includes("whatsapp")) return "💬";
   if (s.includes("email")) return "📧";
   if (s.includes("booking") || s.includes("calendar")) return "📅";
   if (s.includes("payment") || s.includes("stripe")) return "💳";

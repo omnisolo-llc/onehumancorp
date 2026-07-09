@@ -173,13 +173,23 @@ impl Department for CustomerSuccessAgent {
             tokio::spawn(async move {
                 if source == "whatsapp" && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
+                    let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
 
-                    if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
-                        if !account_sid.is_empty() && !auth_token.is_empty() {
+                    if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
+                        if integration_id == "whatsapp_cloud_api" {
+                            use crate::integrations::meta::provider::MetaProvider;
+                            let provider = MetaProvider::new(auth_token);
+                            let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
+                            if let Err(e) = provider.send_message("whatsapp", &to, &text).await {
+                                tracing::error!("Failed to send whatsapp message via Meta integration: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent whatsapp message via Meta integration");
+                            }
+                            return;
+                        } else if !account_sid.is_empty() && !auth_token.is_empty() {
                             use crate::integrations::twilio::provider::TwilioProvider;
                             let provider = TwilioProvider::new(account_sid, auth_token);
 
