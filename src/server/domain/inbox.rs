@@ -76,9 +76,11 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                     });
                 }
             } else if source == "instagram" || source == "facebook" {
+                let integration_id = if source == "whatsapp" { "whatsapp_cloud_api" } else { "meta" };
                 let meta_creds: Result<String, sqlx::Error> = sqlx::query_scalar(
-                    "SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1"
+                    "SELECT api_token FROM integration_credentials WHERE integration_id = $1 AND tenant_id = $2 LIMIT 1"
                 )
+                .bind(integration_id)
                 .bind(tenant_id)
                 .fetch_optional(pool)
                 .await
@@ -88,7 +90,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                     if !api_token.trim().is_empty() {
                         let registry = crate::integrations::registry::IntegrationsRegistry::new();
                         let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-                            integration_id: "meta".to_string(),
+                            integration_id: integration_id.to_string(),
                             base_url: "".to_string(),
                             bot_token: "".to_string(),
                             chat_id: "".to_string(),
@@ -96,13 +98,14 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                             api_token: api_token.clone(),
                             from_phone: "".to_string(),
                         };
-                        let _ = registry.connect("meta", "", creds);
+                        let _ = registry.connect(integration_id, "", creds);
 
                         let draft_reply_clone = draft_reply.to_string();
                         let sender_id_clone = sender_id.to_string();
                         let source_clone = source.clone();
+                        let integration_id_clone = integration_id.to_string();
                         tokio::spawn(async move {
-                            if let Err(e) = registry.send_message("meta", &source_clone, &sender_id_clone, &draft_reply_clone).await {
+                            if let Err(e) = registry.send_message(&integration_id_clone, &source_clone, &sender_id_clone, &draft_reply_clone).await {
                                 tracing::error!("Failed to send {} reply: {}", source_clone, e);
                             } else {
                                 tracing::info!("Successfully sent {} reply to {}", source_clone, sender_id_clone);
