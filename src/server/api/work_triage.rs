@@ -175,33 +175,70 @@ pub async fn get_daily_work_handler(
                     }).collect();
                     Ok::<Vec<serde_json::Value>, sqlx::Error>(items)
                 }),
-                tokio::spawn(async move {
-                    let cache = crate::api::agent_feed::get_agent_feed_cache();
-                    let feed_cache_key = format!("agent_feed:{}:5:0:{}", cache_t_bg, mobile_optimized);
-                    if let Some(cached_feed) = cache.get(&feed_cache_key).await {
-                        if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
-                            let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
-                                serde_json::json!({
-                                    "id": i.id,
-                                    "intent": "agent_action",
-                                    "status": i.lifecycle_state,
-                                    "suggested_actions": i.proposed_action
-                                })
-                            }).collect();
-                            return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
-                        } else if let crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(mob_resp) = cached_feed {
-                            let items: Vec<serde_json::Value> = mob_resp.items.into_iter().map(|i| {
-                                serde_json::json!({
-                                    "id": i.id,
-                                    "intent": "agent_action",
-                                    "status": i.lifecycle_state
-                                })
-                            }).collect();
-                            return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                {
+                    let db_feed = db.clone();
+                    let t_feed = cache_t_bg.clone();
+                    tokio::spawn(async move {
+                        let cache = crate::api::agent_feed::get_agent_feed_cache();
+                        let feed_cache_key = format!("agent_feed:{}:5:0:{}", t_feed, mobile_optimized);
+                        let tag = format!("agent_feed_tenant:{}", t_feed);
+                        let fetched_feed = cache.get_or_fetch_with_tags_swr(
+                            &feed_cache_key,
+                            vec![tag],
+                            std::time::Duration::from_secs(60),
+                            {
+                                let db_bg = db_feed.clone();
+                                let t_bg = t_feed.clone();
+                                move || async move {
+                                    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(db_bg);
+                                    match repo.list(&t_bg, 5, 0, mobile_optimized).await {
+                                        Ok(items) => {
+                                            let any_response = if mobile_optimized {
+                                                let mobile_items = items.into_iter().map(|item| crate::api::agent_feed::MobileAgentFeedItem {
+                                                    id: item.id,
+                                                    event_source: item.event_source,
+                                                    context_payload: None,
+                                                    proposed_action: None,
+                                                    lifecycle_state: item.lifecycle_state,
+                                                    created_at: item.created_at,
+                                                }).collect();
+                                                crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(crate::api::agent_feed::MobileAgentFeedListResponse { items: mobile_items })
+                                            } else {
+                                                crate::api::agent_feed::AnyAgentFeedListResponse::Standard(crate::api::agent_feed::AgentFeedListResponse { items })
+                                            };
+                                            Some(any_response)
+                                        },
+                                        Err(_) => None
+                                    }
+                                }
+                            }
+                        ).await;
+
+                        if let Some(cached_feed) = fetched_feed {
+                            if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
+                                let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
+                                    serde_json::json!({
+                                        "id": i.id,
+                                        "intent": "agent_action",
+                                        "status": i.lifecycle_state,
+                                        "suggested_actions": i.proposed_action
+                                    })
+                                }).collect();
+                                return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                            } else if let crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(mob_resp) = cached_feed {
+                                let items: Vec<serde_json::Value> = mob_resp.items.into_iter().map(|i| {
+                                    serde_json::json!({
+                                        "id": i.id,
+                                        "intent": "agent_action",
+                                        "status": i.lifecycle_state
+                                    })
+                                }).collect();
+                                return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                            }
                         }
-                    }
-                    Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
-                })
+                        Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
+                    })
+                }
             );
 
             let mut final_items = work_res.unwrap_or(Ok(vec![])).unwrap_or_default();
@@ -282,33 +319,70 @@ pub async fn get_daily_work_handler(
                     }).collect();
                     Ok::<Vec<serde_json::Value>, sqlx::Error>(items)
                 }),
-                tokio::spawn(async move {
-                    let cache = crate::api::agent_feed::get_agent_feed_cache();
-                    let feed_cache_key = format!("agent_feed:{}:5:0:{}", cache_t_bg, mobile_optimized);
-                    if let Some(cached_feed) = cache.get(&feed_cache_key).await {
-                        if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
-                            let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
-                                serde_json::json!({
-                                    "id": i.id,
-                                    "intent": "agent_action",
-                                    "status": i.lifecycle_state,
-                                    "suggested_actions": i.proposed_action
-                                })
-                            }).collect();
-                            return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
-                        } else if let crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(mob_resp) = cached_feed {
-                            let items: Vec<serde_json::Value> = mob_resp.items.into_iter().map(|i| {
-                                serde_json::json!({
-                                    "id": i.id,
-                                    "intent": "agent_action",
-                                    "status": i.lifecycle_state
-                                })
-                            }).collect();
-                            return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                {
+                    let db_feed = db.clone();
+                    let t_feed = cache_t_bg.clone();
+                    tokio::spawn(async move {
+                        let cache = crate::api::agent_feed::get_agent_feed_cache();
+                        let feed_cache_key = format!("agent_feed:{}:5:0:{}", t_feed, mobile_optimized);
+                        let tag = format!("agent_feed_tenant:{}", t_feed);
+                        let fetched_feed = cache.get_or_fetch_with_tags_swr(
+                            &feed_cache_key,
+                            vec![tag],
+                            std::time::Duration::from_secs(60),
+                            {
+                                let db_bg = db_feed.clone();
+                                let t_bg = t_feed.clone();
+                                move || async move {
+                                    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(db_bg);
+                                    match repo.list(&t_bg, 5, 0, mobile_optimized).await {
+                                        Ok(items) => {
+                                            let any_response = if mobile_optimized {
+                                                let mobile_items = items.into_iter().map(|item| crate::api::agent_feed::MobileAgentFeedItem {
+                                                    id: item.id,
+                                                    event_source: item.event_source,
+                                                    context_payload: None,
+                                                    proposed_action: None,
+                                                    lifecycle_state: item.lifecycle_state,
+                                                    created_at: item.created_at,
+                                                }).collect();
+                                                crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(crate::api::agent_feed::MobileAgentFeedListResponse { items: mobile_items })
+                                            } else {
+                                                crate::api::agent_feed::AnyAgentFeedListResponse::Standard(crate::api::agent_feed::AgentFeedListResponse { items })
+                                            };
+                                            Some(any_response)
+                                        },
+                                        Err(_) => None
+                                    }
+                                }
+                            }
+                        ).await;
+
+                        if let Some(cached_feed) = fetched_feed {
+                            if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
+                                let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
+                                    serde_json::json!({
+                                        "id": i.id,
+                                        "intent": "agent_action",
+                                        "status": i.lifecycle_state,
+                                        "suggested_actions": i.proposed_action
+                                    })
+                                }).collect();
+                                return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                            } else if let crate::api::agent_feed::AnyAgentFeedListResponse::Mobile(mob_resp) = cached_feed {
+                                let items: Vec<serde_json::Value> = mob_resp.items.into_iter().map(|i| {
+                                    serde_json::json!({
+                                        "id": i.id,
+                                        "intent": "agent_action",
+                                        "status": i.lifecycle_state
+                                    })
+                                }).collect();
+                                return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
+                            }
                         }
-                    }
-                    Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
-                })
+                        Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
+                    })
+                }
             );
 
             let mut final_items = work_res.unwrap_or(Ok(vec![])).unwrap_or_default();
