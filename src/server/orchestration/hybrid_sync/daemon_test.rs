@@ -24,7 +24,7 @@ mod tests {
 
         sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (\n                id TEXT PRIMARY KEY,\n                status TEXT NOT NULL,\n                payload TEXT,\n                tenant_id TEXT,\n                synced_to_cloud BOOLEAN DEFAULT false,\n                sync_error TEXT,\n                last_synced_at TEXT\n            )").execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (
+        sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 parent_task_id TEXT,
@@ -74,7 +74,7 @@ mod tests {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+            "CREATE TABLE IF NOT EXISTS ohc_job_queue (
                 id VARCHAR PRIMARY KEY,
                 tenant_id VARCHAR NOT NULL,
                 parent_task_id VARCHAR,
@@ -135,7 +135,7 @@ mod tests {
 
         // Let's also check the pg queue redaction.
         let queue_row =
-            sqlx::query("SELECT payload FROM sub_agent_queue WHERE payload LIKE '%test_mem_1%'")
+            sqlx::query("SELECT payload FROM ohc_job_queue WHERE payload LIKE '%test_mem_1%'")
                 .fetch_one(&pg_pool)
                 .await
                 .unwrap();
@@ -332,7 +332,7 @@ async fn test_hybrid_sync_clears_error_on_success() {
     };
 
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+        "CREATE TABLE IF NOT EXISTS ohc_job_queue (
             id VARCHAR PRIMARY KEY,
             tenant_id VARCHAR NOT NULL,
             parent_task_id VARCHAR,
@@ -532,7 +532,7 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+            "CREATE TABLE IF NOT EXISTS ohc_job_queue (
                 id VARCHAR PRIMARY KEY,
                 tenant_id VARCHAR NOT NULL,
                 parent_task_id VARCHAR,
@@ -556,15 +556,15 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.prune_stuck_agent_missions().await.unwrap();
-        daemon.prune_stuck_sub_agent_queue().await.unwrap();
+        daemon.prune_stuck_ohc_job_queue().await.unwrap();
 
         // Verify SQLite mission is failed
         let row_sqlite = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_sqlite'")
@@ -578,12 +578,12 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         assert_eq!(row_pg.unwrap().get::<String, _>("status"), "FAILED");
 
         // Verify SQLite queue is failed
-        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_sqlite'")
+        let row_queue_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = 'stuck_queue_sqlite'")
             .fetch_one(&sqlite_pool).await.unwrap();
         assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
 
         // Verify PG queue is failed
-        let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_pg'")
+        let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = 'stuck_queue_pg'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
     }
@@ -595,7 +595,7 @@ async fn test_hybrid_sync_pos_offline_transactions() {
             .await
             .unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (
+        sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
                 parent_task_id TEXT,
@@ -626,7 +626,7 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
+            "CREATE TABLE IF NOT EXISTS ohc_job_queue (
                 id VARCHAR PRIMARY KEY,
                 tenant_id VARCHAR NOT NULL,
                 parent_task_id VARCHAR,
@@ -646,37 +646,37 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck queued tasks
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), datetime('now', '-25 hour'), '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), datetime('now', '-25 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', NOW() - INTERVAL '25 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', NOW() - INTERVAL '25 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         // Insert stuck running tasks
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
-        daemon.prune_stuck_sub_agent_queue().await.unwrap();
+        daemon.prune_stuck_ohc_job_queue().await.unwrap();
 
         // Verify SQLite queue is deleted
-        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
+        let row_queue_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
         assert!(row_queue_sqlite.is_none());
 
         // Verify PG queue is deleted
-        let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
+        let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
         assert!(row_queue.is_none());
 
         // Verify SQLite running is failed
         use sqlx::Row;
-        let row_running_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_running_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
+        let row_running_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_running_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
         assert_eq!(row_running_sqlite.get::<String, _>("status"), "FAILED");
 
         // Verify PG running is failed
-        let row_running = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_running_pg\'").fetch_one(&pg_pool).await.unwrap();
+        let row_running = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_running_pg\'").fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_running.get::<String, _>("status"), "FAILED");
 
         // Verify dead letters were created for running jobs
