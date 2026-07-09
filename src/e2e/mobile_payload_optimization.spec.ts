@@ -132,7 +132,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
       if (item) {
         expect(item).toHaveProperty('id');
         expect(item).toHaveProperty('intent');
-        expect(item).toHaveProperty('customer_info');
+        expect(item).not.toHaveProperty('customer_info');
         // Assert that customer_info is strictly undefined or omitted for mobile payload if originally designed to trim entirely
         // Wait, the Rust code returns an empty json '{}' string instead of undefined. But to be robust and hermetic, we should seed test data, or at least just expect it exists.
       }
