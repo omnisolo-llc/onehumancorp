@@ -60,7 +60,24 @@ impl AgentFeedService {
             updated_at: Some(Utc::now()),
         };
 
-        self.repo.create(item.clone()).await.map_err(|e| e.to_string())
+        let created_item = self.repo.create(item.clone()).await.map_err(|e| e.to_string())?;
+
+        // Notify via Redis Pub/Sub for WebSockets
+        if let Some(client) = crate::get_redis_client() {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let payload_str = serde_json::json!({
+                    "event_type": "approval_request",
+                    "data": created_item
+                }).to_string();
+                let topic = format!("agent_feed:{}", tenant_id);
+                let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload_str)
+                    .query_async(&mut conn).await;
+            }
+        }
+
+        Ok(created_item)
     }
 }
 

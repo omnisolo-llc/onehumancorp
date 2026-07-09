@@ -396,51 +396,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         }
 
         if (mounted) {
-          // Listen to SSE updates
-          if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(
-            `/api/agents/approvals/stream?tenant_id=${tenant}`,
-          );
 
-          eventSource.onmessage = (event) => {
-            try {
-              const payload = JSON.parse(event.data);
-
-              if (payload.event_type === "approval_request") {
-                setItems((prev) => {
-                  if (prev.find((a) => a.id === payload.data.id)) return prev;
-                  return [payload.data, ...prev];
-                });
-              } else if (payload.event_type === "approval_decision") {
-                setItems((prev) =>
-                  prev.filter((a) => a.id !== payload.data.request_id),
-                );
-                setActivities((prev) => {
-                  const newActivity = {
-                    id: crypto.randomUUID(),
-                    tenant_id: tenant,
-                    event_type: payload.data.status || "APPROVED",
-                    department: payload.data.department || "general",
-                    payload: payload.data,
-                    created_at: new Date().toISOString(),
-                  };
-                  return [newActivity, ...prev];
-                });
-              }
-            } catch (e) {
-              console.error("Error parsing SSE event", e);
-            }
-          };
-
-          eventSource.onerror = (error) => {
-            console.error("SSE connection error", error);
-            eventSource.close();
-          };
-
-          return () => {
-            eventSource.close();
-            mounted = false;
-          };
         }
       } catch (err: any) {
         if (mounted) {

@@ -330,6 +330,25 @@ async fn update_feed_item_state(
         Ok(updated_item) => {
             let _ = crate::domain::agent_approvals::sync_legacy_approval_status(&tenant_id, &id, &payload.state, &pool).await;
 
+            // Notify via Redis Pub/Sub for WebSockets
+            if let Some(client) = Some(get_redis_client()) {
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    let payload_str = serde_json::json!({
+                        "event_type": "approval_decision",
+                        "data": {
+                            "request_id": id,
+                            "status": payload.state,
+                            "department": updated_item.event_source
+                        }
+                    }).to_string();
+                    let topic = format!("agent_feed:{}", tenant_id);
+                    let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
+                        .arg(topic)
+                        .arg(payload_str)
+                        .query_async(&mut conn).await;
+                }
+            }
+
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
                     let mut is_incident = false;
