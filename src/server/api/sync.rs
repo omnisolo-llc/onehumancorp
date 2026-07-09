@@ -42,6 +42,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
 
     let inventory_topic = format!("inventory:{}", tenant_id);
     let orders_topic = format!("orders:{}", tenant_id);
+    let tenant_events_topic = format!("tenant_events:{}", tenant_id);
 
     let redis_client_opt = crate::get_redis_client();
 
@@ -49,6 +50,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
         if let Ok(mut pubsub_conn) = client.get_async_pubsub().await {
             let _ = pubsub_conn.subscribe(&inventory_topic).await;
             let _ = pubsub_conn.subscribe(&orders_topic).await;
+            let _ = pubsub_conn.subscribe(&tenant_events_topic).await;
 
             let mut stream = pubsub_conn.into_on_message();
 
@@ -139,6 +141,20 @@ mod tests {
 
                 assert!(msg.is_text());
                 assert_eq!(msg.to_text().unwrap(), payload);
+
+                // Publish tenant event message
+                let topic2 = "tenant_events:test_tenant";
+                let payload2 = "{\"event\":\"notification\"}";
+                let _: () = redis::cmd("PUBLISH").arg(topic2).arg(payload2).query_async(&mut conn).await.unwrap();
+
+                let msg2 = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                    .await
+                    .expect("Timeout")
+                    .expect("Stream closed")
+                    .expect("Error receiving");
+
+                assert!(msg2.is_text());
+                assert_eq!(msg2.to_text().unwrap(), payload2);
             }
         }
     }
