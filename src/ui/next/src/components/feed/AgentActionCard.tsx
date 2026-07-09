@@ -121,6 +121,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "invoice_draft"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || 'Phase 1'}`
             : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup"
+            ? "Action Required: Overdue Invoice"
+            : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply"
             ? "Action Required: Approve Reply"
             : (approval as any).description ||
@@ -139,6 +142,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "social_post_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
@@ -251,6 +256,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">Total Amount Due</span>
                     <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}</span>
                   </div>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-500">
+                    {approval.context_payload?.original_message ||
+                      approval.proposed_action?.original_message ||
+                      "Invoice is overdue."}
+                  </span>
+                </div>
+                <div className="flex flex-col text-sm mt-1">
+                  <span className="text-gray-500 dark:text-gray-400">Suggested Draft:</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 mt-1 line-clamp-3">
+                    {approval.context_payload?.generated_response ||
+                      approval.proposed_action?.generated_response ||
+                      "Hi there, just checking in on the overdue invoice..."}
+                  </span>
                 </div>
               </div>
             )}
@@ -1926,7 +1952,75 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "proactive_ops" ? null : (
             approval.proposed_action || approval.context_payload
-          )?.feature_type === "ambassador_reply" ? (
+          )?.feature_type === "invoice_followup" ? (
+          editingId === approval.id ? (
+            <div className="flex flex-col gap-3 w-full">
+              <textarea
+                className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                data-testid="edit-invoice-followup-textarea"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleDecision(approval.id, true, editContent, approval.event_source);
+                    setEditingId(null);
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  data-testid="save-send-invoice-followup"
+                  disabled={loadingAction !== null}
+                >
+                  {isActionLoading("approve") ? <span className="animate-pulse">Loading...</span> : "Save & Send"}
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  data-testid="cancel-edit-invoice-followup"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center"
+                aria-label="Approve & Send"
+                data-testid="approve-invoice-followup"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("approve") ? <span className="animate-pulse">Loading...</span> : "Approve & Send"}
+              </button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setEditingId(approval.id);
+                    setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || "");
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Edit Message"
+                  data-testid="edit-invoice-followup"
+                >
+                  Edit Message
+                </button>
+                <button
+                  onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Pause Reminders"
+                  data-testid="dismiss-invoice-followup"
+                  disabled={loadingAction !== null}
+                >
+                  {isActionLoading("dismiss") ? <span className="animate-pulse">Loading...</span> : "Pause Reminders"}
+                </button>
+              </div>
+            </div>
+          )
+        ) : (approval.proposed_action || approval.context_payload)
+          ?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
