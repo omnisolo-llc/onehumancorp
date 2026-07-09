@@ -398,18 +398,6 @@
         window.open(`https://wa.me/?text=${text}`, '_blank');
     });
 
-    document.getElementById('share-twitter-btn').addEventListener('click', () => {
-        const urlInput = document.getElementById('share-link').value;
-        const text = encodeURIComponent('Join our loyalty program! 🎁');
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(urlInput)}`, '_blank');
-    });
-
-    document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
-        const urlInput = document.getElementById('share-link').value;
-        const text = encodeURIComponent('Join our loyalty program! 🎁 ' + urlInput);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-    });
-
     document.getElementById('copy-btn').addEventListener('click', async () => {
         const urlInput = document.getElementById('share-link');
         urlInput.select();
