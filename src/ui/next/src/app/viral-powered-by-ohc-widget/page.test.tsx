@@ -40,7 +40,7 @@ describe('ViralPoweredByOHCWidgetPage', () => {
 
   it('copies embed code to clipboard', () => {
     render(<ViralPoweredByOHCWidgetPage />);
-    const copyButton = screen.getByRole('button', { name: /Copy Embed Code/i });
+    const copyButton = screen.getAllByRole('button', { name: /Copy Embed Code/i })[0];
     fireEvent.click(copyButton);
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
     expect(screen.getByText('Copied to Clipboard!')).toBeDefined();
