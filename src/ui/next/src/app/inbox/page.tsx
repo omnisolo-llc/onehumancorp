@@ -274,8 +274,8 @@ function InboxWorkspace({
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
         <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism overflow-hidden">
-            <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
+          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
+            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div>
                 <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
                 <div className="app-list-subtitle text-xs text-gray-500">{sourceLabel}</div>
@@ -292,7 +292,7 @@ function InboxWorkspace({
                     setSelectedId(message.id);
                     setShowOriginal(false);
                   }}
-                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-xl transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
+                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[8px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
@@ -316,14 +316,14 @@ function InboxWorkspace({
                     <div className="flex gap-3 mt-4 flex-wrap">
                       <button
                         onClick={() => handleSendManualReply(selected.id)}
-                        className="app-btn-primary"
+                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
                         disabled={!manualReply.trim()}
                       >
                         Send Reply
                       </button>
                       <button
                         onClick={handleAttachPhoto}
-                        className="app-btn-secondary flex items-center gap-2"
+                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                         Attach Photo
@@ -333,8 +333,8 @@ function InboxWorkspace({
                 )}
 \n          </section>
 
-          <section className="app-panel glassmorphism overflow-hidden">
-            <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
+          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
+            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>
             {!selected ? (
@@ -421,7 +421,7 @@ function InboxWorkspace({
                       }
                       return (
                         <button
-                          className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10"
+                          className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-white/10"
                           onClick={() => handleApproveAndSend(selected.id)}
                         >
                           {buttonText}
@@ -431,18 +431,10 @@ function InboxWorkspace({
                   </div>
                 )}
                 {!activeApproval && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-col gap-4">
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="app-button w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
-                    >✨ Draft Quote with AI</button>
-                  </div>
-                )}
-                {!activeApproval && (
-                  <div className="mt-4">
-                    <button
-                      onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
                   </div>
                 )}
