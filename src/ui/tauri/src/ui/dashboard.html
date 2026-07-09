@@ -579,7 +579,36 @@
         }
       }
     </style>
-  </head>
+
+    <script>
+      function renderAgentBadge(source, fallbackLabel = null) {
+        const style = getAgentIconAndColor(source);
+        let label = fallbackLabel || (source || 'Unknown');
+        if (!fallbackLabel && typeof label === 'string') {
+           label = label.replace(/_/g, ' ').toUpperCase();
+        } else if (fallbackLabel) {
+           label = fallbackLabel.toUpperCase();
+        }
+        return `<div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: ${style.bg}; color: ${style.color}; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${style.icon} ${label}</div>`;
+      }
+
+      function getAgentIconAndColor(source) {
+        const src = (source || "").toLowerCase();
+        if (src.includes('operation') || src.includes('ops')) {
+          return { icon: '⚙️', bg: 'rgba(255, 149, 0, 0.1)', color: '#FF9500' };
+        } else if (src.includes('advisor') || src.includes('knowledge')) {
+          return { icon: '🧠', bg: 'rgba(175, 82, 222, 0.1)', color: '#AF52DE' };
+        } else if (src.includes('market') || src.includes('promot')) {
+          return { icon: '✨', bg: 'rgba(255, 45, 85, 0.1)', color: '#FF2D55' };
+        } else if (src.includes('message') || src.includes('chat') || src.includes('email') || src.includes('welcome')) {
+          return { icon: '💬', bg: 'rgba(0, 102, 255, 0.1)', color: '#0066FF' };
+        } else if (src.includes('finance') || src.includes('invoice') || src.includes('quote')) {
+          return { icon: '💰', bg: 'rgba(52, 199, 89, 0.1)', color: '#34C759' };
+        }
+        return { icon: '🤖', bg: 'rgba(142, 142, 147, 0.1)', color: '#8E8E93' };
+      }
+    </script>
+</head>
   <body>
     <!-- Omnibox Modal -->
     <div id="omnibox-overlay">
@@ -919,6 +948,8 @@
 
         <a href="weekly-snapshot-share.html" id="weekly-snapshot-share-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Weekly Snapshot Share 📸</a>
         <a href="reputation-engine.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
+        <a href="gift-cards.html" id="gift-card-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Gift Card Generator 🎁</a>
+
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
         <a href="viral-mystery-offer-generator.html" id="mystery-offer-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Mystery Offer Generator 🎁</a>
         <a href="group-buy-generator.html" id="group-buy-link" style="display: inline-block; background-color: #ff3b30; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Group Buy Generator 👥</a>
@@ -951,6 +982,7 @@
         <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Work-Intake Widget 📋</a>
+        <a href="viral-receipt-lottery.html" id="viral-receipt-lottery-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Receipt Lottery 🎟</a>
         <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
         <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
         <a href="share-and-save-widget.html" id="share-and-save-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share & Save Widget 💸</a>
@@ -2078,6 +2110,99 @@
               `;
             }
 
+            if (item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup' || actionType === 'invoice_followup' || item.action_payload?.feature_type === 'invoice_followup' || item.payload?.feature_type === 'invoice_followup' || (item.payload && typeof item.payload === 'string' && item.payload.includes('invoice_followup'))) {
+
+              let payload = item.proposed_action || item.context_payload || item.payload || {};
+
+              if (typeof payload === 'string') {
+
+                  try { payload = JSON.parse(payload); } catch(e){}
+
+              }
+
+              if (typeof item.action_payload === 'string') {
+
+                  try { payload = JSON.parse(item.action_payload); } catch(e){}
+
+              } else if (item.action_payload) {
+
+                  payload = item.action_payload;
+
+              }
+
+              const invoiceId = payload.invoice_id || 'unknown';
+
+              const originalMessage = payload.original_message || `Invoice ${invoiceId} is overdue.`;
+
+              const generatedResponse = payload.generated_response || `Hi there, just checking in to see if you received invoice ${invoiceId}.`;
+
+              return `
+
+                <div class="triage-item glassmorphism app-list-item" data-testid="invoice-followup-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+
+                    <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+
+                      <span style="font-size: 18px;">💰</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Finance Agent</strong>
+
+                    </div>
+
+                    <div class="triage-priority glassmorphism" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">Action Required: Overdue Invoice</div>
+
+                  </div>
+
+                  <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 14px; color: #333;">
+
+                    Invoice ${invoiceId} is overdue.
+
+                  </div>
+
+                  <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+
+                    "${originalMessage}"
+
+                  </div>
+
+                  <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB;">
+
+                    <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">Nudge Draft</span>
+
+                    ${generatedResponse}
+
+                  </div>
+
+                  <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
+
+                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+
+                    <button class="triage-btn-dismiss" onclick="window.location.href='/invoice.html?id=${invoiceId}'" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Edit</button>
+
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Pause Reminders</button>
+
+                  </div>
+
+                </div>
+
+              `;
+
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft' || item.payload?.feature_type === 'quote_draft' || (item.payload && typeof item.payload === 'string' && item.payload.includes('quote_draft'))) {
               let payload = item.proposed_action || item.context_payload || item.payload || {};
               if (typeof payload === 'string') {
@@ -2116,9 +2241,7 @@
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
+                  ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2272,9 +2395,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
-                  </div>
+                  ${renderAgentBadge(item.source || "message")}
                   <div class="triage-priority ${priorityClass}">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2362,9 +2483,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
-                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
-                  </div>
+                  ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
@@ -2386,7 +2505,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                  ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
@@ -2406,7 +2525,7 @@
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
                   <div>
                     <h2 style="font-size: 20px; font-weight: 700; color: #995500; display: flex; align-items: center; gap: 8px; margin: 0;">
-                      <span style="font-size: 24px;">✨</span> Needs Attention Today
+                      <span style="font-size: 24px;">💡</span> Needs Attention Today
                     </h2>
                   </div>
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">${item.priority || 'High'}</div>
@@ -2425,7 +2544,7 @@
           return `
             <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
               <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
+                ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
@@ -2454,7 +2573,7 @@
             return `
               <div class="triage-item glassmorphism" data-testid="invoice-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">Invoice</div>
+                  ${renderAgentBadge("invoice", "Invoice")}
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">${status}</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
@@ -2479,7 +2598,7 @@
             return `
               <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px; box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
+                  ${renderAgentBadge(activity.event_source || "Unknown")}
                   <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px; font-weight: 600;">${activity.lifecycle_state}</div>
                 </div>
                 <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px; margin-bottom: 8px; color: #1D1D1F;">${description}</div>
