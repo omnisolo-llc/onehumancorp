@@ -68,7 +68,21 @@ pub struct Store {
     path: Option<PathBuf>,
 }
 
+use std::sync::Arc;
+use std::sync::OnceLock;
+
+static GLOBAL_STORE: OnceLock<Arc<Store>> = OnceLock::new();
+
 impl Store {
+    pub fn global() -> Arc<Store> {
+        GLOBAL_STORE.get_or_init(|| {
+            let path = crate::config::get_safe_user_dir().join("settings.json");
+            let store = Store::from_file(path).unwrap_or_else(|_| Store::new());
+            ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(store.get().product_telemetry_enabled, std::sync::atomic::Ordering::Relaxed);
+            Arc::new(store)
+        }).clone()
+    }
+
     pub fn new() -> Self {
         Store {
             data: RwLock::new(AppSettings::default()),
@@ -86,6 +100,7 @@ impl Store {
 
         let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let data: AppSettings = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(data.product_telemetry_enabled, std::sync::atomic::Ordering::Relaxed);
 
         Ok(Store {
             data: RwLock::new(data),
@@ -155,6 +170,7 @@ impl Store {
     pub fn set_product_telemetry(&self, enabled: bool) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.product_telemetry_enabled = enabled;
+        ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
         drop(data);
         self.save()
     }

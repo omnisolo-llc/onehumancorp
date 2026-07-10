@@ -76,7 +76,7 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_telemetry_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if !::server_config::get().telemetry_enabled {
+        if !::server_config::is_telemetry_enabled() {
             return Ok(());
         }
 

@@ -133,7 +133,7 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         let total_synced = synced_embeddings + synced_missions;
         let total_failed = failed_embeddings + failed_missions;
 
-        if total_synced > 0 && ::server_config::get().telemetry_enabled {
+        if total_synced > 0 && ::server_config::is_telemetry_enabled() {
             let _ = sqlx::query(
                 r#"
                 INSERT INTO telemetry_buffer (metric_name, metric_type, metric_value, labels)
@@ -148,7 +148,7 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
             .await;
         }
 
-        if total_failed > 0 && ::server_config::get().telemetry_enabled {
+        if total_failed > 0 && ::server_config::is_telemetry_enabled() {
             let _ = sqlx::query(
                 r#"
                 INSERT INTO telemetry_buffer (metric_name, metric_type, metric_value, labels)

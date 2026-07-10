@@ -45,6 +45,15 @@ pub struct AppConfig {
 
 static INSTANCE: OnceLock<AppConfig> = OnceLock::new();
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+pub static DYNAMIC_TELEMETRY_ENABLED: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn is_telemetry_enabled() -> bool {
+    get().telemetry_enabled || DYNAMIC_TELEMETRY_ENABLED.load(Ordering::Relaxed)
+}
+
 pub fn get() -> &'static AppConfig {
     INSTANCE.get_or_init(|| {
         load().expect("Failed to load configuration")
