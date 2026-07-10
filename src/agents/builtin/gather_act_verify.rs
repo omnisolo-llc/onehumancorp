@@ -18,7 +18,7 @@ pub struct GatherActVerifyHarness {
     pub act_tools: Vec<Tool>,
     pub verify_tools: Vec<Tool>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-}
+
 
 impl GatherActVerifyHarness {
     pub fn new(
@@ -248,7 +248,7 @@ impl GatherActVerifyHarness {
                                             content: res.clone(),
                                             error: String::new(),
                                         }),
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc_name, &msg)),
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg))),
                                         Err(e) => Err(e),
                                     }
                                 } else {
@@ -273,6 +273,17 @@ impl GatherActVerifyHarness {
                                 Ok(r) => r,
                                 Err(e) => match e {
                                     ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                        if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                                tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
+                                            } else {
+                                                let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
+                                                for past_tr in tool_results.iter_mut().skip(read_only_count) {
+                                                    past_tr.content = format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was rolled back to prevent state desync because a subsequent tool in this step failed. The changes made by this tool have been REVERTED and are no longer present.", past_tr.content);
+                                                }
+                                                skip_remaining = true;
+                                            }
+                                        }
                                         let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
                                         return;
                                     }
@@ -320,7 +331,17 @@ impl GatherActVerifyHarness {
                             tool_results.push(tr);
                         }
 
+                        let mut skip_remaining = false;
+                        let read_only_count = tool_results.len();
                         for tc in mutating_calls {
+                            if skip_remaining {
+                                tool_results.push(ohc_builtin_agent_core::types::ToolResult {
+                                    tool_call_id: tc.id.clone(),
+                                    content: "[ABORTED] Tool execution aborted due to previous tool failure and workspace rollback in this super-step.".to_string(),
+                                    error: String::new(),
+                                });
+                                continue;
+                            }
                             let _ = tx.send(AgentEvent::TextChunk {
                                 content: format!("Starting mutating tool call: {}", tc.name),
                             });
@@ -333,7 +354,20 @@ impl GatherActVerifyHarness {
                                         content: res.clone(),
                                         error: String::new(),
                                     }),
-                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &msg)),
+                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                                        if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                                tracing::warn!("Failed to restore checkpoint {} after LlmRecoverable error: {}", cp_id, restore_err);
+                                            } else {
+                                                let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
+                                                for past_tr in tool_results.iter_mut().skip(read_only_count) {
+                                                    past_tr.content = format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was rolled back to prevent state desync because a subsequent tool in this step failed. The changes made by this tool have been REVERTED and are no longer present.", past_tr.content);
+                                                }
+                                                skip_remaining = true;
+                                            }
+                                        }
+                                        Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg)))
+                                    },
                                     Err(e) => Err(e),
                                 }
                             } else {
@@ -344,6 +378,17 @@ impl GatherActVerifyHarness {
                                 Ok(r) => r,
                                 Err(e) => match e {
                                     ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                        if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                                tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
+                                            } else {
+                                                let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
+                                                for past_tr in tool_results.iter_mut().skip(read_only_count) {
+                                                    past_tr.content = format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was rolled back to prevent state desync because a subsequent tool in this step failed. The changes made by this tool have been REVERTED and are no longer present.", past_tr.content);
+                                                }
+                                                skip_remaining = true;
+                                            }
+                                        }
                                         let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
                                         return;
                                     }
@@ -464,7 +509,7 @@ impl GatherActVerifyHarness {
 
         rx
     }
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -822,4 +867,270 @@ mod tests {
         }
 
         assert!(has_guardrail_err);
+
+
+    #[tokio::test]
+    async fn test_gather_act_verify_git_commit_checkpointing_rollback() {
+        use crate::tools::ToolExecutor;
+        use ohc_builtin_agent_core::types::ToolError;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        struct MutatingFailExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingFailExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("Validation Error".to_string()))
+            }
+        }
+
+        let fail_tool = Tool {
+            name: "mutating_fail".to_string(),
+            description: "always fails".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(MutatingFailExecutor),
+        };
+
+        struct MockCheckpointer {
+            restored_count: Arc<AtomicUsize>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::checkpointer::CheckpointSaver for MockCheckpointer {
+            fn storage_prefix(&self) -> String {
+                "mock".to_string()
+            }
+            async fn put_checkpoint(&self, _cp: crate::checkpointer::Checkpoint) -> Result<(), String> {
+                Ok(())
+            }
+            async fn get_checkpoint(&self, _thread_id: &str, _checkpoint_id: &str) -> Result<Option<crate::checkpointer::Checkpoint>, String> {
+                Ok(None)
+            }
+            async fn list_checkpoints(&self, _thread_id: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
+                Ok(vec![])
+            }
+            async fn restore_checkpoint(&self, _checkpoint_id: &str) -> Result<(), String> {
+                self.restored_count.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }
+        }
+
+        struct MockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("I will call the tool")
+                            .with_tool_calls(vec![ohc_builtin_agent_core::types::ToolCall {
+                                id: "tc_1".to_string(),
+                                name: "mutating_fail".to_string(),
+                                arguments: serde_json::json!({}),
+                            }]),
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("I am done"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+            fn provider(&self) -> String {
+                "mock".to_string()
+            }
+            fn model(&self) -> String {
+                "mock".to_string()
+            }
+        }
+
+        let llm = Arc::new(MockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let restored_count = Arc::new(AtomicUsize::new(0));
+        let checkpointer = Arc::new(MockCheckpointer { restored_count: restored_count.clone() });
+        let harness = GatherActVerifyHarness::new(llm, vec![], vec![fail_tool], vec![])
+            .with_checkpointer(checkpointer);
+
+        let mut config = AgentRunConfig::default();
+        config.enable_state_checkpointing = true;
+        config.thread_id = Some("test_thread".to_string());
+
+        let mut rx = harness.query(config, "test".to_string());
+        while let Some(event) = rx.recv().await {
+            match event {
+                AgentEvent::TaskError { .. } | AgentEvent::Done { .. } => break,
+                _ => {}
+            }
+        }
+
+        assert_eq!(restored_count.load(Ordering::SeqCst), 1);
+    }
+
+
+    #[tokio::test]
+    async fn test_gather_act_verify_multi_tool_desync_prevention() {
+        use crate::tools::ToolExecutor;
+        use ohc_builtin_agent_core::types::ToolError;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        struct MutatingSuccessExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingSuccessExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Success 1".to_string())
+            }
+        }
+
+        struct MutatingFailExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingFailExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Err(ToolError::LlmRecoverable("Validation Error".to_string()))
+            }
+        }
+
+        struct MutatingSuccess2Executor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MutatingSuccess2Executor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("Success 2".to_string())
+            }
+        }
+
+        let success_tool = Tool {
+            name: "mutating_success".to_string(),
+            description: "always succeeds".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(MutatingSuccessExecutor),
+        };
+
+        let fail_tool = Tool {
+            name: "mutating_fail".to_string(),
+            description: "always fails".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(MutatingFailExecutor),
+        };
+
+        let success2_tool = Tool {
+            name: "mutating_success2".to_string(),
+            description: "always succeeds but runs after fail".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(MutatingSuccess2Executor),
+        };
+
+        struct MockCheckpointer {
+            restored_count: Arc<AtomicUsize>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::checkpointer::CheckpointSaver for MockCheckpointer {
+            fn storage_prefix(&self) -> String {
+                "mock".to_string()
+            }
+            async fn put_checkpoint(&self, _cp: crate::checkpointer::Checkpoint) -> Result<(), String> {
+                Ok(())
+            }
+            async fn get_checkpoint(&self, _thread_id: &str, _checkpoint_id: &str) -> Result<Option<crate::checkpointer::Checkpoint>, String> {
+                Ok(None)
+            }
+            async fn list_checkpoints(&self, _thread_id: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
+                Ok(vec![])
+            }
+            async fn restore_checkpoint(&self, _checkpoint_id: &str) -> Result<(), String> {
+                self.restored_count.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            }
+        }
+
+        struct MockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    Ok(ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("I will call the tools")
+                            .with_tool_calls(vec![
+                                ohc_builtin_agent_core::types::ToolCall {
+                                    id: "tc_1".to_string(),
+                                    name: "mutating_success".to_string(),
+                                    arguments: serde_json::json!({}),
+                                },
+                                ohc_builtin_agent_core::types::ToolCall {
+                                    id: "tc_2".to_string(),
+                                    name: "mutating_fail".to_string(),
+                                    arguments: serde_json::json!({}),
+                                },
+                                ohc_builtin_agent_core::types::ToolCall {
+                                    id: "tc_3".to_string(),
+                                    name: "mutating_success2".to_string(),
+                                    arguments: serde_json::json!({}),
+                                }
+                            ]),
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    })
+                } else if *count == 2 {
+                    // Turn 2: the harness should provide the tool results for tc_1, tc_2, and tc_3
+                    let last_msg = req.messages.last().unwrap();
+                    assert_eq!(last_msg.role, "user");
+                    assert!(last_msg.content.contains("[REVERTED]"));
+                    assert!(last_msg.content.contains("[ABORTED]"));
+                    Ok(ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("I see the rollback"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: ohc_builtin_agent_core::types::Message::assistant("I am done"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    })
+                }
+            }
+            fn provider(&self) -> String {
+                "mock".to_string()
+            }
+            fn model(&self) -> String {
+                "mock".to_string()
+            }
+        }
+
+        let llm = Arc::new(MockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let restored_count = Arc::new(AtomicUsize::new(0));
+        let checkpointer = Arc::new(MockCheckpointer { restored_count: restored_count.clone() });
+        let harness = GatherActVerifyHarness::new(llm, vec![], vec![success_tool, fail_tool, success2_tool], vec![])
+            .with_checkpointer(checkpointer);
+
+        let mut config = AgentRunConfig::default();
+        config.enable_state_checkpointing = true;
+        config.thread_id = Some("test_thread".to_string());
+
+        let mut rx = harness.query(config, "test".to_string());
+        while let Some(event) = rx.recv().await {
+            match event {
+                AgentEvent::TaskError { .. } | AgentEvent::Done { .. } => break,
+                _ => {}
+            }
+        }
+
+        assert_eq!(restored_count.load(Ordering::SeqCst), 1);
+    }
+
 }
