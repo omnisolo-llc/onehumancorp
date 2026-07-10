@@ -2383,6 +2383,18 @@ pub async fn bench_get_daily_work_latency() {
                 async move {
                     sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&db.pool).await
                 }
+            }),
+            tokio::spawn({
+                let db = db.clone();
+                async move {
+                    sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&db.pool).await
+                }
+            }),
+            tokio::spawn({
+                let db = db.clone();
+                async move {
+                    sqlx::query("SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&db.pool).await
+                }
             })
         );
         let duration = start_sim.elapsed();
@@ -2391,7 +2403,7 @@ pub async fn bench_get_daily_work_latency() {
             "  - get_daily_work_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -2401,6 +2413,8 @@ pub async fn bench_get_daily_work_latency() {
 
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS daily_work_items (id TEXT, tenant_id TEXT, signal_id TEXT, intent TEXT, customer_info TEXT, suggested_actions TEXT, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS task_envelopes (id TEXT, tenant_id TEXT, current_department TEXT, status TEXT, payload TEXT, routing_history TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
 
         let start_sim = std::time::Instant::now();
         let db = std::sync::Arc::new(crate::db::DB {
@@ -2420,6 +2434,18 @@ pub async fn bench_get_daily_work_latency() {
                 async move {
                     match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) }
                 }
+            }),
+            tokio::spawn({
+                let db = db.clone();
+                async move {
+                    match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) }
+                }
+            }),
+            tokio::spawn({
+                let db = db.clone();
+                async move {
+                    match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) }
+                }
             })
         );
         let duration = start_sim.elapsed();
@@ -2428,7 +2454,7 @@ pub async fn bench_get_daily_work_latency() {
             "  - get_daily_work_handler (SQLite Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
     }
 }
 
