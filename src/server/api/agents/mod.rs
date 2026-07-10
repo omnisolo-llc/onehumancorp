@@ -8,3 +8,4 @@ pub mod translation;
 pub mod client_intake;
 pub mod pydantic;
 pub mod code_native;
+pub mod order_interceptor;
