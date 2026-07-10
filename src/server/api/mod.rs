@@ -53,7 +53,6 @@ pub mod proposals;
 pub mod storefront_delivery;
 pub mod unified_inbox_webhook;
 pub mod work_triage;
-mod walkup;
 pub mod tool_integrations;
 pub mod ohc_job_queue;
 pub mod checkout_api;

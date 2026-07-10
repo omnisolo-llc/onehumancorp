@@ -7257,7 +7257,6 @@ mod tests {
 
 #[tokio::test]
 async fn test_api_settings_voice() {
-    use std::sync::Arc;
     use serde_json::json;
 
     let settings_store = crate::settings::Store::global();

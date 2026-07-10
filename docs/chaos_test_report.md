@@ -1,6 +1,6 @@
-<div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(22, 22, 26, 0.7); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
-
 # 🛡️ Sentry Chaos Report: AI Agent ML-Resilience Timeout & Retry
+
+<div markdown="1" style="background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border-radius: 12px; padding: 24px; border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; font-family: 'Outfit', 'Inter', sans-serif; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);">
 
 ## Objective
 To ensure absolute mode parity and graceful failure recovery between Cloud and Standalone environments when an AI agent task fails or exceeds the expected timeout.
