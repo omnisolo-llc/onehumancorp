@@ -311,6 +311,11 @@ pub async fn create_checkout_session_handler(
     }
 
     if let Some(client) = &hub.tracker().stripe_client {
+        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
+        if savings > 0.0 {
+            tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees", savings);
+        }
+
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         let product_id_opt = req.product_id.clone();
         match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt).await {
@@ -456,7 +461,7 @@ pub async fn my_plan_handler(
         if ai_used as i32 >= limit {
             soft_limit_reached = true;
             user_message = Some(format!(
-                "You've reached your {} tier limit of {} AI actions. Upgrade to unlock more power!",
+                "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                 plan_name, limit
             ));
         }
@@ -468,7 +473,7 @@ pub async fn my_plan_handler(
                 soft_limit_reached = true;
                 let limit_mb = limit / (1024 * 1024);
                 user_message = Some(format!(
-                    "You've reached your {} tier limit of {}MB storage. Upgrade to unlock more capacity!",
+                    "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                     plan_name, limit_mb
                 ));
             }
