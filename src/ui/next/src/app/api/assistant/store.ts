@@ -19,10 +19,19 @@ export type AssistantChange = {
   approvalStatus: 'pending' | 'approved' | 'not_required';
 };
 
+export type ProposedAction = {
+  id: string;
+  type: 'product_creation' | string;
+  status: 'pending' | 'approved' | 'rejected';
+  payload: any;
+};
+
 export type AssistantMessage = {
   id: string;
   role: 'user' | 'assistant' | 'tool';
   content: string;
+  proposedAction?: ProposedAction;
+  toolMetadataJson?: any;
   createdAt: string;
 };
 
@@ -1281,6 +1290,29 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
   const createdAt = now();
   const primaryArtifact = artifactForFormat(normalized.outputFormat);
   const artifacts: AssistantArtifact[] = [];
+  const messages: AssistantMessage[] = [];
+  let currentStep = 'Planning and preparing tools';
+
+  if (prompt.toLowerCase().includes('chocolate dream cake') || prompt.toLowerCase().includes('add a new cake') || prompt.toLowerCase().includes('create a product')) {
+    messages.push({
+      id: id('msg'),
+      role: 'assistant',
+      content: 'I have drafted the new product for your review.',
+      proposedAction: {
+        id: id('proposed'),
+        type: 'product_creation',
+        status: 'pending',
+        payload: {
+          title: 'Chocolate Dream Cake',
+          price: 45,
+          description: 'A rich and decadent vegan chocolate cake.',
+        },
+      },
+      createdAt: now(),
+    });
+    currentStep = 'Waiting for product approval';
+  }
+
   const task: AssistantTask = {
     id: id('task'),
     title: titleFromPrompt(prompt),
@@ -1298,11 +1330,11 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
     skills: normalized.skills,
     connectors: normalized.connectors,
     permissionProfile: normalized.permissionProfile,
-    currentStep: 'Planning and preparing tools',
+    currentStep,
     riskSummary: buildRiskSummary(normalized),
     artifacts,
     changes: [],
-    messages: [],
+    messages,
     actions: actionsForTask(normalized.outputFormat, normalized.permissionProfile),
     createdAt,
     updatedAt: createdAt,
@@ -1326,6 +1358,19 @@ export function mutateTask(taskId: string, action: string, payload: Record<strin
   if (action === 'approve_changes') {
     task.changes = task.changes.map((change) => ({ ...change, approvalStatus: 'approved' }));
     task.messages.push({ id: id('msg'), role: 'assistant', content: 'Changes approved and ready to apply.', createdAt: now() });
+  } else if (action === 'approve_proposed_action') {
+    const actionId = payload.actionId;
+    let found = false;
+    for (const msg of task.messages) {
+      if (msg.proposedAction && msg.proposedAction.id === actionId) {
+        msg.proposedAction.status = 'approved';
+        found = true;
+      }
+    }
+    if (!found) throw new Error('Proposed action not found');
+    task.status = 'completed';
+    task.currentStep = 'Product created successfully';
+    task.messages.push({ id: id('msg'), role: 'assistant', content: 'Product approved and created successfully.', createdAt: now() });
   } else if (action === 'stop') {
     task.status = 'blocked';
     task.currentStep = 'Stopped by user';

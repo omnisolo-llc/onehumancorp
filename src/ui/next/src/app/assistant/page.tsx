@@ -38,10 +38,19 @@ type AssistantChange = {
   approvalStatus: string;
 };
 
+type ProposedAction = {
+  id: string;
+  type: string;
+  status: 'pending' | 'approved' | 'rejected';
+  payload: any;
+};
+
 type AssistantMessage = {
   id: string;
   role: string;
   content: string;
+  proposedAction?: ProposedAction;
+  toolMetadataJson?: any;
 };
 
 type AssistantTask = {
@@ -313,6 +322,23 @@ export default function AssistantPage() {
     }
   }
 
+  async function runProposedActionApprove(actionId: string) {
+    if (!activeTask) return;
+    try {
+      const response = await fetch(`/api/assistant/tasks/${activeTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_proposed_action', actionId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Approval failed');
+      setTasks((current) => [data.task, ...current.filter((task) => task.id !== data.task.id)]);
+      setActiveTaskId(data.task.id);
+    } catch (err: any) {
+      setError(err.message || 'Approval failed');
+    }
+  }
+
   async function runResultAction(action: 'share' | 'preview') {
     if (!activeTask?.artifacts?.length) return;
     const artifact = activeTask.artifacts[0];
@@ -480,7 +506,7 @@ export default function AssistantPage() {
             </section>
           )}
 
-          {section === 'conversation' && <ConversationPage task={activeTask} />}
+          {section === 'conversation' && <ConversationPage task={activeTask} onApproveAction={runProposedActionApprove} />}
           {section === 'results' && (
             <ResultsPage
               task={activeTask}
@@ -585,7 +611,7 @@ function TaskListPage({
   );
 }
 
-function ConversationPage({ task }: { task?: AssistantTask }) {
+function ConversationPage({ task, onApproveAction }: { task?: AssistantTask, onApproveAction?: (actionId: string) => void }) {
   if (!task) {
     return (
       <section className={styles.panel}>
@@ -610,6 +636,23 @@ function ConversationPage({ task }: { task?: AssistantTask }) {
           <div key={message.id} className={cx(styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage)}>
             <div className={styles.overline}>{message.role}</div>
             <p className={styles.messageText}>{message.content}</p>
+            {message.proposedAction && (
+              <div className={styles.proposedActionCard}>
+                <p className={styles.proposedActionTitle}>{message.proposedAction.payload?.title || 'Proposed Action'}</p>
+                <p className={styles.proposedActionDetail}>
+                  {message.proposedAction.payload?.price ? `$${message.proposedAction.payload.price} - ` : ''}
+                  {message.proposedAction.payload?.description || 'Review the details before proceeding.'}
+                </p>
+                {message.proposedAction.status === 'pending' ? (
+                  <div className={styles.proposedActionRow}>
+                    <button type="button" onClick={() => onApproveAction && onApproveAction(message.proposedAction!.id)} className={styles.approveButton}>Approve & Create</button>
+                    <button type="button" className={styles.rejectButton}>Reject</button>
+                  </div>
+                ) : (
+                  <p className={styles.statusApproved}>Approved</p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
