@@ -283,7 +283,8 @@ pub async fn handle_omnichannel_webhook(
         "content": message,
         "sender_id": sender_id,
         "customer_id": customer_id,
-        "service_lead_id": service_lead_id
+        "service_lead_id": service_lead_id,
+        "message": message
     });
 
     let enqueue_result = match &state.db.store {
