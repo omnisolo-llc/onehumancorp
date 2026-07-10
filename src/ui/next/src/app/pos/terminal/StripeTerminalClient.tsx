@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
 
 interface StripeTerminalClientProps {
@@ -93,18 +94,23 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     if (typeof window !== 'undefined' && !navigator.onLine) {
        // Offline Mode Payment Enqueue
        setStatus('Offline Tap-to-Pay. Authorizing locally...');
-       const syncManager = SyncManager.getInstance();
-       if (onOptimisticReserve) onOptimisticReserve();
 
        cart?.forEach(item => {
-           SyncManager.getInstance().enqueue({
-             type: 'tap_to_pay',
-             product_id: item.product.id,
-             quantity: item.quantity,
-             amount: item.product.price_cents * item.quantity,
-             currency: 'usd',
-             payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity }
-          });
+           MutationService.getInstance().executeMutation(
+               'tap_to_pay',
+               {
+                   amount_cents: item.product.price_cents * item.quantity,
+                   product_id: item.product.id,
+                   quantity: item.quantity,
+               },
+               () => {
+                   if (onOptimisticReserve) onOptimisticReserve();
+               },
+               () => {
+                   if (onOptimisticRollback) onOptimisticRollback();
+                   setStatus('Failed to save offline payment.');
+               }
+           );
        });
 
        setTimeout(() => {
@@ -172,14 +178,22 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   const processCashSale = async () => {
      if (typeof window !== 'undefined' && !navigator.onLine) {
-         if (onOptimisticReserve) onOptimisticReserve();
          cart?.forEach(item => {
-               SyncManager.getInstance().enqueue({
-               type: 'cash_sale',
-               product_id: item.product.id,
-               quantity: item.quantity,
-               payload: { amount_cents: item.product.price_cents * item.quantity }
-            });
+            MutationService.getInstance().executeMutation(
+                'cash_sale',
+                {
+                    amount_cents: item.product.price_cents * item.quantity,
+                    product_id: item.product.id,
+                    quantity: item.quantity
+                },
+                () => {
+                    if (onOptimisticReserve) onOptimisticReserve();
+                },
+                () => {
+                    if (onOptimisticRollback) onOptimisticRollback();
+                    setStatus('Failed to save offline cash sale.');
+                }
+            );
          });
          setTimeout(() => {
            setStatus('Saved Offline - Will sync when connected');
