@@ -107,7 +107,7 @@ function walkFiles(dir: string): string[] {
       if (entry.isDirectory()) return walkFiles(fullPath);
       return entry.isFile() ? [fullPath] : [];
     });
-  } catch (e) {
+  } catch(e) {
     return [];
   }
 }
@@ -144,9 +144,7 @@ test.describe('real data contract', () => {
         .map((pattern) => pattern.toString());
 
       expect(violations).toEqual([]);
-    } catch (e) {
-      // Ignored for e2e runfiles
-    }
+    } catch(e) {}
   });
 
   test('production UI/server code does not ship simulated data paths', async () => {
@@ -212,13 +210,12 @@ test.describe('real data contract', () => {
         files.add(file);
       }
     }
-
     try {
       files.add(path.join(repoRoot, 'src/server/lib.rs'));
-    } catch (e) {}
+    } catch(e) {}
 
     for (const file of files) {
-      if (!fs.existsSync(file)) continue;
+      if(!fs.existsSync(file)) continue;
       const relative = path.relative(repoRoot, file);
       const source = fs.readFileSync(file, 'utf8');
       const lines = source.split('\n');
