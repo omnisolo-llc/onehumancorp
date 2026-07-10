@@ -553,7 +553,7 @@ export default function ApprovalInbox({
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        Quote Ready for Review: {req.payload.service || 'Plumbing Fix'} for Customer
+                        Quote Ready for Review: {req.payload.service} for Customer
                       </div>
                       <div className="text-xs text-[#0066FF] font-medium">
                         {req.payload.customer_inquiry}
@@ -578,10 +578,12 @@ export default function ApprovalInbox({
                             <span className="text-xs text-gray-500">Scope of Work:</span>
                             <span className="text-xs font-medium text-gray-800">{req.payload.scope}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-xs text-gray-500">Suggested Time:</span>
-                            <span className="text-xs font-medium text-gray-800">{req.payload.suggested_time}</span>
-                          </div>
+                          {req.payload.suggested_time && (
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Suggested Time:</span>
+                              <span className="text-xs font-medium text-gray-800">{req.payload.suggested_time}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -682,7 +684,7 @@ export default function ApprovalInbox({
                           onReject(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                     >
                       {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")
                         ? "Edit"
@@ -700,7 +702,7 @@ export default function ApprovalInbox({
                            onApprove(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
@@ -811,7 +813,7 @@ export default function ApprovalInbox({
                     setSelectedReview(null);
                     setEditedQuote(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                   data-testid="modal-approve-btn"
                 >
                   {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
