@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Management - OHC</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f5f5f7; margin: 0; padding: 20px; color: #1d1d1f; }
+        .container { max-width: 800px; margin: 0 auto; padding-bottom: 80px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .title { font-size: 24px; font-weight: 600; margin: 0; }
+        .btn-primary { background: #0066FF; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background: #005ce6; }
+        .btn-secondary { background: white; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.1); padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; }
+
+        .board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+        .column { flex: 1; min-width: 250px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; scroll-snap-align: start; }
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #000; color: #f5f5f7; }
+            .column { background: rgba(22, 22, 26, 0.7); border-color: rgba(255, 255, 255, 0.1); }
+            .card, .milestone-item { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: white; }
+            .btn-secondary { background: rgba(255,255,255,0.1); color: white; border-color: transparent; }
+        }
+        .col-title { font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #86868b; }
+
+        .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card-title { font-weight: 600; margin: 0 0 8px 0; }
+        .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #86868b; }
+        .milestone-badge { background: rgba(0,102,255,0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .task-actions { margin-top: 12px; display: flex; gap: 8px; }
+        .btn-task { flex: 1; padding: 6px; font-size: 13px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1); background: transparent; cursor: pointer; }
+
+        .milestones-section { margin-top: 40px; }
+        .milestone-list { display: flex; flex-direction: column; gap: 12px; }
+        .milestone-item { display: flex; justify-content: space-between; align-items: center; background: white; border-radius: 12px; padding: 16px; border: 1px solid rgba(0,0,0,0.05); }
+        .milestone-info { display: flex; flex-direction: column; gap: 4px; }
+        .m-title { font-weight: 600; }
+        .m-amount { color: #0066FF; font-weight: 600; }
+        .m-status { font-size: 12px; text-transform: uppercase; color: #86868b; font-weight: 600; letter-spacing: 0.5px; }
+        .btn-approve { background: #34C759; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-approve:hover:not(:disabled) { background: #2ebd4f; }
+        .btn-approve:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+
+        .loading { text-align: center; padding: 40px; color: #86868b; }
+        .empty-state { text-align: center; padding: 40px; color: #86868b; background: rgba(0,0,0,0.02); border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Project Dashboard</h1>
+            <a class="btn-secondary" href="dashboard.html">Back to Home</a>
+        </div>
+
+        <div id="loading" class="loading">Loading project data...</div>
+
+        <div id="content" style="display: none;">
+            <div class="board" id="tasks-board">
+                <!-- Columns will be injected here -->
+            </div>
+
+            <div class="milestones-section">
+                <h2>Milestones</h2>
+                <div class="milestone-list" id="milestones-list">
+                    <!-- Milestones will be injected here -->
+                </div>
+            </div>
+        </div>
+        <div id="empty" style="display: none;" class="empty-state">
+            <p>No active projects found.</p>
+        </div>
+    </div>
+    <script>
+        const tenantId = localStorage.getItem('ohc_tenant_id') || 'e2e-tenant';
+        let currentProjectId = null;
+        let tasksData = [];
+        let milestonesData = [];
+
+        async function init() {
+            try {
+                // Fetch projects
+                const pRes = await fetch(`/api/v1/projects?tenant_id=${tenantId}`);
+                if (pRes.ok) {
+                    const projects = await pRes.json();
+                    if (projects.length > 0) {
+                        currentProjectId = projects[0].id;
+                        await loadProjectData();
+                    } else {
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('empty').style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load projects", e);
+                document.getElementById('loading').innerText = "Failed to load projects.";
+            }
+        }
+
+        async function loadProjectData() {
+            if (!currentProjectId) return;
+            try {
+                const [tRes, mRes] = await Promise.all([
+                    fetch(`/api/v1/projects/${currentProjectId}/tasks?tenant_id=${tenantId}`),
+                    fetch(`/api/v1/projects/${currentProjectId}/milestones?tenant_id=${tenantId}`)
+                ]);
+
+                if (tRes.ok) tasksData = await tRes.json();
+                if (mRes.ok) milestonesData = await mRes.json();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+                renderBoard();
+                renderMilestones();
+            } catch (error) {
+                console.error('Error loading project data:', error);
+            }
+        }
+
+        async function updateTaskStatus(taskId, newStatus) {
+            try {
+                await fetch(`/api/v1/projects/tasks/${taskId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: tenantId, status: newStatus })
+                });
+
+                // Update local state
+                const task = tasksData.find(t => t.id === taskId);
+                if (task) task.status = newStatus;
+
+                // If a task is marked done, check if all tasks for its milestone are done
+                if (newStatus === 'done' && task.milestone_id) {
+                    const milestoneTasks = tasksData.filter(t => t.milestone_id === task.milestone_id);
+                    const allDone = milestoneTasks.every(t => t.status === 'done');
+                    if (allDone) {
+                        const m = milestonesData.find(m => m.id === task.milestone_id);
+                        if (m && m.status === 'draft') {
+                            await updateMilestoneStatus(m.id, 'pending');
+                        }
+                    }
+                }
+
+                renderBoard();
+            } catch(e) {
+                console.error('Error updating task', e);
+            }
+        }
+
+        async function updateMilestoneStatus(milestoneId, newStatus) {
+            try {
+                await fetch(`/api/v1/projects/milestones/${milestoneId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: tenantId, status: newStatus })
+                });
+
+                const m = milestonesData.find(m => m.id === milestoneId);
+                if (m) m.status = newStatus;
+
+                renderMilestones();
+            } catch(e) {
+                console.error('Error updating milestone', e);
+            }
+        }
+
+        async function approveInvoice(milestoneId) {
+            // Approving sets it to 'paid' (or sent)
+            await updateMilestoneStatus(milestoneId, 'paid');
+            alert('Invoice approved and sent via Stripe!');
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('tasks-board');
+            const cols = {
+                todo: { title: 'To Do', tasks: [] },
+                in_progress: { title: 'In Progress', tasks: [] },
+                done: { title: 'Done', tasks: [] }
+            };
+
+            tasksData.forEach(t => {
+                if(cols[t.status]) cols[t.status].tasks.push(t);
+                else cols['todo'].tasks.push(t); // fallback
+            });
+
+            const getMilestoneTitle = (mid) => {
+                if (!mid) return '';
+                const m = milestonesData.find(m => m.id === mid);
+                return m ? m.title : 'Milestone';
+            };
+
+            board.innerHTML = Object.keys(cols).map(key => `
+                <div class="column">
+                    <h3 class="col-title">${cols[key].title} (${cols[key].tasks.length})</h3>
+                    ${cols[key].tasks.map(t => `
+                        <div class="card" data-testid="task-card-${t.id}">
+                            <h4 class="card-title">${t.title}</h4>
+                            <div class="card-meta">
+                                ${t.milestone_id ? `<span class="milestone-badge">${getMilestoneTitle(t.milestone_id)}</span>` : '<span></span>'}
+                            </div>
+                            <div class="task-actions">
+                                ${key !== 'todo' ? `<button class="btn-task" onclick="updateTaskStatus('${t.id}', 'todo')">← Todo</button>` : ''}
+                                ${key !== 'in_progress' ? `<button class="btn-task" onclick="updateTaskStatus('${t.id}', 'in_progress')">Do</button>` : ''}
+                                ${key !== 'done' ? `<button class="btn-task" id="btn-done-${t.id}" onclick="updateTaskStatus('${t.id}', 'done')">Done →</button>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        function renderMilestones() {
+            const list = document.getElementById('milestones-list');
+            list.innerHTML = milestonesData.map(m => `
+                <div class="milestone-item" data-testid="milestone-item-${m.id}">
+                    <div class="milestone-info">
+                        <span class="m-title">${m.title}</span>
+                        <span class="m-amount">$${(m.amount_cents / 100).toFixed(2)}</span>
+                        <span class="m-status">${m.status.replace('_', ' ')}</span>
+                    </div>
+                    <button class="btn-approve" id="approve-btn-${m.id}" onclick="approveInvoice('${m.id}')" ${m.status !== 'pending' ? 'disabled' : ''}>
+                        ${m.status === 'pending' ? 'Approve & Invoice' : (m.status === 'paid' ? 'Paid' : 'Pending Tasks')}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Start load
+        init();
+    </script>
+</body>
+</html>
