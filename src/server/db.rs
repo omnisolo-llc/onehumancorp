@@ -1991,6 +1991,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         bot_token TEXT,
                         api_token TEXT,
                         from_phone TEXT,
+                        chat_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );

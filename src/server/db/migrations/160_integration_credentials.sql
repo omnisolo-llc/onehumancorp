@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS integration_credentials (
     bot_token TEXT,
     api_token TEXT,
     from_phone TEXT,
+    chat_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

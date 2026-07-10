@@ -64,7 +64,7 @@ test.describe('WhatsApp Integration UI', () => {
     await page.getByRole('button', { name: 'Save & Connect' }).click();
 
     // Check for success status updates
-    await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
+    await expect(page.locator('[role="status"]', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
   });
 
   test('can open WhatsApp Cloud API modal', async ({ page }) => {
@@ -85,6 +85,6 @@ test.describe('WhatsApp Integration UI', () => {
     await page.getByRole('button', { name: 'Continue with Meta' }).click();
 
     // Check for success status updates
-    await expect(page.locator('.app-status-item', { hasText: 'WhatsApp Cloud API connected.' })).toBeVisible();
+    await expect(page.locator('[role="status"]', { hasText: 'WhatsApp Cloud API connected.' })).toBeVisible();
   });
 });

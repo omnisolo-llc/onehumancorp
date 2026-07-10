@@ -316,16 +316,19 @@ async fn handle_create_product(
             .clone()
             .unwrap_or_else(|| "Monthly".to_string())
             .to_lowercase();
-        let _discount = payload.subscription_discount_percent.unwrap_or(0);
+        let discount = payload.subscription_discount_percent.unwrap_or(0);
 
         let insert_plan = sqlx::query(
-            "INSERT INTO subscription_plans (id, tenant_id, name, price_cents, frequency) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO subscription_plans (id, tenant_id, product_id, name, price_cents, frequency, interval, discount_percentage) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&plan_id)
         .bind(&tenant_id)
+        .bind(&product_id)
         .bind(&payload.name)
         .bind(price_cents)
         .bind(&frequency)
+        .bind(&frequency)
+        .bind(discount)
         .execute(&mut *conn)
         .await;
 

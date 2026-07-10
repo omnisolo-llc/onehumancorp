@@ -56,8 +56,30 @@ test.describe('Ambassador RAG Pipeline', () => {
     await expect(approvalCard.getByText('Do you have vegan cakes today?')).toBeVisible({ timeout: 15000 });
     await expect(approvalCard.getByText('AI Draft')).toBeVisible();
 
-    // Approve the response
-    const approveButton = approvalCard.getByRole('button', { name: /Send Draft/ }).first();
+    // Now test editing functionality through the Team Approval Inbox
+    await page.goto('/team');
+
+    // 1. Enter The Ambassador department
+    const ambassadorDept = page.locator('button', { hasText: 'The Ambassador' });
+    await expect(ambassadorDept).toBeVisible({ timeout: 15000 });
+    await ambassadorDept.click();
+
+    // 2. Find the card
+    const teamApprovalCard = page.locator('.glassmorphism').filter({ hasText: 'Do you have vegan cakes today?' }).first();
+    await expect(teamApprovalCard).toBeVisible({ timeout: 15000 });
+
+    // 3. Click Edit
+    const editButton = teamApprovalCard.getByRole('button', { name: 'Edit' }).first();
+    await expect(editButton).toBeVisible();
+    await editButton.click();
+
+    // 4. Update the draft
+    const draftTextarea = page.getByTestId('edit-ambassador-draft');
+    await expect(draftTextarea).toBeVisible();
+    await draftTextarea.fill('Yes we do! We have fresh vegan chocolate cakes available right now.');
+
+    // 5. Approve & Send
+    const approveButton = page.getByTestId('modal-approve-btn');
     await expect(approveButton).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box
@@ -71,6 +93,6 @@ test.describe('Ambassador RAG Pipeline', () => {
     await approveButton.click();
 
     // Verify it disappears
-    await expect(approvalCard).not.toBeVisible({ timeout: 10000 });
+    await expect(teamApprovalCard).not.toBeVisible({ timeout: 10000 });
   });
 });
