@@ -6937,6 +6937,9 @@ async fn create_ui_bom_item_handler(
         .route("/assistant.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
+        .route("/tasks", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/tasks.html"))
+        }))
         .route("/calendar", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))
         }))
