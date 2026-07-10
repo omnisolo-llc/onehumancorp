@@ -368,7 +368,19 @@ export default function FeedPage() {
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
 
-                {editingId === item.id ? (
+                {isAmbassador ? (
+                   <AmbassadorReplyCard
+                    approval={item}
+                    isEditing={editingId === item.id}
+                    editContent={editValue}
+                    setEditContent={setEditValue}
+                    onEdit={() => startEditing(item)}
+                    onCancelEdit={() => cancelEdit()}
+                    onSaveEdit={() => saveEdit(item.id)}
+                    onApprove={() => handleAction(item.id, 'APPROVED')}
+                    onDismiss={() => handleAction(item.id, 'DISMISSED')}
+                   />
+                ) : editingId === item.id ? (
                   <div className="mb-5">
                     <textarea
                       value={editValue}
@@ -520,92 +532,7 @@ export default function FeedPage() {
                         Dismiss
                       </button>
                     </div>
-) : isAmbassador ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                          <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
-                          {ambassadorPayload.past_orders && (
-                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
-                              {ambassadorPayload.past_orders}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
-                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed">
-                            {ambassadorPayload.generated_response}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                        {item.proposed_action?.action_type === 'Draft Quote'
-                          ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
-                          : item.proposed_action?.action_type === 'Draft Booking'
-                          ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
-                          : item.proposed_action?.action_type === 'Reassign Shift'
-                          ? (item.context_payload?.context || 'AI has proposed a shift reassignment.')
-                          : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {!editingId || editingId !== item.id ? (
-                  isDisputeResolution ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#FF9500] text-white font-medium hover:bg-[#E68A00] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Resolve"
-                        data-testid="feed-approve-resolve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : 'Approve & Resolve'}
-                      </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Draft"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-
-                    ) : isInvoiceDraft ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send"
-                        data-testid="feed-approve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : 'Approve & Send'}
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-
-                    ) : isPromoter ? (
+) : isPromoter ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
                           <p className="text-[13px] text-indigo-700 dark:text-indigo-300 font-medium mb-1">Generated Marketing Posts</p>
@@ -653,37 +580,7 @@ export default function FeedPage() {
                         Dismiss
                       </button>
                     </div>
-) : isAmbassador ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send Draft"
-                        data-testid="feed-approve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : 'Send Draft'}
-                      </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Draft"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (
+) : (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}

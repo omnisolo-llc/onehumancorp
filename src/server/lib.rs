@@ -2382,7 +2382,7 @@ async fn get_pending_approvals(
 }
 
 pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
-    let store = crate::settings::Store::new();
+    let store = crate::settings::Store::global();
     let settings = store.get();
 
     let should_send = match event_type {
@@ -6073,7 +6073,7 @@ async fn create_ui_bom_item_handler(
 }
 
     let db_for_sales = db.clone();
-    let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let settings_store = crate::settings::Store::global();
     let is_standalone = crate::is_standalone_runtime();
     let ohc_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
@@ -6816,6 +6816,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
+        .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
@@ -6939,6 +6940,9 @@ async fn create_ui_bom_item_handler(
         .route("/assistant.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
+        .route("/tasks", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/tasks.html"))
+        }))
         .route("/calendar", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))
         }))
@@ -7061,7 +7065,7 @@ async fn create_ui_bom_item_handler(
                 let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
-    if ::server_config::get().telemetry_enabled {
+    if ::server_config::is_telemetry_enabled() {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(db.pool.clone(), cloud_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         telemetry_daemon.start();
@@ -7259,7 +7263,7 @@ async fn test_api_settings_voice() {
     use std::sync::Arc;
     use serde_json::json;
 
-    let settings_store = Arc::new(crate::settings::Store::new());
+    let settings_store = crate::settings::Store::global();
     settings_store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string()), Some("Be nice".to_string())).unwrap();
 
     let json_req = json!({

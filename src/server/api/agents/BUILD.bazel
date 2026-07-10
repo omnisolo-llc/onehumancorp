@@ -14,6 +14,7 @@ exports_files(
         "client_intake.rs",
         "pydantic.rs",
         "code_native.rs",
+        "order_interceptor.rs",
 
 
     ],
@@ -36,6 +37,7 @@ rust_library(
         "client_intake.rs",
         "pydantic.rs",
         "code_native.rs",
+        "order_interceptor.rs",
 
 
     ],
