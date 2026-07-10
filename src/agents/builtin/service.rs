@@ -202,6 +202,8 @@ impl AgentServiceImpl {
                                 repo.clone(),
                                 Duration::from_secs(3600),
                                 180,
+                                20,
+                                2,
                                 None,
                             ))
                             .spawn_background_task(),
@@ -221,6 +223,8 @@ impl AgentServiceImpl {
                                 repo.clone(),
                                 Duration::from_secs(3600),
                                 180,
+                                20,
+                                2,
                                 None,
                             ))
                             .spawn_background_task(),
