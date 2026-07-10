@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, ReactNode } from 'react';
+import { WithTooltip } from './TooltipRegistry';
 
 export type Step = {
   targetId: string;
@@ -192,10 +193,14 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
  * It wraps its children in a relative container with the specified ID, which is then
  * targeted by the walkthrough overlay and speech bubble logic.
  */
-export function WalkthroughTarget({ id, children, className = "" }: { id: string, children?: ReactNode, className?: string }) {
-  return (
+export function WalkthroughTarget({ id, children, className = "", tooltipId }: { id: string, children?: ReactNode, className?: string, tooltipId?: string }) {
+  const inner = (
     <div id={id} className={`relative ${className}`}>
       {children || <div className="hidden" aria-hidden="true" />}
     </div>
   );
+  if (tooltipId) {
+    return <WithTooltip id={tooltipId}>{inner}</WithTooltip>;
+  }
+  return inner;
 }
