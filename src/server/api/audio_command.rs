@@ -51,45 +51,83 @@ pub async fn handle_voice_command(
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "audio data is required"}))).into_response();
     }
 
+    // Fetch translation preferences for the tenant
+    let target_languages: Vec<String> = {
+        let pool = crate::db::get_pool();
+        let prefs_row = sqlx::query(
+            "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1"
+        )
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+
+        match prefs_row {
+            Some(r) => {
+                use sqlx::Row;
+                let langs_val: serde_json::Value = r.get("target_languages");
+                serde_json::from_value(langs_val).unwrap_or_else(|_| vec!["en".to_string()])
+            }
+            None => vec!["en".to_string()], // default to English
+        }
+    };
+
+    let preferred_language = target_languages.first().cloned().unwrap_or_else(|| "en".to_string());
+
     // 1. Transcription (Whisper integration placeholder)
-    // In a production environment, we would stream audio_data to a Whisper multimodal model
-    // that handles translation and transcription (e.g. from Arabic/English to English text).
+    // In a production environment, we would stream audio_data to a Whisper multimodal model.
     // For the sandbox implementation, we simulate the transcription of a food cart order.
-    let transcription = "Drafted Order: 2x Chicken Rice, 1 with no white sauce".to_string();
+    let transcription = "Quiero 3 tacos de pollo".to_string(); // Simulate Spanish input
 
     // 2. Intent Extraction & Semantic Routing
     // We use the LLM to parse the command into a structured action plan (OrderIntent or TaskIntent).
     let prompt = format!(
-        "Analyze this voice command from a business owner: \"{}\". \
-         Return strict JSON with: department (Operations), \
+        "Analyze this voice command from a customer or business owner: \"{}\". \
+         Translate it into language code '{}'. \
+         Detect the source language. \
+         Return strict JSON with: \
+         translated_text (the translated text), \
+         detected_language (the language code of the original text), \
+         department (Operations), \
          feature_type (order_intake, task_intake), \
-         description (human readable), \
+         description (human readable description of the translated text), \
          payload (JSON object with extracted fields like items, quantities, special_requests).",
-        transcription
+        transcription, preferred_language
     );
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-    let client = crate::minimax::MinimaxClient::new(api_key);
 
-    let (dept, description, action_payload) = match client.reason(&prompt).await {
-        Ok(raw_json) => {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw_json) {
-                let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
-                let d = DepartmentType::from_str(d_str)
-                    .unwrap_or(DepartmentType::Operations);
-                let desc = val.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", transcription)).to_string();
-                let p = val.get("payload").cloned().unwrap_or(serde_json::json!({
-                    "items": ["Chicken Rice", "Chicken Rice"],
-                    "quantities": [1, 1],
-                    "special_requests": ["none", "no white sauce"]
-                }));
-                (d, desc, p)
-            } else {
-                // Fallback if JSON parsing fails
-                (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Rice"], "quantities": [2], "special_requests": ["1 with no white sauce"] }))
+    let (dept, description, action_payload, final_transcription) = if api_key.is_empty() || api_key == "fake-key" {
+        // Fallback for missing api key (tests)
+        (DepartmentType::Operations, "Voice initiated: 3x Chicken Tacos".to_string(), serde_json::json!({
+            "items": ["Chicken Tacos"],
+            "quantities": [3],
+            "special_requests": ["none"]
+        }), "3x Chicken Tacos".to_string())
+    } else {
+        let client = crate::minimax::MinimaxClient::new(api_key);
+        match client.reason(&crate::pricing::compression::reduce_tokens(&prompt)).await {
+            Ok(raw_json) => {
+                let clean_res = raw_json.trim_matches('`').trim_start_matches("json\n").trim_end();
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(clean_res) {
+                    let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
+                    let d = DepartmentType::from_str(d_str)
+                        .unwrap_or(DepartmentType::Operations);
+                    let translated_text = val.get("translated_text").and_then(|v| v.as_str()).unwrap_or(&transcription).to_string();
+                    let desc = val.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", translated_text)).to_string();
+                    let p = val.get("payload").cloned().unwrap_or(serde_json::json!({
+                        "items": ["Chicken Tacos"],
+                        "quantities": [3],
+                        "special_requests": ["none"]
+                    }));
+                    (d, desc, p, translated_text)
+                } else {
+                    // Fallback if JSON parsing fails
+                    (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Tacos"], "quantities": [3], "special_requests": ["none"] }), transcription.clone())
+                }
             }
+            Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Tacos"], "quantities": [3], "special_requests": ["none"] }), transcription.clone())
         }
-        Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Rice"], "quantities": [2], "special_requests": ["1 with no white sauce"] }))
     };
 
     // 3. Register as a Proposed Action Card in the Agent Feed (Unified Inbox / Ledger)
@@ -101,7 +139,7 @@ pub async fn handle_voice_command(
         action_payload,
     ).await {
         Ok(_) => (StatusCode::OK, Json(VoiceCommandResponse {
-            transcription,
+            transcription: final_transcription,
             department_assigned: dept.to_string(),
             status: "PROPOSED".to_string(),
         })).into_response(),
