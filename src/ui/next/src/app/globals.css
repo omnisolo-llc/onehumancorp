@@ -642,7 +642,7 @@ body {
 }
 
 .glassmorphism {
-  border-radius: 16px;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -651,7 +651,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
-    border-radius: 16px;
+    border-radius: 16px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -660,7 +660,7 @@ body {
 }
 
 html.dark .glassmorphism {
-  border-radius: 16px;
+  border-radius: 16px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -668,7 +668,7 @@ html.dark .glassmorphism {
 }
 
 .glass-card {
-  border-radius: 16px;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -676,7 +676,7 @@ html.dark .glassmorphism {
 
 @media (prefers-color-scheme: dark) {
   .glass-card {
-    border-radius: 16px;
+    border-radius: 16px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -684,7 +684,7 @@ html.dark .glassmorphism {
 }
 
 html.dark .glass-card {
-  border-radius: 16px;
+  border-radius: 16px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -718,7 +718,7 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 16px;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -1207,8 +1207,8 @@ html.dark .glass-panel {
 }
 /* Global border radius to fix UI regression */
 .glassmorphism, .glass-card {
-  border-radius: 16px;
+  border-radius: 16px !important;
 }
 .glass-control {
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
