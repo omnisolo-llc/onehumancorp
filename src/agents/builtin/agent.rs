@@ -657,7 +657,7 @@ impl Agent {
                             error: String::new(),
                         };
                     }
-                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                         let self_correct_msg =
                             ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 tc.id.clone(),
@@ -761,7 +761,7 @@ impl Agent {
                             error: String::new(),
                         };
                     }
-                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                         let self_correct_msg =
                             ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 tc.id.clone(),
@@ -1390,7 +1390,7 @@ impl Agent {
                                     err_msg
                                 ))));
                             }
-                            Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                            Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                                 if let Some(checkpointer) = &self.checkpointer {
                                     if let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
@@ -1526,7 +1526,7 @@ impl Agent {
                                         err_msg
                                     ))));
                                 }
-                                Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                                Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                                     if let Some(checkpointer) = &self.checkpointer {
                                         if let Some(cp_id) = &current_checkpoint_id {
                                             let _ = checkpointer.restore_checkpoint(cp_id).await;
@@ -1902,7 +1902,7 @@ impl Agent {
                                 error: "".to_string(),
                             };
                         }
-                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                             if let Some(checkpointer) = &checkpointer_node {
                                 if let Some(cp_id) = &current_checkpoint_id {
                                     let _ = checkpointer.restore_checkpoint(cp_id).await;
@@ -1957,7 +1957,7 @@ impl Agent {
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
                         match e {
-                            crate::types::ToolError::LlmRecoverable(err_msg) => {
+                            crate::types::ToolError::LlmRecoverable(err_msg) | crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. } => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
@@ -2031,7 +2031,7 @@ impl Agent {
                                     error: "".to_string(),
                                 };
                             }
-                            Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                            Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
@@ -2585,7 +2585,7 @@ impl Agent {
                                 break Err(crate::types::ToolError::Transient(format!("Error executing planned step: Transient error after retries: {}", msg)));
                             }
                         }
-                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                             if llm_recoverable_count >= 2 {
                                 break Err(crate::types::ToolError::Unexpected(format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg)));
                             }
@@ -2731,7 +2731,7 @@ impl Agent {
                             .into());
                         }
                     }
-                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                    Err(crate::types::ToolError::LlmRecoverable(err_msg)) | Err(crate::types::ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                         if llm_recoverable_count >= 2 {
                             return Err(format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg).into());
                         }
@@ -4205,7 +4205,7 @@ impl Agent {
                         };
                     }
 
-                    Err(ToolError::LlmRecoverable(err_msg)) => {
+                    Err(ToolError::LlmRecoverable(err_msg)) | Err(ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > std::cmp::min(final_cfg.max_retries, 2) {
@@ -4468,7 +4468,7 @@ impl Agent {
                             content = r;
                             break;
                         }
-                        Err(ToolError::LlmRecoverable(err_msg)) => {
+                        Err(ToolError::LlmRecoverable(err_msg)) | Err(ToolError::LlmRecoverableWithContext { msg: err_msg, .. }) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
                             if *count > std::cmp::min(final_cfg.max_retries, 2) {

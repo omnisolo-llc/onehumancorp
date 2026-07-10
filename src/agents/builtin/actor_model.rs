@@ -207,7 +207,7 @@ impl Actor for ToolActor {
                                 }
                                 Err(e) => {
                                     let error_str = match e {
-                                        ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => {
+                                        ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) | ohc_builtin_agent_core::types::ToolError::LlmRecoverableWithContext { msg, .. } => {
                                             let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
                                             error_counts.insert(tc.name.clone(), count);
                                             if count > 2 {

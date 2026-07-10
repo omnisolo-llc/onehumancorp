@@ -210,7 +210,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => {
+            ToolError::LlmRecoverableWithContext { msg, .. } => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
                 assert!(msg.contains("missing field `required_int`"));
             },
@@ -241,7 +241,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert!(res.is_err());
         assert!(res.as_ref().expect_err("Expected error in test").to_string().contains("Validation Error (Pydantic-first tool schema)"));
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
+            ToolError::LlmRecoverableWithContext { msg, .. } => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
@@ -270,7 +270,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => {
+            ToolError::LlmRecoverableWithContext { msg, .. } => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             },
             _ => panic!("Expected LlmRecoverable error"),
@@ -298,7 +298,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("parse error")),
+            ToolError::LlmRecoverableWithContext { msg, .. } => assert!(msg.contains("parse error")),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }

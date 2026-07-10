@@ -215,7 +215,7 @@ impl PlanAndExecuteOrchestrator {
 
                     match res {
                         Ok(r) => Ok::<_, String>((task.task_id, r)),
-                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) | Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverableWithContext { msg, .. }) => {
                             Ok::<_, String>((
                                 task.task_id,
                                 ohc_builtin_agent_core::types::format_llm_recoverable_error(
@@ -262,7 +262,7 @@ impl PlanAndExecuteOrchestrator {
 
                 let final_res = match res {
                     Ok(r) => r,
-                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) | Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverableWithContext { msg, .. }) => {
                         ohc_builtin_agent_core::types::format_llm_recoverable_error(
                             &task.tool_name,
                             &msg,

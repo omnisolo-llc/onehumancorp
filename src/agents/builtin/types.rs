@@ -155,6 +155,8 @@ pub enum ToolError {
     /// Errors the LLM can fix if it sees them (e.g. invalid arguments, missing required param).
     /// Passed back to the LLM as a ToolMessage containing the raw error.
     LlmRecoverable(String),
+    /// Same as LlmRecoverable, but with explicitly attached tool name context to prevent loss of context.
+    LlmRecoverableWithContext { tool_name: String, msg: String },
     /// Errors requiring human intervention. Pauses execution and asks the user.
     UserFixable(String),
     /// Fatal errors. Bubbles up to debug/halt immediately.
@@ -170,6 +172,7 @@ impl std::fmt::Display for ToolError {
         match self {
             Self::Transient(msg) => write!(f, "Transient error: {}", msg),
             Self::LlmRecoverable(msg) => write!(f, "Recoverable error: {}", msg),
+            Self::LlmRecoverableWithContext { tool_name, msg } => write!(f, "Recoverable error in {}: {}", tool_name, msg),
             Self::UserFixable(msg) => write!(f, "User intervention required: {}", msg),
             Self::Fatal(msg) => write!(f, "Fatal error: {}", msg),
             Self::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),

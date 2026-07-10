@@ -39,6 +39,13 @@ impl ToolExecutionEngine {
                     info!("Tool execution successful");
                     return Ok(res);
                 }
+                Err(ToolError::LlmRecoverableWithContext { msg, .. }) => {
+                    warn!(
+                        "LLM-recoverable error encountered in tool '{}' (Pydantic-first schema failure or similar): {}",
+                        tool.name, msg
+                    );
+                    return Err(ToolError::LlmRecoverableWithContext { tool_name: tool.name.clone(), msg });
+                }
                 Err(ToolError::Transient(msg)) => {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
@@ -65,15 +72,11 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    // E.g., when the schema fails validation (Pydantic-first approach).
                     warn!(
                         "LLM-recoverable error encountered in tool '{}' (Pydantic-first schema failure or similar): {}",
                         tool.name, msg
                     );
-                    let formatted_msg = ohc_builtin_agent_core::types::format_llm_recoverable_error(
-                        &tool.name, &msg,
-                    );
-                    return Err(ToolError::LlmRecoverable(formatted_msg));
+                    return Err(ToolError::LlmRecoverableWithContext { tool_name: tool.name.clone(), msg });
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: immediately bubble up to the orchestrator to request human-in-loop input.
