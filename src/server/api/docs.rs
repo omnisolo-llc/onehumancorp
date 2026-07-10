@@ -1031,7 +1031,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Ignoring since it requires a real database
+
     async fn test_tooltips_api() {
         let db_pool = crate::db::create_sqlite_pool_for_test().await;
         let pg_pool = crate::db::create_dummy_pg_pool().await;
