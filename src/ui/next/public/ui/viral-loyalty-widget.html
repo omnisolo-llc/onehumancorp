@@ -267,7 +267,7 @@
 
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
-        let refId = tenantId;
+        let refId = null;
 
         try {
           // This simulates generating a program
@@ -286,6 +286,8 @@
           const data = await res.json();
           if (data.referral_link) {
               refId = data.referral_link.split('/').pop();
+          } else {
+              throw new Error("No referral link in response");
           }
         } catch (fetchErr) {
             console.error("Network unreachable or API error", fetchErr);
