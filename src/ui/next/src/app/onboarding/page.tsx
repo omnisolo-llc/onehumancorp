@@ -6,6 +6,7 @@ import { useOnboardingStore } from "./store";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
+
 function generateSubdomain(name: string): string {
   if (!name || name.trim() === "") return "my-business.ohc.app";
   const cleanName = name
@@ -2292,7 +2293,7 @@ export default function OnboardingWizard() {
                     </span>
                     <input
                       type="checkbox"
-                      className="sr-only"
+                      className="glass-control sr-only"
                       checked={aiAutoRespond}
                       onChange={(e) =>
                         updateState({ aiAutoRespond: e.target.checked })
@@ -2486,7 +2487,7 @@ export default function OnboardingWizard() {
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-[#0066FF] font-semibold">
-                      {generateSubdomain(businessName)}
+                      {domainChoice === "subdomain" ? generateSubdomain(businessName) : "Custom Domain Configured"}
                     </span>
                   </div>
                 </div>
