@@ -2879,22 +2879,23 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     let t_id2 = tenant_id.clone();
 
                     async move {
-                        let (shared_res, swarm_res) = tokio::join!(
-                            tokio::spawn(async move {
-                                let mut tx = pool1.begin().await?;
-                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                                tx.commit().await?;
-                                Ok::<_, sqlx::Error>(rows)
-                            }),
-                            tokio::spawn(async move {
-                                let mut tx = pool2.begin().await?;
-                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                                tx.commit().await?;
-                                Ok::<_, sqlx::Error>(rows)
-                            })
-                        );
+                        let shared_task = tokio::spawn(async move {
+                            let mut tx = pool1.begin().await?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                            tx.commit().await?;
+                            Ok::<_, sqlx::Error>(rows)
+                        });
+
+                        let swarm_task = tokio::spawn(async move {
+                            let mut tx = pool2.begin().await?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                            tx.commit().await?;
+                            Ok::<_, sqlx::Error>(rows)
+                        });
+
+                        let (shared_res, swarm_res) = tokio::join!(shared_task, swarm_task);
 
                         let mut res = Vec::new();
 

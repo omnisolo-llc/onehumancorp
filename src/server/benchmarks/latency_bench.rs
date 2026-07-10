@@ -940,7 +940,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_docs_mobile_payload() {
-        bench_docs_mobile_payload().await;
+        super::bench_docs_mobile_payload().await;
     }
 
     #[tokio::test]
