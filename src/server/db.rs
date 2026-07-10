@@ -753,24 +753,15 @@ impl DB {
 
             match timeout_res {
                 Err(_) => {
-                    attempt += 1;
-                    if attempt > max_attempts {
-                        let _ = ::server_telemetry::record_sqlite_retry_exhausted(
-                            &self.pool, operation,
-                        )
-                        .await;
-                        return Err(E::from(format!(
-                            "Database operation '{}' timed out",
-                            operation
-                        )));
-                    }
-                    let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
-                    let jittered_backoff = std::time::Duration::from_secs_f64(
-                        backoff.as_secs_f64() * jitter_factor,
-                    );
-                    tokio::time::sleep(jittered_backoff).await;
-                    backoff *= 2;
-                    continue;
+                    // ML-Resilience: If the timeout is hit, we must fail immediately
+                    // instead of retrying, because `tokio::time::timeout` implies the
+                    // entire 60-second limit has elapsed. If we retry, we might
+                    // incorrectly increment the attempt counter and return an
+                    // "exhausted" message instead of a "timed out" message.
+                    return Err(E::from(format!(
+                        "Database operation '{}' timed out",
+                        operation
+                    )));
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
