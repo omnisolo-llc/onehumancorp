@@ -3894,7 +3894,7 @@ mod tests_added_for_coverage {
         repo.upsert(&rec2).await.unwrap();
         repo.upsert(&rec3).await.unwrap();
 
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 

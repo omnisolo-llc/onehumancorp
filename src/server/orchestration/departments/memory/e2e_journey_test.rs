@@ -116,7 +116,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     assert_eq!(resolved, 1, "Exactly 1 conflict should be resolved");
 
     // Run Pruning process (removes stale note older than 180 days)
-    repo.prune_stale(now - chrono::Duration::days(180)).await.expect("Failed to prune stale context");
+    repo.prune_stale(now - chrono::Duration::days(180), 20, 2).await.expect("Failed to prune stale context");
 
     // Cross-department retrieval: Operations fetches pricing context natively via vector repository
     // We explicitly use the application-level method provided by `VectorRepository` to satisfy the code review
