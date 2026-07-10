@@ -281,7 +281,6 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                // If directory already exists, ensure its permissions are 0700
                                 if e.kind() != std::io::ErrorKind::AlreadyExists {
                                     ::server_telemetry::record_error_signal(
                                         "[bug] Failed to securely create DB directory",
@@ -291,6 +290,26 @@ impl DB {
                                         e
                                     );
                                     return Err(e.into());
+                                }
+                            }
+
+                            // Regardless of whether it was just created or already existed,
+                            // enforce strict 0700 permissions to fix TOCTOU vulnerabilities.
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(metadata) = std::fs::metadata(parent) {
+                                let mut perms = metadata.permissions();
+                                if (perms.mode() & 0o777) != 0o700 {
+                                    perms.set_mode(0o700);
+                                    if let Err(set_err) = std::fs::set_permissions(parent, perms) {
+                                        ::server_telemetry::record_error_signal(
+                                            "[bug] Failed to securely update DB directory permissions",
+                                        );
+                                        tracing::error!(
+                                            "Failed to securely update DB directory permissions: {}",
+                                            set_err
+                                        );
+                                        return Err(set_err.into());
+                                    }
                                 }
                             }
                         }
@@ -3186,6 +3205,60 @@ mod tests {
                     });
             },
         );
+    }
+
+    #[test]
+    fn test_sqlite_secure_directory_permissions_fixed() {
+        use std::sync::Mutex;
+        static LOCAL_MUTEX: Mutex<()> = Mutex::new(());
+        let _lock = LOCAL_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let temp_dir = tempfile::tempdir().expect("Database URL or operation failed in test");
+        let parent_dir = temp_dir.path().join("insecure_test_dir");
+
+        std::fs::create_dir_all(&parent_dir).expect("Failed to create parent dir");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&parent_dir).unwrap().permissions();
+            perms.set_mode(0o777);
+            std::fs::set_permissions(&parent_dir, perms).expect("Failed to set insecure permissions");
+        }
+
+        let db_path = parent_dir.join("test.db");
+        let database_url = format!(
+            "sqlite://{}",
+            db_path
+                .to_str()
+                .expect("Database URL or operation failed in test")
+        );
+
+        temp_env::with_vars(
+            vec![
+                ("OHC_DATABASE_URL", Some(&*database_url)),
+                ("OHC_SQLITE_KEY", Some("dummy_key")),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("Database URL or operation failed in test")
+                    .block_on(async {
+                        let _ = DB::new().await;
+                    });
+            },
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = std::fs::metadata(&parent_dir).expect("Database URL or operation failed in test");
+            let permissions = metadata.permissions();
+            assert_eq!(
+                permissions.mode() & 0o777,
+                0o700,
+                "Directory permissions should be fixed to 0700"
+            );
+        }
     }
 }
 
