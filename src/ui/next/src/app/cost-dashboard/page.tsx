@@ -218,7 +218,7 @@ export default function CostDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="p-4 app-card ohc-growth-card">
                       <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                      <p id="cost-dashboard-plan-name" className="text-2xl font-bold text-gray-900  mt-1">{myPlanData?.current_plan || 'Free'}</p>
+                      <p id="cost-dashboard-plan-name" className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.current_plan || 'Free'}</p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card">
                       <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
