@@ -15,30 +15,33 @@ export async function GET(request: Request) {
     const tenant = searchParams.get('tenant') || 'e2e-tenant';
     const target = searchParams.get('target') || '500';
     const reward = searchParams.get('reward') || '50% off for everyone!';
-
-    // In actual production this would connect to the database.
-    // For this example API endpoint we are showing the mock representation format.
-    // But per instructions, "ZERO mock data in UI", we must fetch from the backend API if we had one.
-    // Since there's no pre-existing backend for `community_goal`, we will use 0 for now as an empty state representation, or maybe pull the total referrals.
-    // Since we don't have a direct hook right here in Next.js without setting up full db conn, let's use the actual referral system API.
+    const backendUrl = process.env.OHC_CORE_URL || 'http://localhost:8080';
 
     let current = 0;
 
     try {
-        const hostUrl = request.headers.get('host') ? `http://${request.headers.get('host')}` : 'http://localhost:3000';
-        // Check if we can fetch referrals to show actual growth loop progress
-        const res = await fetch(`${hostUrl}/api/v1/growth/referrals/metrics?tenant_id=${tenant}`);
+        const authHeader = request.headers.get('Authorization') || request.headers.get('x-spiffe-id') || '';
+
+        const res = await fetch(`${backendUrl}/api/v1/growth/referrals/metrics?tenant_id=${tenant}`, {
+            headers: {
+                'x-spiffe-id': authHeader.includes('spiffe') ? authHeader : 'spiffe://ohc/org/e2e-tenant/agent/browser',
+            }
+        });
+
         if (res.ok) {
            const data = await res.json();
-           // Assume total_referrals or similar metric
            if (data && data.metrics && data.metrics.total_referrals !== undefined) {
                current = data.metrics.total_referrals;
            } else if (data && data.total_invites !== undefined) {
                current = data.total_invites;
            }
+        } else {
+            console.error("Backend failed to respond correctly for referrals metrics", res.status);
+            return new NextResponse("Backend service unavailable", { status: 502 });
         }
     } catch(e) {
         console.error("Failed to fetch current progress", e);
+        return new NextResponse("Backend service unavailable", { status: 503 });
     }
 
     const percentage = Math.min(100, Math.round((current / parseInt(target, 10)) * 100));

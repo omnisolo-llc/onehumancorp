@@ -2,14 +2,32 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    // Mocking the backend implementation of CodeNativePipeline for the UI
-    const results = [
-        "Generated rich data with ID: test_id",
-        "Processed data natively. New record count: 2"
-    ];
+    const backendUrl = process.env.OHC_CORE_URL || 'http://127.0.0.1:8080';
+    const body = await req.json();
 
-    return NextResponse.json({ results });
+    const authHeader = req.headers.get('Authorization') || req.headers.get('x-spiffe-id') || '';
+
+    const res = await fetch(`${backendUrl}/api/agents/code-native`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-spiffe-id': authHeader.includes('spiffe') ? authHeader : 'spiffe://ohc/org/e2e-tenant/agent/browser',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      if (res.status === 409 || res.status === 400 || res.status === 422) {
+        const data = await res.json();
+        return NextResponse.json(data, { status: res.status });
+      }
+      return NextResponse.json({ error: 'Backend failed to respond correctly' }, { status: 502 });
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Warn proxying to backend:', error);
+    return NextResponse.json({ error: 'Backend service unavailable' }, { status: 503 });
   }
 }
