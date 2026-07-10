@@ -50,7 +50,10 @@ export default function HelpCenterPage() {
   useEffect(() => {
     const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
     setIsLoading(true); setIsError(false); fetch(url)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
       .then(data => { setArticles(Array.isArray(data) ? data : []); setIsLoading(false); })
       .catch((err) => {
         console.error(err);
@@ -100,7 +103,19 @@ export default function HelpCenterPage() {
           </div>
         </div>
 
-        {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div></div>) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
+        {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div></div>) : isError ? (
+          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
+            <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-red-500 mb-6 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-center text-gray-900 dark:text-gray-100 font-semibold text-xl md:text-2xl mb-2">
+              Something went wrong loading the help center.
+            </p>
+            <p className="text-center text-gray-500 dark:text-gray-400 text-base md:text-lg mb-8 max-w-md">
+              Please try again later.
+            </p>
+          </div>
+        ) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
             <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-gray-400 mb-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
