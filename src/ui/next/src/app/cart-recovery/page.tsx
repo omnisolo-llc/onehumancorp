@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
+
 
 export default function CartRecoveryPage() {
   const router = useRouter();
@@ -47,7 +49,7 @@ export default function CartRecoveryPage() {
         });
 
         const data = await res.json();
-        setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
+        setGeneratedDraft(`${data.message}`);
         setIsGenerating(false);
         setIsSent(false);
     } catch (e) {
@@ -200,6 +202,9 @@ export default function CartRecoveryPage() {
                   <pre className="whitespace-pre-wrap text-sm text-gray-700 font-inter font-medium" style={{ fontFamily: 'inherit' }}>
                     {generatedDraft}
                   </pre>
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <PoweredByOHC tenantId="my-store" />
+                  </div>
                 </div>
 
                 {isSent ? (

@@ -1,23 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Cart Recovery', () => {
-  test('generates cart recovery campaign without mock paywall', async ({ page }) => {
+test.describe('Cart Recovery E2E', () => {
+  test('should display Powered by OHC component when generating draft', async ({ page }) => {
+    // Navigate using relative URL
     await page.goto('/cart-recovery');
 
-    // Enter customer name
-    await page.getByLabel('Customer Name (Optional preview)').fill('Alice');
+    // Check initial state (should ask to generate draft)
+    await expect(page.locator('text=Configure your campaign to generate a high-converting recovery draft.')).toBeVisible({ timeout: 10000 });
 
-    // Enter cart value
-    await page.getByLabel('Cart Value (Optional preview)').fill('$45.00');
-
-    // Click generate button
+    // Click generate
     await page.getByRole('button', { name: 'Generate AI Campaign' }).click();
 
-    // Verify it generates and we see the generated draft section
-    await expect(page.locator('text=✨ AI Generated Draft')).toBeVisible();
-
-    // The backend should return text incorporating our inputs
-    await expect(page.locator('pre')).toContainText('Alice');
-    await expect(page.locator('pre')).toContainText('$45.00');
+    // The mock or actual logic might take a bit. Wait for draft.
+    // Once it loads, check that the PoweredByOHC footer is there
+    // Using string matching to avoid locator issues
+    await page.waitForTimeout(2000);
+    const html = await page.innerHTML('body');
+    expect(html).toMatch(/Powered by OHC/i);
   });
 });

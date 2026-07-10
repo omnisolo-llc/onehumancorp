@@ -25,7 +25,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await expect(page.locator('p', { hasText: 'For The Smiths' }).first()).toBeVisible();
 
         // 1. Verify "Powered by OHC" watermark is visible in the preview area
-        const watermark = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const watermark = page.locator('a', { hasText: /Powered by OHC/i }).first();
         await expect(watermark).toBeVisible();
 
         // The link should direct back to OHC with the tenant as a reference source
@@ -33,7 +33,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
 
         // 2. Click the "Remove Branding" toggle (simulating free user)
         const toggle = page.locator('input[type="checkbox"]');
-        await toggle.click({ force: true }); // force click on hidden input
+        await toggle.evaluate((el: HTMLInputElement) => el.click()); // force click on hidden input
 
         // 3. Verify that the Pro Paywall modal appears instead of removing the branding
         const paywallModal = page.locator('div:has-text("Upgrade to Pro")').last();
@@ -66,7 +66,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await expect(page.locator('p', { hasText: 'Replaced all the cabinets and installed new granite countertops.' })).toBeVisible();
 
         // The public showcase should also have the powered by watermark
-        const publicWatermark = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const publicWatermark = page.locator('a', { hasText: /Powered by OHC/i }).first();
         await expect(publicWatermark).toBeVisible();
     });
 
@@ -81,17 +81,17 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await page.goto('/project-showcase');
 
         // Verify watermark is hidden by default for pro users (our component logic sets it to true if pro)
-        await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+        await expect(page.locator('a', { hasText: /Powered by OHC/i }).first()).not.toBeVisible();
 
         // Verify the checkbox is checked
         const toggle = page.locator('input[type="checkbox"]');
         await expect(toggle).toBeChecked();
 
         // Toggle branding back on
-        await toggle.click({ force: true });
+        await toggle.evaluate((el: HTMLInputElement) => el.click());
 
         // Watermark should reappear
-        const watermark = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const watermark = page.locator('a', { hasText: /Powered by OHC/i }).first();
         await expect(watermark).toBeVisible();
         await expect(toggle).not.toBeChecked();
     });

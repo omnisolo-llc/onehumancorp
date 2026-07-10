@@ -76,8 +76,9 @@ export default function InvoiceGeneratorPage() {
 
           <div className="flex flex-col gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Client Name</label>
+              <label htmlFor="client-name" className="block text-sm font-medium text-gray-700 mb-2">Client Name</label>
               <input
+                id="client-name"
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
@@ -87,8 +88,9 @@ export default function InvoiceGeneratorPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Project Details</label>
+              <label htmlFor="project-details" className="block text-sm font-medium text-gray-700 mb-2">Project Details</label>
               <textarea
+                id="project-details"
                 value={projectDetails}
                 onChange={(e) => setProjectDetails(e.target.value)}
                 placeholder="e.g. Website Redesign and SEO Optimization"
@@ -122,8 +124,9 @@ export default function InvoiceGeneratorPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Amount ($)</label>
+              <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">Amount ($)</label>
               <input
+                id="amount"
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
