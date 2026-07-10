@@ -29,7 +29,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).toContainText('Hi! Yes, we have 2 vegan chocolate cakes left for this weekend');
 
     // 6. Click Approve & Execute
-    const approveButton = page.locator(`[data-testid="approve-instagram-dm"]`);
+    const approveButton = page.locator(`[data-testid="feed-approve-btn"]`);
     await approveButton.click();
 
     // 7. Verify the item is removed from the feed

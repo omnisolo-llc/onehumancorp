@@ -31,7 +31,7 @@ export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onAp
               onApprove();
             }}
             className="triage-btn-approve flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
-            aria-label="Approve & Send" data-testid="approve-instagram-dm" id="approve-instagram-dm"
+            aria-label="Approve & Send" data-testid="feed-approve-btn" id="approve-instagram-dm"
           >
             Approve & Send
           </button>
