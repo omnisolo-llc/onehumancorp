@@ -710,7 +710,7 @@
             const customerName = item.customer_info?.name || "Customer";
             const message = item.customer_info?.message || "No message provided";
             return `
-              <div class="triage-card app-list-item" data-testid="triage-card-${item.id}" onclick="selectItem('${item.id}')">
+              <div class="triage-card app-list-item" data-testid="ambassador-reply-card" onclick="selectItem('${item.id}')">
                 <div class="triage-header" style="display: flex; justify-content: space-between; align-items: flex-start; background: transparent; border-bottom: none; padding: 20px 20px 0 20px;">
                   <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">${customerName}</h3>
                   <span class="app-badge warn" style="background: rgba(239, 246, 255, 0.8); color: #1d4ed8; border: 1px solid rgba(191, 219, 254, 0.8);">Missed Lead</span>
@@ -779,7 +779,7 @@
           const createdDate = item.created_at ? new Date(item.created_at).toLocaleDateString() : '';
 
           return `
-            <div class="triage-card app-list-item" data-testid="triage-card-${item.id}">
+            <div class="triage-card app-list-item" data-testid="ambassador-reply-card">
               <div class="triage-header">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div class="triage-source">

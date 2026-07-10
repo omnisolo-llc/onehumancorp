@@ -2241,7 +2241,7 @@
           if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
             let parsedPayload = item.proposed_action || item.context_payload || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
@@ -2281,7 +2281,7 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
+                  <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
                 </div>
               </div>
@@ -2290,7 +2290,7 @@
 
           if (actionType === 'Daily Prep Checklist' || item.feature_type === 'daily_prep_checklist') {
             return `
-              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism app-list-item" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                     <span style="font-size: 18px;">📋</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Operations Agent</strong>
@@ -2329,7 +2329,7 @@
             const source = parsedPayload.source || item.source || 'instagram';
 
             return `
-              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism app-list-item" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${source.replace('_', ' ')}</strong>
@@ -2362,7 +2362,7 @@
 
           if (item.event_source === 'Simulated Webhook' || item.context_payload?.description === 'A new simulated event needs your attention.') {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.event_source || 'Simulated Webhook').replace('_', ' ')}</div>
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
@@ -2395,7 +2395,7 @@
 
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   ${renderAgentBadge(item.source || "message")}
                   <div class="triage-priority ${priorityClass}">Action Needed</div>
@@ -2483,7 +2483,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   ${renderAgentBadge("marketing", "The Promoter")}
                   <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
@@ -2505,7 +2505,7 @@
 
           if (description.includes("reschedule") || description.includes("tentatively booked")) {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
@@ -2522,7 +2522,7 @@
 
           if (item.source === 'Proactive Context Agent') {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden; box-sizing: border-box; width: 100%;">
+              <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden; box-sizing: border-box; width: 100%;">
                 <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #FF9500;"></div>
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
                   <div>
@@ -2544,7 +2544,7 @@
           }
 
           return `
-            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+            <div class="triage-item glassmorphism" data-testid="ambassador-reply-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
               <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 ${renderAgentBadge(item.source || item.event_source || "Unknown")}
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
