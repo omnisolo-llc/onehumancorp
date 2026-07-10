@@ -12,6 +12,7 @@ SERVER_RS_SRCS = [
     "cart_recovery.rs",
     "chaos.rs",
     "chaos_db_test.rs",
+    "chaos_db_test_postgres.rs",
     "chaos_network_test.rs",
     "crypto.rs",
     "db.rs",

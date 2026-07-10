@@ -93,11 +93,7 @@ mod postgres_chaos_tests {
     #[tokio::test]
     async fn test_postgres_timezone_parity() {
         let pg_db = setup_postgres_db().await;
-        if pg_db.is_none() {
-            tracing::info!("Skipping postgres parity test due to missing database");
-            return;
-        }
-        let db = pg_db.unwrap();
+        let db = pg_db.expect("Postgres DB must be available for tests");
 
         sqlx::query("CREATE TABLE IF NOT EXISTS timezone_test (id TEXT PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP);")
             .execute(&db.pool)

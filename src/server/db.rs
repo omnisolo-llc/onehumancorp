@@ -788,7 +788,8 @@ impl DB {
                     let is_connection_err = err_str.contains("connection refused")
                         || err_str.contains("connection reset")
                         || err_str.contains("connection closed")
-                        || err_str.contains("broken pipe");
+                        || err_str.contains("broken pipe")
+                        || err_str.contains("pool timed out");
 
                     if is_sqlite_lock || is_postgres_lock || is_connection_err {
                         attempt += 1;
