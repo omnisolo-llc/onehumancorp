@@ -129,6 +129,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:compute.rs",
     "//src/server/domain:federation.rs",
     "//src/server/domain:action_router.rs",
+    "//src/server/domain:catalog.rs",
     "//src/server/domain:agent_approvals.rs",
     "//src/server/domain:inbox.rs",
     "//src/server/domain:incidents.rs",

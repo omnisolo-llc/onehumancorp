@@ -21,3 +21,5 @@ pub mod agent_approvals;
 pub mod booking;
 pub mod money;
 pub use money::Money;
+
+pub mod catalog;

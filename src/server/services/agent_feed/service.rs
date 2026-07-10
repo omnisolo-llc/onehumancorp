@@ -21,7 +21,7 @@ impl AgentFeedService {
     pub async fn process_event(&self, tenant_id: &str, event_source: &str, payload: &Value) -> Result<AgentFeedItem, String> {
         // Build context via LLM/Minimax
         let prompt = format!(
-            "Analyze the following event and provide a concise JSON object with a 'draft_action' containing a suggested response or action, and 'intent' summarizing the reason. Tenant: {}. Source: {}. Payload: {}",
+            "Analyze the following event and provide a concise JSON object. If the user's intent is to create a product or service, include 'feature_type': 'create_product', along with a 'payload' object containing 'title', 'description', 'price', and 'item_type' (Product or Service). Otherwise, provide a 'draft_action' containing a suggested response or action, and 'intent' summarizing the reason. Tenant: {}. Source: {}. Payload: {}",
             tenant_id, event_source, payload
         );
         let prompt = crate::pricing::compression::reduce_tokens(&prompt);
