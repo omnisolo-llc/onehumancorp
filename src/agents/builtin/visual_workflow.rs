@@ -125,6 +125,57 @@ fn evaluate_condition(expr: &str) -> bool {
     expr.trim().eq_ignore_ascii_case("true")
 }
 
+pub trait BlockConnectUI: Send + Sync {
+    fn generate_ui_schema(&self) -> String;
+    fn validate_connection(&self, source_node: &Node, target_node: &Node) -> Result<(), String>;
+}
+
+impl BlockConnectUI for WorkflowGraph {
+    fn generate_ui_schema(&self) -> String {
+        let mut schema = serde_json::json!({
+            "nodes": [],
+            "edges": []
+        });
+
+        for node in &self.nodes {
+            schema["nodes"].as_array_mut().unwrap().push(serde_json::json!({
+                "id": node.id,
+                "type": match node.node_type {
+                    NodeType::Llm { .. } => "Llm",
+                    NodeType::Tool { .. } => "Tool",
+                    NodeType::Condition { .. } => "Condition",
+                    NodeType::Input { .. } => "Input",
+                    NodeType::Output => "Output",
+                    NodeType::SubAgent { .. } => "SubAgent",
+                    NodeType::HumanInLoop { .. } => "HumanInLoop",
+                    NodeType::Merge { .. } => "Merge",
+                    NodeType::ParallelFork { .. } => "ParallelFork",
+                    NodeType::ParallelJoin { .. } => "ParallelJoin",
+                }
+            }));
+        }
+
+        for edge in &self.edges {
+            schema["edges"].as_array_mut().unwrap().push(serde_json::json!({
+                "source": edge.source,
+                "target": edge.target
+            }));
+        }
+
+        serde_json::to_string_pretty(&schema).unwrap_or_default()
+    }
+
+    fn validate_connection(&self, source_node: &Node, target_node: &Node) -> Result<(), String> {
+        if matches!(source_node.node_type, NodeType::Output) {
+            return Err("Output nodes cannot have outgoing connections.".to_string());
+        }
+        if matches!(target_node.node_type, NodeType::Input { .. }) {
+            return Err("Input nodes cannot have incoming connections.".to_string());
+        }
+        Ok(())
+    }
+}
+
 impl WorkflowExecutor {
     pub fn new(
         graph: WorkflowGraph,
@@ -1510,5 +1561,49 @@ mod additional_tests {
 
         assert_eq!(graph.nodes.len(), 6);
         assert_eq!(graph.edges.len(), 2);
+    }
+
+    #[test]
+    fn test_visual_workflow_block_connect_ui_schema() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_json".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
+        };
+
+        let schema = graph.generate_ui_schema();
+        assert!(schema.contains(r#""id": "in""#));
+        assert!(schema.contains(r#""type": "Input""#));
+        assert!(schema.contains(r#""id": "out""#));
+        assert!(schema.contains(r#""type": "Output""#));
+        assert!(schema.contains(r#""source": "in""#));
+        assert!(schema.contains(r#""target": "out""#));
+    }
+
+    #[test]
+    fn test_visual_workflow_block_connect_ui_validation() {
+        let graph = WorkflowGraph { nodes: vec![], edges: vec![] };
+        let in_node = Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_json".to_string() } };
+        let out_node = Node { id: "out".to_string(), node_type: NodeType::Output };
+
+        let res1 = graph.validate_connection(&out_node, &in_node);
+        assert!(res1.is_err());
+        let res2 = graph.validate_connection(&in_node, &out_node);
+        assert!(res2.is_ok());
     }
 }

@@ -128,7 +128,7 @@ export class SyncManager {
          mutation_type: 'agent_intent',
          payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
       };
-    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice') {
+    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice' || m.type === 'sync_event') {
         return m; // keep them for specific APIs
     }
     return m;
@@ -281,7 +281,7 @@ export class SyncManager {
       }
 
       // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
 
       if (operationIntents.length > 0) {
         const mappedIntents = operationIntents.map(m => ({
@@ -312,8 +312,32 @@ export class SyncManager {
         }
       }
 
+      // Sync generic sync events via /sync/events
+      const syncEvents = queue.filter(m => m.type === 'sync_event');
+      if (syncEvents.length > 0) {
+        const eventsPayload = syncEvents.map(m => m.payload);
+        try {
+          const resSync = await fetch('/api/v1/sync/events', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ events: eventsPayload })
+          });
+          this.checkRateLimit(resSync);
+          if (!resSync.ok) {
+            console.error(`Sync Events Sync failed with status ${resSync.status}`);
+            if (resSync.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Sync Events Sync error:", err);
+          allOk = false;
+        }
+      }
+
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',

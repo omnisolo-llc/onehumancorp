@@ -68,7 +68,7 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
 pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
     Tool {
         name: "agent_marketplace".to_string(),
-        description: "Search for, fetch, and publish pre-built agents to the AutoGPT Agent Marketplace.".to_string(),
+        description: "Search for, fetch, and publish pre-built agents to the AutoGPT Agent Marketplace API distribution.".to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",
