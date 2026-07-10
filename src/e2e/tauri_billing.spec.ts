@@ -2,16 +2,9 @@ import { test, expect } from './fixtures';
 
 test.describe('Tauri Billing & Pricing UI', () => {
 
-  test('Cost Dashboard loads and displays "My Plan" and metrics', async ({ page }) => {
+  test('Cost Dashboard loads and displays "My Plan" and metrics', async ({ page, adminUser, loginAs }) => {
 
-    // Tauri static files are hosted at /ui in testing
-    await page.goto(`/ui/dashboard.html`);
-
-    // Inject mock token into localStorage before navigating to the billing pages
-    await page.evaluate(() => {
-      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
-      localStorage.setItem('token', 'e2e-dummy-token');
-    });
+    await loginAs(page, adminUser);
 
     await page.goto(`/cost-dashboard`);
 
@@ -32,79 +25,52 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('button#view-detailed-costs')).toBeVisible();
   });
 
-  test('Pricing page loads and displays tiers', async ({ page }) => {
-    await page.goto(`/ui/dashboard.html`);
-
-    await page.evaluate(() => {
-      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
-      localStorage.setItem('token', 'e2e-dummy-token');
-    });
+  test('Pricing page loads and displays tiers', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
 
     await page.goto(`/pricing`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify the presence of specific pricing tiers
-    await expect(page.locator('.plan-name', { hasText: 'Free' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Starter' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Pro' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Business' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Free' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Starter' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
 
-    await expect(page.locator('button#btn-Starter')).toBeVisible();
+    await expect(page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")')).toBeVisible();
   });
 
-  test('Pricing page allows downgrade to Free for paid users', async ({ page }) => {
-    // Mock the backend response to indicate the user is on the 'Starter' plan
-    await page.route('**/api/billing/my-plan', async (route) => {
-      const json = {
-        current_plan: 'Starter',
-        ai_actions_used: 10,
-        ai_actions_limit: 1000,
-        storage_used_bytes: 5000,
-        storage_limit_bytes: 5000000000,
-        next_bill_estimated: 2900
-      };
-      await route.fulfill({ json });
-    });
-
-    await page.goto(`/ui/dashboard.html`);
-
-    await page.evaluate(() => {
-      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
-      localStorage.setItem('token', 'e2e-dummy-token');
-    });
+  test('Pricing page allows downgrade to Free for paid users', async ({ page, loginAs }) => {
+    const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
+    await loginAs(page, starterUser as any);
 
     await page.goto(`/pricing`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify the Starter plan shows "Manage Plan"
-    const starterBtn = page.locator('button#btn-Starter');
+    const starterBtn = page.locator('button:has-text("Manage Plan"), button:has-text("Upgrade to Starter via Stripe")');
     await expect(starterBtn).toBeVisible();
     await expect(starterBtn).toHaveText('Manage Plan');
 
     // Verify the Free plan shows "Downgrade to Free" and is NOT disabled
-    const freeBtn = page.locator('button#btn-Free');
+    const freeBtn = page.locator('button:has-text("Current Plan"), button:has-text("Downgrade to Free")');
     await expect(freeBtn).toBeVisible();
     await expect(freeBtn).toHaveText('Downgrade to Free');
     await expect(freeBtn).not.toBeDisabled();
   });
 
-  test('Pricing page toggles between monthly and annual pricing', async ({ page }) => {
-    await page.goto(`/ui/dashboard.html`);
-
-    await page.evaluate(() => {
-      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
-      localStorage.setItem('token', 'e2e-dummy-token');
-    });
+  test('Pricing page toggles between monthly and annual pricing', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
 
     await page.goto(`/pricing`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify initial monthly prices
-    const proPrice = page.locator('.ohc-growth-card:has-text("Pro") .plan-price');
-    const businessPrice = page.locator('.ohc-growth-card:has-text("Business") .plan-price');
+    const proPrice = page.locator('.ohc-growth-card:has-text("Pro") p.text-xl.font-semibold');
+    const businessPrice = page.locator('.ohc-growth-card:has-text("Business") p.text-xl.font-semibold');
 
     await expect(proPrice).toContainText('$79');
     await expect(proPrice).toContainText('/month');

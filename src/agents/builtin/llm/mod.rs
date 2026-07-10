@@ -253,7 +253,6 @@ mod tests {
         assert_eq!(minified.messages[0].content, r#"{"user":"input"}"#);
         assert_eq!(minified.messages[0].tool_results[0].content, r#"{"tool":"result"}"#);
     }
-    use ohc_builtin_agent_core::types::Message;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     pub struct FailingLlmClient {
@@ -286,7 +285,7 @@ mod tests {
             fail_until: 2,
             error_msg: "HTTP 429 Rate Limit".to_string(),
         });
-        let client = RetryLlmClient::new(inner, 3);
+        let client = RetryLlmClient::new(inner.clone(), 3);
         let req = ChatRequest {
             model: "test".to_string(),
             system: "".to_string(),
@@ -306,7 +305,7 @@ mod tests {
             fail_until: 5,
             error_msg: "HTTP 502 Bad Gateway".to_string(),
         });
-        let client = RetryLlmClient::new(inner, 3);
+        let client = RetryLlmClient::new(inner.clone(), 3);
         let req = ChatRequest {
             model: "test".to_string(),
             system: "".to_string(),
@@ -326,7 +325,7 @@ mod tests {
             fail_until: 5,
             error_msg: "HTTP 400 Context Length Exceeded".to_string(),
         });
-        let client = RetryLlmClient::new(inner, 3);
+        let client = RetryLlmClient::new(inner.clone(), 3);
         let req = ChatRequest {
             model: "test".to_string(),
             system: "".to_string(),
