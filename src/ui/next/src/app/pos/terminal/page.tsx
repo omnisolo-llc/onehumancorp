@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { useSearchParams } from 'next/navigation';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
@@ -25,7 +26,16 @@ export default function POSTerminal() {
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
   const [activeStaff, setActiveStaff] = useState<any>(null);
+  const fetcher = (url: string) => fetch(url, { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } }).then((res) => res.json());
+  const { data: posData, mutate: mutatePosInventory } = useSWR(activeStaff ? `/api/pos/inventory` : null, fetcher, { refreshInterval: 2000 });
   const [inventory, setInventory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (posData?.inventory) {
+      setInventory(posData.inventory);
+    }
+  }, [posData]);
+
   const [isSyncingInitial, setIsSyncingInitial] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);

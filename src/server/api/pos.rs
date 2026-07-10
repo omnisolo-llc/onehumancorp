@@ -111,6 +111,7 @@ async fn post_inventory_handler(
         if let Some(p) = payload.get("payload") {
             let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
             let is_sold_out = p.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
+            let new_stock = p.get("new_stock").and_then(|v| v.as_i64());
             let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
             if !item_id.is_empty() {
@@ -135,12 +136,59 @@ async fn post_inventory_handler(
                             .await;
                     }
 
-                    let update_res = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(is_sold_out)
-                        .bind(item_id)
-                        .bind(tenant_id)
-                        .execute(&mut *tx)
-                        .await;
+                    let update_res = if let Some(ns) = new_stock {
+                        let res = sqlx::query("UPDATE products SET is_sold_out = $1, inventory_count = $4, available_quantity = $4 WHERE id = $2 AND tenant_id = $3")
+                            .bind(if ns <= 0 { true } else { is_sold_out })
+                            .bind(item_id)
+                            .bind(tenant_id)
+                            .bind(ns as i32)
+                            .execute(&mut *tx)
+                            .await;
+
+                        if let Err(e) = res {
+                            let _ = tx.rollback().await;
+                            return Json(json!({"status": "error", "message": format!("Failed to update product: {}", e)}));
+                        }
+
+                        // Insert into the unified ledger for tracking the transaction
+                        let ledger_res = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location, quantity) VALUES ($1, $2, $3, 'in-store', $4) ON CONFLICT (id) DO UPDATE SET quantity = $4")
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(tenant_id)
+                            .bind(item_id)
+                            .bind(ns as i32)
+                            .execute(&mut *tx)
+                            .await;
+
+                        if let Err(e) = ledger_res {
+                            let _ = tx.rollback().await;
+                            return Json(json!({"status": "error", "message": format!("Failed to update inventory_levels: {}", e)}));
+                        }
+
+                        let uni_ledger_res = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_TRANSACTION', $3::jsonb)")
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(tenant_id)
+                            .bind(serde_json::json!({
+                                "product_id": item_id,
+                                "type": "manual_adjustment",
+                                "new_quantity": ns,
+                            }))
+                            .execute(&mut *tx)
+                            .await;
+
+                        if let Err(e) = uni_ledger_res {
+                            let _ = tx.rollback().await;
+                            return Json(json!({"status": "error", "message": format!("Failed to update universal ledger: {}", e)}));
+                        }
+
+                        res
+                    } else {
+                        sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
+                            .bind(is_sold_out)
+                            .bind(item_id)
+                            .bind(tenant_id)
+                            .execute(&mut *tx)
+                            .await
+                    };
 
                     if update_res.is_ok() {
                         let _ = tx.commit().await;
@@ -311,6 +359,80 @@ mod tests {
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
+    }
+
+    #[tokio::test]
+    async fn test_post_inventory_handler() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = crate::db::get_pool();
+        let tenant_id = format!("test_tenant_{}", uuid::Uuid::new_v4());
+        let item_id = format!("test_item_{}", uuid::Uuid::new_v4());
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity) VALUES ($1, $2, 'Test Item', 10, 10) ON CONFLICT DO NOTHING")
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-tenant-id", tenant_id.parse().unwrap());
+
+        let payload = json!([{
+            "payload": {
+                "item_id": item_id.clone(),
+                "new_stock": 5,
+                "is_sold_out": false
+            }
+        }]);
+
+        let (tx, _) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let response = post_inventory_handler(
+            axum::extract::State(hub),
+            headers,
+            axum::extract::Json(payload.as_array().unwrap().clone())
+        ).await;
+
+        let response_value = response.0;
+        assert_eq!(response_value.get("status").and_then(|v| v.as_str()), Some("ok"), "Handler returned error: {:?}", response_value);
+
+        let count: (i32, i32) = sqlx::query_as("SELECT inventory_count, available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count.0, 5, "inventory_count not updated");
+        assert_eq!(count.1, 5, "available_quantity not updated");
+
+        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE tenant_id = $1 AND state_change->>'product_id' = $2 AND state_change->>'type' = 'manual_adjustment'")
+            .bind(&tenant_id)
+            .bind(&item_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(ledger_count.0, 1, "Universal ledger entry not created");
+
+        let inv_levels_count: (i32,) = sqlx::query_as("SELECT quantity FROM inventory_levels WHERE tenant_id = $1 AND product_id = $2")
+            .bind(&tenant_id)
+            .bind(&item_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(inv_levels_count.0, 5, "inventory_levels entry not created");
     }
 }
 
