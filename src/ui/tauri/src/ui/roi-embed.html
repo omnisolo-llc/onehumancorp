@@ -136,7 +136,7 @@
     const serviceName = urlParams.get('service') || 'Our Service';
     const baseInvStr = urlParams.get('inv') || '1000';
     const multStr = urlParams.get('mult') || '3';
-    const tenantId = urlParams.get('tenant') || 'default-tenant';
+    const tenantId = urlParams.get('tenant') || '';
     const showBranding = urlParams.get('branding') !== 'false';
 
     const mult = parseFloat(multStr) || 3;

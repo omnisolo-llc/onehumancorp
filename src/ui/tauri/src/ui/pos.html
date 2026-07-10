@@ -5,8 +5,8 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
@@ -14,16 +14,16 @@
         .glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(40px) saturate(220%);
-          -webkit-backdrop-filter: blur(40px) saturate(220%);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
       .old-glassmorphism {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -188,7 +188,7 @@
         padding: 24px;
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
         border-radius: 0;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
@@ -230,7 +230,7 @@
         transition: background-color 0.2s;
       }
       .back-btn:hover {
-        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
       }
       .amount-display {
         font-size: 56px;
@@ -325,8 +325,8 @@
         flex-direction: column;
         justify-content: space-between;
         min-height: 80px;
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
       }
       .product-btn:active {
         transform: scale(0.95);
@@ -387,7 +387,7 @@
         right: 0;
         bottom: 0;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
         border-radius: inherit;
         z-index: 100;
         display: none;
@@ -768,7 +768,7 @@
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(40px) saturate(220%);
+            backdrop-filter: blur(30px) saturate(210%);
             z-index: 10000;
             pointer-events: auto;
         }
@@ -783,7 +783,7 @@
         .ohc-walkthrough-bubble {
             position: absolute;
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(220%);
+            backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
             padding: 20px;
@@ -827,7 +827,7 @@
             cursor: pointer;
         }
         .ohc-walkthrough-btn-secondary {
-            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);
+            background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
             color: #1d1d1f;
             border: none;
             padding: 8px 16px;
@@ -1509,8 +1509,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(220%);
-            -webkit-backdrop-filter: blur(40px) saturate(220%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 12px 16px;
@@ -1659,8 +1659,8 @@ document.addEventListener('DOMContentLoaded', () => {
 .ohc-tooltip {
     position: fixed;
     background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(40px) saturate(220%);
-    -webkit-backdrop-filter: blur(40px) saturate(220%);
+    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
     color: #1d1d1f;
     padding: 8px 12px;
@@ -1783,7 +1783,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {

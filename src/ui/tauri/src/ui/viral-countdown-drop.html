@@ -40,8 +40,8 @@
 
     .glassmorphism {
       background: var(--card-bg);
-      backdrop-filter: blur(40px) saturate(220%);
-      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
       border: 1px solid var(--border);
       border-radius: 16px;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -223,7 +223,7 @@
       document.getElementById('generate-btn').addEventListener('click', async () => {
         const title = document.getElementById('drop-title').value || 'Product Drop';
         const time = document.getElementById('drop-time').value;
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || '';
         const includeBranding = toggle.checked;
 
         // Call backend to record generation

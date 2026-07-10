@@ -23,8 +23,8 @@
       width: 100%;
       box-sizing: border-box;
       background: rgba(255, 255, 255, 0.65);
-      backdrop-filter: blur(40px) saturate(220%);
-      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
       padding: 30px;
@@ -146,7 +146,7 @@
       <div class="card-footer">
         <div>Redeemable at My Store</div>
         <span>Powered by OHC</span>
-        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-tenant&source=gift_card" id="powered-by-link">⚡ Powered by OHC</a>
+        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=&source=gift_card" id="powered-by-link">⚡ Powered by OHC</a>
       </div>
     </div>
 
@@ -189,7 +189,7 @@
           const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant");
           const amount = valueInput.value || '50';
 
-          // Set href dynamically based on tenant id (though default-tenant is hardcoded in initial HTML for preview)
+          // Set href dynamically based on tenant id
           poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`;
 
           const baseUrl = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
