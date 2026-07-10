@@ -88,6 +88,6 @@ test.describe('Instant Setup CUJ', () => {
     await expect(approveBtn).toBeVisible({ timeout: 10000 });
     await approveBtn.click();
 
-    await expect(page).toHaveURL(/.*success.html/, { timeout: 60000 });
+    await expect(page).toHaveURL(/.*dashboard.html#unified-agent-feed-section/, { timeout: 60000 });
   });
 });
