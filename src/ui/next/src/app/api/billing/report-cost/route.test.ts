@@ -48,8 +48,13 @@ describe('POST /api/billing/report-cost', () => {
             body: JSON.stringify({ value: 100 }),
         });
 
+        const originalConsoleError = console.error;
+        console.error = vi.fn();
+
         const response = await POST(request);
         const data = await response.json();
+
+        console.error = originalConsoleError;
 
         expect(response.status).toBe(502);
         expect(data).toEqual({ error: 'Failed to report cost to backend' });
