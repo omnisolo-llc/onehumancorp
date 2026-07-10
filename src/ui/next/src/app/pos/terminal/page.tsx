@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { MutationService } from '../../../lib/sync/MutationService';
 
 const t = (text: string) => text;
 
@@ -254,25 +255,26 @@ export default function POSTerminal() {
      setReserving(true);
 
      if (isOffline) {
-         setOrderStatus(t('Processing offline quick charge...'));
-         const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-         const tx = {
-            id: transactionId,
-            type: 'tap_to_pay',
-            amount: 5000,
-            currency: 'usd',
-            product_id: 'quick_charge',
-            quantity: 1,
-            timestamp: new Date().toISOString()
-         };
-
-         await SyncManager.getInstance().enqueue(tx);
-
-         setTimeout(() => {
-            setOrderStatus(t('Offline Quick Charge Saved.'));
-            setReserving(false);
-            setTimeout(() => setOrderStatus(''), 3000);
-         }, 1000);
+         MutationService.getInstance().executeMutation(
+             'tap_to_pay',
+             {
+                 amount_cents: 5000,
+                 product_id: 'quick_charge',
+                 quantity: 1
+             },
+             () => {
+                 setOrderStatus(t('Processing offline quick charge...'));
+                 setTimeout(() => {
+                    setOrderStatus(t('Offline Quick Charge Saved.'));
+                    setReserving(false);
+                    setTimeout(() => setOrderStatus(''), 3000);
+                 }, 1000);
+             },
+             () => {
+                 setOrderStatus(t('Failed to queue offline charge.'));
+                 setReserving(false);
+             }
+         );
          return;
      }
 
