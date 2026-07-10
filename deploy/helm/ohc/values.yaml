@@ -20,8 +20,6 @@ backend:
       memory: 64Mi
   service:
     port: 8080
-  vpa:
-    enabled: true
 chatwoot:
   adminEmail: admin@ohc.local
   autoscaling:
@@ -46,8 +44,6 @@ chatwoot:
       memory: 64Mi
   service:
     port: 3000
-  vpa:
-    enabled: true
 cnpg:
   clusterName: ohc-pg
   database: ohc
@@ -119,8 +115,6 @@ ohcCore:
       memory: 64Mi
   service:
     port: 18789
-  vpa:
-    enabled: true
 powersync:
   autoscaling:
     enabled: true
@@ -144,8 +138,6 @@ powersync:
     port: 8081
     targetPort: 8080
     type: ClusterIP
-  vpa:
-    enabled: true
 resourceQuota:
   enabled: true
   limits:
