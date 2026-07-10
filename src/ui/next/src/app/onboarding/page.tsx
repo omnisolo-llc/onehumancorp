@@ -6,6 +6,7 @@ import { useOnboardingStore } from "./store";
 import { SetupIcon } from "./components/SetupIcon";
 import { IconLabel } from "./components/IconLabel";
 
+
 function generateSubdomain(name: string): string {
   if (!name || name.trim() === "") return "my-business.ohc.app";
   const cleanName = name
@@ -966,7 +967,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border  border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism "
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border  border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism "
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -2292,7 +2293,7 @@ export default function OnboardingWizard() {
                     </span>
                     <input
                       type="checkbox"
-                      className="sr-only"
+                      className="glass-control sr-only"
                       checked={aiAutoRespond}
                       onChange={(e) =>
                         updateState({ aiAutoRespond: e.target.checked })
@@ -2313,7 +2314,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                className="w-full bg-[#0066FF] text-white p-4 min-h-[44px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -2486,7 +2487,7 @@ export default function OnboardingWizard() {
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-[#0066FF] font-semibold">
-                      {generateSubdomain(businessName)}
+                      {domainChoice === "subdomain" ? generateSubdomain(businessName) : "Custom Domain Configured"}
                     </span>
                   </div>
                 </div>

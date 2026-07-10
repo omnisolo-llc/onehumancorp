@@ -18,12 +18,18 @@ vi.mock('swagger-ui-react', () => {
   };
 });
 
-global.fetch = vi.fn().mockResolvedValue({
-  json: () => Promise.resolve({ paths: { '/api/help': {}, '/api/tooltips': {} } }),
-  ok: true
-}) as any;
-
 describe('ApiDocsPage', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ paths: { '/api/help': {}, '/api/tooltips': {} } }),
+      ok: true
+    }) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders the advanced warning and swagger ui mock', async () => {
     render(
       <TooltipProvider>
