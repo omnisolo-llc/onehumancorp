@@ -17,7 +17,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
     for item in batch {
         match item.metric_type.as_str() {
             "token_usage" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -86,7 +86,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 }
             }
             "agent_api_call" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -126,7 +126,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 }
             }
             "agent_api_error" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -144,7 +144,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 ::server_telemetry::record_agent_api_error(agent_id, role, api);
             }
             "human_interaction" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -156,7 +156,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 ::server_telemetry::record_human_interaction(i_type);
             }
             "meeting_event" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -169,7 +169,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 ::server_telemetry::record_meeting_event(e_type);
             }
             "swarm_task_completed" => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
@@ -181,7 +181,7 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 ::server_telemetry::record_swarm_task_completed(mission_id);
             }
             _ => {
-                let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+                let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
                 if !is_telemetry_enabled {
                     continue;
                 }
