@@ -1369,19 +1369,19 @@ mod tests {
         assert!(resp_ap_list_steps.error.is_none());
         assert!(resp_ap_list_steps.result.unwrap().get("steps").is_some());
 
-        // Test Agent Marketplace am_search_agents method
+        // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_search = r#"{"jsonrpc": "2.0", "id": "13", "method": "am_search_agents", "params": {"query": "Rust"}}"#;
         let resp_json_am_search = app_server.handle_request(req_json_am_search).await;
         let resp_am_search: JsonRpcResponse = serde_json::from_str(&resp_json_am_search).unwrap();
         assert!(resp_am_search.error.is_none());
 
-        // Test Agent Marketplace am_fetch_agent method
+        // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "agent-1"}}"#;
         let resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
         let resp_am_fetch: JsonRpcResponse = serde_json::from_str(&resp_json_am_fetch).unwrap();
         assert!(resp_am_fetch.error.is_none());
 
-        // Test Agent Marketplace am_publish_agent method
+        // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();

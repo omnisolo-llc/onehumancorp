@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-/// Ruflo Unique Harness Innovations: Swarm coordination topologies
+/// Ruflo Unique Harness Innovations: Multi-agent swarm (Hierarchical, mesh, adaptive with consensus)
 /// Hierarchical, mesh, adaptive with consensus.
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -4,7 +4,7 @@ use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
 
-/// Ruflo Unique Harness Innovations: Swarm coordination topologies
+/// Ruflo Unique Harness Innovations: Multi-agent swarm (Hierarchical, mesh, adaptive with consensus)
 /// Hierarchical, mesh, adaptive with consensus
 /// SONA neural patterns: Self-learning trajectory patterns
 
