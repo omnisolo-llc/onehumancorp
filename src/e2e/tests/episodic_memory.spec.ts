@@ -19,7 +19,7 @@ test.describe('Long-Term Episodic Memory', () => {
             // Try to insert using docker-compose exec
             execSync(`docker exec ohc_postgres psql -U postgres -d ohc -c "${sql}"`, { stdio: 'ignore' });
         } catch (e) {
-            console.log("Could not seed DB via docker, skipping pre-seeding...");
+            throw new Error("Could not seed DB via docker, this must work for the test!");
         }
 
         // Test the mobile UI API
