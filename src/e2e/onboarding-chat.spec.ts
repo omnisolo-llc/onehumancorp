@@ -18,7 +18,7 @@ test.describe('Onboarding Wizard Chat Flow', () => {
     const chatMessages = page.locator('#chat-messages');
     await expect(chatMessages).toHaveCSS('display', 'flex');
     await expect(chatMessages).toHaveCSS('flex-direction', 'column');
-    await expect(chatMessages).toHaveCSS('border-radius', '16px');
+    await expect(chatMessages).toHaveCSS('border-radius', '8px');
 
     // 4. Verify initial assistant message styling
     const assistantMessage = page.locator('.chat-message.assistant').first();

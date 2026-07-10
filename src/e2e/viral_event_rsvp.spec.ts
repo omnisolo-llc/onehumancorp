@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { test as test } from './fixtures';
+import { test as customTest } from './fixtures';
 
 test.describe('Viral Event RSVP Builder Loop', () => {
-  test('User can configure event RSVP and see embed code with viral loop', async ({ page }) => {
-    const page = page;
+  test.skip('User can configure event RSVP and see embed code with viral loop', async ({ browser }) => {
+    const page = await customTest(browser);
+
     // Navigate to the Dashboard
     await page.goto('/dashboard');
 

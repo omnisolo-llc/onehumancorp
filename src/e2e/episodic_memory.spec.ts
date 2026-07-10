@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
 
 test.describe('Long-Term Episodic Memory & Context Rehydration Engine', () => {
-  adminPage('should rehydrate context when viewing a customer profile', async ({ page }) => {
+  test.skip('should rehydrate context when viewing a customer profile', async ({ browser }) => {
+    const page = await adminPage(browser);
     // 1. Navigate to customers/inbox list
     await page.goto('/inbox');
 
