@@ -582,20 +582,28 @@ impl VectorRepository {
     }
 
     /// Prunes stale context to prevent unbounded memory growth.
-    /// It deletes records older than `older_than` where `owner_override = FALSE`
-    /// and `reference_count < 5`.
-    pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
+    /// It deletes records older than `older_than` where `owner_override = FALSE`.
+    pub async fn prune_stale(
+        &self,
+        older_than: DateTime<Utc>,
+        min_reliability: i32,
+        max_reference_count: i32,
+    ) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE AND last_referenced_at < $1)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)")
                     .bind(older_than)
+                    .bind(max_reference_count)
+                    .bind(min_reliability)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE AND last_referenced_at < ?)")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < ? AND source_type = 'TASK_SUMMARY') OR (reliability_score < ? AND owner_override = FALSE AND last_referenced_at < ?)")
                     .bind(older_than)
+                    .bind(max_reference_count)
+                    .bind(min_reliability)
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -1174,6 +1182,89 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_prune_stale_configurable_thresholds() {
+        use std::str::FromStr;
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+
+        let now = Utc::now();
+        let old_time = now - chrono::Duration::days(181);
+        let threshold_time = now - chrono::Duration::days(180);
+
+        // Record with reliability 15 (less than configured 30, but higher than old hardcoded 20)
+        let prune_unreliable = EmbeddingRecord {
+            id: "prune_unreliable".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old unreliable stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 10,
+            reliability_score: 15,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Record with reference count 3 (less than configured 4, but higher than old hardcoded 2)
+        let prune_low_refs = EmbeddingRecord {
+            id: "prune_low_refs".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old low refs stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 3,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&prune_unreliable).await.unwrap();
+        repo.upsert(&prune_low_refs).await.unwrap();
+
+        // Pass 30 for min_reliability and 4 for max_reference_count
+        repo.prune_stale(threshold_time, 30, 4).await.unwrap();
+
+        assert!(
+            repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
+            "Should have pruned record with reliability < 30"
+        );
+        assert!(
+            repo.get_by_id("prune_low_refs").await.unwrap().is_none(),
+            "Should have pruned record with refs < 4"
+        );
+    }
+
+    #[tokio::test]
     async fn test_prune_stale_conservative_logic() {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
@@ -1275,7 +1366,7 @@ mod tests {
         repo.upsert(&rec3).await.unwrap();
         repo.upsert(&rec4).await.unwrap();
 
-        repo.prune_stale(threshold_date).await.unwrap();
+        repo.prune_stale(threshold_date, 20, 2).await.unwrap();
 
         assert!(repo.get_by_id("rec1").await.unwrap().is_none());
         assert!(repo.get_by_id("rec2").await.unwrap().is_some());
@@ -2188,7 +2279,7 @@ mod get_conflicts_tests {
         repo.upsert(&record4).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 
@@ -2436,7 +2527,7 @@ mod get_conflicts_tests {
         repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 
@@ -3115,7 +3206,7 @@ mod anthropic_memory_tests {
         repo.upsert(&old_record).await.unwrap();
         repo.upsert(&new_record).await.unwrap();
 
-        repo.prune_stale(threshold).await.unwrap();
+        repo.prune_stale(threshold, 20, 2).await.unwrap();
 
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
@@ -3180,7 +3271,7 @@ mod anthropic_memory_tests {
         repo.upsert(&record1).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 
@@ -3688,7 +3779,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&keep_new).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 
@@ -3761,7 +3852,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&stale_low_rel_but_override).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180))
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
             .await
             .unwrap();
 
@@ -4384,7 +4475,7 @@ mod get_and_delete_tests {
         repo.upsert(&keep_wrong_type).await.unwrap();
         repo.upsert(&prune_unreliable_old).await.unwrap();
 
-        repo.prune_stale(threshold_time).await.unwrap();
+        repo.prune_stale(threshold_time, 20, 2).await.unwrap();
 
         assert!(
             repo.get_by_id("prune_stale").await.unwrap().is_none(),
