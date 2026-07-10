@@ -325,6 +325,157 @@
 
 
     <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const composerInput = document.querySelector('.composer-input');
+    const messagesContainer = document.getElementById('messages-container');
+    let isWaiting = false;
+
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function appendMessage(text, role) {
+        // Remove empty state if present
+        const emptyState = messagesContainer.querySelector('.empty-state');
+        if (emptyState) emptyState.remove();
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${role}`;
+        msgDiv.textContent = text;
+        messagesContainer.appendChild(msgDiv);
+        scrollToBottom();
+        return msgDiv;
+    }
+
+    function appendActionCard(actionData) {
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'result-item';
+      cardDiv.style.flexDirection = 'column';
+      cardDiv.style.alignItems = 'flex-start';
+      cardDiv.style.background = 'rgba(255, 255, 255, 0.65)';
+      cardDiv.style.padding = '16px';
+      cardDiv.style.marginTop = '10px';
+      cardDiv.style.border = '1px solid rgba(0,0,0,0.1)';
+
+      const title = document.createElement('h3');
+      title.textContent = 'Proposed Action';
+      title.style.margin = '0 0 8px 0';
+      title.style.fontSize = '16px';
+
+      const desc = document.createElement('p');
+      desc.textContent = actionData.description;
+      desc.style.margin = '0 0 16px 0';
+      desc.style.color = '#6b7280';
+
+      const btnContainer = document.createElement('div');
+      btnContainer.style.display = 'flex';
+      btnContainer.style.gap = '8px';
+      btnContainer.style.width = '100%';
+
+      const approveBtn = document.createElement('button');
+      approveBtn.textContent = 'Approve & Execute';
+      approveBtn.style.flex = '1';
+      approveBtn.style.padding = '8px 16px';
+      approveBtn.style.background = '#0066FF';
+      approveBtn.style.color = 'white';
+      approveBtn.style.border = 'none';
+      approveBtn.style.borderRadius = '8px';
+      approveBtn.style.cursor = 'pointer';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.flex = '1';
+      cancelBtn.style.padding = '8px 16px';
+      cancelBtn.style.background = 'transparent';
+      cancelBtn.style.color = '#1d1d1f';
+      cancelBtn.style.border = '1px solid rgba(0,0,0,0.2)';
+      cancelBtn.style.borderRadius = '8px';
+      cancelBtn.style.cursor = 'pointer';
+
+      btnContainer.appendChild(cancelBtn);
+      btnContainer.appendChild(approveBtn);
+
+      cardDiv.appendChild(title);
+      cardDiv.appendChild(desc);
+      cardDiv.appendChild(btnContainer);
+
+      messagesContainer.appendChild(cardDiv);
+      scrollToBottom();
+
+      return { approveBtn, cancelBtn, cardDiv };
+    }
+
+    composerInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const text = composerInput.value.trim();
+            if (!text || isWaiting) return;
+
+            composerInput.value = '';
+            appendMessage(text, 'user');
+
+            isWaiting = true;
+            const loadingMsg = appendMessage("Agent is thinking...", 'assistant');
+
+            try {
+                const res = await fetch('/api/agents/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                loadingMsg.remove();
+
+                appendMessage("I have drafted a plan for your request.", 'assistant');
+
+                if (data.draft_action) {
+                    const { approveBtn, cancelBtn, cardDiv } = appendActionCard(data.draft_action);
+
+                    approveBtn.addEventListener('click', async () => {
+                        approveBtn.disabled = true;
+                        cancelBtn.disabled = true;
+                        approveBtn.textContent = 'Approving...';
+
+                        try {
+                            const execRes = await fetch(`/api/agents/approvals/${data.draft_action.id}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ approved: true, edited_payload: null })
+                            });
+                            if (execRes.ok) {
+                                approveBtn.textContent = 'Approved';
+                                approveBtn.style.background = '#34C759';
+                                appendMessage("Action successfully executed.", 'assistant');
+                            } else {
+                                approveBtn.textContent = 'Failed';
+                                approveBtn.style.background = '#FF3B30';
+                                appendMessage("Failed to execute action.", 'assistant');
+                            }
+                        } catch (err) {
+                            approveBtn.textContent = 'Error';
+                            appendMessage("Network error during execution.", 'assistant');
+                        }
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        approveBtn.disabled = true;
+                        cancelBtn.disabled = true;
+                        cardDiv.style.opacity = '0.5';
+                        appendMessage("Action cancelled.", 'assistant');
+                    });
+                }
+
+            } catch (err) {
+                loadingMsg.remove();
+                appendMessage("Error communicating with agent.", 'assistant');
+            } finally {
+                isWaiting = false;
+            }
+        }
+    });
+});
+</script>
+<script>
 (function() {
     // Inject walkthrough CSS
     const style = document.createElement('style');

@@ -91,7 +91,7 @@ test('renders dashboard with actionable feed', async () => {
   });
 
   await waitFor(() => {
-    expect(screen.getAllByText("Business Analytics").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("Business Analytics").length).toBeGreaterThan(0);
   });
 
   expect(screen.getByText("Operations Map")).toBeDefined();

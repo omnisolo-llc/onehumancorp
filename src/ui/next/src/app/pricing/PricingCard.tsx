@@ -2,6 +2,8 @@ import React from 'react';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
 
 export interface PricingCardProps {
+  basePrice?: number;
+  isAnnual?: boolean;
   tierName: string;
   price: string;
   priceSuffix?: string;
@@ -11,10 +13,12 @@ export interface PricingCardProps {
   currentPlan: string | null;
   loading: boolean;
   onManageBilling: () => void;
-  onUpgrade: (tier: string) => void;
+  onUpgrade: (tier: string, isAnnual?: boolean) => void;
 }
 
 export const PricingCard: React.FC<PricingCardProps> = ({
+  basePrice,
+  isAnnual,
   tierName,
   price,
   priceSuffix = '/ month',
@@ -34,7 +38,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
       <div>
         <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">{tierName}</h3>
         <p className="text-xl font-semibold mb-4 text-gray-900">
-          {price} <span className="text-sm font-normal text-gray-500">{priceSuffix}</span>
+          {basePrice !== undefined && basePrice > 0 ? (
+            isAnnual ? `${Math.floor(basePrice * 0.8)}` : `${basePrice}`
+          ) : (
+            price
+          )} <span className="text-sm font-normal text-gray-500">{isAnnual ? '/month, billed annually' : priceSuffix}</span>
         </p>
         {isRecommended && recommendationText && (
           <p className="text-xs text-indigo-600 font-medium mb-4">{recommendationText}</p>
@@ -65,11 +73,11 @@ export const PricingCard: React.FC<PricingCardProps> = ({
           Downgrade to Free
         </button>
       ) : isRecommended ? (
-        <button onClick={() => onUpgrade(tierName)} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+        <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
           Upgrade to {tierName} via Stripe
         </button>
       ) : (
-        <button onClick={() => onUpgrade(tierName)} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+        <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
           Upgrade to {tierName} via Stripe
         </button>
       )}

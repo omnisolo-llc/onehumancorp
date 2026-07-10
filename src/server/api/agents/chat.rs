@@ -22,6 +22,7 @@ pub struct ChatRequest {
 pub struct ChatResponse {
     pub success: bool,
     pub department_assigned: Option<String>,
+    pub draft_action: Option<crate::orchestration::departments::types::ApprovalRequest>,
 }
 
 #[derive(Clone)]
@@ -50,7 +51,7 @@ async fn handle_chat(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
+        None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None, draft_action: None })).into_response(),
     };
 
     let req = SemanticRoutingRequest {
@@ -74,8 +75,8 @@ async fn handle_chat(
         ActionRisk::DraftForReview,
         payload_json,
     ).await {
-        Ok(_) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
+        Ok(req) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()), draft_action: Some(req) })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None, draft_action: None })).into_response(),
     }
 }
 

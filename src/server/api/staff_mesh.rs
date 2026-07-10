@@ -85,7 +85,8 @@ pub struct TaskResponse {
 
 #[derive(Deserialize)]
 pub struct UpdateTaskRequest {
-    pub status: String,
+    pub status: Option<String>,
+    pub title: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -571,8 +572,63 @@ pub async fn update_task_handler(
     };
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
-            let res = sqlx::query("UPDATE staff_tasks SET status = ? WHERE id = ? AND tenant_id = ?")
-                .bind(&payload.status)
+            let mut query = String::from("UPDATE staff_tasks SET updated_at = CURRENT_TIMESTAMP");
+            if payload.status.is_some() { query.push_str(", status = ?"); }
+            if payload.title.is_some() { query.push_str(", title = ?"); }
+            query.push_str(" WHERE id = ? AND tenant_id = ?");
+
+            let mut builder = sqlx::query(&query);
+            if let Some(s) = &payload.status { builder = builder.bind(s); }
+            if let Some(t) = &payload.title { builder = builder.bind(t); }
+            builder = builder.bind(&task_id).bind(&tenant_id);
+
+            let res = builder.execute(pool).await;
+            if res.is_err() {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+        }
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response(),
+            };
+            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+
+            let mut count = 1;
+            let mut query = String::from("UPDATE staff_tasks SET updated_at = CURRENT_TIMESTAMP");
+            if payload.status.is_some() { query.push_str(&format!(", status = ${}", count)); count += 1; }
+            if payload.title.is_some() { query.push_str(&format!(", title = ${}", count)); count += 1; }
+            query.push_str(&format!(" WHERE id = ${} AND tenant_id = ${}", count, count + 1));
+
+            let mut builder = sqlx::query(&query);
+            if let Some(s) = &payload.status { builder = builder.bind(s); }
+            if let Some(t) = &payload.title { builder = builder.bind(t); }
+            builder = builder.bind(&task_id).bind(&tenant_id);
+
+            let res = builder.execute(&mut *tx).await;
+            if res.is_err() || tx.commit().await.is_err() {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+        }
+    }
+    (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+}
+
+
+pub async fn delete_task_handler(
+    headers: HeaderMap,
+    axum::extract::Path(task_id): axum::extract::Path<String>,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+    match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let res = sqlx::query("DELETE FROM staff_tasks WHERE id = ? AND tenant_id = ?")
                 .bind(&task_id)
                 .bind(&tenant_id)
                 .execute(pool)
@@ -589,8 +645,7 @@ pub async fn update_task_handler(
             if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
             }
-            let res = sqlx::query("UPDATE staff_tasks SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(&payload.status)
+            let res = sqlx::query("DELETE FROM staff_tasks WHERE id = $1 AND tenant_id = $2")
                 .bind(&task_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
@@ -602,6 +657,7 @@ pub async fn update_task_handler(
     }
     (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
 }
+
 
 pub async fn get_summaries_handler(
     headers: HeaderMap,
@@ -663,7 +719,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/{id}/pin", post(set_staff_pin_handler))
         .route("/timecard", post(sync_timecard_handler).get(get_timecard_handler))
         .route("/tasks", post(create_task_handler).get(get_tasks_handler))
-        .route("/tasks/{id}", post(update_task_handler))
+        .route("/tasks/{id}", post(update_task_handler).delete(delete_task_handler))
         .route("/summaries", axum::routing::get(get_summaries_handler))
         .with_state(db)
 }

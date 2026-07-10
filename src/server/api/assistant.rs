@@ -371,7 +371,7 @@ async fn list_tasks(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
-) -> Result<Json<Vec<Task>>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -395,19 +395,37 @@ async fn list_tasks(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Task> = rows.into_iter().map(|row| Task {
-                id: row.get("id"),
-                workspace_id: row.get("workspace_id"),
-                title: row.get("title"),
-                prompt: row.get("prompt"),
-                status: row.get("status"),
-                mode: row.get("mode"),
-                permission_profile: row.get("permission_profile"),
-                model_config_json: row.get::<Option<String>, _>("model_config").and_then(|s| serde_json::from_str(&s).ok()),
-                current_step: row.get("current_step"),
-                archived: row.get::<Option<i32>, _>("archived").map(|v| v != 0).unwrap_or(false),
-                created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
-                updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+            let list: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "workspace_id": row.get::<String, _>("workspace_id"),
+                        "title": row.get::<String, _>("title"),
+                        "status": row.get::<String, _>("status"),
+                        "mode": row.get::<Option<String>, _>("mode"),
+                        "permission_profile": row.get::<String, _>("permission_profile"),
+                        "current_step": row.get::<Option<String>, _>("current_step"),
+                        "archived": row.get::<Option<i32>, _>("archived").map(|v| v != 0).unwrap_or(false),
+                        "created_at_unix": row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse::<i64>().ok()).unwrap_or(0),
+                        "updated_at_unix": row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse::<i64>().ok()).unwrap_or(0),
+                    })
+                } else {
+                    let task = Task {
+                        id: row.get("id"),
+                        workspace_id: row.get("workspace_id"),
+                        title: row.get("title"),
+                        prompt: row.get("prompt"),
+                        status: row.get("status"),
+                        mode: row.get("mode"),
+                        permission_profile: row.get("permission_profile"),
+                        model_config_json: row.get::<Option<String>, _>("model_config").and_then(|s| serde_json::from_str(&s).ok()),
+                        current_step: row.get("current_step"),
+                        archived: row.get::<Option<i32>, _>("archived").map(|v| v != 0).unwrap_or(false),
+                        created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                        updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                    };
+                    serde_json::to_value(task).unwrap_or(serde_json::json!({}))
+                }
             }).collect();
             Ok(list)
         }
@@ -433,19 +451,37 @@ async fn list_tasks(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Task> = rows.into_iter().map(|row| Task {
-                id: row.get("id"),
-                workspace_id: row.get("workspace_id"),
-                title: row.get("title"),
-                prompt: row.get("prompt"),
-                status: row.get("status"),
-                mode: row.get("mode"),
-                permission_profile: row.get("permission_profile"),
-                model_config_json: row.get("model_config"),
-                current_step: row.get("current_step"),
-                archived: row.get("archived"),
-                created_at_unix: row.get("c_unix"),
-                updated_at_unix: row.get("u_unix"),
+            let list: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "workspace_id": row.get::<String, _>("workspace_id"),
+                        "title": row.get::<String, _>("title"),
+                        "status": row.get::<String, _>("status"),
+                        "mode": row.get::<Option<String>, _>("mode"),
+                        "permission_profile": row.get::<String, _>("permission_profile"),
+                        "current_step": row.get::<Option<String>, _>("current_step"),
+                        "archived": row.get::<bool, _>("archived"),
+                        "created_at_unix": row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
+                        "updated_at_unix": row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
+                    })
+                } else {
+                    let task = Task {
+                        id: row.get("id"),
+                        workspace_id: row.get("workspace_id"),
+                        title: row.get("title"),
+                        prompt: row.get("prompt"),
+                        status: row.get("status"),
+                        mode: row.get("mode"),
+                        permission_profile: row.get("permission_profile"),
+                        model_config_json: row.get("model_config"),
+                        current_step: row.get("current_step"),
+                        archived: row.get("archived"),
+                        created_at_unix: row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
+                        updated_at_unix: row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
+                    };
+                    serde_json::to_value(task).unwrap_or(serde_json::json!({}))
+                }
             }).collect();
             Ok(list)
         }
@@ -453,7 +489,7 @@ async fn list_tasks(
 
     let tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
 
-    Ok(Json(tasks))
+    Ok(Json(serde_json::Value::Array(tasks)))
 }
 
 async fn create_task(
@@ -583,6 +619,20 @@ async fn mutate_task(
             } else if action == "approve_changes" {
                 sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = ? AND task_id = ?")
                     .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_action" {
+                let msg_id = Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content, tool_metadata) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&msg_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("user")
+                .bind("Approve & Execute")
+                .bind(None::<String>)
+                .execute(pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
                 let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -624,6 +674,20 @@ async fn mutate_task(
             } else if action == "approve_changes" {
                 sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = $1 AND task_id = $2")
                     .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_action" {
+                let msg_id = Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content, tool_metadata) VALUES ($1, $2, $3, $4, $5, $6)"
+                )
+                .bind(&msg_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("user")
+                .bind("Approve & Execute")
+                .bind(None::<serde_json::Value>)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
                 sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

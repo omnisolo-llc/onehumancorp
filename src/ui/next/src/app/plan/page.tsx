@@ -181,13 +181,13 @@ export default function MyPlanPage() {
                       <div className="flex justify-between items-end mb-2">
                           <span className="font-medium text-gray-700 text-lg">Storage Used</span>
                           <span className="font-bold text-gray-900 text-lg">
-                              {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{data?.storage_limit_bytes != null && data.storage_limit_bytes > 0 ? `/ ${formatStorage(data.storage_limit_bytes)}` : '/ Unlimited'}</span>
+                              {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{(data?.storage_limit_bytes ?? 0) > 0 ? `/ ${formatStorage(data!.storage_limit_bytes!)}` : '/ Unlimited'}</span>
                           </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
                               className="bg-gradient-to-r from-blue-500 to-cyan-400 h-3 rounded-full transition-all duration-500"
-                              style={{ width: data?.storage_limit_bytes != null && data.storage_limit_bytes > 0 ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
+                              style={{ width: (data?.storage_limit_bytes ?? 0) > 0 ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes!) * 100)}%` : '5%' }}>
                           </div>
                       </div>
                   </div>

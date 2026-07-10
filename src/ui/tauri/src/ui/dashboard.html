@@ -676,8 +676,10 @@
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%; min-height: 44px;">
-        <h1 id="dashboard-title" style="margin: 0;" data-tooltip-id="dashboard-tooltip">Dashboard</h1>
-        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <h1 id="dashboard-title" style="margin: 0;" data-tooltip-id="dashboard-tooltip">Dashboard</h1>
+            <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
+        </div>
       </div>
       <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back.</div>
 
@@ -2035,7 +2037,7 @@
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
           if (proposals.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">All caught up! Your business is running smoothly.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">All caught up! Your business is running smoothly.</div>';
             return;
           }
 
@@ -2600,7 +2602,7 @@
         } else if (currentTriageTab === 'financials') {
           const financials = items.filter(i => (i.payload?.feature_type === 'invoice' || i.context_payload?.feature_type === 'invoice' || i.action_payload?.feature_type === 'invoice' || i.type === 'invoice'));
           if (financials.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">No pending invoices found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No pending invoices found.</div>';
             return;
           }
           triageQueue.innerHTML = financials.map(item => {
@@ -2631,7 +2633,7 @@
 
           const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">No recent activity found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No recent activity found.</div>';
             return;
           }
           triageQueue.innerHTML = activities.map(activity => {
