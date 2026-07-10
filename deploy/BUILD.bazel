@@ -252,7 +252,7 @@ sh_test(
         "helm/ohc/templates/powersync-service.yaml",
         "helm/ohc/templates/resourcequota.yaml",
         "helm/ohc/templates/servicemonitor.yaml",
-        "helm/ohc/templates/vpa.yaml",
+
         "helm/ohc/values.yaml",
         "//deploy/scripts:ohc-standalone.sh",
     ] + ["BUILD.bazel"],
@@ -340,7 +340,7 @@ sh_test(
         "helm/ohc/templates/powersync-service.yaml",
         "helm/ohc/templates/resourcequota.yaml",
         "helm/ohc/templates/servicemonitor.yaml",
-        "helm/ohc/templates/vpa.yaml",
+
         "helm/ohc/values.yaml",
     ] + [
         ":load_all_images",

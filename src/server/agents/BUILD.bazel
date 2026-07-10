@@ -28,6 +28,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:libc",
         "//src/server:server_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",

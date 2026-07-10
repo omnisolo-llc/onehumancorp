@@ -5576,6 +5576,7 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
+ "libc",
  "libsqlite3-sys",
  "ohc_builtin_agent",
  "once_cell",

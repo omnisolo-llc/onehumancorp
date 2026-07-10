@@ -64,6 +64,260 @@
   "version": 1,
   "panels": [
     {
+      "type": "bargauge",
+      "title": "Critiques by Agent",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "id": 1006,
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (rate(ohc_ultraplan_critiques_total[5m]))",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "auto",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Average Revision Cycles per Plan",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "id": 1007,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_ultraplan_revision_cycles_total[5m])) / sum(rate(ohc_ultraplan_approvals_total[5m]))",
+          "legendFormat": "Avg Revisions",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "AutoDream Sync Duration",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "id": 1003,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_autodream_sync_duration_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "P95 Sync Latency",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "AutoDream Memory Consolidation",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
+      "id": 1004,
+      "targets": [
+        {
+          "expr": "sum by (mode) (rate(ohc_autodream_consolidation_total[5m]))",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "AutoDream Errors",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "id": 1005,
+      "targets": [
+        {
+          "expr": "sum by (mode) (rate(ohc_autodream_ingestion_error_total[5m]))",
+          "legendFormat": "Ingestion Errors ({{mode}})",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (mode) (rate(ohc_autodream_compression_error_total[5m]))",
+          "legendFormat": "Compression Errors ({{mode}})",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sync Latency (P95) by Mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 1000,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(sync_latency_ms_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sync Error Rate by Mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 1001,
+      "targets": [
+        {
+          "expr": "sum(rate(sync_daemon_error_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sync Payload Size and Batch Depth",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "id": 1002,
+      "targets": [
+        {
+          "expr": "sum(rate(sync_payload_size_bytes_sum[5m])) by (mode)",
+          "legendFormat": "Payload Size ({{mode}})",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
+          "legendFormat": "Batch Depth ({{mode}})",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Task Claim Contention Rate by Mode",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 999,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
       "gridPos": {
         "h": 3,
         "w": 24,
