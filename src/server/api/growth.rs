@@ -402,7 +402,37 @@ where
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
+        .route("/upgrade-paywall", get(handle_upgrade_paywall).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct UpgradePaywallResponse {
+    pub progress: i64,
+    pub target: i64,
+}
+
+async fn handle_upgrade_paywall(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<UpgradePaywallResponse>, StatusCode> {
+    let parsed_uuid = auth_info.org_id;
+
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(parsed_uuid)
+        .fetch_one(&state.pool)
+        .await;
+
+    let mut conversions: i64 = 0;
+    if let Ok(r) = row {
+        use sqlx::Row;
+        conversions = r.get(0);
+    }
+
+    Ok(Json(UpgradePaywallResponse {
+        progress: conversions,
+        target: 3,
+    }))
 }
 
 #[derive(Debug, Serialize)]
