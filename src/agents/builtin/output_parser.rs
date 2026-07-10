@@ -60,23 +60,6 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
             }
         }
 
-        // Fallback mechanic: Legacy RetryWithErrorOutputParser
-        let content = msg.content.trim();
-        let mut json_str = content;
-
-        if let Some(start) = content.find("```json") {
-            if let Some(end) = content[start + 7..].rfind("```") {
-                json_str = content[start + 7..start + 7 + end].trim();
-            }
-        } else if let Some(start) = content.find("```")
-            && let Some(end) = content[start + 3..].rfind("```") {
-                json_str = content[start + 3..start + 3 + end].trim();
-            }
-
-        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
-            return Ok(parsed);
-        }
-
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
@@ -612,19 +595,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_structured_output_with_preamble() {
-        // Fallback mechanic now seamlessly extracts the JSON even with preamble and postamble text
+        // The markdown fallback is disabled; plain text should fail and trigger the fallback loop.
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_text_resp(
-                "Here is the parsed JSON output for your request:\n```json\n{\n  \"result\": \"success_preamble\"\n}\n```\nLet me know if you need anything else!",
-            )]),
+            responses: Mutex::new(vec![
+                create_text_resp(
+                    "Here is the parsed JSON output for your request:\n```json\n{\n  \"result\": \"success_preamble\"\n}\n```\nLet me know if you need anything else!",
+                ),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success_preamble_recovered"}}),
+                ),
+            ]),
         });
 
         let req = create_test_req();
-        let result: TestOutput =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
-                .await
-                .expect("Expected TestOutput in test");
-        assert_eq!(result.result, "success_preamble");
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success_preamble_recovered");
     }
 
     #[tokio::test]
@@ -649,7 +638,7 @@ mod tests {
 
         // Because of the strict native tool_calls enforcement, it must retry and succeed on the second attempt
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain_recovered");
     }
 
     #[tokio::test]
