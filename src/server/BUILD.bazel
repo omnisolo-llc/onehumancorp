@@ -103,6 +103,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:translation.rs",
     "//src/server/api/agents:webhook.rs",
     "//src/server/api/agents:code_native.rs",
+    "//src/server/api/agents:order_interceptor.rs",
     "//src/server/api/agents:client_intake.rs",
     "//src/server/api/agents:pydantic.rs",
     "//src/server/api/onboarding:mod.rs",
