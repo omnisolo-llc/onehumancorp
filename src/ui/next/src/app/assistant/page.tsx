@@ -42,6 +42,7 @@ type AssistantMessage = {
   id: string;
   role: string;
   content: string;
+  tool_metadata_json?: any;
 };
 
 type AssistantTask = {
@@ -610,6 +611,25 @@ function ConversationPage({ task }: { task?: AssistantTask }) {
           <div key={message.id} className={cx(styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage)}>
             <div className={styles.overline}>{message.role}</div>
             <p className={styles.messageText}>{message.content}</p>
+            {message.tool_metadata_json?.proposed_action && (
+              <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50/50">
+                <h4 className="font-bold text-sm text-blue-900 mb-2">Proposed Action</h4>
+                <pre className="text-[11px] bg-white border border-gray-100 p-3 rounded text-gray-700 overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(message.tool_metadata_json.proposed_action, null, 2)}
+                </pre>
+                <div className="mt-4 flex gap-3">
+                  <button onClick={async () => {
+                      if (!task) return;
+                      await fetch(`/api/assistant/tasks/${task.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve_action' }) });
+                  }} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
+                    Approve & Execute
+                  </button>
+                  <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 font-medium rounded transition-colors text-sm border border-gray-200">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
