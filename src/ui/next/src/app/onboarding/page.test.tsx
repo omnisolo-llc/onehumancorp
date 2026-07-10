@@ -1318,7 +1318,7 @@ describe("OnboardingWizard", () => {
     await user.click(continueButton);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Please tell us what you sell/i)).toBeInTheDocument();
+      expect(screen.queryByText("Please tell us what you sell.")).toBeInTheDocument();
     });
   });
 
