@@ -2,14 +2,21 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    // Mocking the backend implementation of CodeNativePipeline for the UI
-    const results = [
-        "Generated rich data with ID: test_id",
-        "Processed data natively. New record count: 2"
-    ];
+    const body = await req.json().catch(() => ({}));
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
-    return NextResponse.json({ results });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const res = await fetch(`${backendUrl}/api/agents/code-native`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+    return NextResponse.json({ error: 'Failed to execute code-native pipeline' }, { status: 502 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to execute code-native pipeline' }, { status: 502 });
   }
 }
