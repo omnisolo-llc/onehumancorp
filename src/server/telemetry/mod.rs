@@ -1904,3 +1904,71 @@ mod harness_security_divergence_tests {
 }
 #[cfg(test)]
 mod dashboard_test;
+
+static SANDBOX_CPU_USAGE: OnceLock<Gauge<f64>> = OnceLock::new();
+static SANDBOX_MEMORY_BYTES: OnceLock<Gauge<f64>> = OnceLock::new();
+
+pub fn get_sandbox_cpu_usage() -> &'static Gauge<f64> {
+    SANDBOX_CPU_USAGE.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter
+            .f64_gauge("ohc_sandbox_cpu_usage")
+            .with_description("CPU Usage of the Sandbox")
+            .build()
+    })
+}
+
+pub fn get_sandbox_memory_bytes() -> &'static Gauge<f64> {
+    SANDBOX_MEMORY_BYTES.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter
+            .f64_gauge("ohc_sandbox_memory_bytes")
+            .with_description("Memory Bytes of the Sandbox")
+            .build()
+    })
+}
+
+pub fn record_sandbox_cpu_usage(agent_id: &str, value: f64) {
+    if !::server_config::get().telemetry_enabled { return; }
+    let gauge = get_sandbox_cpu_usage();
+    gauge.record(
+        value,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        ],
+    );
+}
+
+pub fn record_sandbox_memory_bytes(agent_id: &str, value: f64) {
+    if !::server_config::get().telemetry_enabled { return; }
+    let gauge = get_sandbox_memory_bytes();
+    gauge.record(
+        value,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        ],
+    );
+}
+
+static SANDBOX_NETWORK_IO: OnceLock<Gauge<f64>> = OnceLock::new();
+
+pub fn get_sandbox_network_io() -> &'static Gauge<f64> {
+    SANDBOX_NETWORK_IO.get_or_init(|| {
+        let meter = global::meter("ohc.sandbox");
+        meter
+            .f64_gauge("ohc_sandbox_network_io")
+            .with_description("Network I/O of the Sandbox")
+            .build()
+    })
+}
+
+pub fn record_sandbox_network_io(agent_id: &str, value: f64) {
+    if !::server_config::get().telemetry_enabled { return; }
+    let gauge = get_sandbox_network_io();
+    gauge.record(
+        value,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        ],
+    );
+}
