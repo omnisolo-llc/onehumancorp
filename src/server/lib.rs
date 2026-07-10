@@ -3336,7 +3336,7 @@ pub async fn update_ui_omni_inbox_action_handler(
                                 if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
                                     if integration_id == "whatsapp_cloud_api" {
                                         use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token);
+                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
                                         let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
                                         let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
                                     } else if !account_sid.is_empty() && !auth_token.is_empty() {
@@ -3409,7 +3409,7 @@ pub async fn update_ui_omni_inbox_action_handler(
                                 if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
                                     if integration_id == "whatsapp_cloud_api" {
                                         use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token);
+                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
                                         let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
                                         let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
                                     } else if !account_sid.is_empty() && !auth_token.is_empty() {

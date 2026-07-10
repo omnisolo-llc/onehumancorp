@@ -234,13 +234,15 @@ impl IntegrationsRegistry {
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
+                creds.api_token.clone(),
+                Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
             )));
         }
         if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
             let mut clients = self.whatsapp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
+                creds.api_token.clone(),
+                Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
             )));
         }
         if integration_id == "calendly" {
