@@ -3,7 +3,7 @@ import { test, expect, adminPage } from './fixtures';
 
 test.describe('Walkthrough Features', () => {
   test('should display walkthrough when dashboard tour is triggered', async ({ browser }) => {
-    const page = page = await adminPage(browser);
+    let page = await adminPage(browser);
     // Navigate to dashboard where the walkthrough button lives
     await page.goto('/dashboard?test_walkthrough=true');
 
