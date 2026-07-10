@@ -56,6 +56,13 @@ export function GrowBusinessCard() {
               Mystery Discount
             </Link>
             <Link
+              id="give-get-widget-btn"
+              href="/viral-give-get-widget"
+              className="px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Give/Get Widget
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
