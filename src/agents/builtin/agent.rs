@@ -390,10 +390,13 @@ impl Agent {
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
+
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
+        let wrapped_llm = Arc::new(crate::llm::RetryLlmClient::new(llm, 3));
         Self {
-            llm,
+            llm: wrapped_llm,
             tools,
+
             progress: Arc::new(AgentProgress::default()),
             memory_store: None,
             checkpointer: None,

@@ -9,6 +9,54 @@ pub trait LlmClient: Send + Sync {
     }
 }
 
+use ohc_builtin_agent_core::retry::{ExponentialBackoffWithJitter, RetryStrategy};
+use std::sync::Arc;
+use tokio::time::sleep;
+
+/// RetryLlmClient wraps any LlmClient and automatically retries requests on failure
+/// using an exponential backoff with jitter strategy.
+pub struct RetryLlmClient {
+    inner: Arc<dyn LlmClient>,
+    max_retries: usize,
+    retry_strategy: ExponentialBackoffWithJitter,
+}
+
+impl RetryLlmClient {
+    pub fn new(inner: Arc<dyn LlmClient>, max_retries: usize) -> Self {
+        Self {
+            inner,
+            max_retries,
+            retry_strategy: ExponentialBackoffWithJitter::default(),
+        }
+    }
+}
+
+
+
+#[async_trait]
+impl LlmClient for RetryLlmClient {
+    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let mut attempts = 0;
+        loop {
+            match self.inner.chat(req.clone()).await {
+                Ok(resp) => return Ok(resp),
+                Err(e) => {
+                    let err_str = e.to_string().to_lowercase();
+                    // Match specific HTTP status codes or standard rate limit terms
+                    let is_transient = err_str.contains("http 429") || err_str.contains("http 500") || err_str.contains("http 502") || err_str.contains("http 503") || err_str.contains("http 504") || err_str.contains("rate limit") || err_str.contains("timeout");
+
+                    if !is_transient || attempts >= self.max_retries {
+                        return Err(e);
+                    }
+                    let backoff = self.retry_strategy.next_backoff(attempts);
+                    sleep(backoff).await;
+                    attempts += 1;
+                }
+            }
+        }
+    }
+}
+
 pub mod anthropic;
 pub mod openai;
 pub mod ollama;
@@ -204,5 +252,91 @@ mod tests {
         assert_eq!(minified.system, r#"{"system":"instruction"}"#);
         assert_eq!(minified.messages[0].content, r#"{"user":"input"}"#);
         assert_eq!(minified.messages[0].tool_results[0].content, r#"{"tool":"result"}"#);
+    }
+    use ohc_builtin_agent_core::types::Message;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    pub struct FailingLlmClient {
+        attempts: AtomicUsize,
+        fail_until: usize,
+        error_msg: String,
+    }
+
+    #[async_trait]
+    impl LlmClient for FailingLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let attempt = self.attempts.fetch_add(1, Ordering::SeqCst);
+            if attempt < self.fail_until {
+                Err(self.error_msg.clone().into())
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Success"),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry_llm_client_success_after_failure() {
+        let inner = Arc::new(FailingLlmClient {
+            attempts: AtomicUsize::new(0),
+            fail_until: 2,
+            error_msg: "HTTP 429 Rate Limit".to_string(),
+        });
+        let client = RetryLlmClient::new(inner, 3);
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+        let resp = client.chat(req).await.unwrap();
+        assert_eq!(resp.message.content, "Success");
+    }
+
+    #[tokio::test]
+    async fn test_retry_llm_client_exhausts_retries() {
+        let inner = Arc::new(FailingLlmClient {
+            attempts: AtomicUsize::new(0),
+            fail_until: 5,
+            error_msg: "HTTP 502 Bad Gateway".to_string(),
+        });
+        let client = RetryLlmClient::new(inner, 3);
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+        let resp = client.chat(req).await;
+        assert!(resp.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_retry_llm_client_permanent_error_no_retry() {
+        let inner = Arc::new(FailingLlmClient {
+            attempts: AtomicUsize::new(0),
+            fail_until: 5,
+            error_msg: "HTTP 400 Context Length Exceeded".to_string(),
+        });
+        let client = RetryLlmClient::new(inner, 3);
+        let req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+        let resp = client.chat(req).await;
+        assert!(resp.is_err());
+        assert_eq!(inner.attempts.load(Ordering::SeqCst), 1); // Should only attempt once
     }
 }
