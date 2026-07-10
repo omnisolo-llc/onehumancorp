@@ -125,6 +125,84 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("create_order") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+
+                if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id_clone).await {
+                    tracing::error!("Failed to set org context: {}", e);
+                    let _ = db_tx.rollback().await;
+                    return Err(e.to_string());
+                }
+
+                if let Some(ref mutation_id) = mutation.client_mutation_id {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_one(&mut *db_tx)
+                        .await
+                        .unwrap_or((0,));
+
+                    if exists.0 > 0 {
+                        let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or(""));
+                        let _ = db_tx.rollback().await;
+                        return Ok(None);
+                    }
+
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .execute(&mut *db_tx)
+                        .await;
+                }
+
+                // Process the create_order payload
+                let payload_str = mutation.payload.unwrap_or_else(|| "{}".to_string());
+                if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                    let order_id = uuid::Uuid::new_v4().to_string();
+                    let amount_cents = payload_json.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let total_amount = (amount_cents as f64) / 100.0;
+
+                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed') ON CONFLICT DO NOTHING")
+                        .bind(&order_id)
+                        .bind(&tenant_id_clone)
+                        .bind(None::<String>) // Customer ID could be extracted from payload if available
+                        .bind(total_amount)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                    if let Some(cart) = payload_json.get("cart").and_then(|v| v.as_array()) {
+                        for item in cart {
+                            if let Some(product) = item.get("product") {
+                                let product_id = product.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                                let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                                let price_cents = product.get("price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                let price = (price_cents as f64) / 100.0;
+
+                                if !product_id.is_empty() {
+                                    let item_id = uuid::Uuid::new_v4().to_string();
+                                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                                        .bind(&item_id)
+                                        .bind(&tenant_id_clone)
+                                        .bind(&order_id)
+                                        .bind(product_id)
+                                        .bind(quantity)
+                                        .bind(price)
+                                        .execute(&mut *db_tx)
+                                        .await;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                db_tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(None)
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;

@@ -107,6 +107,15 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           });
        });
 
+       SyncManager.getInstance().enqueue({
+           type: 'create_order',
+           payload: {
+               cart: cart,
+               amount_cents: amount,
+               payment_method: 'tap_to_pay'
+           }
+       });
+
        setTimeout(() => {
          setStatus('Saved Offline - Will sync when connected');
          if (onSuccess) onSuccess();
@@ -180,6 +189,15 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                quantity: item.quantity,
                payload: { amount_cents: item.product.price_cents * item.quantity }
             });
+         });
+
+         SyncManager.getInstance().enqueue({
+             type: 'create_order',
+             payload: {
+                 cart: cart,
+                 amount_cents: amount,
+                 payment_method: 'cash_sale'
+             }
          });
          setTimeout(() => {
            setStatus('Saved Offline - Will sync when connected');

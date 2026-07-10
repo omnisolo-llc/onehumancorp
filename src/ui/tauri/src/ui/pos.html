@@ -1247,6 +1247,17 @@
                   device_signature: `sig_offline_${crypto.randomUUID()}`
               });
 
+              enqueueOfflineMutation({
+                  type: 'create_order',
+                  id: 'order_' + Date.now(),
+                  payload: {
+                      cart: [{ product: { id: currentProductId, price_cents: currentAmountCents }, quantity: 1 }],
+                      amount_cents: currentAmountCents,
+                      payment_method: 'tap_to_pay'
+                  },
+                  timestamp: new Date().toISOString()
+              });
+
               // Optimistically update local inventory
               const tenantId = localStorage.getItem('tenant_id') || 'default';
               const cacheKey = `ohc_catalog_${tenantId}`;

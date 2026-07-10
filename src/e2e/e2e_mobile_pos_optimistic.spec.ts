@@ -71,6 +71,23 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     expect(product).toBeDefined();
     expect(product.inventory_count).toBe(4);
 
+    // Verify it's in the IndexedDB offline queue and includes create_order
+    const queueData = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
+
+    expect(queueData).toContain('create_order');
+
     // Restore network
     await page.context().setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));

@@ -95,6 +95,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     });
 
     expect(queueData).toContain('cash_sale');
+    expect(queueData).toContain('create_order');
 
     // Go online to trigger sync
     await context.setOffline(false);
