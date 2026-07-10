@@ -220,7 +220,7 @@ impl CostAuditor {
     }
 
     pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
-        let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
+        let savings = crate::pricing::calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
         
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
