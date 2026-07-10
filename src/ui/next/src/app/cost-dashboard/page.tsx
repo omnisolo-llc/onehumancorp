@@ -232,18 +232,18 @@ export default function CostDashboardPage() {
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
                       <p className="text-2xl font-bold text-gray-900  mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
-                  {myPlanData?.storage_limit_bytes && myPlanData?.storage_used_bytes != null && (
+                  {myPlanData?.storage_used_bytes != null && (
                       <div className="p-4 app-card ohc-growth-card md:col-span-2 lg:col-span-4">
                           <div className="flex justify-between text-sm text-gray-600 mb-1">
-                              <span id="storage-text">{myPlanData.storage_limit_bytes > 0 ? `${formatStorage(myPlanData.storage_limit_bytes).replace('.0 MB', ' MB').replace('.0 GB', ' GB')} Storage Quota` : 'Unlimited Storage Quota'}</span>
+                              <span id="storage-text">{(myPlanData.storage_limit_bytes ?? 0) > 0 ? `${formatStorage(myPlanData.storage_limit_bytes!).replace('.0 MB', ' MB').replace('.0 GB', ' GB')} Storage Quota` : 'Unlimited Storage Quota'}</span>
                               <span>
-                                  {myPlanData.storage_limit_bytes > 0 ? (
-                                      myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'Limit reached' : `${formatStorage(myPlanData.storage_used_bytes)} used (${Math.round((myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100)}%)`
+                                  {(myPlanData.storage_limit_bytes ?? 0) > 0 ? (
+                                      myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes! ? 'Limit reached' : `${formatStorage(myPlanData.storage_used_bytes)} used (${Math.round((myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes!) * 100)}%)`
                                   ) : `${formatStorage(myPlanData.storage_used_bytes)} used`}
                               </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                              <div className={`h-2.5 rounded-full ${myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'bg-red-600' : 'bg-[#0071E3]'}`} style={{ width: `${Math.min(100, Math.max(0, (myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100))}%` }}></div>
+                              <div className={`h-2.5 rounded-full ${(myPlanData.storage_limit_bytes ?? 0) > 0 && myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes! ? 'bg-red-600' : 'bg-[#0071E3]'}`} style={{ width: `${Math.min(100, Math.max(0, (myPlanData.storage_limit_bytes ?? 0) > 0 ? (myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes!) * 100 : 5))}%` }}></div>
                           </div>
                       </div>
                   )}

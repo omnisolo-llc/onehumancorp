@@ -466,7 +466,7 @@
                 }
 
                 // Storage
-                const storageText = (planData.storage_limit_bytes != null && planData.storage_limit_bytes >= 0) ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
+                const storageText = (planData.storage_limit_bytes != null && planData.storage_limit_bytes > 0) ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
                 document.getElementById('storage-text').innerText = storageText;
                 if (planData.storage_limit_bytes != null && planData.storage_limit_bytes > 0) {
                     const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);

@@ -178,6 +178,70 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('Tier limit reached')).toBeDefined();
   });
 
+  test('handles zero limits as unlimited storage quota correctly', async () => {
+    const mockCostData = {
+      cost_per_1k_tokens: 0,
+      trend: [],
+      department_tier_usage: {
+        departments: [],
+      },
+    };
+
+    const mockPlanData = {
+      current_plan: "Starter",
+      ai_actions_used: 150,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 1024,
+      storage_limit_bytes: 0,
+      next_bill_estimated: 0,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    expect(screen.getByText('Unlimited Storage Quota')).toBeDefined();
+  });
+
+  test('handles null limits as unlimited storage quota correctly', async () => {
+    const mockCostData = {
+      cost_per_1k_tokens: 0,
+      trend: [],
+      department_tier_usage: {
+        departments: [],
+      },
+    };
+
+    const mockPlanData = {
+      current_plan: "Starter",
+      ai_actions_used: 150,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 1024,
+      storage_limit_bytes: null,
+      next_bill_estimated: 0,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    expect(screen.getByText('Unlimited Storage Quota')).toBeDefined();
+  });
+
   test('handles fetch error gracefully', async () => {
     global.fetch = vi.fn().mockImplementation(() => {
       return Promise.resolve({
