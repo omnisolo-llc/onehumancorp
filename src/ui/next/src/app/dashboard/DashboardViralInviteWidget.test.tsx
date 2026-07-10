@@ -10,8 +10,11 @@ Object.assign(navigator, {
 });
 
 describe('DashboardViralInviteWidget', () => {
+  let originalFetch: typeof global.fetch;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    originalFetch = global.fetch;
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn((key) => {
@@ -21,6 +24,10 @@ describe('DashboardViralInviteWidget', () => {
       },
       writable: true,
     });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it('renders correctly', async () => {
@@ -34,6 +41,12 @@ describe('DashboardViralInviteWidget', () => {
   });
 
   it('generates link, copies to clipboard, and shares to X', async () => {
+    // Mock the fetch call for the generation
+    const mockFetch = vi.fn().mockResolvedValue({
+      json: async () => ({ referral_link: 'https://ohc.app/ref/test-tenant-123' }),
+    });
+    global.fetch = mockFetch;
+
     render(<DashboardViralInviteWidget />);
 
     const generateBtn = screen.getByRole('button', { name: 'Get My Invite Link' });
@@ -48,7 +61,7 @@ describe('DashboardViralInviteWidget', () => {
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('test-tenant-123')
+      expect.stringContaining('https://ohc.app/ref/test-tenant-123')
     );
     expect(screen.getByText('Copied!')).toBeDefined();
 
