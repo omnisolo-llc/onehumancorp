@@ -67,21 +67,32 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     } else if tag.starts_with("entity:product:") {
                         product_id_str = Some(tag.trim_start_matches("entity:product:").to_string());
                     }
-                    edge_cache.invalidate_by_tag(tag).await;
-                    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                    cdn_cache.invalidate_by_tag(tag).await;
-
-                    // Send purge request to NGINX Edge Cache
-                    if let Err(e) = client.post("http://edge-cache/purge")
-                        .body(tag.clone())
-                        .send()
-                        .await
-                    {
-                        warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
-                    } else {
-                        info!("Successfully sent purge request to NGINX for tag {}", tag);
-                    }
                 }
+
+                let edge_cache_ref = edge_cache.clone();
+                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                let futures = event.tags.iter().map(|tag| {
+                    let edge_cache_clone = edge_cache_ref.clone();
+                    let cdn_cache_clone = cdn_cache.clone();
+                    let client_clone = client.clone();
+                    let tag_clone = tag.clone();
+                    async move {
+                        edge_cache_clone.invalidate_by_tag(&tag_clone).await;
+                        cdn_cache_clone.invalidate_by_tag(&tag_clone).await;
+
+                        // Send purge request to NGINX Edge Cache
+                        if let Err(e) = client_clone.post("http://edge-cache/purge")
+                            .body(tag_clone.clone())
+                            .send()
+                            .await
+                        {
+                            warn!("Failed to send purge request to NGINX for tag {}: {}", tag_clone, e);
+                        } else {
+                            info!("Successfully sent purge request to NGINX for tag {}", tag_clone);
+                        }
+                    }
+                });
+                futures::future::join_all(futures).await;
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
                     if let (Ok(tenant_id), Ok(product_id)) = (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str)) {
@@ -139,11 +150,16 @@ mod tests {
             tags: vec![tag.to_string()],
         };
 
-        for tag in event.tags {
-            edge_cache.invalidate_by_tag(&tag).await;
-            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-            cdn_cache.invalidate_by_tag(&tag).await;
-        }
+        let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+        let futures = event.tags.into_iter().map(|tag| {
+            let edge_cache_clone = edge_cache.clone();
+            let cdn_cache_clone = cdn_cache.clone();
+            async move {
+                edge_cache_clone.invalidate_by_tag(&tag).await;
+                cdn_cache_clone.invalidate_by_tag(&tag).await;
+            }
+        });
+        futures::future::join_all(futures).await;
 
         assert_eq!(edge_cache.get("test_key").await, None);
     }

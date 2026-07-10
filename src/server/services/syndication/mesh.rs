@@ -35,9 +35,13 @@ impl SyndicationMeshService {
 
                             tokio::spawn(async move {
                                 let adapters = adapters.lock().await;
-                                for adapter in adapters.iter() {
-                                    let _ = adapter.push_product_update(&payload).await;
-                                }
+                                let futures = adapters.iter().map(|adapter| {
+                                    let payload_clone = payload.clone();
+                                    async move {
+                                        let _ = adapter.push_product_update(&payload_clone).await;
+                                    }
+                                });
+                                futures::future::join_all(futures).await;
                             });
                         }
                     }

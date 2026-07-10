@@ -25,12 +25,14 @@ pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
+#[allow(dead_code)]
 pub fn walkup_routes<S: Clone + Send + Sync + 'static>(state: AppState) -> Router<S> {
     Router::new()
         .route("/", post(handle_walkup))
         .with_state(state)
 }
 
+#[allow(dead_code)]
 pub async fn handle_walkup(
     State(state): State<AppState>,
     Json(payload): Json<WalkupPayload>,

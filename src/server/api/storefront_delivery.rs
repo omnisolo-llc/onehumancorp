@@ -85,9 +85,10 @@ impl CacheInvalidationService {
     }
 
     pub async fn invalidate(&self, tags: Vec<String>) {
-        for tag in tags {
+        let futures = tags.into_iter().map(|tag| async move {
             self.cache.invalidate_by_tag(&tag).await;
-        }
+        });
+        futures::future::join_all(futures).await;
     }
 }
 
@@ -108,20 +109,25 @@ async fn invalidate_cache_webhook(
     tokio::spawn(async move {
         let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
         let client = reqwest::Client::new();
-        for tag in tags_to_invalidate {
-            cdn.invalidate_by_tag(&tag).await;
+        let futures = tags_to_invalidate.into_iter().map(|tag| {
+            let cdn_clone = cdn.clone();
+            let client_clone = client.clone();
+            async move {
+                cdn_clone.invalidate_by_tag(&tag).await;
 
-            // Send purge request to NGINX Edge Cache
-            if let Err(e) = client.post("http://edge-cache/purge")
-                .body(tag.clone())
-                .send()
-                .await
-            {
-                tracing::warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
-            } else {
-                tracing::info!("Successfully sent purge request to NGINX for tag {}", tag);
+                // Send purge request to NGINX Edge Cache
+                if let Err(e) = client_clone.post("http://edge-cache/purge")
+                    .body(tag.clone())
+                    .send()
+                    .await
+                {
+                    tracing::warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
+                } else {
+                    tracing::info!("Successfully sent purge request to NGINX for tag {}", tag);
+                }
             }
-        }
+        });
+        futures::future::join_all(futures).await;
     });
 
     StatusCode::OK
