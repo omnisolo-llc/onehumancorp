@@ -14,6 +14,38 @@ fn apply_domain_logic<'a, 'c>(
                     .execute(&mut **tx)
                     .await?;
             }
+        } else if event.entity_type == "appointment" && event.action_type == "UpdateStatus" {
+            if let Some(status) = event.payload.get("status").and_then(|v| v.as_str()) {
+                let notes = event.payload.get("notes").and_then(|v| v.as_str());
+                sqlx::query("UPDATE appointments SET status = $1, notes = COALESCE($2, notes), updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
+                    .bind(status)
+                    .bind(notes)
+                    .bind(&event.entity_id)
+                    .bind(&tenant_id)
+                    .execute(&mut **tx)
+                    .await?;
+
+                if status == "Completed" {
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "sync_event_id": event.id,
+                        "entity_type": event.entity_type,
+                        "entity_id": event.entity_id,
+                        "action_type": event.action_type,
+                        "message": "Offline job completed. Trigger downstream workflows like ETA SMS to next customer and invoice generation."
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'job.completed', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&ai_payload)
+                    .execute(&mut **tx)
+                    .await?;
+                }
+            }
         } else if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
             if let Some(is_sold_out) = event.payload.get("is_sold_out").and_then(|v| v.as_bool()) {
                 sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
@@ -293,33 +325,65 @@ pub async fn sync_events_handler(
                                 .execute(&mut *tx)
                                 .await;
                         }
-                    } else if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
-                        if let Some(is_sold_out) = event.payload.get("is_sold_out").and_then(|v| v.as_bool()) {
-                            let _ = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
-                                .bind(is_sold_out)
+                    } else if event.entity_type == "appointment" && event.action_type == "UpdateStatus" {
+                        if let Some(status) = event.payload.get("status").and_then(|v| v.as_str()) {
+                            let notes = event.payload.get("notes").and_then(|v| v.as_str());
+                            let _ = sqlx::query("UPDATE appointments SET status = $1, notes = COALESCE($2, notes), updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
+                                .bind(status)
+                                .bind(notes)
                                 .bind(&event.entity_id)
                                 .bind(&tenant_id)
                                 .execute(&mut *tx)
                                 .await;
-                        }
-                            if let Some(client) = crate::get_redis_client() {
-                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                                    let invalidation_topic = "cache_invalidation_events";
-                                    let invalidation_payload = serde_json::json!({
-                                        "event": "product.updated",
-                                        "tags": [
-                                            format!("tenant-id:{}", tenant_id),
-                                            format!("entity:product:{}", event.entity_id)
-                                        ]
-                                    }).to_string();
-                                    let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
-                                }
-                            }
-                            let edge_cache = crate::builder::edge::get_edge_cache();
-                            edge_cache.invalidate_by_tag(&format!("entity:product:{}", event.entity_id)).await;
-                            edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-                            let item_id_owned = event.entity_id.to_string();
+                            if status == "Completed" {
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "sync_event_id": event.id,
+                                    "entity_type": event.entity_type,
+                                    "entity_id": event.entity_id,
+                                    "action_type": event.action_type,
+                                    "message": "Offline job completed. Trigger downstream workflows like ETA SMS to next customer and invoice generation."
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'job.completed', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&task_id)
+                                .bind(&tenant_id)
+                                .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
+                            }
+                        }
+                    } else if event.entity_type == "appointment" && event.action_type == "UpdateStatus" {
+                        if let Some(status) = event.payload.get("status").and_then(|v| v.as_str()) {
+                            let notes = event.payload.get("notes").and_then(|v| v.as_str());
+                            let _ = sqlx::query("UPDATE appointments SET status = $1, notes = COALESCE($2, notes), updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
+                                .bind(status)
+                                .bind(notes)
+                                .bind(&event.entity_id)
+                                .bind(&tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
+                            if status == "Completed" {
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "sync_event_id": event.id,
+                                    "entity_type": event.entity_type,
+                                    "entity_id": event.entity_id,
+                                    "action_type": event.action_type,
+                                    "message": "Offline job completed. Trigger downstream workflows like ETA SMS to next customer and invoice generation."
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'job.completed', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&task_id)
+                                .bind(&tenant_id)
                             let tenant_id_owned = tenant_id.to_string();
                             tokio::spawn(async move {
                                 let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();

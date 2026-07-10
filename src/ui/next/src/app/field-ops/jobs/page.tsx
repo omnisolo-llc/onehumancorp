@@ -113,15 +113,22 @@ function FieldOpsJobsPageContent() {
     if (newStatus === "Completed") updatedJob.actual_end_time = now;
 
     if (isOffline) {
+      const eventId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
       await SyncManager.getInstance().enqueue({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        type: 'field_ops_status',
+        id: eventId,
+        type: 'sync_event',
         payload: {
-          id: updatedJob.id,
-          status: updatedJob.status,
-          notes: updatedJob.notes,
-          scheduled_start_time: updatedJob.scheduled_start_time,
-          scheduled_end_time: updatedJob.scheduled_end_time,
+          id: eventId,
+          entity_type: 'appointment',
+          entity_id: updatedJob.id,
+          action_type: 'UpdateStatus',
+          base_version: 1, // simplified assumption for offline UI
+          payload: {
+            status: updatedJob.status,
+            notes: updatedJob.notes,
+            scheduled_start_time: updatedJob.scheduled_start_time,
+            scheduled_end_time: updatedJob.scheduled_end_time,
+          }
         },
         timestamp: Date.now()
       });
