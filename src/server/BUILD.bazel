@@ -460,6 +460,7 @@ rust_library(
         "//src/server/integrations/shippo:server_integrations_shippo",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
+        "//src/server/integrations/whatsapp_cloud:server_integrations_whatsapp_cloud",
         "//src/server/integrations/taxjar:server_integrations_taxjar",
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/integrations/google_calendar:server_integrations_google_calendar",
