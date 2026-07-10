@@ -359,7 +359,7 @@ impl Store {
         store
     }
 
-    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
         self.validate_org_id(&org_id)?;
         if username.is_empty() {
             return Err("username is required".to_string());
@@ -407,20 +407,24 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+    pub async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
-        let by_name = self.by_name.read().expect("Failed to acquire lock");
-        let users = self.users.read().expect("Failed to acquire lock");
+        let user = if let Some(repo) = &self.repo {
+            repo.get_by_username(username, org_id).await?
+        } else {
+            let by_name = self.by_name.read().expect("Failed to acquire lock");
+            let users = self.users.read().expect("Failed to acquire lock");
 
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
-        let mut user_id_opt = by_name.get(&name_key).cloned();
+            let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+            let mut user_id_opt = by_name.get(&name_key).cloned();
 
-        if user_id_opt.is_none() && org_id.is_empty() {
-            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
-        }
+            if user_id_opt.is_none() && org_id.is_empty() {
+                user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+            }
 
-        let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
-        let user = users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?;
+            let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
+            users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?.clone()
+        };
 
         if !user.active {
             return Err("account disabled".to_string());
@@ -453,9 +457,13 @@ impl Store {
         Ok(())
     }
 
-    pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+    pub async fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
         if self.validate_org_id(org_id).is_err() {
             return None;
+        }
+
+        if let Some(repo) = &self.repo {
+            return repo.get_by_id(id, org_id).await.ok();
         }
 
         let users = self.users.read().expect("Failed to acquire lock");
@@ -471,9 +479,13 @@ impl Store {
         Some(u.clone())
     }
 
-    pub fn list_users(&self, org_id: &str) -> Vec<User> {
+    pub async fn list_users(&self, org_id: &str) -> Vec<User> {
         if self.validate_org_id(org_id).is_err() {
             return vec![];
+        }
+
+        if let Some(repo) = &self.repo {
+            return repo.list_users(org_id).await.unwrap_or_default();
         }
 
         let users = self.users.read().expect("Failed to acquire lock");
@@ -489,8 +501,18 @@ impl Store {
             .collect()
     }
 
-    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
+
+        if let Some(repo) = &self.repo {
+            let mut u = repo.get_by_id(id, org_id).await?;
+            if let Some(email) = email_ptr { u.email = email; }
+            if let Some(r) = roles { u.roles = r; }
+            if let Some(active) = active_ptr { u.active = active; }
+            u.updated_at = chrono::Utc::now();
+            repo.update_user(u.clone(), org_id).await?;
+            return Ok(u);
+        }
 
         let mut users = self.users.write().expect("Failed to acquire lock");
         let mut by_email = self.by_email.write().expect("Failed to acquire lock");
@@ -531,8 +553,12 @@ impl Store {
         Ok(u.clone())
     }
 
-    pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+    pub async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         self.validate_org_id(org_id)?;
+
+        if let Some(repo) = &self.repo {
+            return repo.delete_user(id, org_id).await;
+        }
 
         let mut users = self.users.write().expect("Failed to acquire lock");
         let mut by_name = self.by_name.write().expect("Failed to acquire lock");
@@ -770,7 +796,7 @@ impl AuthService for AuthServiceServerImpl {
             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
         }
 
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.store.authenticate(&req.username, &req.password, &req.organization_id).await {
             Ok(user) => {
                 match self.store.issue_token(&user) {
                     Ok(token) => {
@@ -812,7 +838,7 @@ impl AuthService for AuthServiceServerImpl {
             req.password,
             vec![final_role],
             final_org_id,
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
 
         let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
 
@@ -847,7 +873,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id)
+        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -867,7 +893,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let users = self.store.list_users(&auth_info.org_id);
+        let users = self.store.list_users(&auth_info.org_id).await;
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
@@ -887,7 +913,7 @@ impl AuthService for AuthServiceServerImpl {
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
 
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         if !caller.roles.contains(&"ADMIN".to_string()) {
@@ -902,7 +928,7 @@ impl AuthService for AuthServiceServerImpl {
             req.password,
             vec![],
             org_id,
-        ).map_err(|e| Status::internal(e))?;
+        ).await.map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -920,7 +946,7 @@ impl AuthService for AuthServiceServerImpl {
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id)
+        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id).await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -942,7 +968,7 @@ impl AuthService for AuthServiceServerImpl {
         let org_id = auth_info.org_id.clone();
 
         // Privilege Escalation fix: Ensure caller is ADMIN or the target user themselves
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         let req = request.into_inner();
@@ -953,11 +979,11 @@ impl AuthService for AuthServiceServerImpl {
         }
 
         // Only ADMIN can change roles or active status
-        let target_user = self.store.get_user(&req.id, &org_id).ok_or_else(|| Status::not_found("User not found"))?;
+        let target_user = self.store.get_user(&req.id, &org_id).await.ok_or_else(|| Status::not_found("User not found"))?;
         let final_roles = if is_admin { req.roles } else { target_user.roles.clone() };
         let final_active = if is_admin { req.active } else { Some(target_user.active) };
 
-        let user = self.store.update_user(&req.id, req.email, Some(final_roles), final_active, &org_id)
+        let user = self.store.update_user(&req.id, req.email, Some(final_roles), final_active, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -979,14 +1005,14 @@ impl AuthService for AuthServiceServerImpl {
         let org_id = auth_info.org_id.clone();
 
         // Privilege Escalation fix: Ensure caller is ADMIN
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         if !caller.roles.contains(&"ADMIN".to_string()) {
             return Err(Status::permission_denied("Only ADMIN can delete users"));
         }
 
-        self.store.delete_user(&request.get_ref().id, &org_id)
+        self.store.delete_user(&request.get_ref().id, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))
