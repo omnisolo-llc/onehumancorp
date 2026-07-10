@@ -96,15 +96,18 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        const syncManager = SyncManager.getInstance();
        if (onOptimisticReserve) onOptimisticReserve();
 
-       cart?.forEach(item => {
-           SyncManager.getInstance().enqueue({
-             type: 'tap_to_pay',
-             product_id: item.product.id,
-             quantity: item.quantity,
-             amount: item.product.price_cents * item.quantity,
-             currency: 'usd',
-             payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity }
-          });
+       const txId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
+       SyncManager.getInstance().enqueue({
+         id: txId,
+         type: 'create_order',
+         payload: {
+           type: 'tap_to_pay',
+           amount_cents: amount,
+           currency: 'usd',
+           mutation_type: 'tap_to_pay',
+           cart: cart?.map(item => ({ product_id: item.product.id, quantity: item.quantity, price_cents: item.product.price_cents })) || [],
+           status: 'completed'
+         }
        });
 
        setTimeout(() => {
@@ -173,13 +176,18 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const processCashSale = async () => {
      if (typeof window !== 'undefined' && !navigator.onLine) {
          if (onOptimisticReserve) onOptimisticReserve();
-         cart?.forEach(item => {
-               SyncManager.getInstance().enqueue({
-               type: 'cash_sale',
-               product_id: item.product.id,
-               quantity: item.quantity,
-               payload: { amount_cents: item.product.price_cents * item.quantity }
-            });
+         const txId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
+         SyncManager.getInstance().enqueue({
+           id: txId,
+           type: 'create_order',
+           payload: {
+             type: 'cash_sale',
+             amount_cents: amount,
+             currency: 'usd',
+             mutation_type: 'cash_sale',
+             cart: cart?.map(item => ({ product_id: item.product.id, quantity: item.quantity, price_cents: item.product.price_cents })) || [],
+             status: 'completed'
+           }
          });
          setTimeout(() => {
            setStatus('Saved Offline - Will sync when connected');

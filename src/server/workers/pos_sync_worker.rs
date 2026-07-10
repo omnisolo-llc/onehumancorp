@@ -113,7 +113,76 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
 
         // Handle tap_to_pay offline processing via Stripe
         let mutation_type = payload.get("mutation_type").and_then(|v| v.as_str()).unwrap_or("");
-        if mutation_type == "tap_to_pay" {
+        if mutation_type == "create_order" {
+            // It's already recorded optimistically on frontend, but we need to commit it logically
+            // Deduct inventory for all items in the cart
+            let cart = payload.get("cart").and_then(|v| v.as_array());
+            if let Some(items) = cart {
+                for item in items {
+                    if let (Some(product_id), Some(quantity_val)) = (item.get("product_id").and_then(|v| v.as_str()), item.get("quantity")) {
+                        let quantity_deducted = quantity_val.as_i64().unwrap_or(1);
+
+                        let current_stock_res = sqlx::query("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                            .bind(product_id)
+                            .bind(&job.tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await;
+
+                        if let Ok(Some(row)) = current_stock_res {
+                            let stock: i32 = sqlx::Row::get(&row, "available_quantity");
+                            let is_conflict = stock < quantity_deducted as i32;
+
+                            let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                .bind(quantity_deducted)
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
+                            if is_conflict {
+                                let feed_id = uuid::Uuid::new_v4().to_string();
+                                let feed_payload = serde_json::json!({
+                                    "transaction_id": transaction_id,
+                                    "product_id": product_id,
+                                    "shortage": (quantity_deducted as i32) - stock,
+                                });
+                                let proposed_action = serde_json::json!({
+                                    "action": "Resolve POS offline conflict"
+                                });
+                                let _ = sqlx::query(
+                                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+                                )
+                                .bind(&feed_id)
+                                .bind(&job.tenant_id)
+                                .bind(feed_payload)
+                                .bind(proposed_action)
+                                .execute(&mut *tx)
+                                .await;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Create the order
+            let order_id = uuid::Uuid::new_v4().to_string();
+            let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+            let total_amount = (amount_cents as f64) / 100.0;
+
+            let _ = sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ($1, $2, $3, 'completed') ON CONFLICT DO NOTHING")
+                .bind(&order_id).bind(&job.tenant_id).bind(total_amount).execute(&mut *tx).await;
+
+            if let Some(items) = cart {
+                for item in items {
+                    if let (Some(product_id), Some(quantity_val)) = (item.get("product_id").and_then(|v| v.as_str()), item.get("quantity")) {
+                        let quantity_deducted = quantity_val.as_i64().unwrap_or(1);
+                        let item_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                            .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(quantity_deducted).bind(total_amount).execute(&mut *tx).await;
+                    }
+                }
+            }
+        } else if mutation_type == "tap_to_pay" {
             // Securely create and capture Stripe intent since it's an offline tap-to-pay
             let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
             let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);

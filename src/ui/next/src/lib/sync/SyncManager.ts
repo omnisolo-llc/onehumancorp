@@ -144,7 +144,7 @@ export class SyncManager {
 
     try {
       // Separate POS transactions from general offline sync
-      const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale').map(m => {
+      const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale' || m.type === 'create_order').map(m => {
         let storedDeviceId = 'terminal_client';
         if (typeof window !== 'undefined') {
             storedDeviceId = localStorage.getItem('ohc_pos_device_id') || 'terminal_client';
@@ -158,12 +158,12 @@ export class SyncManager {
           payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
           device_signature: m.device_signature || `sig_offline_${storedDeviceId}_${m.id}`,
-          mutation_type: m.type,
+          mutation_type: m.type === 'create_order' ? 'create_order' : m.type,
           terminal_id: storedDeviceId
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => this.mapGeneralMutation(m));
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'create_order').map(m => this.mapGeneralMutation(m));
 
       // Route POS offline mutations through SyncEvents standard sync_gateway
       const posSyncEvents = queue
@@ -281,7 +281,7 @@ export class SyncManager {
       }
 
       // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'create_order' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
 
       if (operationIntents.length > 0) {
         const mappedIntents = operationIntents.map(m => ({

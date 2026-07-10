@@ -454,7 +454,12 @@ pub async fn sync_offline_transactions_handler(
                 // Evaluate conflicts for pending reconciliation synchronously
                 for tx in &req_data.transactions {
                     if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
-                        if let Some(items) = payload_val.as_array() {
+                        let items = if let Some(arr) = payload_val.as_array() {
+                            Some(arr.clone())
+                        } else {
+                            payload_val.get("cart").and_then(|v| v.as_array()).cloned()
+                        };
+                        if let Some(items) = items {
                             for item in items {
                                 if let (Some(product_id), Some(quantity)) = (
                                     item.get("product_id").and_then(|v| v.as_str()),

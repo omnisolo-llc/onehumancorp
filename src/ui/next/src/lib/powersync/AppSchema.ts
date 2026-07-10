@@ -93,6 +93,27 @@ const posTerminalSessions = new Table({
   pending_reconciliation: column.text
 });
 
+const orders = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  customer_id: column.text,
+  total_amount: column.real,
+  status: column.text,
+  notes: column.text,
+  translated_notes: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const orderItems = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  order_id: column.text,
+  product_id: column.text,
+  quantity: column.integer,
+  price: column.real
+});
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
@@ -100,5 +121,7 @@ export const AppSchema = new Schema({
   omni_inbox_messages: omniInboxMessages,
   pending_actions: pendingActions,
   pos_offline_transactions: posOfflineTransactions,
-  pos_terminal_sessions: posTerminalSessions
+  pos_terminal_sessions: posTerminalSessions,
+  orders: orders,
+  order_items: orderItems
 });
