@@ -6,7 +6,7 @@ test.describe('Agentic Invoicing System E2E', () => {
     await page.goto('/invoice-generator');
 
     // Verify header
-    await expect(page.locator('h1')).toHaveText('Invoice Generator');
+    await expect(page.locator('h1').first()).toHaveText('Invoice Generator');
 
     // Verify form elements exist
     await expect(page.locator('input[placeholder="e.g. Acme Corp"]')).toBeVisible();
