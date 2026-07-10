@@ -158,9 +158,51 @@ pub struct UpdateAppointmentResponse {
 }
 
 pub async fn update_appointment(
+    headers: axum::http::HeaderMap,
     State(state): State<Arc<FieldOpsState>>,
     Json(payload): Json<UpdateAppointmentRequest>,
 ) -> Result<Json<UpdateAppointmentResponse>, (axum::http::StatusCode, String)> {
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )
+    })?;
+
+    // Extract tenant_id from spiffe-id or fallback to x-tenant-id header securely.
+    // Ensure we do not arbitrarily fall back to a hardcoded "default" if neither exists,
+    // unless authorized or explicitly checking the DB based on identity.
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (spiffe_tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+    let header_tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+
+    let mut tenant_id = if !spiffe_tenant_id.is_empty() {
+        spiffe_tenant_id
+    } else {
+        header_tenant_id
+    };
+
+    if tenant_id.is_empty() {
+        let tenant_query: Result<(String,), sqlx::Error> = sqlx::query_as(
+            "SELECT tenant_id FROM appointments WHERE id = $1",
+        )
+        .bind(&payload.id)
+        .fetch_one(&mut *tx)
+        .await;
+
+        if let Ok((t_id,)) = tenant_query {
+            tenant_id = t_id;
+        } else {
+            let _ = tx.rollback().await;
+            return Err((axum::http::StatusCode::UNAUTHORIZED, "Missing tenant identity".to_string()));
+        }
+    }
+
     sqlx::query(
         r#"
         UPDATE appointments
@@ -171,9 +213,42 @@ pub async fn update_appointment(
     .bind(&payload.status)
     .bind(&payload.notes)
     .bind(&payload.id)
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await
     .map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )
+    })?;
+
+    if payload.status == "Completed" {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let ai_payload = serde_json::json!({
+            "appointment_id": payload.id,
+            "status": "Completed",
+            "message": "Field Ops job marked completed. Operations Agent please verify if travel time needs recalculation for subsequent jobs or text next customer."
+        }).to_string();
+
+        sqlx::query(
+            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+             VALUES ($1, $2, 'operations', 'field_ops.job_completed', $3::jsonb, 'PENDING')"
+        )
+        .bind(&task_id)
+        .bind(&tenant_id)
+        .bind(&ai_payload)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to insert into department_tasks: {}", e);
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                e.to_string(),
+            )
+        })?;
+    }
+
+    tx.commit().await.map_err(|e| {
         (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             e.to_string(),
