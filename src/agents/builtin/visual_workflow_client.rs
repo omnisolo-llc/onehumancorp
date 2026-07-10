@@ -21,6 +21,16 @@ pub struct WorkflowRunRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct WorkflowSchemaResponse {
+    pub schema: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WorkflowValidateRequest {
+    pub graph: WorkflowGraph,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WorkflowRunResponse {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -54,6 +64,26 @@ pub async fn handle_workflow_run(
             error: Some(e),
         }),
     }
+}
+
+pub async fn handle_workflow_schema(
+    axum::extract::State(_state): axum::extract::State<Arc<VisualWorkflowState>>,
+) -> Json<WorkflowSchemaResponse> {
+    let graph = WorkflowGraph { nodes: vec![], edges: vec![] };
+    use crate::visual_workflow::BlockConnectUI;
+    Json(WorkflowSchemaResponse {
+        schema: graph.generate_ui_schema(),
+    })
+}
+
+pub async fn handle_workflow_validate(
+    axum::extract::State(_state): axum::extract::State<Arc<VisualWorkflowState>>,
+    Json(req): Json<WorkflowValidateRequest>,
+) -> Json<WorkflowRunResponse> {
+    if req.graph.nodes.is_empty() {
+        return Json(WorkflowRunResponse { success: false, result: None, error: Some("Empty graph".to_string()) });
+    }
+    Json(WorkflowRunResponse { success: true, result: Some("Valid".to_string()), error: None })
 }
 
 pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {
