@@ -41,7 +41,7 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
     await page.locator('text="Step-by-Step Setup"').click();
@@ -71,7 +71,7 @@ test.describe('Wizard and Onboarding flows', () => {
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
     await page.locator('text="Step-by-Step Setup"').click();
@@ -102,5 +102,26 @@ test.describe('Wizard and Onboarding flows', () => {
 
     const containerWidth = await container.evaluate(el => el.clientWidth);
     expect(containerWidth).toBeLessThanOrEqual(375);
+  });
+
+  test('Buttons and Inputs have minimum touch target on Setup UI', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/onboarding');
+
+    // Let the initial route resolve to the onboarding screen
+    await page.waitForTimeout(2000);
+
+    // We verify a button exists with a min height. Since playright has locator geometry,
+    // we can evaluate the height of all buttons to ensure none fall below the 44px threshold
+    const buttons = await page.locator('button').all();
+    for (const btn of buttons) {
+      const isVisible = await btn.isVisible();
+      if (isVisible) {
+         const box = await btn.boundingBox();
+         if (box) {
+           expect(box.height).toBeGreaterThanOrEqual(44);
+         }
+      }
+    }
   });
 });

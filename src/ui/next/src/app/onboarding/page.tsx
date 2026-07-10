@@ -59,15 +59,18 @@ export default function OnboardingWizard() {
   useEffect(() => {
     if (step === 4) {
       setLoadingProgress(0);
+
       const interval = setInterval(() => {
         setLoadingProgress((prev) => {
-          if (prev >= 99) {
-            clearInterval(interval);
-            return 99;
+          // Fast to 90%, then very slow to 99%
+          const increment = prev < 90 ? Math.random() * 5 + 2 : Math.random() * 0.5 + 0.1;
+          const next = prev + increment;
+          if (next >= 99) {
+             clearInterval(interval); return 99;
           }
-          return prev + 1;
+          return next;
         });
-      }, 50); // Increment 1% every 50ms, roughly 5 seconds to 99%
+      }, 100);
       return () => clearInterval(interval);
     }
   }, [step]);
@@ -1054,7 +1057,7 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px] min-h-[44px]"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px] min-h-[44px]"
                   onClick={() => {
                     updateState({ step: 1 });
                     syncStateToBackend({ step: 1 });
@@ -1448,7 +1451,7 @@ export default function OnboardingWizard() {
                         syncStateToBackend({ chatStep: 2 });
                       }}
                       disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                      className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -1553,7 +1556,7 @@ export default function OnboardingWizard() {
                         syncStateToBackend({ chatStep: 3 });
                       }}
                       disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                      className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -1654,7 +1657,7 @@ export default function OnboardingWizard() {
                         syncStateToBackend({ chatStep: 4 });
                       }}
                       disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                      className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
                       <IconLabel icon="next">Next</IconLabel>
                     </button>
@@ -1756,7 +1759,7 @@ export default function OnboardingWizard() {
                         handleIntake();
                       }}
                       disabled={isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                      className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
                       {isLoading ? (
                         <span className="flex items-center justify-center gap-2">
@@ -1997,7 +2000,7 @@ export default function OnboardingWizard() {
                     updateState({ step: 3 });
                     syncStateToBackend({ step: 3 });
                   }}
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                 >
                   <IconLabel icon="next">Continue</IconLabel>
                 </button>
