@@ -350,7 +350,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 0 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
                   <h2 className="text-xl font-semibold font-outfit text-gray-800 dark:text-[#e5e5e7] mb-2">Your business, live in minutes.</h2>
                   <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                     Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
@@ -377,7 +377,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 1 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
                       className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glass-control p-4 font-bold shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
@@ -403,7 +403,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 2 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
                   <div id="step-3" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
@@ -432,7 +432,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 3 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div id="step-4" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <label className="flex items-center gap-3 p-4 glass-control cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
@@ -464,7 +464,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 4 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Product details</h1>
                   <div id="step-5" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
@@ -493,7 +493,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 5 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <button
                       className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glass-control p-4 font-bold shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
@@ -513,7 +513,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 6 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Create your account</h1>
                   <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
@@ -543,15 +543,15 @@ export default function WebsiteBuilderPage() {
                     >
                       Next
                     </button>
-                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-red-500 text-xs text-center mt-1">Please enter a valid email address.</p>}
-                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-red-500 text-xs text-center mt-1">Password must be at least 8 characters.</p>}
+                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-[#FF3B30] text-xs text-center mt-1">Please enter a valid email address.</p>}
+                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-[#FF3B30] text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
 
               {wizardStep === 7 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
                       className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glass-control p-4 font-bold shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
@@ -584,7 +584,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 8 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
                   <div id="step-9" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
                       className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -617,7 +617,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 9 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Review your choices</h1>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
                       className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -672,8 +672,8 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 'instant-build' && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
-<h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h2>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">10-Minute Setup Wizard</h1>
+<h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Tell us about your business</h2>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <textarea
                       value={bio}
@@ -808,13 +808,13 @@ export default function WebsiteBuilderPage() {
           <div className="w-16 h-16 bg-[#34C759]/10 text-[#34C759] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Success! Your business is live!</h1>
+          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Success! Your business is live!</h1>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">You're set up! Here's what to do next:</p>
 
           <div className="w-full glassmorphism p-3 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]">Copy</button>
           </div>
 
           <button

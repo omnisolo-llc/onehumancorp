@@ -287,7 +287,7 @@ export default function StorefrontBuilderPage() {
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1></WalkthroughTarget>
+              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1></WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
@@ -355,7 +355,7 @@ export default function StorefrontBuilderPage() {
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h1>
+          <h1 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">You're Live!</h1>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
@@ -379,7 +379,7 @@ export default function StorefrontBuilderPage() {
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden glassmorphism">
           <div className="px-6 py-6 flex flex-col justify-start h-full">
               <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7]">Marketing Agent</h2>
+                  <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7]">Marketing Agent</h2>
                   <button
                       onClick={() => updateStatus("draft")}
                       className="text-gray-500 hover:text-gray-700"
