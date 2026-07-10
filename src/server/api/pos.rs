@@ -96,10 +96,17 @@ async fn post_orders_handler(
     Json(json!({"status": "ok"}))
 }
 
+#[derive(serde::Deserialize)]
+pub struct InventoryAdjustment {
+    pub item_id: String,
+    pub quantity_change: i32,
+    pub location_id: Option<String>,
+}
+
 async fn post_inventory_handler(
-    State(_hub): State<Arc<Hub>>,
+    axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
     headers: axum::http::HeaderMap,
-    Json(payloads): Json<Vec<serde_json::Value>>,
+    axum::Json(payloads): axum::Json<Vec<serde_json::Value>>,
 ) -> Json<Value> {
     let tenant_id = headers
         .get("x-tenant-id")
@@ -110,6 +117,8 @@ async fn post_inventory_handler(
     for payload in payloads {
         if let Some(p) = payload.get("payload") {
             let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
+            let quantity_change = p.get("quantity_change").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let location_id = p.get("location_id").and_then(|v| v.as_str()).unwrap_or("default_loc");
             let is_sold_out = p.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
             let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -125,7 +134,7 @@ async fn post_inventory_handler(
 
                         if exists.0 > 0 {
                             let _ = tx.rollback().await;
-                            continue; // Idempotency check hit, skip duplicate
+                            continue;
                         }
 
                         let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
@@ -135,21 +144,58 @@ async fn post_inventory_handler(
                             .await;
                     }
 
-                    let update_res = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
+                    // Update centralized inventory level
+                    let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                        .bind(quantity_change)
+                        .bind(item_id)
+                        .bind(tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await;
+
+                    let mut inv_lvl_id: String = "".to_string();
+                    if let Ok(Some(row)) = &update_res {
+                         inv_lvl_id = sqlx::Row::get(row, "id");
+                    } else if let Ok(None) = &update_res {
+                         // Insert if not exists
+                         inv_lvl_id = uuid::Uuid::new_v4().to_string();
+                         let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
+                            .bind(&inv_lvl_id)
+                            .bind(tenant_id)
+                            .bind(item_id)
+                            .bind(location_id)
+                            .bind(quantity_change)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+
+                    if !inv_lvl_id.is_empty() && quantity_change != 0 {
+                         let t_id = uuid::Uuid::new_v4().to_string();
+                         let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
+                             .bind(&t_id)
+                             .bind(tenant_id)
+                             .bind(&inv_lvl_id)
+                             .bind(quantity_change)
+                             .execute(&mut *tx)
+                             .await;
+                    }
+
+                    // Sync to legacy products for compatibility
+                    let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
+                        .bind(quantity_change)
                         .bind(is_sold_out)
                         .bind(item_id)
                         .bind(tenant_id)
                         .execute(&mut *tx)
                         .await;
 
-                    if update_res.is_ok() {
+                    if update_legacy.is_ok() {
                         let _ = tx.commit().await;
 
                         if let Some(client) = crate::get_redis_client() {
                             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                                 let invalidation_topic = "cache_invalidation_events";
                                 let invalidation_payload = serde_json::json!({
-                                    "event": "product.updated",
+                                    "event": "inventory.updated",
                                     "tags": [
                                         format!("tenant-id:{}", tenant_id),
                                         format!("entity:product:{}", item_id)
@@ -297,6 +343,17 @@ async fn get_inventory_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_inventory_adjustment_struct() {
+        let adj = InventoryAdjustment {
+            item_id: "test_item".to_string(),
+            quantity_change: -1,
+            location_id: Some("loc1".to_string()),
+        };
+        assert_eq!(adj.item_id, "test_item");
+        assert_eq!(adj.quantity_change, -1);
+    }
 
     #[tokio::test]
     async fn test_pos_orders_cache_initialization() {

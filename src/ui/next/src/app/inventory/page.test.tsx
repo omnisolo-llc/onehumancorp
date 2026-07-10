@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
 test("does not expose backend API route names in the inventory UI", async () => {
   global.fetch = vi.fn(() => Promise.resolve({
     ok: true,
-    json: () => Promise.resolve({ vendors: [], raw_materials: [], bom_items: [] }),
+    json: () => Promise.resolve({ inventory: [] }),
   })) as any;
 
   await act(async () => {
@@ -29,6 +29,6 @@ test("does not expose backend API route names in the inventory UI", async () => 
     );
   });
 
-  expect(screen.getByText("Raw Materials")).toBeDefined();
-  expect(screen.queryByText(/\/api\/ui\/supply/)).toBeNull();
+  expect(screen.getByText("Products & Variants")).toBeDefined();
+  expect(screen.queryByText(/\/api\/ui\/inventory/)).toBeNull();
 });

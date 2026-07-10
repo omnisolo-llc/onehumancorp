@@ -151,3 +151,4 @@ CREATE POLICY tenant_isolation_telemetry_buffer ON telemetry_buffer USING (tenan
 -- Missing RLS Enablement added by cleanup script
 ALTER TABLE IF EXISTS embedding_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS telemetry_buffer ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inventory_transactions ENABLE ROW LEVEL SECURITY;
