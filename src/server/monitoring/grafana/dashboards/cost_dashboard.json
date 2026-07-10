@@ -100,7 +100,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_agent_cost_total{organization_id=\"$tenant\"}[5m])) by (agent_id)",
+          "expr": "sum(rate(ohc_llm_cost_total_cents{organization_id=\"$tenant\"}[5m])) by (agent_id)",
           "interval": "",
           "legendFormat": "{{agent_id}}",
           "refId": "A"
@@ -175,7 +175,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_api_call_cost_total{organization_id=\"$tenant\"}[5m])) by (entity)",
+          "expr": "sum(rate(ohc_api_call_cost{organization_id=\"$tenant\"}[5m])) by (entity)",
           "interval": "",
           "legendFormat": "{{entity}}",
           "refId": "A"
@@ -250,7 +250,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_storage_rw_cost_total{organization_id=\"$tenant\"}[5m])) by (operation)",
+          "expr": "sum(rate(ohc_storage_rw_cost{organization_id=\"$tenant\"}[5m])) by (operation)",
           "interval": "",
           "legendFormat": "{{operation}}",
           "refId": "A"
@@ -325,7 +325,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_email_send_cost_total{organization_id=\"$tenant\"}[5m]))",
+          "expr": "sum(rate(ohc_email_send_cost{organization_id=\"$tenant\"}[5m]))",
           "interval": "",
           "legendFormat": "Emails",
           "refId": "A"
@@ -349,7 +349,7 @@
           "value": "$__all"
         },
         "datasource": "Prometheus",
-        "definition": "label_values(ohc_agent_cost_total, organization_id)",
+        "definition": "label_values(ohc_llm_cost_total_cents, organization_id)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -359,7 +359,7 @@
         "name": "tenant",
         "options": [],
         "query": {
-          "query": "label_values(ohc_agent_cost_total, organization_id)",
+          "query": "label_values(ohc_llm_cost_total_cents, organization_id)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
