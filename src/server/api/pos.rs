@@ -19,6 +19,7 @@ where
     Router::new()
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
+        .route("/inventory/adjust", axum::routing::post(post_inventory_adjust_handler))
         .route("/auth", axum::routing::post(pos_auth_handler))
         .route("/orders/translate", axum::routing::post(translate_order_notes_handler))
         .with_state(hub)
@@ -178,6 +179,60 @@ async fn post_inventory_handler(
         }
     }
     Json(json!({"status": "ok"}))
+}
+
+#[derive(serde::Deserialize)]
+pub struct InventoryAdjustment {
+    pub item_id: String,
+    pub quantity_change: i32,
+}
+
+async fn post_inventory_adjust_handler(
+    State(_hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<InventoryAdjustment>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let pool = crate::db::get_pool();
+
+    if !payload.item_id.is_empty() && payload.quantity_change != 0 {
+        if let Ok(mut tx) = pool.begin().await {
+            // Create inventory transaction
+            let tx_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, product_id, location_id, type, quantity_change) VALUES ($1, $2, $3, 'default', 'manual_adjustment', $4)")
+                .bind(&tx_id)
+                .bind(tenant_id)
+                .bind(&payload.item_id)
+                .bind(payload.quantity_change)
+                .execute(&mut *tx)
+                .await;
+
+            // Update products available_quantity and inventory_count
+            let update_res = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1) WHERE id = $2 AND tenant_id = $3")
+                .bind(payload.quantity_change)
+                .bind(&payload.item_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            if update_res.is_ok() {
+                let _ = tx.commit().await;
+
+                let edge_cache = crate::builder::edge::get_edge_cache();
+                edge_cache.invalidate_by_tag(&format!("entity:product:{}", payload.item_id)).await;
+                edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+                return Json(json!({"status": "ok"}));
+            } else {
+                let _ = tx.rollback().await;
+            }
+        }
+    }
+    Json(json!({"status": "error"}))
 }
 
 #[derive(serde::Deserialize)]

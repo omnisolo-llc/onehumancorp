@@ -1,25 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AppShell } from "../components/AppShell";
 
-type RawMaterial = {
+type Product = {
   id: string;
   name: string;
-  current_quantity: number;
-  reorder_threshold: number;
-};
-
-type Vendor = {
-  id: string;
-  name: string;
-  contact_info?: string;
-};
-
-type SupplyPayload = {
-  vendors: Vendor[];
-  raw_materials: RawMaterial[];
-  bom_items: unknown[];
+  stock: number;
 };
 
 function tenantId() {
@@ -27,101 +14,191 @@ function tenantId() {
   return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
 }
 
-export default function InventoryDashboard() {
-  const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+export default function CentralizedInventory() {
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [posSimulateMsg, setPosSimulateMsg] = useState("");
+
+  const fetchInventory = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/pos/inventory?tenant_id=${encodeURIComponent(tenantId())}`);
+      if (!res.ok) throw new Error("Failed to load inventory");
+      const data = await res.json();
+      setProducts(data.inventory || []);
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch inventory");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadSupply() {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/ui/supply?tenant_id=${encodeURIComponent(tenantId())}`);
-        if (!res.ok) throw new Error("Failed to load inventory from the database");
-        const data = await res.json();
-        setSupply({
-          vendors: Array.isArray(data?.vendors) ? data.vendors : [],
-          raw_materials: Array.isArray(data?.raw_materials) ? data.raw_materials : [],
-          bom_items: Array.isArray(data?.bom_items) ? data.bom_items : [],
-        });
-      } catch (e: any) {
-        setError(e?.message || "Failed to load inventory");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSupply();
+    fetchInventory();
   }, []);
 
-  const lowStockMaterials = useMemo(
-    () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold),
-    [supply.raw_materials],
+  const handleAdjust = async (product: Product, change: number) => {
+    // Optimistic update
+    setProducts(prev => prev.map(p => {
+      if (p.id === product.id) {
+        return { ...p, stock: Math.max(0, p.stock + change) };
+      }
+      return p;
+    }));
+
+    try {
+      const res = await fetch("/api/pos/inventory/adjust", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId()
+        },
+        body: JSON.stringify({ item_id: product.id, quantity_change: change })
+      });
+      if (!res.ok) throw new Error("Adjustment failed");
+    } catch (e: any) {
+      setError(e.message || "Failed to adjust inventory");
+      fetchInventory(); // Revert
+    }
+  };
+
+  const simulatePosSale = async (product: Product) => {
+    // 1. Reserve
+    try {
+      const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId(),
+          "x-spiffe-id": `spiffe://ohc/org/${tenantId()}/agent/browser`
+        },
+        body: JSON.stringify({
+          tenant_id: tenantId(),
+          product_id: product.id,
+          quantity: 1,
+          ttl_seconds: 15
+        })
+      });
+
+      const reserveData = await reserveRes.json();
+      if (!reserveRes.ok || !reserveData.success) {
+        setPosSimulateMsg("Failed to reserve: " + (reserveData.error_message || "Item is currently being checked out"));
+        return;
+      }
+
+      // Optimistically deduct stock
+      setProducts(prev => prev.map(p => {
+        if (p.id === product.id) {
+          return { ...p, stock: Math.max(0, p.stock - 1) };
+        }
+        return p;
+      }));
+      setPosSimulateMsg(`Reserved! Simulating checkout...`);
+
+      // 2. Commit
+      const commitRes = await fetch("/api/v1/payments/terminal/commit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenantId(),
+          "x-spiffe-id": `spiffe://ohc/org/${tenantId()}/agent/browser`
+        },
+        body: JSON.stringify({
+          tenant_id: tenantId(),
+          product_id: product.id,
+          quantity: 1,
+          lock_id: reserveData.lock_id
+        })
+      });
+
+      const commitData = await commitRes.json();
+      if (commitRes.ok && commitData.success) {
+        setPosSimulateMsg("Sale completed successfully.");
+      } else {
+        setPosSimulateMsg("Sale failed.");
+        fetchInventory(); // Revert optimistic
+      }
+    } catch (e: any) {
+      setPosSimulateMsg("Error: " + e.message);
+      fetchInventory();
+    }
+  };
+
+  const lowStockProducts = useMemo(
+    () => products.filter(p => p.stock <= 5),
+    [products]
   );
 
   return (
     <AppShell
-      title="Inventory"
-      subtitle="Supply-chain records from the database, without fallback data."
+      title="Inventory Ledger"
+      subtitle="Centralized dynamic inventory. Mutating stock here syncs globally."
       statusItems={[
-        { label: "Materials", value: String(supply.raw_materials.length), tone: supply.raw_materials.length > 0 ? "good" : "neutral" },
-        { label: "Low Stock", value: String(lowStockMaterials.length), tone: lowStockMaterials.length > 0 ? "warn" : "good" },
-        { label: "Vendors", value: String(supply.vendors.length), tone: supply.vendors.length > 0 ? "good" : "neutral" },
+        { label: "Products", value: String(products.length), tone: products.length > 0 ? "good" : "neutral" },
+        { label: "Low Stock", value: String(lowStockProducts.length), tone: lowStockProducts.length > 0 ? "warn" : "good" }
       ]}
     >
       <div className="app-grid two">
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Raw Materials</div>
-              <div className="app-list-subtitle">Live material levels and reorder thresholds.</div>
+              <div className="app-panel-title">Variants & Products</div>
+              <div className="app-list-subtitle">Manage unified stock across online and in-store.</div>
             </div>
           </div>
-          {error && <div className="app-empty">{error}</div>}
-          {!error && supply.raw_materials.length === 0 ? (
-            <div className="app-empty">{loading ? "Loading inventory from the database..." : "No raw material rows found for this tenant."}</div>
-          ) : (
-            <div className="app-table-wrap">
-              <table className="app-table">
-                <thead>
-                  <tr>
-                    <th>Material</th>
-                    <th>On Hand</th>
-                    <th>Threshold</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {supply.raw_materials.map((material) => {
-                    const low = material.current_quantity <= material.reorder_threshold;
-                    return (
-                      <tr key={material.id} data-testid={`alert-card-${material.id}`}>
-                        <td className="font-semibold">{material.name}</td>
-                        <td>{material.current_quantity}</td>
-                        <td>{material.reorder_threshold}</td>
-                        <td><span className={`app-badge ${low ? "warn" : "good"}`}>{low ? "Low Stock" : "Healthy"}</span></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {error && <div className="app-empty" style={{color: 'red'}}>{error}</div>}
+
+          <div className="app-table-wrap">
+            <table className="app-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>On Hand</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && products.length === 0 ? (
+                  <tr><td colSpan={3} className="app-empty">Loading inventory...</td></tr>
+                ) : products.length === 0 ? (
+                  <tr><td colSpan={3} className="app-empty">No products found.</td></tr>
+                ) : (
+                  products.map(p => (
+                    <tr key={p.id}>
+                      <td className="font-semibold">{p.name}</td>
+                      <td>{p.stock}</td>
+                      <td>
+                        <button style={{marginRight: '8px', padding: '4px 12px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px'}} onClick={() => handleAdjust(p, -1)}>-</button>
+                        <button style={{padding: '4px 12px', background: 'rgba(0,0,0,0.05)', borderRadius: '4px'}} onClick={() => handleAdjust(p, 1)}>+</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="app-panel">
           <div className="app-panel-header">
-            <div className="app-panel-title">Vendors</div>
+            <div className="app-panel-title">POS Simulator</div>
           </div>
-          <div className="app-list">
-            {supply.vendors.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading vendors from the database..." : "No vendor rows found for this tenant."}</div>
-            ) : supply.vendors.map((vendor) => (
-              <div key={vendor.id} className="app-list-item">
-                <div>
-                  <div className="app-list-title">{vendor.name}</div>
-                  <div className="app-list-subtitle">{vendor.contact_info || "No contact info recorded"}</div>
-                </div>
+          <div className="app-list" style={{padding: '16px'}}>
+            <p style={{marginBottom: '16px', fontSize: '14px', color: '#666'}}>
+              Test real-time unified checkout. Processing a sale here will immediately lock and deduct stock from the ledger above.
+            </p>
+            {posSimulateMsg && <p style={{color: '#0055ff', marginBottom: '16px'}}>{posSimulateMsg}</p>}
+            {products.map(p => (
+              <div key={p.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                <span>{p.name}</span>
+                <button
+                  style={{padding: '8px 16px', background: '#0055ff', color: '#fff', borderRadius: '4px'}}
+                  onClick={() => simulatePosSale(p)}
+                >
+                  Sell In-Person (POS)
+                </button>
               </div>
             ))}
           </div>

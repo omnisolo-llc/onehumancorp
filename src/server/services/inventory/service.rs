@@ -534,6 +534,14 @@ impl InventoryService {
             update_result
         };
 
+        let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, product_id, location_id, type, quantity_change) VALUES ($1, $2, $3, 'default', 'sale', $4)")
+            .bind(Uuid::new_v4().to_string())
+            .bind(tenant_id)
+            .bind(product_id)
+            .bind(-quantity)
+            .execute(&mut *tx)
+            .await;
+
         if let Some(new_stock) = update_result {
             let event_id = Uuid::new_v4().to_string();
             let event_payload = serde_json::json!({

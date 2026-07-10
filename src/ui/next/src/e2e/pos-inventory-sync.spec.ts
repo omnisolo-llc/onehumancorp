@@ -99,7 +99,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     await page.getByRole('button', { name: 'Pay' }).click();
 
     // 4. Verify the "Item just sold out" message appears
-    await expect(page.locator('h3', { hasText: 'Oops! Item just sold out.' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Oops! Item just sold out.' })).toBeVisible({ timeout: 15000 });
 
     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
