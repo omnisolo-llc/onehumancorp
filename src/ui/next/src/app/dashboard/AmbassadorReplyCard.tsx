@@ -64,7 +64,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
         Draft Reply
       </div>
       <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
-        {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send."}
+        {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || approval.proposed_action?.draft_reply || "Ready to send."}
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
         {onApprove && (
