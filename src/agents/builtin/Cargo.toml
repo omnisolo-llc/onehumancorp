@@ -16,7 +16,6 @@ futures = { workspace = true }
 futures-util = "0.3.32"
 glob = "0.3"
 hex = "0.4"
-hmac = "0.12"
 ohc_builtin_agent_core = { path = "core" }
 ohc_builtin_agent_llm = { path = "llm" }
 ohc_builtin_agent_tools = { path = "tools" }
@@ -33,7 +32,6 @@ server_harness = { path = "../../server/harness" }
 server_ohc = { path = "../../server/ohc" }
 server_pricing = { path = "../../server/pricing" }
 server_telemetry = { path = "../../server/telemetry" }
-sha2 = "0.10"
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 temp-env = "0.3.6"
 tempfile = "3.27.0"

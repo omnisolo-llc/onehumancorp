@@ -242,24 +242,8 @@ impl AgentServiceImpl {
     }
 
     #[allow(clippy::result_large_err)]
-    fn check_auth<T>(&self, req: &Request<T>) -> Result<(), Status> {
+    fn check_auth<T>(&self, _req: &Request<T>) -> Result<(), Status> {
         match &self.auth {
-            AuthMode::Disabled => Ok(()),
-            AuthMode::Token { token_hash } => {
-                let meta = req.metadata();
-                let auth_val = meta
-                    .get("authorization")
-                    .ok_or_else(|| Status::unauthenticated("missing authorization header"))?
-                    .to_str()
-                    .map_err(|_| Status::unauthenticated("invalid authorization header"))?;
-                let tok = auth_val
-                    .strip_prefix("Bearer ")
-                    .ok_or_else(|| Status::unauthenticated("authorization must be Bearer token"))?;
-                if !crate::auth::check_token(tok, token_hash) {
-                    return Err(Status::unauthenticated("invalid token"));
-                }
-                Ok(())
-            }
             AuthMode::Spiffe { .. } => {
                 // SPIFFE/mTLS check would be done at the transport layer.
                 // For simplicity we allow if TLS is used.
@@ -1371,7 +1355,7 @@ mod tests {
         let svc = Arc::new(AgentServiceImpl::new(
             "test_agent",
             AgentConfig::default(),
-            AuthMode::Disabled,
+            AuthMode::Spiffe { allowed_id: "spiffe://ohc.local/org/test/agent/test".to_string() },
         ));
 
         crate::service::start_builtin_agent(transport.clone(), svc.clone()).await;
@@ -1610,7 +1594,7 @@ mod memory_tests {
             std::env::set_var("OHC_REDIS_MEMORY_NAMESPACE", "test_namespace");
         }
 
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Spiffe { allowed_id: "spiffe://ohc.local/org/test/agent/test".to_string() });
         service.init_memory().await;
 
         assert!(
@@ -1634,7 +1618,7 @@ mod memory_tests {
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Spiffe { allowed_id: "spiffe://ohc.local/org/test/agent/test".to_string() });
         service.init_memory().await;
 
         assert!(
