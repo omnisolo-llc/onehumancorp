@@ -1,20 +1,21 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('The Promoter Agent CUJ', () => {
-  test('generates social post and SEO tags for a new product', async ({ page }) => {
+  test('generates social post and SEO tags for a new product', async ({ page, loginAs, unlimitedAdminUser }) => {
+    // Login to ensure we have access
+    await loginAs(page, unlimitedAdminUser);
 
     // We start at the homepage/triage feed
-    await page.goto('/');
+    await page.goto('/dashboard.html');
 
-    // Verify the Promoter card is visible (it shouldn't be yet, since there are no products, but the page could be empty state)
-    // Wait for the feed to load
+    // Wait for the dashboard to load
+    await expect(page.locator('text="The Promoter Agent"')).toBeVisible();
 
     // For this test, we navigate directly to the promoter page which we added a link for
-    await page.click('text="Go to Promoter Agent"');
+    await page.click('text="Promote New Product"');
 
-    // We should see the empty state first if no mocked data
-    // The exact behavior depends on how data is mocked, but we will assert the empty state first
-    await expect(page.locator('text="No new proposals generated."')).toBeVisible();
+    // The button has ID generate-btn
+    await expect(page.locator('#generate-btn')).toBeVisible();
 
   });
 });
