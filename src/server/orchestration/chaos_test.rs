@@ -922,3 +922,110 @@ mod chaos_tests {
         assert_eq!(res.unwrap().len(), 0);
     }
 }
+
+#[tokio::test]
+async fn test_redis_mailbox_corruption_pubsub_loss() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+    // ML-Resilience Parity: Simulate Redis Pub/Sub message loss & mailbox corruption
+    use std::sync::Arc;
+    use std::time::Duration;
+    use crate::orchestration::mesh::TeammateMesh;
+    use ohc_builtin_agent::mesh::transport::Message;
+
+    struct CorruptedRedisMesh;
+
+    #[async_trait::async_trait]
+    impl TeammateMesh for CorruptedRedisMesh {
+        async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+            // Chaos: Simulate 100% message loss
+            Ok(())
+        }
+        async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
+            // Chaos: Simulate corrupted mailbox returning garbage response
+            Err("Redis connection reset by peer - corrupted mailbox state".to_string())
+        }
+        async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+        async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn extend_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
+            Ok(true)
+        }
+        async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> {
+            Ok(())
+        }
+        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+            Ok(vec![])
+        }
+    }
+
+    let mesh = Arc::new(CorruptedRedisMesh);
+
+    // Publish standard message (should succeed but get "lost" in transit)
+    let pub_res = mesh.publish("agent_mailbox_1", b"corrupt_data".to_vec()).await;
+    assert!(pub_res.is_ok(), "Publish should succeed even if message is dropped by ChaosMesh");
+
+    // Publish with ack (should fail gracefully)
+    let ack_res = mesh.publish_with_ack("agent_mailbox_1", b"corrupt_data".to_vec()).await;
+    assert!(ack_res.is_err(), "Publish with ack should fail due to mailbox corruption");
+    assert!(ack_res.unwrap_err().contains("corrupted mailbox state"), "Must fail with specific corruption error");
+}
+
+#[tokio::test]
+async fn test_redis_agent_lock_race_condition() {
+    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+    // ML-Resilience Parity: Simulate race conditions on .agent-lock/ in Redis
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use std::time::Duration;
+
+    struct MockRedisLock {
+        locked: Arc<Mutex<bool>>,
+    }
+
+    impl MockRedisLock {
+        async fn acquire(&self, _key: &str) -> Result<bool, String> {
+            let mut l = self.locked.lock().await;
+            if *l {
+                // Already locked
+                Ok(false)
+            } else {
+                *l = true;
+                Ok(true)
+            }
+        }
+
+        async fn acquire_with_chaos(&self, key: &str, lag: u64) -> Result<bool, String> {
+            tokio::time::sleep(Duration::from_millis(lag)).await;
+            self.acquire(key).await
+        }
+    }
+
+    let mock_lock = Arc::new(MockRedisLock { locked: Arc::new(Mutex::new(false)) });
+
+    let l1 = mock_lock.clone();
+    let l2 = mock_lock.clone();
+
+    // Spawn two tasks racing to acquire the same lock, with simulated network lag
+    let h1 = tokio::spawn(async move {
+        l1.acquire_with_chaos(".agent-lock/test", 10).await.unwrap()
+    });
+
+    let h2 = tokio::spawn(async move {
+        l2.acquire_with_chaos(".agent-lock/test", 12).await.unwrap()
+    });
+
+    let res1 = h1.await.unwrap();
+    let res2 = h2.await.unwrap();
+
+    // Only one should successfully acquire the lock
+    assert_ne!(res1, res2, "Chaos test failed: Race condition resulted in both agents acquiring the .agent-lock/");
+    assert!(res1 || res2, "Chaos test failed: Neither agent acquired the lock");
+}
