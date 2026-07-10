@@ -1,15 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
-  test('Owner receives Instagram DM, views draft in feed, and approves it', async ({ page }) => {
+  test('Owner receives Instagram DM, views draft in feed, and approves it', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     test.setTimeout(180000);
 
     // 1. Log in via UI
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@ohc.local');
-    await page.fill('input[type="password"]', 'changeme');
-    await page.click('button:has-text("Log In")');
-    await expect(page).toHaveURL(/\/dashboard/);
+
+
+
+
+
 
     // 2. Simulate incoming Instagram DM via omnichannel webhook
     const tenantId = 'default';
@@ -20,7 +21,7 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
       message: 'Do you have vegan chocolate cake available for Saturday?'
     };
 
-    const response = await page.request.post('/api/v1/omnichannel/webhook', {
+    const response = await page.request.post("/api/v1/omnichannel/webhook", {
       data: messagePayload
     });
     expect(response.status()).toBe(200);
@@ -29,7 +30,7 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
     await page.waitForTimeout(5000); // Give worker some time to process
 
     // 4. Go to Agent Feed
-    await page.goto('/feed');
+    await page.goto("/feed");
     await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
 
     // Look for the specific card based on source or content
