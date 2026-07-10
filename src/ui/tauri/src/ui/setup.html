@@ -4332,6 +4332,34 @@
       });
 
       document.addEventListener("DOMContentLoaded", () => {
+
+      // Real-time input validation & state sync for seamless cross-device resumes
+      const realTimeFields = [
+        { inputId: 'business-name', errorId: 'name-error', stateKey: 'business_name' },
+        { inputId: 'business-tagline', errorId: null, stateKey: 'tagline' },
+        { inputId: 'first-offer', errorId: 'offer-error', stateKey: 'first_offer' },
+        { inputId: 'location-input', errorId: 'location-error', stateKey: 'location' },
+        { inputId: 'target-audience', errorId: 'target-audience-error', stateKey: 'target_audience' }
+      ];
+
+      realTimeFields.forEach(field => {
+        const el = document.getElementById(field.inputId);
+        const errEl = field.errorId ? document.getElementById(field.errorId) : null;
+        if (el) {
+          el.addEventListener('input', () => {
+            // Remove error styling instantly
+            if (el.value.trim().length > 0) {
+              if (errEl) errEl.style.display = 'none';
+              el.classList.remove('invalid-input');
+            }
+
+            // Sync to state and localStorage for cross-device resume
+            state[field.stateKey] = el.value.trim();
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          });
+        }
+      });
+
         // Add keyboard navigation for context cards
         document.querySelectorAll(".context-card").forEach((card) => {
           card.addEventListener("keydown", function(e) {
