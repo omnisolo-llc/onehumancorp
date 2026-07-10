@@ -7,9 +7,9 @@ interface SocialPostProposal {
   tenant_id: string;
   product_id: string;
   content: string;
-  image_url: string;
-  seo_alt_text: string;
-  seo_meta_description: string;
+  image_url?: string;
+  seo_alt_text?: string;
+  seo_meta_description?: string;
   status: string;
   created_at_unix: number;
 }
@@ -17,9 +17,27 @@ interface SocialPostProposal {
 export default function PromoterPage() {
   const [proposals, setProposals] = useState<SocialPostProposal[]>([]);
   const [selectedProposal, setSelectedProposal] = useState<SocialPostProposal | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This is mocked for now
+    async function loadProposals() {
+      try {
+        const response = await fetch('/api/campaign/proposals', {
+          headers: {
+            'x-tenant-id': localStorage.getItem('tenantId') || 'default',
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProposals(data.proposals || []);
+        }
+      } catch (err) {
+        console.error("Failed to load proposals", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProposals();
   }, []);
 
   if (selectedProposal) {
@@ -28,18 +46,18 @@ export default function PromoterPage() {
         <button onClick={() => setSelectedProposal(null)} className="mb-4 text-blue-500">&larr; Back</button>
         <h2 className="text-xl font-bold mb-4">Promoter Proposal</h2>
         <div className="bg-white rounded shadow p-4">
-            {selectedProposal.image_url && <img src={selectedProposal.image_url} alt={selectedProposal.seo_alt_text} className="w-full h-48 object-cover rounded mb-4" />}
+            {selectedProposal.image_url && <img src={selectedProposal.image_url} alt={selectedProposal.seo_alt_text || 'Product image'} className="w-full h-48 object-cover rounded mb-4" />}
             <p className="text-sm font-semibold text-gray-700">Caption:</p>
             <p className="text-gray-900 mb-4">{selectedProposal.content}</p>
             <details className="mb-4">
                 <summary className="text-sm text-gray-500 cursor-pointer">SEO Details</summary>
                 <div className="mt-2 text-sm text-gray-700">
-                    <p><strong>Alt Text:</strong> {selectedProposal.seo_alt_text}</p>
-                    <p><strong>Meta Description:</strong> {selectedProposal.seo_meta_description}</p>
+                    <p><strong>Alt Text:</strong> {selectedProposal.seo_alt_text || 'N/A'}</p>
+                    <p><strong>Meta Description:</strong> {selectedProposal.seo_meta_description || 'N/A'}</p>
                 </div>
             </details>
             <div className="flex gap-2">
-                <button className="flex-1 bg-blue-500 text-white py-2 rounded">Approve & Publish</button>
+                <button className="flex-1 bg-blue-500 text-white py-2 rounded" id="generate-btn">Approve & Publish</button>
                 <button className="flex-1 bg-gray-200 text-gray-800 py-2 rounded">Edit</button>
                 <button className="flex-1 bg-red-100 text-red-600 py-2 rounded">Discard</button>
             </div>
@@ -52,7 +70,9 @@ export default function PromoterPage() {
     <div className="p-4 max-w-sm mx-auto">
       <h1 className="text-2xl font-bold mb-4">The Promoter</h1>
       <div className="space-y-4">
-        {proposals.length === 0 ? (
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading proposals...</p>
+        ) : proposals.length === 0 ? (
           <p className="text-gray-500 text-sm">No new proposals generated.</p>
         ) : (
           proposals.map((p) => (

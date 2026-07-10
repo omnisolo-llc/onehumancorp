@@ -99,6 +99,7 @@ where
         .route("/draft_agent", post(draft_agent))
         .route("/{id}", get(get_proposal))
         .route("/{id}/approve", post(approve_proposal))
+        .route("/social/list", get(list_social_post_proposals))
 }
 
 async fn draft_agent(
@@ -399,6 +400,70 @@ mod tests {
         let req = Request::builder()
             .method("POST")
             .uri("/123/approve")
+            .body(Body::empty())
+            .unwrap();
+
+        let _res = app.oneshot(req).await.unwrap();
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SocialPostProposal {
+    pub id: String,
+    pub tenant_id: String,
+    pub product_id: String,
+    pub content: String,
+    pub image_url: Option<String>,
+    pub seo_alt_text: Option<String>,
+    pub seo_meta_description: Option<String>,
+    pub status: String,
+    pub created_at_unix: i64,
+    pub updated_at_unix: i64,
+}
+
+#[derive(Deserialize)]
+pub struct ListSocialPostProposalsQuery {
+    pub tenant_id: String,
+}
+
+pub async fn list_social_post_proposals(
+    State(pool): State<PgPool>,
+    axum::extract::Query(query): axum::extract::Query<ListSocialPostProposalsQuery>,
+) -> impl IntoResponse {
+    let tenant_id = query.tenant_id;
+    let proposals_res = sqlx::query_as::<_, SocialPostProposal>(
+        "SELECT * FROM social_post_proposals WHERE tenant_id = $1 ORDER BY created_at_unix DESC LIMIT 50"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    match proposals_res {
+        Ok(proposals) => (StatusCode::OK, Json(serde_json::json!({ "proposals": proposals }))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch social post proposals: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Internal error" }))).into_response()
+        }
+    }
+}
+
+#[cfg(test)]
+mod social_tests {
+    use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_list_social_post_proposals_route_exists() {
+        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
+        if pool.is_err() {
+            return;
+        }
+        let app = router().with_state(pool.unwrap());
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/social/list?tenant_id=default")
             .body(Body::empty())
             .unwrap();
 
