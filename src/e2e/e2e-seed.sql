@@ -755,3 +755,6 @@ ON CONFLICT DO NOTHING;
 INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, health_score, last_engagement_at)
 VALUES ('sub_churn_1', 'e2e-tenant', 'c_churn_1', 'plan_churn_1', 'ACTIVE', 30, NOW() - INTERVAL '31 days')
 ON CONFLICT DO NOTHING;
+INSERT INTO service_items (id, tenant_id, name, base_price_cents)
+VALUES ('748888aa-3333-3333-3333-333333333333', 'tenant-1', '2-Bedroom Apartment Painting', 120000)
+ON CONFLICT (id) DO NOTHING;
