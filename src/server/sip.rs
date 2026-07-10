@@ -139,7 +139,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(threshold_time.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -1323,12 +1323,12 @@ mod tests {
             let res = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await;
             assert!(res.is_ok());
 
-            // Verify stagnant missions were deleted
-            let count_stagnant: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
+            // Verify stagnant missions were marked as FAILED
+            let count_stagnant: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_missions WHERE status = 'FAILED' AND id IN ('stagnant_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
-            assert_eq!(count_stagnant, 0);
+            assert_eq!(count_stagnant, 3);
 
             // Verify dead letters were created
             let count_dead_letters: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM department_dead_letters WHERE event_type = 'mission_stagnant'")
