@@ -2501,6 +2501,48 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
+    let unified_intake_worker_db = db.clone();
+    tokio::spawn(async move {
+        loop {
+            // Very simple queue poller, we don't have the full queue abstraction here so we'll just poll the DB directly for simplicity, similar to the other workers
+            // Or we use the new unified_intake_worker loop
+            match &unified_intake_worker_db.store {
+                crate::db::DbStore::Postgres => {
+                    let res = sqlx::query("SELECT id, payload, tenant_id FROM ohc_job_queue WHERE job_type = 'UNIFIED_INTAKE_TRIAGE' AND status = 'PENDING' LIMIT 1")
+                        .fetch_optional(&unified_intake_worker_db.pool).await;
+                    if let Ok(Some(row)) = res {
+                        use sqlx::Row;
+                        let id: String = row.try_get("id").unwrap_or_default();
+                        let payload: serde_json::Value = row.try_get("payload").unwrap_or_default();
+                        let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
+
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
+                            .bind(&id).execute(&unified_intake_worker_db.pool).await;
+
+                        let _ = crate::workers::unified_intake_worker::process_unified_intake(unified_intake_worker_db.clone(), id, payload, tenant_id).await;
+                    }
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    let res = sqlx::query("SELECT id, payload, tenant_id FROM ohc_job_queue WHERE job_type = 'UNIFIED_INTAKE_TRIAGE' AND status = 'PENDING' LIMIT 1")
+                        .fetch_optional(pool).await;
+                    if let Ok(Some(row)) = res {
+                        use sqlx::Row;
+                        let id: String = row.try_get("id").unwrap_or_default();
+                        let payload_str: String = row.try_get("payload").unwrap_or_default();
+                        let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_default();
+                        let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
+
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&id).execute(pool).await;
+
+                        let _ = crate::workers::unified_intake_worker::process_unified_intake(unified_intake_worker_db.clone(), id, payload, tenant_id).await;
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+        }
+    });
+
 
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
@@ -6405,7 +6447,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
-        .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/daily-work/action/:id", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/triage", axum::routing::get(crate::api::unified_intake::get_triage_feed_handler).with_state(db.clone()))
+        .route("/api/ui/triage/action/:id", axum::routing::post(crate::api::unified_intake::approve_proposed_task_handler).with_state(db.clone()))
+        .route("/api/webhook/simulate_intake", axum::routing::post(crate::api::unified_intake::simulate_intake_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))

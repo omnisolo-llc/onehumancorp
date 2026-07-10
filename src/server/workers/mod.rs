@@ -28,3 +28,4 @@ pub mod booking_reengagement_job;
 
 pub mod subscription_health_job;
 pub mod subscription_health_worker;
+pub mod unified_intake_worker;
