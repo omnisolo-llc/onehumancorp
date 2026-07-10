@@ -1174,7 +1174,7 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
-                // C. 4. Verification Loops: Guides (steer before action)
+                // Master Catalog C.4. Architectural Decisions & Metrics: Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
                     .run_guides_before_action(&msg.content, &current_context)
                     .await
@@ -1182,7 +1182,7 @@ impl Agent {
                     messages.push(crate::types::Message::user(e));
                     continue;
                 }
-                // C. 4. Verification Loops: Sensors (observe after action)
+                // Master Catalog C.4. Architectural Decisions & Metrics: Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
                     .run_sensors_after_action(&msg.content, initial_message, Some(&msg.content))
                     .await
@@ -3989,7 +3989,7 @@ impl Agent {
                 }
 
                 let current_context = serde_json::to_string(&messages).unwrap_or_default();
-                // C. 4. Verification Loops: Guides (steer before action)
+                // Master Catalog C.4. Architectural Decisions & Metrics: Verification Loops: Guides (steer before action)
                 if let Err(e) = verification_manager
                     .run_guides_before_action(&last_assistant_content, &current_context)
                     .await
@@ -3999,7 +3999,7 @@ impl Agent {
                     messages.push(user_msg);
                     continue;
                 }
-                // C. 4. Verification Loops: Sensors (observe after action)
+                // Master Catalog C.4. Architectural Decisions & Metrics: Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
                     .run_sensors_after_action(&last_assistant_content, initial_message, Some(&last_assistant_content))
                     .await

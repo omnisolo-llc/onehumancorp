@@ -25,7 +25,7 @@ pub trait InferentialSensor: Send + Sync {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String>;
 }
 
-/// 10. Verification Loops (Quality x3): Giving the model ways to verify work.
+/// Master Catalog B.10. Verification Loops (Quality x3): Giving the model ways to verify work.
 ///     Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests),
 ///     Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and
 ///     Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
