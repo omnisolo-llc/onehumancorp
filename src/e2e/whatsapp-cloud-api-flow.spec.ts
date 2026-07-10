@@ -131,4 +131,43 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
     await expect(page.getByText(/Look at this cake/i).first()).toBeVisible({ timeout: 15000 });
   });
 
+  test('Owner receives a WhatsApp Cloud API message with audio media', async ({ page, request }) => {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    const payload = {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "value": {
+                            "metadata": {
+                                "display_phone_number": "tenant-whatsapp-id"
+                            },
+                            "messages": [
+                                {
+                                    "from": "0987654321",
+                                    "audio": {
+                                        "id": "audio123"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    };
+
+    const response = await request.post(`${apiBase}/api/v1/webhooks/meta`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: payload,
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto('/inbox');
+    await expect(page.getByText(/\[Audio\]\(audio123\)/i).first()).toBeVisible({ timeout: 15000 });
+  });
+
 });
