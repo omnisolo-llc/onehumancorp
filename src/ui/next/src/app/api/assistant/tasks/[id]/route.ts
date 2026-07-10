@@ -24,7 +24,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-       return NextResponse.json({ error: data.error || 'task could not be updated' }, { status: response.status });
+       return NextResponse.json({ error: data.error || 'task could not be updated' }, { status: response.status === 404 ? 404 : 502 });
     }
     if ('deletedTask' in data) {
        return NextResponse.json(data);

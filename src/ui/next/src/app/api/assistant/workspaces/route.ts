@@ -1,48 +1,68 @@
 import { NextResponse } from 'next/server';
-import { listWorkspaces, mutateWorkspace } from '../store';
+
+function backendUrl() {
+  return process.env.BACKEND_URL || 'http://localhost:8080';
+}
+
+function backendHeaders(request?: Request) {
+  const headers: Record<string, string> = {
+    'x-tenant-id': request?.headers?.get('x-tenant-id') || 'storefront',
+  };
+  const authHeader = request?.headers?.get('Authorization');
+  if (authHeader) headers.Authorization = authHeader;
+  return headers;
+}
+
+async function upstreamJson(response: Response, fallbackMessage: string) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
+  }
+  return NextResponse.json(data);
+}
 
 export async function GET(request?: Request) {
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request?.headers?.get('x-tenant-id') || 'storefront';
-    
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-    };
-    const authHeader = request?.headers?.get('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    const res = await fetch(`${backendUrl}/api/assistant/workspaces`, {
-      headers,
+    const route = request ? new URL(request.url).pathname.split('/').pop() : 'unknown';
+    const response = await fetch(`${backendUrl()}/api/assistant/${route}`, {
+      headers: backendHeaders(request),
     });
-
-    if (res.ok) {
-      const data = await res.json();
-      const workspaces = data.map((ws: any) => ({
-        id: ws.id,
-        name: ws.name,
-        collapsed: false,
-        pinned: false,
-        archived: false,
-        sortOrder: 0,
-        memoryFile: 'MEMORY.md',
-      }));
-      return NextResponse.json({ workspaces, deleted: [] });
-    }
-  } catch (error) {
-    console.error('Failed to fetch workspaces from backend:', error);
+    return upstreamJson(response, `Assistant ${route} unavailable`);
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable` }, { status: 502 });
   }
+}
 
-  return NextResponse.json(listWorkspaces());
+export async function POST(request: Request) {
+  const route = new URL(request.url).pathname.split('/').pop();
+  const payload = await request.json().catch(() => null);
+  try {
+    const response = await fetch(`${backendUrl()}/api/assistant/${route}`, {
+      method: 'POST',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+       return NextResponse.json({ error: data.error || `Assistant ${route} unavailable` }, { status: response.status === 404 ? 404 : 502 });
+    }
+    return NextResponse.json(data, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: `Assistant backend unavailable` }, { status: 502 });
+  }
 }
 
 export async function PATCH(request: Request) {
+  const route = new URL(request.url).pathname.split('/').pop();
   const payload = await request.json().catch(() => null);
   try {
-    return NextResponse.json(mutateWorkspace(payload || {}));
+    const response = await fetch(`${backendUrl()}/api/assistant/${route}`, {
+      method: 'PATCH',
+      headers: { ...backendHeaders(request), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return upstreamJson(response, `Assistant ${route} could not be updated`);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'workspace could not be updated' }, { status: 400 });
+    return NextResponse.json({ error: `Assistant backend unavailable` }, { status: 502 });
   }
 }
