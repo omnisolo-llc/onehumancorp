@@ -18,6 +18,7 @@ describe('HelpCenterPage', () => {
       }
       if (url === '/api/help') {
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve([
             { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1", category: "General" },
             { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store", category: "General" },
@@ -37,6 +38,7 @@ describe('HelpCenterPage', () => {
           a.desc.toLowerCase().includes(q)
         );
         return Promise.resolve({
+          ok: true,
           json: () => Promise.resolve(results)
         });
       }

@@ -31,7 +31,7 @@ describe("Help API Route", () => {
     expect(data).toEqual(mockData);
   });
 
-  it("returns empty array on backend error", async () => {
+  it("returns 500 and error object on backend error", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -41,18 +41,18 @@ describe("Help API Route", () => {
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toEqual([]);
+    expect(response.status).toBe(500);
+    expect(data).toEqual({ error: "Failed to fetch help" });
   });
 
-  it("handles fetch exceptions gracefully with empty array", async () => {
+  it("handles fetch exceptions gracefully with 500 error", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
     const request = new NextRequest("http://localhost/api/help");
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toEqual([]);
+    expect(response.status).toBe(500);
+    expect(data).toEqual({ error: "Failed to fetch help" });
   });
 });
