@@ -100,7 +100,7 @@ describe('PricingPage', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tier: 'Starter' }),
+        body: JSON.stringify({ tier: 'Starter', subscription_interval: 'month' }),
       });
       expect(window.location.href).toBe(mockCheckoutUrl);
     });
@@ -326,7 +326,7 @@ describe('PricingPage', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tier: 'Business' }),
+        body: JSON.stringify({ tier: 'Business', subscription_interval: 'month' }),
       });
       expect(window.location.href).toBe(mockCheckoutUrl);
     });
@@ -371,7 +371,7 @@ describe('PricingPage', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tier: 'Pro' }),
+        body: JSON.stringify({ tier: 'Pro', subscription_interval: 'month' }),
       });
       expect(window.location.href).toBe(mockCheckoutUrl);
     });
