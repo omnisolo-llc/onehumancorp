@@ -22,21 +22,25 @@ export function DashboardViralInviteWidget() {
     try {
       const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
       if (w.__TAURI__ && w.__TAURI__.core) {
-        const link = await w.__TAURI__.core.invoke('generate_cloud_bridge_invite');
+        const link = await w.__TAURI__.core.invoke('generate_referral_link');
         setReferralLink(link);
       } else {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-        const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+        const token = localStorage.getItem('token') || localStorage.getItem('ohc_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['authorization'] = `Bearer ${token}`;
+
+        const res = await fetch('/api/v1/growth/referrals/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+          headers,
+          body: JSON.stringify({ tenant_id: tenantId, custom_message: "" })
         });
         const data = await res.json();
-        setReferralLink(data.invite_link || `https://ohc.app/invite/${tenantId}`);
+        setReferralLink(data.referral_link || `https://ohc.app/ref/${tenantId}`);
       }
     } catch (err) {
       console.error(err);
-      setReferralLink(`https://ohc.app/invite/${tenantId}`);
+      setReferralLink(`https://ohc.app/ref/${tenantId}`);
     }
     setLoading(false);
   };

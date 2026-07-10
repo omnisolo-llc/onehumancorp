@@ -59,23 +59,24 @@ test.describe('Viral Loop Dashboard Widget', () => {
             });
         });
 
-        // Next, go to the Team page and generate an invite to trigger a change
-        await page.goto('/team');
-        const generateInviteBtn = page.locator('button:has-text("Invite to Cloud Team")');
+        // Next, go to the Referrals page and generate a link to trigger a change
+        await page.goto('/referrals');
 
-        await page.route('/api/v1/growth/cloud-bridge/invite', async route => {
-            await route.fulfill({ json: { invite_link: 'https://ohc.app/invite/test' } });
+        // Let's use the dashboard widget actually, or just simulate it directly on the dashboard
+        await page.goto('/dashboard');
+
+        const generateInviteBtn = page.locator('button:has-text("Get My Invite Link")');
+
+        await page.route('/api/v1/growth/referrals/generate', async route => {
+            await route.fulfill({ json: { referral_link: 'https://ohc.app/ref/test' } });
         });
 
         await expect(generateInviteBtn).toBeVisible();
         await generateInviteBtn.click();
 
         // The copy link input should become visible.
-        const copyInput = page.locator('#cloud-bridge-invite-link');
+        const copyInput = page.locator('#dashboard-invite-link');
         await expect(copyInput).toBeVisible({ timeout: 15000 });
-
-        // Go back to the dashboard and ensure the widget still renders
-        await page.goto('/dashboard');
         await expect(widgetHeader).toBeVisible();
 
         // Check if the number of invites sent has incremented
