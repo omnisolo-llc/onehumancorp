@@ -35,20 +35,29 @@ test.describe('Omnichannel Voice Order Intake', () => {
     await expect(page.getByText('Processing command...')).toBeVisible();
 
     // 7. Success state verifies the processing is complete
-    await expect(page.getByText('Action Prepared!')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Action Prepared!')).toBeVisible({ timeout: 15000 });
 
-    // 8. Find the created draft intent in the Agent Feed/Inbox
+    // 8. Confirm the order intent was translated to the result card correctly
+    // The structured item 'Chicken Tacos' should appear from the extracted JSON intent payload
+    // based on our mock translation string "Quiero 3 tacos de pollo" -> "3x Chicken Tacos"
+    const orderCard = page.getByText('Chicken Tacos');
+    await expect(orderCard).toBeVisible();
+
+    // 9. Confirm the drafted order via the walk-up UI
+    const confirmBtn = page.getByRole('button', { name: 'Confirm & Add to List' });
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
+
+    // 10. Find the created draft intent in the Agent Feed/Inbox (after modal closes)
     const feed = page.locator('section', { hasText: 'Unified Agent Feed' });
     await expect(feed).toBeVisible();
 
-    // 9. Confirm the order intent was created (assert loosely to account for LLM variation)
-    // The structured item 'Chicken Rice' should appear from the extracted JSON intent payload
-    const orderCard = page.getByText('Chicken Rice');
-    await expect(orderCard).toBeVisible();
+    // The item should now be in the feed
+    await expect(page.getByText('Chicken Tacos').first()).toBeVisible();
 
-    // 10. Approve the drafted order
-    const approveBtn = page.getByTestId('feed-approve-btn').first();
-    await approveBtn.waitFor({ state: 'visible', timeout: 5000 });
-    await approveBtn.click();
+    // 11. Approve the drafted order in the feed
+    const approveBtnFeed = page.getByTestId('feed-approve-btn').first();
+    await approveBtnFeed.waitFor({ state: 'visible', timeout: 5000 });
+    await approveBtnFeed.click();
   });
 });

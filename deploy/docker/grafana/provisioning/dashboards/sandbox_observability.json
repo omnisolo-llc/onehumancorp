@@ -1,0 +1,178 @@
+{
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "KAIROS",
+    "OHC",
+    "Hybrid",
+    "Observability",
+    "Sandbox"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Sandbox Observability Metrics",
+  "uid": "sandbox-observability",
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Sandbox Network I/O",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (ohc_sandbox_network_io)",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sandbox Policy Violations",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_sandbox_violations_total[5m])) by (reason)",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<h1 >Sandbox Observability Dashboard</h1>\n  <p >Full-Spectrum CPU, Memory, and IO tracking for Sandboxes</p>"
+      },
+      "title": "Aesthetic Injector",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "type": "timeseries",
+      "title": "Sandbox CPU Usage",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (ohc_sandbox_cpu_usage)",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Sandbox Memory Usage (Bytes)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum by (agent_id) (ohc_sandbox_memory_bytes)",
+          "legendFormat": "{{agent_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

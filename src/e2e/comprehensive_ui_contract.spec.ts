@@ -161,7 +161,7 @@ async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature
 }
 
 async function gotoReady(page: Page, route: string) {
-  await page.goto(route, { waitUntil: 'domcontentloaded' });
+  await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 1000 }).catch(() => undefined);
   await page.waitForTimeout(100);
   await page.evaluate(() => {
@@ -333,28 +333,18 @@ test.describe('comprehensive UI contract', () => {
   });
 
   for (const route of generatedContractRoutes) {
-    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ browser }) => {
+    test(`all visible interactive elements declare their designed purpose on ${routeLabel(route)}`, async ({ page }) => {
       test.setTimeout(120000);
-      const page = await browser.newPage();
-      try {
-        const audit = await auditInteractivePurposeForRoute(page, route);
-        console.info(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
-        expect(audit.failures).toEqual([]);
-      } finally {
-        await page.close();
-      }
+      const audit = await auditInteractivePurposeForRoute(page, route);
+      console.info(`Audited ${audit.auditedElements} interactive elements on ${routeLabel(route)}.`);
+      expect(audit.failures).toEqual([]);
     });
 
-    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ browser }) => {
+    test(`all visible enabled buttons and click targets have an effect on ${routeLabel(route)}`, async ({ page }) => {
       test.setTimeout(120000);
-      const page = await browser.newPage();
-      try {
-        const audit = await auditClickEffectsForRoute(page, route);
-        console.info(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
-        expect(audit.failures).toEqual([]);
-      } finally {
-        await page.close();
-      }
+      const audit = await auditClickEffectsForRoute(page, route);
+      console.info(`Audited ${audit.auditedTargets} click targets on ${routeLabel(route)}.`);
+      expect(audit.failures).toEqual([]);
     });
   }
 
@@ -371,7 +361,7 @@ test.describe('comprehensive UI contract', () => {
     });
 
     for (const route of appRoutes) {
-      const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+      const response = await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
       const status = response?.status() ?? 0;
       if (status >= 400) {
         failures.push(`${routeLabel(route)}: HTTP ${status}`);
@@ -396,7 +386,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
       const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
         anchors
           .filter((anchor) => {
@@ -436,7 +426,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
       const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
         anchors
           .filter((anchor) => {
@@ -578,7 +568,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const route of appRoutes) {
-      await page.goto(route, { waitUntil: 'domcontentloaded' });
+      await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
       const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
         elements.filter((element) => {
           const style = window.getComputedStyle(element);
@@ -634,7 +624,7 @@ test.describe('comprehensive UI contract', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       for (const route of appRoutes) {
-        await page.goto(route, { waitUntil: 'domcontentloaded' });
+        await page.goto(process.env.BASE_URL ? `${process.env.BASE_URL}${route}` : `http://127.0.0.1:18789${route}`, { waitUntil: 'domcontentloaded' });
         auditedLayouts += 1;
         const layout = await page.evaluate((selector) => {
           const documentElement = document.documentElement;

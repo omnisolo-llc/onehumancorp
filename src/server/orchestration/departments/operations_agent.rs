@@ -88,7 +88,14 @@ impl Department for OperationsAgent {
             if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
                 let pool = crate::db::get_pool();
                 let cache_clone = cache.clone();
+                let product_id_str = product_id.to_string();
                 tokio::spawn(async move {
+                    if !product_id_str.is_empty() {
+                        if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
+                            let product_cache_key = format!("storefront:product:{}:{}", tenant_uuid, product_uuid);
+                            let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_uuid, product_uuid, product_cache_key, cache_clone.clone()).await;
+                        }
+                    }
                     if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_uuid).await {
                         if let Some(site) = sites.first() {
                             let site_id = site.id;
@@ -249,6 +256,17 @@ impl Department for OperationsAgent {
                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
                 cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
+                if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                    if let Ok(product_uuid) = uuid::Uuid::parse_str(product_id) {
+                        let pool = crate::db::get_pool();
+                        let cache_clone = cache.clone();
+                        tokio::spawn(async move {
+                            let product_cache_key = format!("storefront:product:{}:{}", tenant_uuid, product_uuid);
+                            let _ = crate::builder::edge::regenerate_product_cache(pool, tenant_uuid, product_uuid, product_cache_key, cache_clone).await;
+                        });
+                    }
+                }
             }
         }
 

@@ -2465,7 +2465,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb)));
+    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, Some(cb)));
     let _ = consolidation_worker.spawn_background_task();
 
     let retention_job = crate::workers::subscription_retention_job::SubscriptionRetentionJob::new(db.clone());
@@ -2633,6 +2633,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
     let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
+    let multilingual_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::multilingual_agent::MultilingualAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2642,7 +2643,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
         dept_orchestrator.register_department(advisory_agent),
-        dept_orchestrator.register_department(translation_agent)
+        dept_orchestrator.register_department(translation_agent),
+        dept_orchestrator.register_department(multilingual_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
@@ -6814,6 +6816,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
+        .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))

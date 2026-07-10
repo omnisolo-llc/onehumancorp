@@ -3,7 +3,7 @@ import { test, expect, adminPage } from './fixtures';
 
 test('viral wrapped: verify year in review widget is dynamically rendered and shareable', async ({ browser }) => {
   // Set up local storage to simulate being a tenant
-  const page = page = await adminPage(browser);
+  let page = await adminPage(browser);
   await page.evaluate(() => {
     localStorage.setItem('tenant', 'e2e_tenant_id');
   });

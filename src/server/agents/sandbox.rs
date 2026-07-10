@@ -68,10 +68,45 @@ impl LocalEnvironment {
         command.env_remove("GITHUB_TOKEN");
         command.env_remove("OTEL_EXPORTER_OTLP_HEADERS");
 
+        let rusage_start = {
+            let mut rusage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+            unsafe {
+                libc::getrusage(libc::RUSAGE_CHILDREN, rusage.as_mut_ptr());
+                rusage.assume_init()
+            }
+        };
+
         let child = command.output();
 
         match timeout(timeout_dur, child).await {
-            Ok(output_result) => Ok(output_result?),
+            Ok(output_result) => {
+                let output = output_result?;
+
+                let mut rusage_end = std::mem::MaybeUninit::<libc::rusage>::uninit();
+                unsafe {
+                    libc::getrusage(libc::RUSAGE_CHILDREN, rusage_end.as_mut_ptr());
+                    let rusage_end = rusage_end.assume_init();
+
+                    let utime_sec = rusage_end.ru_utime.tv_sec - rusage_start.ru_utime.tv_sec;
+                    #[cfg(target_os = "linux")]
+                    let utime_usec = rusage_end.ru_utime.tv_usec - rusage_start.ru_utime.tv_usec;
+                    #[cfg(target_os = "linux")]
+                    let stime_usec = rusage_end.ru_stime.tv_usec - rusage_start.ru_stime.tv_usec;
+                    #[cfg(not(target_os = "linux"))]
+                    let utime_usec = rusage_end.ru_utime.tv_usec as i64 - rusage_start.ru_utime.tv_usec as i64;
+                    #[cfg(not(target_os = "linux"))]
+                    let stime_usec = rusage_end.ru_stime.tv_usec as i64 - rusage_start.ru_stime.tv_usec as i64;
+                    let stime_sec = rusage_end.ru_stime.tv_sec - rusage_start.ru_stime.tv_sec;
+                    let cpu_usage = (utime_sec as f64 + utime_usec as f64 / 1_000_000.0) + (stime_sec as f64 + stime_usec as f64 / 1_000_000.0);
+                    let mem_bytes = (rusage_end.ru_maxrss) as f64 * 1024.0;
+                    let net_io = (rusage_end.ru_inblock + rusage_end.ru_oublock) as f64;
+                    ::server_telemetry::record_sandbox_cpu_usage("local_sandbox", cpu_usage);
+                    ::server_telemetry::record_sandbox_memory_bytes("local_sandbox", mem_bytes);
+                    ::server_telemetry::record_sandbox_network_io("local_sandbox", net_io);
+                }
+
+                Ok(output)
+            }
             Err(_) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Command execution timed out").into()),
         }
     }
