@@ -16,6 +16,7 @@ export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [planDetails, setPlanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   useEffect(() => {
     const fetchPlanData = async () => {
@@ -64,7 +65,7 @@ export default function PricingPage() {
     }
   };
 
-  const handleUpgrade = async (tier: string) => {
+  const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/billing/create-checkout-session', {
@@ -73,7 +74,7 @@ export default function PricingPage() {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
       });
 
       if (!response.ok) {
@@ -102,6 +103,20 @@ export default function PricingPage() {
       <main id="pricing-screen" className="p-4 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
         <div className="text-center mb-4 md:mb-8 max-w-2xl mx-auto">
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
+        </div>
+
+        <div className="flex justify-center mb-8">
+          <label className="flex items-center cursor-pointer relative">
+            <span className={`mr-3 text-sm font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>Monthly</span>
+            <div className="relative">
+              <input type="checkbox" id="billing-toggle" className="sr-only" checked={isAnnual} onChange={() => setIsAnnual(!isAnnual)} />
+              <div className="block bg-gray-200 w-14 h-8 rounded-full"></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition ${isAnnual ? 'transform translate-x-6 bg-indigo-600' : ''}`}></div>
+            </div>
+            <span className={`ml-3 text-sm font-medium flex items-center ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+              Annual <span className="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold">Save 20%</span>
+            </span>
+          </label>
         </div>
 
         {/* My Plan Section */}
@@ -155,6 +170,8 @@ export default function PricingPage() {
           <PricingCard
             tierName="Starter"
             price="$29"
+            basePrice={29}
+            isAnnual={isAnnual}
             isRecommended={true}
             recommendationText="Suggested for growing stores"
             features={["3 Agents Limit", "1,000 AI actions / month", "5GB Storage Quota", "100 Products Limit"]}
@@ -166,6 +183,8 @@ export default function PricingPage() {
           <PricingCard
             tierName="Pro"
             price="$79"
+            basePrice={79}
+            isAnnual={isAnnual}
             features={["10 Agents Limit", "Unlimited AI actions", "50GB Storage Quota", "Unlimited Products"]}
             currentPlan={currentPlan}
             loading={loading}
@@ -175,6 +194,8 @@ export default function PricingPage() {
           <PricingCard
             tierName="Business"
             price="$299"
+            basePrice={299}
+            isAnnual={isAnnual}
             features={["Unlimited Agents", "Unlimited AI actions", "500GB Storage Quota", "Unlimited Products"]}
             currentPlan={currentPlan}
             loading={loading}
