@@ -15,6 +15,7 @@ pub mod finance_agent;
 pub mod legal_agent;
 pub mod business_advisory_agent;
 pub mod translation_agent;
+pub mod multilingual_agent;
 pub mod throttling;
 #[cfg(test)]
 pub mod approvals_test;
