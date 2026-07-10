@@ -57,7 +57,8 @@ export function VoiceAssistantFAB() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'command.webm');
-      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default'); // Would normally get from context
+      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default');
+      formData.append('language_preference', localStorage.getItem('ohc_language_preference') || 'English'); // Would normally get from context
 
       const response = await fetch('/api/v1/voice/command', {
         method: 'POST',
