@@ -45,6 +45,7 @@ pub struct Tenant {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub version: Option<i64>,
+    pub language_preference: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
