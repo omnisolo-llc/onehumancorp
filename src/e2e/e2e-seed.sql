@@ -758,3 +758,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO service_items (id, tenant_id, name, base_price_cents)
 VALUES ('748888aa-3333-3333-3333-333333333333', 'tenant-1', '2-Bedroom Apartment Painting', 120000)
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO referrals (id, tenant_id, conversions, total_clicks, total_signups, created_at, updated_at)
+VALUES ('e2e-referral-1', 'e2e-tenant', 1, 5, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
