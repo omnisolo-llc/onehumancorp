@@ -60,8 +60,29 @@ test.describe('Setup Wizard 375px Flow', () => {
         await page.locator('#step-categories .next-step-btn').click();
 
         // Business Name
-        await page.locator('#business-name').fill('My Cool Bakery');
-        await page.locator('#step-name .next-step-btn').click();
+
+        // Check real-time validation clearing and state persistence
+        // Test validation clearing for business-name
+        const nameInput = page.locator('#business-name');
+        const nextNameBtn = page.locator('#step-name .next-step-btn');
+        const nameError = page.locator('#name-error');
+
+        // Trigger empty validation
+        await nextNameBtn.click();
+        await expect(nameError).toBeVisible();
+        await expect(nameInput).toHaveClass(/invalid-input/);
+
+        // Type and ensure error clears instantly and state is persisted
+        await nameInput.fill('M');
+        await expect(nameError).toBeHidden();
+        await expect(nameInput).not.toHaveClass(/invalid-input/);
+
+        let stateStr = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+        expect(stateStr).toContain('M');
+
+        await nameInput.fill('My Cool Bakery');
+        await nextNameBtn.click();
+
 
         // Assistant Setup
         await page.getByTestId('team-operations').click();

@@ -151,9 +151,17 @@ To secure your booking, please pay the deposit here: {}", drafted_message, strip
         .execute(pool)
         .await?;
 
+
     // Update inbox_messages
     if let Some(inbox_id) = inbox_message_id {
         let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
+            .bind(inbox_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await;
+
+        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(&drafted_message)
             .bind(inbox_id)
             .bind(tenant_id)
             .execute(pool)
