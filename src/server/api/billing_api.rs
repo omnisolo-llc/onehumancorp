@@ -258,33 +258,32 @@ pub async fn create_checkout_session_handler(
         item_name = title;
 
         if req.is_subscription.unwrap_or(false) {
-            if is_subscribable {
+            // First try reading from the newer subscription_plans table
+            let plan_row = sqlx::query("SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1")
+                .bind(product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *conn)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            if let Some(plan) = plan_row {
+                let interval: String = plan.try_get("interval").unwrap_or_else(|_| "month".to_string());
+                let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
+                actual_interval = Some(interval);
+
+                if discount_percentage > 0 {
+                    amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
+                }
+            } else if is_subscribable {
+                // Fallback to legacy fields on products table
                 actual_interval = subscription_frequency.or_else(|| Some("month".to_string()));
                 if subscription_discount_percent > 0 {
                     amount_usd = amount_usd * (1.0 - (subscription_discount_percent as f64 / 100.0));
                 }
+            } else if let Some(fallback_interval) = &req.subscription_interval {
+                actual_interval = Some(fallback_interval.clone());
             } else {
-                // Check subscription_plans table for discount and interval
-                let plan_row = sqlx::query("SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
-                    .bind(product_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut *conn)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-                if let Some(plan) = plan_row {
-                    let interval: String = plan.try_get("interval").unwrap_or_else(|_| "month".to_string());
-                    let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
-                    actual_interval = Some(interval);
-
-                    if discount_percentage > 0 {
-                        amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
-                    }
-                } else if let Some(fallback_interval) = &req.subscription_interval {
-                    actual_interval = Some(fallback_interval.clone());
-                } else {
-                    actual_interval = Some("month".to_string());
-                }
+                actual_interval = Some("month".to_string());
             }
         }
     } else {
