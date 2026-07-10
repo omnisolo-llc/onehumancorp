@@ -385,6 +385,8 @@ rust_library(
     edition = "2021",
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:libc",
+
         "//src/server/pricing:server_pricing",
         "@crates//:reqwest",
         "@crates//:serde",
@@ -411,6 +413,8 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:libc",
+
         ":minimax",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
@@ -528,6 +532,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -542,6 +548,8 @@ rust_binary(
     edition = "2021",
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:libc",
+
         ":server_lib",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:mcp_proxy_prost",
@@ -662,6 +670,8 @@ SERVER_LIB_SPLIT_TESTS = [
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         deps = [
+        "@crates//:libc",
+
             "@crates//:serde_json",
             "@crates//:sqlx",
             "@crates//:temp-env",
@@ -696,6 +706,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -750,6 +762,8 @@ test_suite(
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         deps = [
+        "@crates//:libc",
+
             "@crates//:tempfile",
             "@crates//:tokio-tungstenite",
         ],
@@ -790,6 +804,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         ":server_lib",
         "@crates//:chrono",
         "@crates//:serde_json",
@@ -809,6 +825,8 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "@crates//:libc",
+
         "//src/server/common:server_common",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
@@ -835,6 +853,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         ":server_lib",
         "//src/server/config:server_config",
         "//src/server/telemetry:server_telemetry",
@@ -869,6 +889,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
@@ -885,6 +907,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/server/utils:server_utils",
@@ -925,6 +949,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tree-sitter-bash",
@@ -952,6 +978,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
@@ -980,6 +1008,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -1011,6 +1041,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:libc",
+
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
