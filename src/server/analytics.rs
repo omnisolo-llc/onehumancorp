@@ -22,7 +22,7 @@ impl Tracker {
     }
 
     pub fn track_event(&self, name: &str, props: HashMap<String, String>) {
-        let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+        let is_telemetry_enabled = ::server_config::is_telemetry_enabled();
         if !is_telemetry_enabled {
             return;
         }
