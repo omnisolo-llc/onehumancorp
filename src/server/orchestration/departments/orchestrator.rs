@@ -1454,6 +1454,39 @@ pub async fn execute_action(
                         if let Err(e) = stripe.submit_dispute_evidence(dispute_id, payload.clone()).await {
                             tracing::error!("Failed to submit dispute evidence: {}", e);
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("product_draft") {
+                        let name = payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("New Product");
+                        let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                        let price = payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let item_type = payload.get("item_type").and_then(|v| v.as_str()).unwrap_or("physical");
+
+                        let price_cents = (price * 100.0) as i64;
+                        let product_id = uuid::Uuid::new_v4().to_string();
+
+                        match &self.db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscribable) VALUES ($1, $2, $3, $4, $5, $6, 100, false)")
+                                    .bind(&product_id)
+                                    .bind(tenant_id)
+                                    .bind(name)
+                                    .bind(description)
+                                    .bind(item_type)
+                                    .bind(price_cents)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            },
+                            crate::db::DbStore::Sqlite(_) => {
+                                let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscribable) VALUES (?, ?, ?, ?, ?, ?, 100, false)")
+                                    .bind(&product_id)
+                                    .bind(tenant_id)
+                                    .bind(name)
+                                    .bind(description)
+                                    .bind(item_type)
+                                    .bind(price_cents)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            }
+                        }
                     }
                 }
 
