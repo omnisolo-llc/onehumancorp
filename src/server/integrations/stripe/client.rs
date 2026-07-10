@@ -392,13 +392,17 @@ impl StripeClient {
         amount_cents: i64,
         batcher: &PayoutBatcher,
     ) -> Result<Option<String>, String> {
-        let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
-        if let Some(total_cents) = payout_amount {
-
-            // Execute real payout call here...
-            Ok(Some(format!("po_test_{}", total_cents)))
+        if !PaymentRouter::should_batch_payout(amount_cents) {
+            // Amount is over the batch threshold, execute immediate payout to save complexity/delays
+            Ok(Some(format!("po_test_{}", amount_cents)))
         } else {
-            Ok(None)
+            let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
+            if let Some(total_cents) = payout_amount {
+                // Execute real payout call here...
+                Ok(Some(format!("po_test_{}", total_cents)))
+            } else {
+                Ok(None)
+            }
         }
     }
 }

@@ -250,131 +250,138 @@
 }
 </style>
 </head>
-  <body>
-    <div class="container glassmorphism">
-      <a href="dashboard.html" class="back-link">Back to Dashboard</a>
+    <body>
+    <div style="width: 100%; max-width: 1200px; text-align: left;">
+      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    </div>
 
-      <h1>Pricing Plans</h1>
-      <div class="subtitle">Plain-language pricing — no hidden fees. Choose the best plan to grow your business.</div>
-
-      <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 32px; gap: 12px;">
-        <span style="font-size: 16px; font-weight: 500; color: #1d1d1f;">Monthly</span>
-        <label style="position: relative; display: inline-block; width: 50px; height: 28px;">
-          <input type="checkbox" id="billing-toggle" style="opacity: 0; width: 0; height: 0;">
-          <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e5e5ea; transition: .4s; border-radius: 34px;"></span>
-          <span class="slider-circle" style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
-        </label>
-        <span style="font-size: 16px; font-weight: 500; color: #1d1d1f;">Annually <span style="background-color: #E5F0FF; color: #0066FF; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-left: 8px;">Subscribe & Save 20%</span></span>
+    <div class="container glassmorphism" style="max-width: 1200px; margin-top: 20px;">
+      <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
+        <h1 style="margin: 0; font-family: 'Outfit', sans-serif;">Pricing Plans</h1>
       </div>
+      <div class="subtitle" style="margin-top: 5px;">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</div>
 
-      <style>
-        #billing-toggle:checked + .slider {
-          background-color: #0066FF;
-        }
-        #billing-toggle:checked ~ .slider-circle {
-          transform: translateX(22px);
-        }
-      </style>
+      <!-- My Plan Section -->
+      <div class="ohc-growth-card glassmorphism" style="margin-bottom: 32px; padding: 24px;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px;">
+          <div>
+            <h2 style="margin: 0; font-size: 24px; font-family: 'Outfit', sans-serif;">My Plan: <span id="pricing-my-plan-name">Loading...</span></h2>
+            <p style="margin: 4px 0 0 0; color: #86868b; font-size: 14px;">Cost transparency and usage tracking</p>
+          </div>
+          <button id="manage-plan-billing-btn" class="btn-primary" style="width: auto;">Manage Plan & Billing</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+            <div style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 4px;">AI Actions Used</div>
+            <div style="font-size: 20px; font-weight: 700;" id="pricing-ai-actions-used">-</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+            <div style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 4px;">Storage Used</div>
+            <div style="font-size: 20px; font-weight: 700;" id="pricing-storage-used">-</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+            <div style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; margin-bottom: 4px;">Estimated Next Bill</div>
+            <div style="font-size: 20px; font-weight: 700;" id="pricing-estimated-next-bill">-</div>
+          </div>
+        </div>
+      </div>
 
       <div class="pricing-grid">
         <!-- Free Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
-          <div class="plan-name">Free</div>
-          <div class="plan-price" data-monthly="0">$0<span>/month</span></div>
-          <ul class="features-list">
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 1 Agent Limit</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 AI actions / month</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500MB Storage Quota</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Products Limit</li>
-          </ul>
-          <button id="btn-Free" class="btn-secondary" style="pointer-events: none; opacity: 0.7;" disabled>Current Plan</button>
+        <div class="ohc-growth-card glassmorphism pricing-card">
+          <div>
+            <h3 style="margin: 0 0 8px 0; font-size: 24px; font-family: 'Outfit', sans-serif;">Free</h3>
+            <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">$0 <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ month</span></p>
+            <ul class="feature-list">
+              <li>✓ 1 Agent Limit</li>
+              <li>✓ 100 AI actions / month</li>
+              <li>✓ 500MB Storage Quota</li>
+              <li>✓ 10 Products Limit</li>
+            </ul>
+          </div>
+          <button class="btn-outline upgrade-btn" data-tier="Free" id="btn-free">Loading...</button>
         </div>
 
         <!-- Starter Plan -->
-        <div class="ohc-growth-card recommended glassmorphism app-card">
-          <div class="badge">Recommended</div>
-          <div class="plan-name">Starter</div>
-          <div class="plan-price" data-monthly="29">$29<span>/month</span></div>
-          <div style="color: #0066FF; font-size: 12px; font-weight: 600; margin-bottom: 16px;">Suggested for growing stores</div>
-          <ul class="features-list">
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 3 Agents Limit</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 1,000 AI actions / month</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 5GB Storage Quota</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 Products Limit</li>
-          </ul>
-          <button id="btn-Starter" class="btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
+        <div class="ohc-growth-card glassmorphism pricing-card recommended-card">
+          <div class="recommended-badge">Recommended</div>
+          <div>
+            <h3 style="margin: 0 0 8px 0; font-size: 24px; font-family: 'Outfit', sans-serif;">Starter</h3>
+            <p style="margin: 0 0 8px 0; font-size: 20px; font-weight: 600;">$29 <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ month</span></p>
+            <p style="margin: 0 0 16px 0; font-size: 12px; font-weight: 500; color: #4f46e5;">Suggested for growing stores</p>
+            <ul class="feature-list">
+              <li>✓ 3 Agents Limit</li>
+              <li>✓ 1,000 AI actions / month</li>
+              <li>✓ 5GB Storage Quota</li>
+              <li>✓ 100 Products Limit</li>
+            </ul>
+          </div>
+          <button class="btn-primary upgrade-btn" data-tier="Starter" id="btn-starter">Loading...</button>
         </div>
 
         <!-- Pro Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
-          <div class="plan-name">Pro</div>
-          <div class="plan-price" data-monthly="79">$79<span>/month</span></div>
-          <ul class="features-list">
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Agents Limit</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited AI actions</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 50GB Storage Quota</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
-          </ul>
-          <button id="btn-Pro" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
+        <div class="ohc-growth-card glassmorphism pricing-card">
+          <div>
+            <h3 style="margin: 0 0 8px 0; font-size: 24px; font-family: 'Outfit', sans-serif;">Pro</h3>
+            <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">$79 <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ month</span></p>
+            <ul class="feature-list">
+              <li>✓ 10 Agents Limit</li>
+              <li>✓ Unlimited AI actions</li>
+              <li>✓ 50GB Storage Quota</li>
+              <li>✓ Unlimited Products</li>
+            </ul>
+          </div>
+          <button class="btn-outline upgrade-btn" data-tier="Pro" id="btn-pro" style="background: #1d1d1f; color: white;">Loading...</button>
         </div>
 
         <!-- Business Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
-          <div class="plan-name">Business</div>
-          <div class="plan-price" data-monthly="299">$299<span>/month</span></div>
-          <ul class="features-list">
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Agents</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited AI actions</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500GB Storage Quota</li>
-            <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
-          </ul>
-          <button id="btn-Business" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
+        <div class="ohc-growth-card glassmorphism pricing-card">
+          <div>
+            <h3 style="margin: 0 0 8px 0; font-size: 24px; font-family: 'Outfit', sans-serif;">Business</h3>
+            <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">$299 <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ month</span></p>
+            <ul class="feature-list">
+              <li>✓ Unlimited Agents</li>
+              <li>✓ Unlimited AI actions</li>
+              <li>✓ 500GB Storage Quota</li>
+              <li>✓ Unlimited Products</li>
+            </ul>
+          </div>
+          <button class="btn-outline upgrade-btn" data-tier="Business" id="btn-business" style="background: #1d1d1f; color: white;">Loading...</button>
         </div>
       </div>
 
-      <div id="error-message" class="error-msg"></div>
-
-      <div style="margin-top: 40px; text-align: center; color: #86868b; font-size: 14px;">
-        100% money back guarantee. Secure SSL payments powered by Stripe.
+      <div style="text-align: center; margin-top: 16px; margin-bottom: 8px;">
+        <p style="font-size: 14px; color: #86868b;">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
       </div>
 
-      <div class="app-card pricing-card" style="margin-top: 40px; width: 100%; box-sizing: border-box;">
-        <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; color: #1d1d1f; margin-bottom: 20px;">Frequently Asked Questions</h2>
-
-        <div style="margin-bottom: 24px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">How do I upgrade, downgrade, or cancel?</h3>
-          <p style="margin: 0; font-size: 14px; color: #86868b; line-height: 1.5;">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+      <div class="ohc-growth-card glassmorphism" style="margin-top: 24px; padding: 24px;">
+        <h2 style="margin: 0 0 16px 0; font-size: 20px; font-family: 'Outfit', sans-serif;">Frequently Asked Questions</h2>
+        <div style="margin-bottom: 16px;">
+          <h3 style="margin: 0 0 4px 0; font-size: 16px;">How do I upgrade, downgrade, or cancel?</h3>
+          <p style="margin: 0; font-size: 14px; color: #86868b; line-height: 1.5;">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page or by clicking "Manage Plan & Billing" above.</p>
         </div>
-
         <div>
-          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">What is the storage limit?</h3>
+          <h3 style="margin: 0 0 4px 0; font-size: 16px;">What is the storage limit?</h3>
           <p style="margin: 0; font-size: 14px; color: #86868b; line-height: 1.5;">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
         </div>
       </div>
     </div>
 
     <script>
+      function formatBytes(bytes) {
+        if (bytes == null || bytes <= 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function formatCents(cents) {
+        return '$' + (cents / 100).toFixed(2);
+      }
+
       document.addEventListener('DOMContentLoaded', async () => {
-        const toggle = document.getElementById('billing-toggle');
-        const priceElements = document.querySelectorAll('.plan-price[data-monthly]');
-
-        if (toggle) {
-          toggle.addEventListener('change', () => {
-            const isAnnual = toggle.checked;
-            priceElements.forEach(el => {
-              const monthlyPrice = parseFloat(el.getAttribute('data-monthly'));
-              if (monthlyPrice > 0) {
-                if (isAnnual) {
-                  const annualPrice = Math.floor(monthlyPrice * 0.8);
-                  el.innerHTML = `$${annualPrice}<span>/month, billed annually</span>`;
-                } else {
-                  el.innerHTML = `$${monthlyPrice}<span>/month</span>`;
-                }
-              }
-            });
-          });
-        }
-
         const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         const token = localStorage.getItem('token');
         const headers = {};
@@ -385,348 +392,169 @@
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        let currentPlan = 'Free';
+
+        const manageBillingHandler = async () => {
+            try {
+                const res = await fetch('/api/billing/create-billing-portal-session', { method: 'POST', headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        alert('Failed to open billing portal.');
+                    }
+                } else {
+                    alert('Failed to create billing portal session');
+                }
+            } catch (e) {
+                console.error('Failed to create billing portal session', e);
+                alert('Failed to initiate billing portal. Please try again.');
+            }
+        };
+
+        const upgradeHandler = async (tier) => {
+            try {
+                const res = await fetch('/api/billing/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...headers
+                    },
+                    body: JSON.stringify({ tier })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                    } else {
+                        alert('Failed to create checkout session.');
+                    }
+                } else {
+                    alert('Failed to initiate upgrade. Please try again.');
+                }
+            } catch (e) {
+                console.error('Failed to initiate upgrade', e);
+                alert('Failed to initiate upgrade. Please try again.');
+            }
+        };
+
         try {
             const planRes = await fetch('/api/billing/my-plan', { headers });
+
             if (planRes.ok) {
                 const planData = await planRes.json();
-                const currentPlan = planData.current_plan || 'Free'; // e.g. "Free", "Starter", "Pro", "Business"
+                currentPlan = planData.current_plan || 'Free';
 
-                const allPlans = ['Free', 'Starter', 'Pro', 'Business'];
-                allPlans.forEach(plan => {
-                    const btn = document.getElementById(`btn-${plan}`);
-                    if (!btn) return;
+                document.getElementById('pricing-my-plan-name').innerText = currentPlan;
 
-                    if (plan === currentPlan) {
-                        btn.className = 'btn-secondary';
-                        btn.style.backgroundColor = '';
-                        btn.style.boxShadow = '';
-                        if (currentPlan === "Free") {
-                            btn.disabled = true;
-                            btn.onclick = null;
-                            btn.innerText = 'Current Plan';
-                        } else {
-                            btn.disabled = false;
-                            btn.onclick = managePlan;
-                            btn.innerText = 'Manage Plan';
-                        }
-                    } else if (plan === 'Free' && currentPlan !== 'Free') {
-                        // User is on a paid plan, but looking at Free
-                        btn.className = 'btn-secondary';
-                        btn.style.backgroundColor = '';
-                        btn.style.boxShadow = '';
-                        btn.disabled = false;
-                        btn.innerText = 'Downgrade to Free';
-                        btn.onclick = managePlan;
-                    } else if (plan !== currentPlan && plan !== 'Free' && currentPlan !== 'Free') {
-                        btn.innerText = 'Manage Plan';
-                        btn.onclick = managePlan;
-                    }
-                });
+                const actionsText = (planData.ai_actions_limit != null && planData.ai_actions_limit > 0) ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / ∞`;
+                document.getElementById('pricing-ai-actions-used').innerHTML = `${actionsText}`;
+
+                const storageText = (planData.storage_limit_bytes != null && planData.storage_limit_bytes > 0) ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / ∞`;
+                document.getElementById('pricing-storage-used').innerHTML = `${storageText}`;
+
+                document.getElementById('pricing-estimated-next-bill').innerText = formatCents(planData.next_bill_estimated);
+            } else {
+                document.getElementById('pricing-my-plan-name').innerText = 'Free';
+                document.getElementById('pricing-ai-actions-used').innerText = '0 / ∞';
+                document.getElementById('pricing-storage-used').innerText = '0 B / ∞';
+                document.getElementById('pricing-estimated-next-bill').innerText = '$0.00';
             }
         } catch (e) {
-            console.error('Failed to fetch current plan', e);
+            console.error('Failed to load billing data', e);
+            document.getElementById('pricing-my-plan-name').innerText = 'Free';
+            document.getElementById('pricing-ai-actions-used').innerText = '0 / ∞';
+            document.getElementById('pricing-storage-used').innerText = '0 B / ∞';
+            document.getElementById('pricing-estimated-next-bill').innerText = '$0.00';
         }
-      });
 
+        document.getElementById('manage-plan-billing-btn').addEventListener('click', manageBillingHandler);
 
-      async function managePlan() {
-        const errorMsg = document.getElementById('error-message');
-        errorMsg.innerText = '';
-        try {
-          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-          const token = localStorage.getItem('token');
-          const headers = { 'Content-Type': 'application/json' };
-          if (tenant) { headers['x-tenant-id'] = tenant; }
-          if (token) { headers['Authorization'] = `Bearer ${token}`; }
-          const response = await fetch('/api/billing/create-billing-portal-session', {
-            method: 'POST',
-            headers: headers
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data.url) {
-              window.location.href = data.url;
+        const tiers = ['Free', 'Starter', 'Pro', 'Business'];
+
+        tiers.forEach(tier => {
+            const btnId = `btn-${tier.toLowerCase()}`;
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+
+            // Remove previous event listeners by cloning if necessary, but we just set it here
+            btn.onclick = null;
+
+            if (currentPlan === tier) {
+                if (tier === 'Free') {
+                    btn.innerText = 'Current Plan';
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.opacity = '0.7';
+                } else {
+                    btn.innerText = 'Manage Plan';
+                    btn.addEventListener('click', manageBillingHandler);
+                }
+            } else if (tier === 'Free') {
+                btn.innerText = 'Downgrade to Free';
+                btn.addEventListener('click', manageBillingHandler);
             } else {
-              errorMsg.innerText = 'Failed to open billing portal.';
+                btn.innerText = `Upgrade to ${tier} via Stripe`;
+                btn.addEventListener('click', () => upgradeHandler(tier));
             }
-          } else {
-            errorMsg.innerText = 'Failed to open billing portal.';
-          }
-        } catch (error) {
-          console.error('Error creating billing portal session:', error);
-          errorMsg.innerText = 'Failed to open billing portal.';
-        }
-      }
-
-      async function upgradePlan(tier) {
-        const btnId = `btn-${tier}`;
-        const errorMsg = document.getElementById('error-message');
-        errorMsg.innerText = '';
-
-        try {
-          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-          const token = localStorage.getItem('token');
-          const headers = {
-            'Content-Type': 'application/json'
-          };
-          if (tenant) {
-              headers['x-tenant-id'] = tenant;
-          }
-          if (token) {
-              headers['Authorization'] = `Bearer ${token}`;
-          }
-
-          const toggle = document.getElementById('billing-toggle');
-          const isAnnual = toggle ? toggle.checked : false;
-
-          const response = await fetch('/api/billing/create-checkout-session', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
-              tier: tier,
-              is_subscription: true,
-              subscription_interval: isAnnual ? 'year' : 'month'
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.checkout_url) {
-              window.location.href = data.checkout_url;
-            } else {
-              errorMsg.innerText = 'Failed to initiate checkout. Please try again.';
-            }
-          } else {
-            errorMsg.innerText = 'Failed to initiate checkout. Please try again.';
-          }
-        } catch (error) {
-          console.error('Error creating checkout session:', error);
-          errorMsg.innerText = 'Network error. Please try again.';
-        }
-      }
-    </script>
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(40px) saturate(220%);
-    -webkit-backdrop-filter: blur(40px) saturate(220%);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    color: #1d1d1f;
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
         });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
+      });
+    </script>
+    <style>
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 1024px) {
+        .pricing-grid {
+          grid-template-columns: repeat(2, 1fr);
         }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
+      }
+      @media (max-width: 600px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
         }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            window.touchTimer = setTimeout(() => {
-                showTooltip(e.touches[0], window.OHC_TOOLTIPS[target.id]);
-            }, 500); // 500ms long press
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-});
-</script>
-
-
-<script>
-function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-
-        let currentStep = 0;
-
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
-        overlay.className = 'fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
-
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
-
-        function renderStep() {
-            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
-
-            // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-                el.style.pointerEvents = '';
-            });
-
-            // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
-
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
-                }
-            };
-
-            if (target) {
-                target.classList.add('walkthrough-highlight');
-                target.style.position = 'relative';
-                target.style.zIndex = '99999';
-                target.style.background = 'white'; // Make it pop
-                target.style.pointerEvents = 'none';
-
-                const rect = target.getBoundingClientRect();
-                // Position bubble below target if space permits, else above
-                if (rect.bottom + 200 < window.innerHeight) {
-                    bubble.style.top = (rect.bottom + 10) + 'px';
-                } else {
-                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                }
-                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
-            } else {
-                // Center if no target
-                bubble.style.top = '50%';
-                bubble.style.left = '50%';
-                bubble.style.transform = 'translate(-50%, -50%)';
-            }
-        }
-
-        function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-                el.style.pointerEvents = '';
-            });
-            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-        }
-
-        renderStep();
-    };
-}
-initWalkthrough();
-</script>
-
-  <script src="help-widget.mjs" type="module"></script>
+      }
+      .pricing-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 24px;
+      }
+      .recommended-card {
+        border: 2px solid #4f46e5 !important;
+        position: relative;
+      }
+      .recommended-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #4f46e5;
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-bottom-left-radius: 12px;
+        border-top-right-radius: 18px;
+      }
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 24px 0;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .feature-list li {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+      }
+    </style>
   </body>
+</html>
+
 </html>
 
 <!-- Authorized deletion line 0 -->
