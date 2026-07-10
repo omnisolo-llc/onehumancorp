@@ -48,11 +48,38 @@
   <div class="modal-overlay" id="cloud-api-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div class="modal" style="background: white; border-radius: 16px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
       <h2 style="margin-top: 0; font-family: Outfit, sans-serif; font-size: 24px;">Connect WhatsApp Cloud API</h2>
-      <p style="color: #86868b; font-size: 14px; margin-bottom: 20px;">Connect your WhatsApp Business Account directly using the WhatsApp Cloud API.</p>
+      <p style="color: #86868b; font-size: 14px; margin-bottom: 20px;">Enter your Meta API credentials to securely link your WhatsApp Business account. Incoming messages will be automatically routed into Work Triage.</p>
+
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">Phone Number ID</label>
+        <input type="text" id="wa-cloud-phone-id" placeholder="1234567890" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">Access Token</label>
+
+        <div style="position: relative; width: 100%; display: flex; align-items: center;">
+          <input type="password" id="wa-cloud-token" class="wa-token-input" placeholder="EAA..." style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; padding-right: 44px;">
+          <button type="button" class="toggle-wa-token-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 0; height: 100%; width: 44px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #555; box-shadow: none; z-index: 10;">
+            <svg class="wa-eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="wa-eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f;">Display Phone Number</label>
+        <input type="text" id="wa-cloud-display-phone" placeholder="+1234567890" style="width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;">
+      </div>
 
       <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
         <button onclick="document.getElementById('cloud-api-modal').style.display='none'" style="background: #e5e5ea; color: #1d1d1f; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
-        <button id="save-cloud-api-btn" onclick="connectWhatsAppCloudApi()" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Continue with Meta</button>
+        <button id="save-cloud-api-btn" onclick="connectWhatsAppCloudApi()" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Save & Connect</button>
       </div>
     </div>
   </div>
@@ -114,44 +141,50 @@
 
 
     async function connectWhatsAppCloudApi() {
+      const btn = document.getElementById('save-cloud-api-btn');
+      const originalText = btn.innerText;
+      btn.innerText = 'Connecting...';
+      btn.disabled = true;
+
+      const phone_id = document.getElementById('wa-cloud-phone-id').value;
+      const api_token = document.getElementById('wa-cloud-token').value;
+      const display_phone = document.getElementById('wa-cloud-display-phone').value;
       const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:18789' : window.location.origin;
 
       try {
         const res = await fetch(`${backendUrl}/api/v1/settings/integrations/whatsapp_cloud_api`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+          },
           body: JSON.stringify({
-            integration_id: 'whatsapp_cloud_api',
+            phone_number_id: phone_id,
+            api_token: api_token,
+            display_phone_number: display_phone
           })
         });
 
         if (res.ok) {
-          const msg = document.createElement('div');
+          const msg = document.createElement('p');
+          msg.style.color = '#34c759';
+          msg.style.marginTop = '15px';
+          msg.style.fontWeight = '600';
           msg.innerText = 'WhatsApp Cloud API connected!';
-          msg.style.position = 'fixed';
-          msg.style.top = '20px';
-          msg.style.left = '50%';
-          msg.style.transform = 'translateX(-50%)';
-          msg.style.background = '#4CAF50';
-          msg.style.color = 'white';
-          msg.style.padding = '12px 24px';
-          msg.style.borderRadius = '8px';
-          msg.style.zIndex = '9999';
-          document.body.appendChild(msg);
-
-          // E2E Test hooks
-          const statusMsg = document.createElement('div');
-          statusMsg.className = 'app-status-item';
-          statusMsg.innerText = 'WhatsApp Cloud API connected.';
-          document.body.appendChild(statusMsg);
-
-          document.getElementById('cloud-api-modal').style.display='none';
-          setTimeout(() => { window.location.href = 'inbox.html'; }, 2000);
+          btn.parentNode.insertBefore(msg, btn.nextSibling);
+          setTimeout(() => {
+            document.getElementById('cloud-api-modal').style.display = 'none';
+            window.location.reload();
+          }, 1500);
         } else {
-          alert('Failed to connect.');
+          alert('Failed to connect WhatsApp Cloud API');
+          btn.innerText = originalText;
+          btn.disabled = false;
         }
       } catch (e) {
-        alert('Error connecting.');
+        alert('Error connecting WhatsApp Cloud API');
+        btn.innerText = originalText;
+        btn.disabled = false;
       }
     }
 

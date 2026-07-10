@@ -119,23 +119,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
         }
 
-        // Fallback: If it's pure markdown JSON block, attempt to parse it directly
-        let content = msg.content.trim();
-        let mut json_str = content;
-
-        if let Some(start) = content.find("```json") {
-            if let Some(end) = content[start + 7..].rfind("```") {
-                json_str = content[start + 7..start + 7 + end].trim();
-            }
-        } else if let Some(start) = content.find("```")
-            && let Some(end) = content[start + 3..].rfind("```") {
-                json_str = content[start + 3..start + 3 + end].trim();
-            }
-
-        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
-            return Ok(parsed);
-        }
-
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
     }
@@ -1127,5 +1110,101 @@ impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPyda
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
+    }
+}
+
+#[cfg(test)]
+mod strict_output_tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{Role, Usage};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[derive(Debug, serde::Deserialize, PartialEq)]
+    struct StrictTestOutput {
+        strict: String,
+    }
+
+    struct MockStrictClient {
+        responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for MockStrictClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if resps.is_empty() {
+                return Err("No more responses".into());
+            }
+            Ok(resps.remove(0))
+        }
+    }
+
+    fn create_test_req() -> ChatRequest {
+        ChatRequest {
+            model: "test".to_string(),
+            system: "test".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_strict_enforcement_rejects_markdown() {
+        // First response is a markdown block, second is a valid tool call
+        let msg_markdown = Message {
+            role: Role::Assistant,
+            content: "```json\n{\"strict\": \"fail\"}\n```".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: Some("1".to_string()),
+            previous_response_id: None,
+        };
+
+        let msg_tool_call = Message {
+            role: Role::Assistant,
+            content: "".to_string(),
+            tool_calls: vec![crate::types::ToolCall {
+                id: "call_1".to_string(),
+                name: "structured_output".to_string(),
+                arguments: serde_json::json!({"data": {"strict": "success"}}),
+            }],
+            tool_results: vec![],
+            response_id: Some("2".to_string()),
+            previous_response_id: Some("1".to_string()),
+        };
+
+        let client = Arc::new(MockStrictClient {
+            responses: Mutex::new(vec![
+                ChatResponse {
+                    response_id: Some("1".to_string()),
+                    stop_reason: "stop".to_string(),
+                    message: msg_markdown,
+                    usage: Usage::default(),
+                },
+                ChatResponse {
+                    response_id: Some("2".to_string()),
+                    stop_reason: "stop".to_string(),
+                    message: msg_tool_call,
+                    usage: Usage::default(),
+                },
+            ]),
+        });
+
+        let parser: Box<dyn OutputParser<StrictTestOutput> + Send + Sync> =
+            Box::new(AdvancedPydanticOutputParser::new());
+        let retry_parser = RetryWithErrorOutputParser::new(parser, client.clone() as Arc<dyn LlmClientForParser>);
+
+        let req = create_test_req();
+        let result = retry_parser.parse_with_prompt_and_strategy(
+            req,
+            2,
+            &crate::retry::ExponentialBackoffWithJitter::new(0, 0)
+        ).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().strict, "success");
     }
 }

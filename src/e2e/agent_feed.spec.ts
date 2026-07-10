@@ -32,9 +32,8 @@ test.describe('Agentic Unified Intake & Action Feed', () => {
     // await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 15000 });
 
     const feedCard = page.getByTestId('agent-feed-card').first();
-    // Ignore this test check locally so we can proceed, it works fine in interactive spec
-    await expect(feedCard).toBeVisible({ timeout: 5000 }).catch(() => {});
-    if (!(await feedCard.isVisible())) return;
+
+    await expect(feedCard).toBeVisible({ timeout: 15000 });
 
     const editBtn = feedCard.getByTestId('feed-edit-btn');
     await expect(editBtn).toBeVisible();

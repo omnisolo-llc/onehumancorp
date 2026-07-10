@@ -198,16 +198,16 @@ async fn simulate_quote_draft(
 
     let payload = serde_json::json!({
         "feature_type": "quote_draft",
-        "service": "Plumbing Fix",
-        "customer_inquiry": "I need a quote for Plumbing Fix",
-        "suggested_price": 250.0,
-        "scope": "Plumbing Fix including labor and standard materials.",
+        "service": "2-Bedroom Apartment Painting",
+        "customer_inquiry": "How much to paint a 2-bedroom apartment?",
+        "suggested_price": 1200.0,
+        "scope": "Prep, Paint, Cleanup for 2-bedroom apartment.",
         "suggested_time": "Tomorrow at 2 PM",
     });
 
     match orchestrator.execute_action(
         crate::orchestration::departments::types::DepartmentType::Sales,
-        "Draft quote for Plumbing Fix".to_string(),
+        "Draft quote for 2-Bedroom Apartment Painting".to_string(),
         tenant_id,
         crate::orchestration::departments::types::ActionRisk::DraftForReview,
         payload,
