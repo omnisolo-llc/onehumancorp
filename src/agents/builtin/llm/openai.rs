@@ -9,6 +9,7 @@ use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, To
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use ::server_pricing::prompt_caching::PromptCache;
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -78,6 +79,7 @@ pub struct OpenAIClient {
     organization: Option<String>,
     project: Option<String>,
     client: Client,
+    cache: PromptCache,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -177,6 +179,7 @@ impl OpenAIClient {
             embedding_format: config.embedding_format,
             organization: config.organization,
             project: config.project,
+            cache: PromptCache::new(std::time::Duration::from_secs(300)),
             client: Client::builder()
                 .timeout(config.timeout)
                 .build()
@@ -471,6 +474,26 @@ impl LlmClient for OpenAIClient {
             tools,
         };
 
+        let payload_str = serde_json::to_string(&payload).unwrap_or_default();
+        let optimized_prompt = PromptCache::truncate_context(&payload_str, 2000);
+
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &payload.model) {
+            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            return Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: cached.text,
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: Some("cached".to_string()),
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("cached".to_string()),
+            });
+        }
+
         // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)
         // Note: OpenAI prompt caching is automatic but we can nudge it by including
         // 'user' role messages that are likely to be reused.
@@ -508,6 +531,9 @@ impl LlmClient for OpenAIClient {
         let finish_reason = choice.finish_reason.unwrap_or_default();
 
         let text = choice.message.content.unwrap_or_default();
+        let prompt_tokens = result.usage.as_ref().map(|u| u.prompt_tokens).unwrap_or(0);
+        self.cache.set(&optimized_prompt, &text, prompt_tokens as usize);
+
         let tool_calls: Vec<ToolCall> = choice
             .message
             .tool_calls
