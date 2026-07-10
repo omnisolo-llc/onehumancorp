@@ -70,6 +70,13 @@ export function GrowBusinessCard() {
               Viral Widget
             </Link>
             <Link
+              id="viral-roi-calculator-btn"
+              href="/viral-roi-calculator"
+              className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              ROI Calculator
+            </Link>
+            <Link
               id="digital-business-card-btn"
               href="/digital-business-card"
               className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
