@@ -132,12 +132,14 @@ export default function FeedPage() {
         ...item.proposed_action,
         description: isAmbassador ? item.proposed_action?.description : editValue,
         generated_response: isAmbassador ? editValue : item.proposed_action?.generated_response,
+        draft_reply: isAmbassador ? editValue : item.proposed_action?.draft_reply,
     };
 
     const updatedContext = {
         ...item.context_payload,
         summary: isAmbassador ? item.context_payload?.summary : editValue,
         generated_response: isAmbassador ? editValue : item.context_payload?.generated_response,
+        draft_reply: isAmbassador ? editValue : item.context_payload?.draft_reply,
     };
 
     setItems((prev) => prev.map((i) => {

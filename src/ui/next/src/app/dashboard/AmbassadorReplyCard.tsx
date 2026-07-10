@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 type AmbassadorReplyCardProps = {
   approval: any;
-  onApprove?: () => void;
+  onApprove?: (editedResponse?: string) => void;
   onDismiss?: () => void;
 };
 
@@ -10,6 +10,11 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
   const payloadSource = approval.payload?.original_payload || approval.payload || approval.proposed_action || approval.context_payload || {};
   const pastOrders = payloadSource.past_orders;
   const contextUsed = payloadSource.context_used;
+
+  const initialResponse = approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send.";
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedResponse, setEditedResponse] = useState(initialResponse);
 
   return (
     <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
@@ -63,36 +68,82 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
         </svg>
         Draft Reply
       </div>
-      <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
-        {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send."}
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-        {onApprove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onApprove();
-            }}
-            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-            aria-label="✨ Approve & Send Draft" data-testid="feed-approve-btn"
-          >
-            ✨ Approve & Send Draft
-          </button>
-        )}
-        {onDismiss && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismiss();
-            }}
-            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-            aria-label="Dismiss"
-            data-testid="feed-dismiss-btn"
-          >
-            Dismiss
-          </button>
-        )}
-      </div>
+      {isEditing ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            className="w-full min-h-[80px] p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:ring-1 focus:ring-[#0066FF] outline-none"
+            value={editedResponse}
+            onChange={(e) => setEditedResponse(e.target.value)}
+            data-testid="feed-edit-input"
+          />
+          <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(false);
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Save" data-testid="feed-save-edit-btn"
+            >
+              Save
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditedResponse(initialResponse);
+                setIsEditing(false);
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Cancel" data-testid="feed-cancel-edit-btn"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
+            {editedResponse}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+            {onApprove && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApprove(editedResponse !== initialResponse ? editedResponse : undefined);
+                }}
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                aria-label="✨ Approve & Send Draft" data-testid="feed-approve-btn"
+              >
+                ✨ Approve & Send Draft
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Edit" data-testid="feed-edit-btn"
+            >
+              Edit
+            </button>
+            {onDismiss && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDismiss();
+                }}
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Dismiss"
+                data-testid="feed-dismiss-btn"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

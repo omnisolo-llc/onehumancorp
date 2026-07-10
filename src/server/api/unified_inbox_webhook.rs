@@ -26,6 +26,7 @@ pub struct UnifiedWebhookPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DraftedResponse {
+    pub feature_type: String,
     pub customer_id: String,
     pub context_summary: String,
     pub draft_reply: String,
@@ -319,6 +320,7 @@ pub async fn handle_unified_webhook(
                 &state.db,
             ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
+                feature_type: "ambassador_reply".to_string(),
                 customer_id: customer_id.clone(),
                 context_summary,
                 draft_reply,
@@ -376,6 +378,7 @@ pub async fn handle_unified_webhook(
                 &state.db,
             ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
+                feature_type: "ambassador_reply".to_string(),
                 customer_id: customer_id.clone(),
                 context_summary,
                 draft_reply,

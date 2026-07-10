@@ -304,11 +304,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ?.feature_type === "ambassador_reply" && (
               <AmbassadorReplyCard
                 approval={approval}
-                onApprove={() =>
+                onApprove={(editedResponse?: string) =>
                   wrapDecision(
                     approval.id,
                     true,
-                    undefined,
+                    editedResponse,
                     approval.event_source,
                   )
                 }
