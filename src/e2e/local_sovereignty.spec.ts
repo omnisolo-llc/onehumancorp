@@ -22,5 +22,17 @@ test.describe('OHC: Local Sovereignty UI Tests', () => {
 
     const checkbox = page.getByRole('checkbox', { name: 'Enable Product Telemetry (Standalone Mode)' });
     await expect(checkbox).toBeVisible();
+    // Verify the UI changes state when toggled
+    const initialState = await checkbox.isChecked();
+    await checkbox.click();
+    await page.waitForTimeout(500);
+    const newState = await checkbox.isChecked();
+    expect(newState).toBe(!initialState);
+
+    // Switch back to keep state clean
+    await checkbox.click();
+    await page.waitForTimeout(500);
+    expect(await checkbox.isChecked()).toBe(initialState);
+
   });
 });
