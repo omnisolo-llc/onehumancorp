@@ -47,6 +47,7 @@ const primaryNav: NavItem[] = [
   { label: "Assistant", href: "/assistant", icon: "assistant" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Triage", href: "/triage", icon: "inbox" },
+  { label: "Walk-up Mode", href: "/walkup", icon: "activity" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
   { label: "Inventory", href: "/inventory", icon: "inventory" },

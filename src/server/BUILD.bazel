@@ -52,6 +52,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:omnichannel_webhook.rs",
     "//src/server/api:unified_inbox_webhook.rs",
+    "//src/server/api:omni_intake.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:quotes.rs",
