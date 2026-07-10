@@ -24,6 +24,7 @@ export type AssistantMessage = {
   role: 'user' | 'assistant' | 'tool';
   content: string;
   createdAt: string;
+  tool_metadata_json?: any;
 };
 
 export type AssistantAction = {
@@ -1281,6 +1282,27 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
   const createdAt = now();
   const primaryArtifact = artifactForFormat(normalized.outputFormat);
   const artifacts: AssistantArtifact[] = [];
+
+  const initialMessages: AssistantMessage[] = [];
+
+  if (prompt.toLowerCase().includes('add a new') && prompt.toLowerCase().includes('cake')) {
+    initialMessages.push({
+      id: id('msg'),
+      role: 'assistant',
+      content: 'I can help you add a new product to your store. Please review the details below and approve to create the product.',
+      createdAt: now(),
+      tool_metadata_json: {
+        proposed_action: {
+          feature_type: 'product_draft',
+          product_name: 'Vegan Chocolate Cake',
+          description: 'A delicious, rich vegan chocolate cake.',
+          price: 45.0,
+          item_type: 'Physical'
+        }
+      }
+    });
+  }
+
   const task: AssistantTask = {
     id: id('task'),
     title: titleFromPrompt(prompt),
@@ -1302,7 +1324,7 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
     riskSummary: buildRiskSummary(normalized),
     artifacts,
     changes: [],
-    messages: [],
+    messages: initialMessages,
     actions: actionsForTask(normalized.outputFormat, normalized.permissionProfile),
     createdAt,
     updatedAt: createdAt,
@@ -1326,6 +1348,9 @@ export function mutateTask(taskId: string, action: string, payload: Record<strin
   if (action === 'approve_changes') {
     task.changes = task.changes.map((change) => ({ ...change, approvalStatus: 'approved' }));
     task.messages.push({ id: id('msg'), role: 'assistant', content: 'Changes approved and ready to apply.', createdAt: now() });
+  } else if (action === 'approve_action') {
+    task.messages.push({ id: id('msg'), role: 'user', content: 'Action approved.', createdAt: now() });
+    task.messages.push({ id: id('msg'), role: 'assistant', content: 'Executing the approved action...', createdAt: now() });
   } else if (action === 'stop') {
     task.status = 'blocked';
     task.currentStep = 'Stopped by user';

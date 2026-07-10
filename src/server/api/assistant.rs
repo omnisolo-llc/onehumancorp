@@ -619,6 +619,20 @@ async fn mutate_task(
             } else if action == "approve_changes" {
                 sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = ? AND task_id = ?")
                     .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_action" {
+                let msg_id = Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content, tool_metadata) VALUES (?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&msg_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("user")
+                .bind("Approve & Execute")
+                .bind(None::<String>)
+                .execute(pool)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
                 let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -660,6 +674,20 @@ async fn mutate_task(
             } else if action == "approve_changes" {
                 sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = $1 AND task_id = $2")
                     .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_action" {
+                let msg_id = Uuid::new_v4().to_string();
+                sqlx::query(
+                    "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content, tool_metadata) VALUES ($1, $2, $3, $4, $5, $6)"
+                )
+                .bind(&msg_id)
+                .bind(&tenant_id)
+                .bind(&id)
+                .bind("user")
+                .bind("Approve & Execute")
+                .bind(None::<serde_json::Value>)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
                 sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
