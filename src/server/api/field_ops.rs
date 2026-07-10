@@ -180,6 +180,32 @@ pub async fn update_appointment(
         )
     })?;
 
+    if payload.status == "Completed" {
+        let tenant_id_row: Result<(String,), _> = sqlx::query_as("SELECT tenant_id FROM appointments WHERE id = $1")
+            .bind(&payload.id)
+            .fetch_one(&state.pool)
+            .await;
+
+        if let Ok((tenant_id,)) = tenant_id_row {
+            if let Err(e) = sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                 VALUES ($1, $2, 'operations', 'job.completed.offline_sync', $3::jsonb, 'PENDING')"
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "job_id": payload.id,
+                "status": payload.status,
+                "notes": payload.notes,
+                "trigger_workflows": ["eta_sms", "invoice_generation"]
+            }).to_string())
+            .execute(&state.pool)
+            .await {
+                tracing::error!("Failed to enqueue department_tasks for completed appointment {}: {}", payload.id, e);
+            }
+        }
+    }
+
     let event = ::server_ohc::orchestration::TeammateMeshEvent {
         agent_id: "system".into(),
         action: "job:status_changed".into(),

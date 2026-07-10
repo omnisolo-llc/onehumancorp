@@ -52,7 +52,7 @@ test.describe('Offline-Tolerant Field Ops CUJ', () => {
     await expect(page.getByText('IN-PROGRESS')).toBeVisible();
 
     // Mark as complete
-    const doneBtn = page.getByText('Job Done');
+    const doneBtn = page.getByText('Complete & Pay');
     await doneBtn.click();
 
     // Verify optimistic UI update

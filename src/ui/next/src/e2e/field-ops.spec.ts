@@ -52,8 +52,8 @@ test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
     await expect(startWorkBtn).toBeVisible({ timeout: 5000 });
     await startWorkBtn.click();
 
-    // Check that we moved to 'Job Done'
-    const jobDoneBtn = page.locator("button", { hasText: "Job Done" }).first();
+    // Check that we moved to 'Complete & Pay'
+    const jobDoneBtn = page.locator("button", { hasText: "Complete & Pay" }).first();
     await expect(jobDoneBtn).toBeVisible({ timeout: 5000 });
     await jobDoneBtn.click();
 
