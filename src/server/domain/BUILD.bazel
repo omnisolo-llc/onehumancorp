@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "action_router.rs",
+        "catalog.rs",
         "agent_approvals.rs",
         "b2b.rs",
         "blueprint.rs",
@@ -31,6 +32,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "action_router.rs",
+        "catalog.rs",
         "agent_approvals.rs",
         "b2b.rs",
         "blueprint.rs",

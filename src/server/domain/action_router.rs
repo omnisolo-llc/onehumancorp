@@ -29,6 +29,12 @@ pub async fn dispatch_action(
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
         }
+
+        "create_product" => {
+            crate::domain::catalog::handle_create_product(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         "booking_draft" => {
             crate::domain::booking::handle_booking_action(tenant_id, payload, pool)
                 .await
