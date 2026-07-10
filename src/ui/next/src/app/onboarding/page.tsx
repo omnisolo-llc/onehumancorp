@@ -2313,7 +2313,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                className="w-full bg-[#0066FF] text-white p-4 min-h-[44px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
