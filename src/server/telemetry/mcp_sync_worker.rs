@@ -24,7 +24,7 @@ impl McpSyncWorker {
     pub async fn run(&self) {
         info!("Starting McpSyncWorker...");
         loop {
-            if ::server_config::get().telemetry_enabled {
+            if ::server_config::is_telemetry_enabled() {
                 if let Err(e) = self.sync_metrics().await {
                     warn!("McpSyncWorker error: {}", e);
                 }
@@ -34,7 +34,7 @@ impl McpSyncWorker {
     }
 
     pub async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if !::server_config::get().telemetry_enabled {
+        if !::server_config::is_telemetry_enabled() {
             return Ok(());
         }
 

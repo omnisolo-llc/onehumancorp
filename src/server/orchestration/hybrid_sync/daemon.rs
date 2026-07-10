@@ -76,7 +76,7 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_telemetry_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if !::server_config::get().telemetry_enabled {
+        if !::server_config::is_telemetry_enabled() {
             return Ok(());
         }
 
@@ -454,20 +454,24 @@ impl HybridSyncDaemon {
         // SQLite
         if let Err(e) = sqlx::query(&sqlite_insert).execute(&self.sqlite_pool).await {
             warn!("Failed to insert dead letter for SQLite agent missions: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite agent missions");
         }
         if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from SQLite");
             }
         }
 
         // PG
         if let Err(e) = sqlx::query(&pg_insert).execute(&self.pg_pool).await {
             warn!("Failed to insert dead letter for PostgreSQL agent missions: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL agent missions");
         }
         if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from PostgreSQL");
             }
         }
 
@@ -493,38 +497,46 @@ impl HybridSyncDaemon {
         // SQLite queue
         if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {
             warn!("Failed to insert dead letter for SQLite RUNNING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite RUNNING jobs");
         }
         if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue");
             }
         }
 
         if let Err(e) = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await {
             warn!("Failed to insert dead letter for SQLite QUEUED jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite QUEUED jobs");
         }
         if let Ok(res) = sqlx::query(&sqlite_queued_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue");
             }
         }
 
         // PG queue
         if let Err(e) = sqlx::query(&pg_running_insert).execute(&self.pg_pool).await {
             warn!("Failed to insert dead letter for PostgreSQL RUNNING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL RUNNING jobs");
         }
         if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue");
             }
         }
 
         if let Err(e) = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await {
             warn!("Failed to insert dead letter for PostgreSQL QUEUED jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL QUEUED jobs");
         }
         if let Ok(res) = sqlx::query(&pg_queued_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue");
             }
         }
 

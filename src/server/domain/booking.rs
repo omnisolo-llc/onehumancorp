@@ -125,7 +125,7 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
         if let Ok(link) = link_res {
             stripe_payment_link = link;
         } else if let Err(e) = link_res {
-             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e);
+             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
              // Fallback to dummy link for testing/e2e if API fails
              stripe_payment_link = format!("https://buy.stripe.com/test_{}", uuid::Uuid::new_v4().simple().to_string().chars().take(16).collect::<String>());
         }

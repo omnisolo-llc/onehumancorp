@@ -3116,7 +3116,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//Cargo.lock 6e0ed4803b687926c4fa89ffd185eed79f4db6541632cba924f029a51f52192d",
+          "FILE:@@//Cargo.lock 3ea0987f01e09153e5d1792ded88da010f5d279b63201a824d9c14c869f0b524",
           "FILE:@@//Cargo.toml 06dde8777709caced2999239dea5e64e19e5478dd43df7a90e595119bf6c22fa",
           "FILE:@@//src/server/integrations/twilio/Cargo.toml 0b844e21da462f26931e5cd748780679576031f13904526d0aae009774abba03",
           "FILE:@@//src/server/integrations/core/Cargo.toml eafe72b50cce37ffa026a47a89e02d1ea7a64cfe9d5fdc7cfb0dea8d3cbcbfbf",
@@ -3156,7 +3156,7 @@
           "FILE:@@//src/server/integrations/pubsub/Cargo.toml 80032c67df3a8b00fa622d4e572137aaf4c51c243c1189a8b3642e77cef19573",
           "FILE:@@//src/agents/builtin/Cargo.toml ea811f2082a6d6228615d4f67f647e70565449eee794fee2984d50069802289c",
           "FILE:@@//src/agents/builtin/core/Cargo.toml d9208ef770609dd2bcf8da9206254c6747d08331a162b0254746b445d87e8e80",
-          "FILE:@@//src/agents/builtin/llm/Cargo.toml 27a6ab8b4a1f2e3b54c27d1eb3be0a88f3fd3e91c54edb7eecb6fcfaf18325e6",
+          "FILE:@@//src/agents/builtin/llm/Cargo.toml b191938eec74a2d8c559dcd280abae30c5f9c8c15b1ae4752686f422cf8b6cb6",
           "FILE:@@//src/agents/builtin/tools/Cargo.toml 954ce389cfc1dab2fb647c0022ba4607a5f5a53de23a92f5627325f3f0d83b35",
           "FILE:@@//src/server/integrations/meta/Cargo.toml 56d595982f6de12131e8817dacd076859232e6e88a9bd675ec21fa2fda455f61",
           "FILE:@@//src/server/integrations/jitsi/Cargo.toml b994735f7f6a594e038fcb2601a2ed002fcf66530be7cc69529a10ed7fff952d",
@@ -17993,6 +17993,164 @@
           "495c7dfaea4e2bf48643662bb622e4ce6378d6d9840015238ad4b8792b99ddbf"
         ]
       },
+      "1.22.1": {
+        "aix_ppc64": [
+          "go1.22.1.aix-ppc64.tar.gz",
+          "6fa698dfb9ad780733f178c03c974053394e08790bfeb16593688f21ae123560"
+        ],
+        "darwin_amd64": [
+          "go1.22.1.darwin-amd64.tar.gz",
+          "3bc971772f4712fec0364f4bc3de06af22a00a12daab10b6f717fdcd13156cc0"
+        ],
+        "darwin_arm64": [
+          "go1.22.1.darwin-arm64.tar.gz",
+          "f6a9cec6b8a002fcc9c0ee24ec04d67f430a52abc3cfd613836986bcc00d8383"
+        ],
+        "dragonfly_amd64": [
+          "go1.22.1.dragonfly-amd64.tar.gz",
+          "d1d5a89968171019dbc992727d761f250cd02076b98c432f7cda0c55e9764549"
+        ],
+        "freebsd_386": [
+          "go1.22.1.freebsd-386.tar.gz",
+          "99f81c10d5a3f8a886faf8fa86aaa2aaf929fbed54a972ae5eec3c5e0bdb961a"
+        ],
+        "freebsd_amd64": [
+          "go1.22.1.freebsd-amd64.tar.gz",
+          "51c614ddd92ee4a9913a14c39bf80508d9cfba08561f24d2f075fd00f3cfb067"
+        ],
+        "freebsd_arm64": [
+          "go1.22.1.freebsd-arm64.tar.gz",
+          "4f7d6ae3edf50938431a05403c710305fd88132511903784618741bacd31045e"
+        ],
+        "freebsd_armv6l": [
+          "go1.22.1.freebsd-arm.tar.gz",
+          "229a986ec0387e3643b3c8a85aedf0e4f608a5ad47c2b8a4729f059a082d1dd4"
+        ],
+        "freebsd_riscv64": [
+          "go1.22.1.freebsd-riscv64.tar.gz",
+          "f374117b13514a1f6dac0e99ff743b92fd205df9b6d2b56966378041103ce7d2"
+        ],
+        "illumos_amd64": [
+          "go1.22.1.illumos-amd64.tar.gz",
+          "f623f3f0129e3eae112bd64a36291aa144b2ce9580cc88d8dcb154526a303bb4"
+        ],
+        "linux_386": [
+          "go1.22.1.linux-386.tar.gz",
+          "8484df36d3d40139eaf0fe5e647b006435d826cc12f9ae72973bf7ec265e0ae4"
+        ],
+        "linux_amd64": [
+          "go1.22.1.linux-amd64.tar.gz",
+          "aab8e15785c997ae20f9c88422ee35d962c4562212bb0f879d052a35c8307c7f"
+        ],
+        "linux_arm64": [
+          "go1.22.1.linux-arm64.tar.gz",
+          "e56685a245b6a0c592fc4a55f0b7803af5b3f827aaa29feab1f40e491acf35b8"
+        ],
+        "linux_armv6l": [
+          "go1.22.1.linux-armv6l.tar.gz",
+          "8cb7a90e48c20daed39a6ac8b8a40760030ba5e93c12274c42191d868687c281"
+        ],
+        "linux_loong64": [
+          "go1.22.1.linux-loong64.tar.gz",
+          "75e9b3c665d31078626e5fe95dcf2e6eae1484326f8b2b178559ca13f71dfc4c"
+        ],
+        "linux_mips": [
+          "go1.22.1.linux-mips.tar.gz",
+          "3f917fb72894effb18db9d191c9b7f288befd2cc4a9735256f1634fb1e4ae8fb"
+        ],
+        "linux_mips64": [
+          "go1.22.1.linux-mips64.tar.gz",
+          "c1ecfa000a3ae70056dbc17ccb3adcf8e3f6f76bb10f166d57c3e1b190bc4907"
+        ],
+        "linux_mips64le": [
+          "go1.22.1.linux-mips64le.tar.gz",
+          "a52386492ee3147d37f7dd80b7b5d41252bc4dbb0e28ce29e730dd095848caa8"
+        ],
+        "linux_mipsle": [
+          "go1.22.1.linux-mipsle.tar.gz",
+          "08e5cf029f5dda72b6a2257fb71eb615294091cc2c3f0a3193692c3135012511"
+        ],
+        "linux_ppc64": [
+          "go1.22.1.linux-ppc64.tar.gz",
+          "daee81491c0b775279e38d4602472d25e67ade41d13d5b3f3fb618ec231463e1"
+        ],
+        "linux_ppc64le": [
+          "go1.22.1.linux-ppc64le.tar.gz",
+          "ac775e19d93cc1668999b77cfe8c8964abfbc658718feccfe6e0eb87663cd668"
+        ],
+        "linux_riscv64": [
+          "go1.22.1.linux-riscv64.tar.gz",
+          "77f7c8d2a8ea10c413c1f86c1c42001cd98bf428239cabceda2cdaff2cf29330"
+        ],
+        "linux_s390x": [
+          "go1.22.1.linux-s390x.tar.gz",
+          "7bb7dd8e10f95c9a4cc4f6bef44c816a6e7c9e03f56ac6af6efbb082b19b379f"
+        ],
+        "netbsd_386": [
+          "go1.22.1.netbsd-386.tar.gz",
+          "6cb82704d548cb90284729359ffbbf4c5a95bb7b5dfc2a9acb6e211992791c28"
+        ],
+        "netbsd_amd64": [
+          "go1.22.1.netbsd-amd64.tar.gz",
+          "f579dde36b89d847029839fb24c61fa028149eab36e42b305b03881bf439b192"
+        ],
+        "netbsd_arm64": [
+          "go1.22.1.netbsd-arm64.tar.gz",
+          "c445e61cbcf6a5f8d40ec22cc44fdce026f6cd53e97b5202ee6c3e2b9a77517b"
+        ],
+        "netbsd_armv6l": [
+          "go1.22.1.netbsd-arm.tar.gz",
+          "a84e507bb591150211d72043c9a616e60e50acbecc3adb90bdb491070f0c0822"
+        ],
+        "openbsd_386": [
+          "go1.22.1.openbsd-386.tar.gz",
+          "a0bac85fa905d7df5f611625fd2de157fe942299683088cac75e4c83e61a62bd"
+        ],
+        "openbsd_amd64": [
+          "go1.22.1.openbsd-amd64.tar.gz",
+          "f1359c30639c040615c7b3a59c2a6252d6c98c7ba3c6164f1e643657cf73e74f"
+        ],
+        "openbsd_arm64": [
+          "go1.22.1.openbsd-arm64.tar.gz",
+          "16fff79fbd66950d124b4de264c6d8dba5b1bbb4775b26362b056ddf5711f52a"
+        ],
+        "openbsd_armv6l": [
+          "go1.22.1.openbsd-arm.tar.gz",
+          "48b511199dd8410f4524ccb97402de01ed2f4669699e7ad21ebc4242c8a49552"
+        ],
+        "plan9_386": [
+          "go1.22.1.plan9-386.tar.gz",
+          "1af03991106ff89dd9221c452c6bd36cdb2d4f4855f54734908110341b18a900"
+        ],
+        "plan9_amd64": [
+          "go1.22.1.plan9-amd64.tar.gz",
+          "898640e029d9c22fd0ed55c90b32971fcb77907c6a5ae97fbac741a3f951733a"
+        ],
+        "plan9_armv6l": [
+          "go1.22.1.plan9-arm.tar.gz",
+          "9df684c49321d4a6a91fae39b71de5a79457afca05cfdf6520b25e9fecf3661f"
+        ],
+        "solaris_amd64": [
+          "go1.22.1.solaris-amd64.tar.gz",
+          "b6c57efcdf6eef5a480c9b755b4b9b2507810ff9f80c891d87fc7ed47404d4e3"
+        ],
+        "windows_386": [
+          "go1.22.1.windows-386.zip",
+          "0c5ebb7eb39b7884ec99f92b425d4c03a96a72443562aafbf6e7d15c42a3108a"
+        ],
+        "windows_amd64": [
+          "go1.22.1.windows-amd64.zip",
+          "cf9c66a208a106402a527f5b956269ca506cfe535fc388e828d249ea88ed28ba"
+        ],
+        "windows_arm64": [
+          "go1.22.1.windows-arm64.zip",
+          "85b8511b298c9f4199ecae26afafcc3d46155bac934d43f2357b9224bcaa310f"
+        ],
+        "windows_armv6l": [
+          "go1.22.1.windows-arm.zip",
+          "fda36f9a50a7d620e0d7192244ea9a87321bec781ef8b35ea132ca5d90c27c60"
+        ]
+      },
       "1.22.4": {
         "aix_ppc64": [
           "go1.22.4.aix-ppc64.tar.gz",
@@ -18315,168 +18473,6 @@
         "windows_arm64": [
           "go1.24.0.windows-arm64.zip",
           "53f73450fb66075d16be9f206e9177bd972b528168271918c4747903b5596c3d"
-        ]
-      },
-      "1.24.1": {
-        "aix_ppc64": [
-          "go1.24.1.aix-ppc64.tar.gz",
-          "8d627dc163a4bffa2b1887112ad6194af175dce108d606ed1714a089fb806033"
-        ],
-        "darwin_amd64": [
-          "go1.24.1.darwin-amd64.tar.gz",
-          "addbfce2056744962e2d7436313ab93486660cf7a2e066d171b9d6f2da7c7abe"
-        ],
-        "darwin_arm64": [
-          "go1.24.1.darwin-arm64.tar.gz",
-          "295581b5619acc92f5106e5bcb05c51869337eb19742fdfa6c8346c18e78ff88"
-        ],
-        "dragonfly_amd64": [
-          "go1.24.1.dragonfly-amd64.tar.gz",
-          "e70053f56f7eb93806d80cbd5726f78509a0a467602f7bea0e2c4ee8ed7c3968"
-        ],
-        "freebsd_386": [
-          "go1.24.1.freebsd-386.tar.gz",
-          "3595e2674ed8fe72e604ca59c964d3e5277aafb08475c2b1aaca2d2fd69c24fc"
-        ],
-        "freebsd_amd64": [
-          "go1.24.1.freebsd-amd64.tar.gz",
-          "47d7de8bb64d5c3ee7b6723aa62d5ecb11e3568ef2249bbe1d4bbd432d37c00c"
-        ],
-        "freebsd_arm": [
-          "go1.24.1.freebsd-arm.tar.gz",
-          "04eec3bcfaa14c1370cdf98e8307fac7e4853496c3045afb9c3124a29cbca205"
-        ],
-        "freebsd_arm64": [
-          "go1.24.1.freebsd-arm64.tar.gz",
-          "51aa70146e40cfdc20927424083dc86e6223f85dc08089913a1651973b55665b"
-        ],
-        "freebsd_riscv64": [
-          "go1.24.1.freebsd-riscv64.tar.gz",
-          "3c131d8e3fc285a1340f87813153e24226d3ddbd6e54f3facbd6e4c46a84655e"
-        ],
-        "illumos_amd64": [
-          "go1.24.1.illumos-amd64.tar.gz",
-          "201d09da737ba39d5367f87d4e8b31edaeeb3dc9b9c407cb8cfb40f90c5a727a"
-        ],
-        "linux_386": [
-          "go1.24.1.linux-386.tar.gz",
-          "8c530ecedbc17e42ce10177bea07ccc96a3e77c792ea1ea72173a9675d16ffa5"
-        ],
-        "linux_amd64": [
-          "go1.24.1.linux-amd64.tar.gz",
-          "cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073"
-        ],
-        "linux_arm64": [
-          "go1.24.1.linux-arm64.tar.gz",
-          "8df5750ffc0281017fb6070fba450f5d22b600a02081dceef47966ffaf36a3af"
-        ],
-        "linux_armv6l": [
-          "go1.24.1.linux-armv6l.tar.gz",
-          "6d95f8d7884bfe2364644c837f080f2b585903d0b771eb5b06044e226a4f120a"
-        ],
-        "linux_loong64": [
-          "go1.24.1.linux-loong64.tar.gz",
-          "19304a4a56e46d04604547d2d83235dc4f9b192c79832560ce337d26cc7b835a"
-        ],
-        "linux_mips": [
-          "go1.24.1.linux-mips.tar.gz",
-          "6347be77fa5359c12a5308c8ab87147c1fc4717b0c216493d1706c3b9fcde22d"
-        ],
-        "linux_mips64": [
-          "go1.24.1.linux-mips64.tar.gz",
-          "1647df415f7030b82d4105670192aa7e8910e18563bb0d505192d72800cc2d21"
-        ],
-        "linux_mips64le": [
-          "go1.24.1.linux-mips64le.tar.gz",
-          "762da594e4ec0f9cf6defae6ef971f5f7901203ee6a2d979e317adec96657317"
-        ],
-        "linux_mipsle": [
-          "go1.24.1.linux-mipsle.tar.gz",
-          "9d8133c7b23a557399fab870b5cf464079c2b623a43b214a7567cf11c254a444"
-        ],
-        "linux_ppc64": [
-          "go1.24.1.linux-ppc64.tar.gz",
-          "132f10999abbaccbada47fa85462db30c423955913b14d6c692de25f4636c766"
-        ],
-        "linux_ppc64le": [
-          "go1.24.1.linux-ppc64le.tar.gz",
-          "0fb522efcefabae6e37e69bdc444094e75bfe824ea6d4cc3cbc70c7ae1b16858"
-        ],
-        "linux_riscv64": [
-          "go1.24.1.linux-riscv64.tar.gz",
-          "eaef4323d5467ff97fb1979c8491764060dade19f02f3275a9313f9a0da3b9c0"
-        ],
-        "linux_s390x": [
-          "go1.24.1.linux-s390x.tar.gz",
-          "6c05e14d8f11094cb56a1c50f390b6b658bed8a7cbd8d1a57e926581b7eabfce"
-        ],
-        "netbsd_386": [
-          "go1.24.1.netbsd-386.tar.gz",
-          "5dbb287d343ea00d58a70b11629f32ee716dc50a6875c459ea2018df0f294cd8"
-        ],
-        "netbsd_amd64": [
-          "go1.24.1.netbsd-amd64.tar.gz",
-          "617aa3faee50ce84c343db0888e9a210c310a7203666b4ed620f31030c9fb32f"
-        ],
-        "netbsd_arm": [
-          "go1.24.1.netbsd-arm.tar.gz",
-          "59a928b7080c4a6ac985946274b7c65ce1cecc0b468ecd992d17b7c12fab9296"
-        ],
-        "netbsd_arm64": [
-          "go1.24.1.netbsd-arm64.tar.gz",
-          "28daa8d0feb4aef2af60cefa3305bb9314de7e8a05cbca41ac548964cdfe89b7"
-        ],
-        "openbsd_386": [
-          "go1.24.1.openbsd-386.tar.gz",
-          "b7382b2f5d99813aeac14db482faa3bfbd47a68880b607fa2a7e669e26bab9cd"
-        ],
-        "openbsd_amd64": [
-          "go1.24.1.openbsd-amd64.tar.gz",
-          "2513b6537c45deead5e641c7ce7502913e7d5e6f0b21c52542fb11f81578690f"
-        ],
-        "openbsd_arm": [
-          "go1.24.1.openbsd-arm.tar.gz",
-          "853c1917d4fc7b144c55a02842aa48542d5cc798dde8db96dc0fdbc263200e04"
-        ],
-        "openbsd_arm64": [
-          "go1.24.1.openbsd-arm64.tar.gz",
-          "6bc207b91e6f6ae3347fb54616a8fb2f5c11983713846a4cef111ff3f4f94d14"
-        ],
-        "openbsd_ppc64": [
-          "go1.24.1.openbsd-ppc64.tar.gz",
-          "4279260e2f2b94ee94e81470d13db7367f4393b061fee60985528fa0fa430df4"
-        ],
-        "openbsd_riscv64": [
-          "go1.24.1.openbsd-riscv64.tar.gz",
-          "6fc4023a0a339ee0778522364a127d94c78e62122288d47d820dba703f81dc07"
-        ],
-        "plan9_386": [
-          "go1.24.1.plan9-386.tar.gz",
-          "b5eb9fafd77146e7e1f748acfd95559580ecc8d2f15abf432a20f58c929c7cd2"
-        ],
-        "plan9_amd64": [
-          "go1.24.1.plan9-amd64.tar.gz",
-          "24dcad6361b141fc8cced15b092351e12a99d2e58d7013204a3013c50daf9fdd"
-        ],
-        "plan9_arm": [
-          "go1.24.1.plan9-arm.tar.gz",
-          "a026ac3b55aa1e6fdc2aaab30207a117eafbe965ed81d3aa0676409f280ddc37"
-        ],
-        "solaris_amd64": [
-          "go1.24.1.solaris-amd64.tar.gz",
-          "8e4f6a77388dc6e5aa481efd5abdb3b9f5c9463bb82f4db074494e04e5c84992"
-        ],
-        "windows_386": [
-          "go1.24.1.windows-386.zip",
-          "b799f4ab264eef12a014c759383ed934056608c483e0f73e34ea6caf9f1df5f9"
-        ],
-        "windows_amd64": [
-          "go1.24.1.windows-amd64.zip",
-          "95666b551453209a2b8869d29d177285ff9573af10f085d961d7ae5440f645ce"
-        ],
-        "windows_arm64": [
-          "go1.24.1.windows-arm64.zip",
-          "e28c4e6d0b913955765b46157ab88ae59bb636acaa12d7bec959aa6900f1cebd"
         ]
       },
       "1.25.0": {
