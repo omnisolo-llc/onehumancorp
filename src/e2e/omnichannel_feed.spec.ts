@@ -24,9 +24,9 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
     });
     await page.reload();
 
-    const emptyState = page.locator('[data-testid="triage-feed-empty"]');
+    const emptyState = page.locator('[data-testid="onboarding-welcome-card"]');
     await expect(emptyState).toBeVisible();
-    await expect(emptyState).toContainText('All caught up! Your business is running smoothly.');
+    await expect(emptyState).toContainText('Welcome to OHC!');
   });
 
   // Test 3: Action Card Interaction

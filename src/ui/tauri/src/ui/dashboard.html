@@ -2035,7 +2035,7 @@
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
           if (proposals.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">All caught up! Your business is running smoothly.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">All caught up! Your business is running smoothly.</div>';
             return;
           }
 
@@ -2600,7 +2600,7 @@
         } else if (currentTriageTab === 'financials') {
           const financials = items.filter(i => (i.payload?.feature_type === 'invoice' || i.context_payload?.feature_type === 'invoice' || i.action_payload?.feature_type === 'invoice' || i.type === 'invoice'));
           if (financials.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">No pending invoices found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No pending invoices found.</div>';
             return;
           }
           triageQueue.innerHTML = financials.map(item => {
@@ -2631,7 +2631,7 @@
 
           const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="feed-empty">No recent activity found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No recent activity found.</div>';
             return;
           }
           triageQueue.innerHTML = activities.map(activity => {
