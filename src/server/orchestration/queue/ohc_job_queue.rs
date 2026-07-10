@@ -150,10 +150,10 @@ impl OHCJobQueue {
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
-        sqlx::query(query_str)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        if let Err(e) = sqlx::query(query_str).execute(&mut *tx).await {
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for stagnant backlog items");
+            return Err(e.to_string());
+        }
 
         let query_str = if is_standalone {
             "DELETE FROM ohc_job_queue
@@ -167,6 +167,10 @@ impl OHCJobQueue {
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        if stagnant_result.rows_affected() > 0 {
+            ::server_telemetry::record_error_signal("[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours");
+        }
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(result.rows_affected() + stagnant_result.rows_affected())
