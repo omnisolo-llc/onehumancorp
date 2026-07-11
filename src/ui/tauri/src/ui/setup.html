@@ -1198,6 +1198,20 @@
         opacity: 1;
         animation: stepFadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
       }
+      .step.exit {
+        opacity: 0;
+        animation: stepFadeOut 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes stepFadeOut {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+      }
       @keyframes fadeIn {
         0% { opacity: 0; transform: translateY(10px); }
         100% { opacity: 1; transform: translateY(0); }
@@ -3527,20 +3541,54 @@
         if (stepId === "step-categories") {
           populateCategories();
         }
-        document.querySelectorAll(".step").forEach((el) => {
-          el.classList.remove("active");
-          el.style.display = "none";
-        });
-        if (document.querySelector(".container")) {
-          document.querySelector(".container").scrollTo(0, 0);
-        }
-        document.getElementById(stepId).classList.add("active");
-        document.getElementById(stepId).style.display = "block";
-        updateStepper(stepId);
 
-        if (shouldSave) {
-          saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        const activeSteps = document.querySelectorAll(".step.active");
+        if (activeSteps.length > 0) {
+          activeSteps.forEach((el) => {
+            el.classList.remove("active");
+            el.classList.add("exit");
+          });
+
+          setTimeout(() => {
+            document.querySelectorAll(".step.exit").forEach((el) => {
+              el.style.display = "none";
+              el.classList.remove("exit");
+            });
+            if (document.querySelector(".container")) {
+              document.querySelector(".container").scrollTo(0, 0);
+            }
+            const nextStep = document.getElementById(stepId);
+            if (nextStep) {
+              nextStep.style.display = "block";
+              // trigger reflow
+              void nextStep.offsetWidth;
+              nextStep.classList.add("active");
+              updateStepper(stepId);
+            }
+            if (shouldSave) {
+              saveCurrentState();
+              localStorage.setItem("onboardingState", JSON.stringify(state));
+            }
+          }, 150); // match exit transition timing
+        } else {
+          document.querySelectorAll(".step").forEach((el) => {
+            el.classList.remove("active");
+            el.style.display = "none";
+          });
+          if (document.querySelector(".container")) {
+            document.querySelector(".container").scrollTo(0, 0);
+          }
+          const nextStep = document.getElementById(stepId);
+          if (nextStep) {
+            nextStep.style.display = "block";
+            nextStep.classList.add("active");
+            updateStepper(stepId);
+          }
+
+          if (shouldSave) {
+            saveCurrentState();
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          }
         }
       }
 
