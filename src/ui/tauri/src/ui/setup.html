@@ -4069,7 +4069,7 @@
             if (approvalDetails) {
                 approvalDetails.innerHTML = `
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-                        <p style="font-size: 14px; text-align: center; color: #1D1D1F;" class="dark:text-[#F5F5F7]"><strong>Suggested Deposit Policy:</strong> Requires a ${startReq.deposit_percentage || 50}% upfront deposit on custom orders.</p>
+                        <p style="font-size: 14px; text-align: center; color: #1D1D1F;" class="dark:text-[#F5F5F7]"><strong>Suggested Deposit Policy:</strong> Requires a ${startReq.deposit_percentage !== undefined ? startReq.deposit_percentage : 50}% upfront deposit on custom orders.</p>
                         <div style="width: 375px; max-width: 100%; aspect-ratio: 9/16; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                             <div style="background: #0066FF; color: white; padding: 12px; text-align: center; font-weight: bold;">
                                 ${startReq.company_name}
