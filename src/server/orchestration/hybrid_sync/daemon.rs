@@ -544,6 +544,11 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_pos_offline_transactions(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if crate::is_standalone_runtime() && !::server_config::is_telemetry_enabled() {
+            tracing::debug!("Standalone mode, telemetry disabled, skipping POS offline sync entirely to enforce local sovereignty."); // pii-safe
+            return Ok(());
+        }
+
         let start = Instant::now();
         let rows = sqlx::query("SELECT id, tenant_id, client_id, amount_cents, currency, payload, status FROM pos_offline_transactions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 100")
             .fetch_all(&self.sqlite_pool)
