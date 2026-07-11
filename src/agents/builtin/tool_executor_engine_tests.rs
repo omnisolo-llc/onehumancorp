@@ -8,7 +8,8 @@ mod tests {
     use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
 use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use ohc_builtin_agent_tools::Tool;
+    use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
@@ -450,7 +451,8 @@ mod additional_transient_tests {
     use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
 use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use ohc_builtin_agent_tools::Tool;
+    use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
