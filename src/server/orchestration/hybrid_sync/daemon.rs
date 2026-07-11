@@ -479,64 +479,64 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_ohc_job_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const SQLITE_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < datetime('now', '-1 hours')";
-        const SQLITE_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < datetime('now', '-24 hours')";
-        const PG_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'";
-        const PG_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'";
+        const SQLITE_PROCESSING_WHERE: &str = "status = 'PROCESSING' AND updated_at < datetime('now', '-1 hours')";
+        const SQLITE_PENDING_WHERE: &str = "status = 'PENDING' AND created_at < datetime('now', '-24 hours')";
+        const PG_PROCESSING_WHERE: &str = "status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '1 hour'";
+        const PG_PENDING_WHERE: &str = "status = 'PENDING' AND created_at < NOW() - INTERVAL '24 hours'";
 
-        let sqlite_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", SQLITE_RUNNING_WHERE);
-        let sqlite_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
-        let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", SQLITE_QUEUED_WHERE);
-        let sqlite_queued_delete = format!("DELETE FROM ohc_job_queue WHERE {}", SQLITE_QUEUED_WHERE);
+        let sqlite_processing_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in PROCESSING for > 1 hour' FROM ohc_job_queue WHERE {}", SQLITE_PROCESSING_WHERE);
+        let sqlite_processing_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_PROCESSING_WHERE);
+        let sqlite_pending_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours' FROM ohc_job_queue WHERE {}", SQLITE_PENDING_WHERE);
+        let sqlite_pending_delete = format!("DELETE FROM ohc_job_queue WHERE {}", SQLITE_PENDING_WHERE);
 
-        let pg_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", PG_RUNNING_WHERE);
-        let pg_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
-        let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", PG_QUEUED_WHERE);
-        let pg_queued_delete = format!("DELETE FROM ohc_job_queue WHERE {}", PG_QUEUED_WHERE);
+        let pg_processing_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in PROCESSING for > 1 hour' FROM ohc_job_queue WHERE {}", PG_PROCESSING_WHERE);
+        let pg_processing_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_PROCESSING_WHERE);
+        let pg_pending_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours' FROM ohc_job_queue WHERE {}", PG_PENDING_WHERE);
+        let pg_pending_delete = format!("DELETE FROM ohc_job_queue WHERE {}", PG_PENDING_WHERE);
 
         // SQLite queue
-        if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {
-            warn!("Failed to insert dead letter for SQLite RUNNING jobs: {}", e);
-            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite RUNNING jobs");
+        if let Err(e) = sqlx::query(&sqlite_processing_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite PROCESSING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite PROCESSING jobs");
         }
-        if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
+        if let Ok(res) = sqlx::query(&sqlite_processing_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue");
+                info!("Pruned {} stuck PROCESSING jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck PROCESSING jobs from SQLite ohc_job_queue");
             }
         }
 
-        if let Err(e) = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await {
-            warn!("Failed to insert dead letter for SQLite QUEUED jobs: {}", e);
-            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite QUEUED jobs");
+        if let Err(e) = sqlx::query(&sqlite_pending_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite PENDING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite PENDING jobs");
         }
-        if let Ok(res) = sqlx::query(&sqlite_queued_delete).execute(&self.sqlite_pool).await {
+        if let Ok(res) = sqlx::query(&sqlite_pending_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue");
+                info!("Pruned {} stuck PENDING jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck PENDING jobs from SQLite ohc_job_queue");
             }
         }
 
         // PG queue
-        if let Err(e) = sqlx::query(&pg_running_insert).execute(&self.pg_pool).await {
-            warn!("Failed to insert dead letter for PostgreSQL RUNNING jobs: {}", e);
-            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL RUNNING jobs");
+        if let Err(e) = sqlx::query(&pg_processing_insert).execute(&self.pg_pool).await {
+            warn!("Failed to insert dead letter for PostgreSQL PROCESSING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL PROCESSING jobs");
         }
-        if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
+        if let Ok(res) = sqlx::query(&pg_processing_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue");
+                info!("Pruned {} stuck PROCESSING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck PROCESSING jobs from PostgreSQL ohc_job_queue");
             }
         }
 
-        if let Err(e) = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await {
-            warn!("Failed to insert dead letter for PostgreSQL QUEUED jobs: {}", e);
-            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL QUEUED jobs");
+        if let Err(e) = sqlx::query(&pg_pending_insert).execute(&self.pg_pool).await {
+            warn!("Failed to insert dead letter for PostgreSQL PENDING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL PENDING jobs");
         }
-        if let Ok(res) = sqlx::query(&pg_queued_delete).execute(&self.pg_pool).await {
+        if let Ok(res) = sqlx::query(&pg_pending_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!("Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue");
+                info!("Pruned {} stuck PENDING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck PENDING jobs from PostgreSQL ohc_job_queue");
             }
         }
 

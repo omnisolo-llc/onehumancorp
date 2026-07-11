@@ -1,0 +1,6 @@
+I need to make the payload include the id or change the daemon to inject the original ID. Wait, I should make the daemon insert the ID! Wait, the daemon uses SELECT lower(hex(randomblob(16))) for the ID. Let us see how the daemon creates the dead letter.
+```
+        let sqlite_processing_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, job_stuck, ohc_job_queue, COALESCE(payload, {{}}), [cleanup] Stagnant backlog item stuck in PROCESSING for hour FROM ohc_job_queue WHERE {}", SQLITE_PROCESSING_WHERE);
+```
+It selects `COALESCE(payload, {})` instead of preserving the `job_id` inside the payload.
+I can change it to `json_insert(COALESCE(payload, {}), $.original_id, id)` or just change the test to put the ID in the payload.

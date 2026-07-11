@@ -556,10 +556,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'PROCESSING', datetime('now', '-2 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_pg', 'tenant1', 'PROCESSING', NOW() - INTERVAL '2 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
@@ -664,17 +664,17 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck queued tasks
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), datetime('now', '-25 hour'), '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'PENDING', datetime('now', '-25 hour'), datetime('now', '-25 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', NOW() - INTERVAL '25 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'PENDING', NOW() - INTERVAL '25 hours', NOW() - INTERVAL '25 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
-        // Insert stuck running tasks
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
+        // Insert stuck processing tasks
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_processing_sqlite', 'tenant1', 'PROCESSING', datetime('now', '-2 hour'), '{\"original_id\": \"stuck_processing_sqlite\"}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_processing_pg', 'tenant1', 'PROCESSING', NOW() - INTERVAL '2 hours', '{\"original_id\": \"stuck_processing_pg\"}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
@@ -688,21 +688,21 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
         assert!(row_queue.is_none());
 
-        // Verify SQLite running is failed
+        // Verify SQLite processing is failed
         use sqlx::Row;
-        let row_running_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_running_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
-        assert_eq!(row_running_sqlite.get::<String, _>("status"), "FAILED");
+        let row_processing_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_processing_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(row_processing_sqlite.get::<String, _>("status"), "FAILED");
 
-        // Verify PG running is failed
-        let row_running = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_running_pg\'").fetch_one(&pg_pool).await.unwrap();
-        assert_eq!(row_running.get::<String, _>("status"), "FAILED");
+        // Verify PG processing is failed
+        let row_processing = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_processing_pg\'").fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(row_processing.get::<String, _>("status"), "FAILED");
 
-        // Verify dead letters were created for running jobs
-        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_running_sqlite%'")
+        // Verify dead letters were created for processing jobs
+        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_processing_sqlite%'")
             .fetch_one(&sqlite_pool).await.unwrap();
         assert_eq!(dl_sqlite.0, 1);
 
-        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_running_pg%'")
+        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_processing_pg%'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(dl_pg.0, 1);
     }
