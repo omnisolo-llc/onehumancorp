@@ -16,7 +16,7 @@ test.describe('Offline-First AI Sync Mesh', () => {
     });
 
     // Check offline indicator
-    await expect(page.getByText('Offline Mode')).toBeVisible();
+    await expect(page.getByText('Offline - Changes saved locally')).toBeVisible();
 
     // Click "Quick Charge $50" which queues an offline transaction
     const quickChargeBtn = page.getByText('Quick Charge $50');
