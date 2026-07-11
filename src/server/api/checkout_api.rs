@@ -37,6 +37,40 @@ pub async fn create_checkout_session_handler(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     }
 
+    if let Some(cart) = &req_data.cart_payload {
+        if let Some(items) = cart.get("items").and_then(|i| i.as_array()) {
+            let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+            let redis_client_opt = redis::Client::open(redis_url).ok();
+            let inventory_service = crate::services::inventory::InventoryService::new(redis_client_opt);
+
+            for item in items {
+                if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
+                    let quantity = item.get("quantity").and_then(|q| q.as_i64()).unwrap_or(1) as i32;
+                    let reserve_res = inventory_service.reserve_inventory(&tenant_id, product_id, quantity, 300).await;
+                    match reserve_res {
+                        Ok(res) if !res.success => {
+                            let _ = db_tx.rollback().await;
+                            return (StatusCode::CONFLICT, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some("Failed to reserve inventory: Item is currently being checked out by another customer.".to_string()),
+                            })).into_response();
+                        }
+                        Err(_) => {
+                            let _ = db_tx.rollback().await;
+                            return (StatusCode::CONFLICT, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some("Failed to reserve inventory: Item is currently being checked out by another customer.".to_string()),
+                            })).into_response();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
     let query = sqlx::query(
         "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"

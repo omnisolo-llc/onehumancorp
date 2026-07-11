@@ -471,3 +471,55 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     const errorJson = await addItemRes.json();
     expect(errorJson.error).toContain('Item is currently being checked out');
   });
+
+  test('POS terminal correctly handles inventory lock contention and 409 conflict', async ({ memberPage, browser }) => {
+    await memberPage.goto('/pos.html');
+
+    // Enter PIN
+    await memberPage.getByRole('button', { name: '1' }).click();
+    await memberPage.getByRole('button', { name: '2' }).click();
+    await memberPage.getByRole('button', { name: '3' }).click();
+    await memberPage.getByRole('button', { name: '4' }).click();
+
+    await memberPage.waitForTimeout(500);
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await memberPage.waitForTimeout(500);
+
+    // Wait for product catalog
+    await memberPage.waitForSelector('text=Product Catalog', { timeout: 10000 });
+
+    // Select the product
+    const productButton = memberPage.locator('button').filter({ hasText: 'Stock: ' }).first();
+    await expect(productButton).toBeVisible();
+    await productButton.click();
+
+    await expect(memberPage.locator('text=Tap to Pay via Terminal')).toBeVisible();
+
+    const cashBtn = memberPage.locator('button', { hasText: /Cash/i });
+    if (await cashBtn.isVisible()) {
+        await cashBtn.click();
+    }
+
+    // Now, before clicking 'Record Offline Cash Sale', we open a second context to checkout the same item online to cause contention
+    const context2 = await browser.newContext();
+    const page2 = await context2.newPage();
+    // Assuming the item is a cake and the user can check it out from the online store.
+    // An easier way is just to send an API request from the existing context's browser context directly to the backend
+    await memberPage.request.post('/api/v1/checkout/session', {
+      data: {
+        tenant_id: 'e2e-tenant-pos',
+        type: 'ONLINE',
+        amount_cents: 1000,
+        cart_payload: {
+          items: [{ product_id: 'e2e-product-cake-pos', quantity: 10000 }] // High quantity or lock
+        }
+      }
+    });
+
+    const collectBtn = memberPage.locator('button', { hasText: /Record Offline Cash Sale/i });
+    if (await collectBtn.isVisible()) {
+        await collectBtn.click();
+    }
+
+    await expect(memberPage.locator('text=Failed to reserve inventory')).toBeVisible({ timeout: 10000 });
+  });

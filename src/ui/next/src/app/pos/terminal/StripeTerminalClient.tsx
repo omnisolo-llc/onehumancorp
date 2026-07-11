@@ -367,12 +367,22 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  setReserving(true);
                  try {
                    if (typeof window !== 'undefined' && navigator.onLine) {
-                     await fetch('/api/v1/checkout/session', {
+                     const sessionRes = await fetch('/api/v1/checkout/session', {
                        method: 'POST',
                        headers: { 'Content-Type': 'application/json' },
                        body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                      });
+                     if (!sessionRes.ok) {
+                       if (sessionRes.status === 409) {
+                         setStatus('Failed to reserve inventory: Item is currently being checked out by another customer.');
+                       } else {
+                         setStatus('Failed to create checkout session.');
+                       }
+                       if (onOptimisticRollback) onOptimisticRollback();
+                       return;
+                     }
                    }
+                   if (onOptimisticReserve) onOptimisticReserve();
                    await processCashSale();
                  } catch(e: any) {
                    setStatus('Error: ' + e.message);

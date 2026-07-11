@@ -8,6 +8,7 @@ use axum::{
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::db::DB;
+use crate::orchestration::queue::redis_lock::RedisLock;
 
 #[derive(Deserialize)]
 pub struct ReserveRequest {
@@ -43,6 +44,22 @@ async fn handle_reserve(
         Some(t) if !t.trim().is_empty() => t.to_string(),
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
+
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    if let Ok(redis_lock) = RedisLock::new(&redis_url) {
+        let slot_time_id = format!("{}_{}_{}", payload.service_id, payload.start_time, payload.end_time);
+        if let Ok(None) = redis_lock.acquire_lock(&tenant_id, "booking_slot", &slot_time_id, 300).await {
+            return (
+                StatusCode::CONFLICT,
+                Json(ReserveResponse {
+                    success: false,
+                    booking_id: None,
+                    error: Some("Failed to reserve booking slot: Time slot is currently being held by another request.".to_string()),
+                    checkout_url: None,
+                }),
+            ).into_response();
+        }
+    }
 
     let pool = db.pool.clone();
 
