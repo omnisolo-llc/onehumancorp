@@ -22,21 +22,21 @@ impl McpSyncWorker {
     }
 
     pub async fn run(&self) {
-        if !::server_config::is_telemetry_enabled() {
-            return;
-        }
         info!("Starting McpSyncWorker...");
         loop {
-            if ::server_config::is_telemetry_enabled()
-                && let Err(e) = self.sync_metrics().await {
-                    warn!("McpSyncWorker error: {}", e);
-                }
+            if let Err(e) = self.sync_metrics().await {
+                warn!("McpSyncWorker error: {}", e);
+            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
 
     pub async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
         if !::server_config::is_telemetry_enabled() {
+            // Guarantee local sovereignty: purge pending telemetry if consent is revoked
+            let _ = sqlx::query("DELETE FROM telemetry_buffer")
+                .execute(&self.sqlite_pool)
+                .await;
             return Ok(());
         }
 
