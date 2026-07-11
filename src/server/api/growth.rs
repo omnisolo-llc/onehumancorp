@@ -386,6 +386,8 @@ where
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
+        .route("/review-reward/embed", get(handle_review_reward_embed))
+        .route("/review-reward/submit", post(handle_review_reward_submit))
         .route("/job-board/generate", post(handle_job_board_generate))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/viral-loop/metrics", get(handle_viral_loop_metrics))
@@ -6345,4 +6347,208 @@ async fn handle_viral_before_after_embed(
     );
 
     axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReviewRewardEmbedQuery {
+    pub tenant: Option<String>,
+    pub reward: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hide_branding")]
+    pub hide_branding: Option<String>,
+}
+
+pub async fn handle_review_reward_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ReviewRewardEmbedQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let reward = escape_html(query.reward.as_deref().unwrap_or("15% Off Your Next Order!"));
+    let theme = query.theme.as_deref().unwrap_or("light");
+    let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
+
+    let bg_color = if theme == "dark" { "#111827" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f3f4f6" } else { "#111827" };
+    let border_color = if theme == "dark" { "#374151" } else { "#e5e7eb" };
+
+    let mut html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: {bg_color};
+            color: {text_color};
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }}
+        .card {{
+            background: {bg_color};
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 400px;
+            width: 100%;
+        }}
+        h2 {{ margin-top: 0; font-size: 24px; font-weight: 700; }}
+        p {{ color: #6b7280; font-size: 14px; line-height: 1.5; margin-bottom: 24px; }}
+        .stars {{ font-size: 32px; color: #d1d5db; cursor: pointer; user-select: none; margin-bottom: 16px; }}
+        .stars span.active {{ color: #fbbf24; }}
+        textarea {{ width: 100%; padding: 12px; border: 1px solid {border_color}; border-radius: 8px; font-family: inherit; margin-bottom: 16px; box-sizing: border-box; background: transparent; color: inherit; resize: vertical; min-height: 80px; display: none; }}
+        button {{ background-color: #4f46e5; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: background-color 0.2s; display: none; }}
+        button:hover {{ background-color: #4338ca; }}
+        .branding {{ margin-top: 16px; font-size: 12px; color: #9ca3af; }}
+        .branding a {{ color: #9ca3af; text-decoration: none; font-weight: 600; }}
+        .branding a:hover {{ color: #6b7280; }}
+        #success-state {{ display: none; }}
+        .reward-box {{ background: rgba(16, 185, 129, 0.1); border: 2px dashed #10b981; padding: 16px; border-radius: 8px; color: #10b981; font-weight: 700; margin: 16px 0; font-size: 18px; }}
+    </style>
+</head>
+<body>
+    <div class="card" id="main-card">
+        <h2>How was your experience?</h2>
+        <p>Leave a 5-star review and unlock: <br/><strong>{reward}</strong></p>
+
+        <div class="stars" id="star-rating">
+            <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+        </div>
+
+        <textarea id="review-text" placeholder="Tell us more..."></textarea>
+        <button id="submit-btn">Submit Review</button>
+
+        <div id="success-state">
+            <h2 style="color: #10b981;">Thank you! 🎉</h2>
+            <p>Here is your unique referral link to claim your reward:</p>
+            <div class="reward-box" id="reward-link">Generating...</div>
+            <button id="copy-btn" style="display: block; background-color: #10b981;">Copy Link</button>
+        </div>
+"#,
+        bg_color = bg_color,
+        border_color = border_color,
+        text_color = text_color,
+        reward = reward
+    );
+
+    if !hide_branding {
+        html.push_str(&format!(
+            r#"        <div class="branding" id="branding-footer">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=review_reward" target="_blank">⚡ Powered by OHC</a>
+        </div>"#
+        ));
+    }
+
+    html.push_str(&format!(
+        r#"    </div>
+    <script>
+        const stars = document.querySelectorAll('.stars span');
+        const textarea = document.getElementById('review-text');
+        const submitBtn = document.getElementById('submit-btn');
+        let currentRating = 0;
+
+        stars.forEach(star => {{
+            star.addEventListener('click', (e) => {{
+                currentRating = parseInt(e.target.dataset.val);
+                stars.forEach((s, idx) => {{
+                    if (idx < currentRating) s.classList.add('active');
+                    else s.classList.remove('active');
+                }});
+                textarea.style.display = 'block';
+                submitBtn.style.display = 'block';
+            }});
+        }});
+
+        submitBtn.addEventListener('click', async () => {{
+            if (currentRating === 0) return;
+
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {{
+                const res = await fetch('/api/v1/growth/review-reward/submit', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ tenant: '{tenant}', rating: currentRating, text: textarea.value }})
+                }});
+
+                if (res.ok) {{
+                    const data = await res.json();
+                    document.getElementById('star-rating').style.display = 'none';
+                    textarea.style.display = 'none';
+                    submitBtn.style.display = 'none';
+                    document.querySelector('p').style.display = 'none';
+                    document.querySelector('h2').style.display = 'none';
+
+                    document.getElementById('success-state').style.display = 'block';
+                    document.getElementById('reward-link').textContent = data.referral_link;
+                }}
+            }} catch (err) {{
+                console.error(err);
+                submitBtn.textContent = 'Error. Try again';
+                submitBtn.disabled = false;
+            }}
+        }});
+
+        document.getElementById('copy-btn').addEventListener('click', () => {{
+            const link = document.getElementById('reward-link').textContent;
+            navigator.clipboard.writeText(link);
+            document.getElementById('copy-btn').textContent = 'Copied!';
+            setTimeout(() => document.getElementById('copy-btn').textContent = 'Copy Link', 2000);
+        }});
+    </script>
+</body>
+</html>"#, tenant = tenant));
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReviewRewardSubmitRequest {
+    pub tenant: String,
+    pub rating: i32,
+    pub text: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReviewRewardSubmitResponse {
+    pub success: bool,
+    pub referral_link: String,
+}
+
+pub async fn handle_review_reward_submit(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<ReviewRewardSubmitRequest>,
+) -> Result<Json<ReviewRewardSubmitResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.review_submitted",
+        "tenant_id": req.tenant,
+        "rating": req.rating,
+        "text": req.text,
+    }));
+    state.hub.append_recent_event(msg);
+
+    let mock_customer_id = format!("review_customer_{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>());
+    let referral_link = crate::services::growth::referral_api::generate_referral_link(&mock_customer_id).unwrap_or_else(|_| "https://ohc.app/invite/default".to_string());
+
+    let msg2 = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.review_reward_generated",
+        "tenant_id": req.tenant,
+        "referral_link": referral_link
+    }));
+    state.hub.append_recent_event(msg2);
+
+    Ok(Json(ReviewRewardSubmitResponse {
+        success: true,
+        referral_link,
+    }))
 }
