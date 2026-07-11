@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Chaos Report UX & Interaction', () => {
   test('Chaos Report loads correctly and toggles dark mode', async ({ page }) => {
     // Navigate to the chaos report page
-    await page.goto('/chaos-report');
+    await page.goto("/api/ui/chaos-report.html");
 
     // Verify title and structure
     await expect(page.locator('h1', { hasText: 'System Reliability Report' })).toBeVisible();
