@@ -218,7 +218,7 @@ export function HelpWidget() {
           <button
             id="ohc-floating-help-btn"
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-200 text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Open help chat"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -310,7 +310,7 @@ export function HelpWidget() {
                       setOpen(false);
                       router.push("/kairos?walkthrough=true");
                     }}
-                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
+                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[30px] saturate-200 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
                   >
                     <span className="font-bold font-outfit text-indigo-800 text-base block">Tour: KAIROS AI OS Orchestration</span>
                   </button>
