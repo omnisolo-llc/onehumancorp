@@ -1348,17 +1348,24 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-500 dark:text-gray-400">
+                    Total Amount:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    $
+                    {Number(
+                      ((approval.proposed_action || approval.context_payload)?.total_amount_cents || 0) / 100
+                    ).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
                     Required Deposit:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
-                        .suggested_price ||
-                        (approval.proposed_action || approval.context_payload)
-                          .price ||
-                        0,
-                    ) * 0.2}
+                      ((approval.proposed_action || approval.context_payload)?.deposit_amount_cents || 0) / 100
+                    ).toFixed(2)}
                   </span>
                 </div>
                 {((approval.proposed_action || approval.context_payload)

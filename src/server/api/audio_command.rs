@@ -76,11 +76,11 @@ pub async fn handle_voice_command(
 
     // 1. Transcription (Whisper integration placeholder)
     // In a production environment, we would stream audio_data to a Whisper multimodal model.
-    // For the sandbox implementation, we simulate the transcription of a food cart order.
-    let transcription = "Quiero 3 tacos de pollo".to_string(); // Simulate Spanish input
+    // For the sandbox implementation, we simulate the transcription of a repair quote.
+    let transcription = "Create a $150 repair quote for the Smith plumbing job, materials $50, labor $100, need 50% deposit".to_string();
 
     // 2. Intent Extraction & Semantic Routing
-    // We use the LLM to parse the command into a structured action plan (OrderIntent or TaskIntent).
+    // We use the LLM to parse the command into a structured action plan.
     let prompt = format!(
         "Analyze this voice command from a customer or business owner: \"{}\". \
          Translate it into language code '{}'. \
@@ -88,10 +88,10 @@ pub async fn handle_voice_command(
          Return strict JSON with: \
          translated_text (the translated text), \
          detected_language (the language code of the original text), \
-         department (Operations), \
-         feature_type (order_intake, task_intake), \
+         department (Sales), \
+         feature_type (must be exactly 'quote_draft' if it relates to a quote or estimate, otherwise order_intake, task_intake), \
          description (human readable description of the translated text), \
-         payload (JSON object with extracted fields like items, quantities, special_requests).",
+         payload (JSON object with extracted fields like total_amount_cents, deposit_amount_cents, items, materials_cost_cents, labor_cost_cents, quantities, special_requests).",
         transcription, preferred_language
     );
 
@@ -99,11 +99,19 @@ pub async fn handle_voice_command(
 
     let (dept, description, action_payload, final_transcription) = if api_key.is_empty() || api_key == "fake-key" {
         // Fallback for missing api key (tests)
-        (DepartmentType::Operations, "Voice initiated: 3x Chicken Tacos".to_string(), serde_json::json!({
-            "items": ["Chicken Tacos"],
-            "quantities": [3],
-            "special_requests": ["none"]
-        }), "3x Chicken Tacos".to_string())
+        (DepartmentType::Sales, "Voice initiated: $150 repair quote for Smith plumbing job".to_string(), serde_json::json!({
+            "total_amount_cents": 15000,
+            "deposit_amount_cents": 7500,
+            "materials_cost_cents": 5000,
+            "labor_cost_cents": 10000,
+            "customer_inquiry": "Smith plumbing job",
+            "scope": "Repair",
+            "service": "Plumbing Repair",
+            "feature_type": "quote_draft",
+            "items": ["Repair Quote"],
+            "quantities": [1],
+            "special_requests": ["50% deposit"]
+        }), transcription.clone())
     } else {
         let client = crate::minimax::MinimaxClient::new(api_key);
         match client.reason(&crate::pricing::compression::reduce_tokens(&prompt)).await {
@@ -130,13 +138,58 @@ pub async fn handle_voice_command(
         }
     };
 
-    // 3. Register as a Proposed Action Card in the Agent Feed (Unified Inbox / Ledger)
+    // 3. Optional: Create quote draft and generate deposit link if it's a quote_draft
+    let mut final_payload = action_payload.clone();
+
+    if final_payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+        let deposit_cents = final_payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        let total_cents = final_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(deposit_cents);
+        let service_name = final_payload.get("service").and_then(|v| v.as_str()).unwrap_or("Service Quote");
+        let customer_id = final_payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown_customer");
+
+        let quote_id = uuid::Uuid::new_v4().to_string();
+        let mut stripe_payment_link = String::new();
+
+        if deposit_cents > 0 {
+            let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(api_key);
+
+            let link_res = stripe_client.create_payment_link(service_name, deposit_cents).await;
+            if let Ok(link) = link_res {
+                stripe_payment_link = link;
+            } else if let Err(e) = link_res {
+                tracing::error!("Failed to generate Stripe payment link for voice quote: {}", e);
+                stripe_payment_link = format!("https://buy.stripe.com/test_{}", uuid::Uuid::new_v4().simple().to_string().chars().take(16).collect::<String>());
+            }
+        }
+
+        let pool = crate::db::get_pool();
+        let payment_link_opt = if stripe_payment_link.is_empty() { None } else { Some(stripe_payment_link.clone()) };
+        let _ = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())")
+            .bind(&quote_id)
+            .bind(&tenant_id)
+            .bind(customer_id)
+            .bind(total_cents)
+            .bind(deposit_cents)
+            .bind(&payment_link_opt)
+            .execute(&pool)
+            .await;
+
+        if let Some(obj) = final_payload.as_object_mut() {
+            obj.insert("quote_id".to_string(), serde_json::Value::String(quote_id));
+            if !stripe_payment_link.is_empty() {
+                obj.insert("stripe_payment_link".to_string(), serde_json::Value::String(stripe_payment_link));
+            }
+        }
+    }
+
+    // 4. Register as a Proposed Action Card in the Agent Feed (Unified Inbox / Ledger)
     match state.orchestrator.execute_action(
         dept.clone(),
         description,
         tenant_id,
         ActionRisk::DraftForReview,
-        action_payload,
+        final_payload,
     ).await {
         Ok(_) => (StatusCode::OK, Json(VoiceCommandResponse {
             transcription: final_transcription,

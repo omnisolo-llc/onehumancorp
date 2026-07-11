@@ -33,12 +33,12 @@ test.describe('Voice Assistant Command Center', () => {
     await expect(feed).toBeVisible();
 
     // Check for the new proposal card
-    const actionCard = page.getByTestId('draft-quote-card');
+    const actionCard = page.getByTestId('quote-draft-card').first();
     await expect(actionCard).toBeVisible();
     await expect(actionCard).toContainText('$150');
 
     // 9. Carlos can approve the quote with one tap
-    const approveBtn = page.getByTestId('approve-quote-draft');
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     await approveBtn.click();
 
     // 10. Verify card is cleared or marked as approved in activity
