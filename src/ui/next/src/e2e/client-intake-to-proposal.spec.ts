@@ -40,7 +40,7 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
 
     // Verify card content correctly scoped the request
     await expect(page.getByText('Action Required: Approve Estimate for Plumbing Fix')).toBeVisible();
-    await expect(page.getByText('Calculated Total:')).toBeVisible();
+    await expect(page.getByText('Suggested Price')).toBeVisible();
     await expect(page.getByText('Scope of Work:')).toBeVisible();
     await expect(page.getByText('Suggested Time:')).toBeVisible();
 
