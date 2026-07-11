@@ -11,6 +11,7 @@ pub struct CreateCheckoutSessionRequest {
     pub amount_cents: i64,
     pub device_id: Option<String>,
     pub cart_payload: Option<serde_json::Value>,
+    pub discount_code: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -37,6 +38,26 @@ pub async fn create_checkout_session_handler(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     }
 
+    let mut final_amount = req_data.amount_cents;
+    if let Some(discount_code) = &req_data.discount_code {
+        let is_valid: Result<bool, sqlx::Error> = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM reward_claims WHERE tenant_id = $1 AND discount_code = $2 AND status = 'Active')"
+        )
+        .bind(&tenant_id)
+        .bind(discount_code)
+        .fetch_one(&mut *db_tx)
+        .await;
+
+        if let Ok(true) = is_valid {
+            final_amount = (final_amount as f64 * 0.85) as i64; // 15% discount
+            let _ = sqlx::query("UPDATE reward_claims SET status = 'Used' WHERE tenant_id = $1 AND discount_code = $2")
+                .bind(&tenant_id)
+                .bind(discount_code)
+                .execute(&mut *db_tx)
+                .await;
+        }
+    }
+
     let query = sqlx::query(
         "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
@@ -44,7 +65,7 @@ pub async fn create_checkout_session_handler(
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&req_data.r#type)
-    .bind(req_data.amount_cents)
+    .bind(final_amount)
     .bind(&req_data.device_id)
     .bind(&req_data.cart_payload);
 
