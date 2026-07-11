@@ -13,7 +13,7 @@ test.describe('The Estimator Agent - Mobile Feed to Customer Deposit', () => {
         const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'default');
 
         // Create a real quote in the backend via API
-        const quoteRes = await request.post(`/api/quotes`, {
+        const quoteRes = await request.post(`/api/v1/quotes`, {
             headers: {
                 'x-tenant-id': tenantId,
             },
