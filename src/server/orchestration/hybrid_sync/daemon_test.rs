@@ -680,16 +680,16 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.prune_stuck_ohc_job_queue().await.unwrap();
 
-        // Verify SQLite queue is deleted
-        let row_queue_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
-        assert!(row_queue_sqlite.is_none());
+        // Verify SQLite queue is failed
+        use sqlx::Row;
+        let row_queue_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
 
-        // Verify PG queue is deleted
-        let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
-        assert!(row_queue.is_none());
+        // Verify PG queue is failed
+        let row_queue = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_queued_pg\'").fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
 
         // Verify SQLite running is failed
-        use sqlx::Row;
         let row_running_sqlite = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = \'stuck_running_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
         assert_eq!(row_running_sqlite.get::<String, _>("status"), "FAILED");
 

@@ -487,12 +487,12 @@ impl HybridSyncDaemon {
         let sqlite_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload, '{{}}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", SQLITE_QUEUED_WHERE);
-        let sqlite_queued_delete = format!("DELETE FROM ohc_job_queue WHERE {}", SQLITE_QUEUED_WHERE);
+        let sqlite_queued_delete = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_QUEUED_WHERE);
 
         let pg_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id::text, tenant_id, 'job_stuck', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", PG_RUNNING_WHERE);
         let pg_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
         let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id::text, tenant_id, 'job_failed', 'ohc_job_queue', COALESCE(payload::text, '{{}}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", PG_QUEUED_WHERE);
-        let pg_queued_delete = format!("DELETE FROM ohc_job_queue WHERE {}", PG_QUEUED_WHERE);
+        let pg_queued_delete = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_QUEUED_WHERE);
 
         // SQLite queue
         if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {
