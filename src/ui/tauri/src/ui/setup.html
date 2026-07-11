@@ -2995,7 +2995,8 @@
             inputs.domain_name.value.trim().length >= 3 &&
             domainRegex.test(inputs.domain_name.value.trim())
           ) {
-            errors.domain_name.style.display = "none";
+            const errEl = document.getElementById("domain-error");
+            if (errEl) errEl.style.display = "none";
             inputs.domain_name.classList.remove("invalid-input");
           }
         });
@@ -3340,7 +3341,8 @@
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.domain_name.style.display = "none";
+            const errEl = document.getElementById("domain-error");
+            if (errEl) errEl.style.display = "none";
             inputs.domain_name.classList.remove("invalid-input");
             state.domain = inputs.domain_name.value.trim();
           }
