@@ -70,6 +70,23 @@ pub async fn dispatch_action(
                 tracing::info!("Dispute Resolution Engine executed operational action: {}", ops);
             }
         }
+        "loyalty_reward_notification" => {
+            tracing::info!("Approved loyalty reward notification for tenant: {}", tenant_id);
+            if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {
+                let id = uuid::Uuid::new_v4().to_string();
+                let discount_code = format!("LOYALTY-{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>().to_uppercase());
+                let _ = sqlx::query("INSERT INTO reward_claims (id, tenant_id, customer_id, discount_code, status) VALUES ($1, $2, $3, $4, 'Active')")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .bind(&discount_code)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tracing::info!("Created reward claim {} with discount code {}", id, discount_code);
+            }
+        }
+
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }

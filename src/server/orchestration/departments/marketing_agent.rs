@@ -430,7 +430,7 @@ impl Department for MarketingAgent {
                     DepartmentType::Marketing,
                     description,
                     event.tenant_id.clone(),
-                    ActionRisk::AutoExecute,
+                    ActionRisk::DraftForReview,
                     payload,
                 ).await.map(|_| ());
             }
