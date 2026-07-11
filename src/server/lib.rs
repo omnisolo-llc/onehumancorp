@@ -3759,7 +3759,7 @@ pub async fn simulate_agent_feed_item_handler(
             .bind(&tenant_id)
             .bind("Simulated Webhook")
             .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
-            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "draft_reply": "This is a simulated draft action payload."})))
             .bind("PENDING_APPROVAL")
             .execute(&db.pool)
             .await {
@@ -3775,7 +3775,7 @@ pub async fn simulate_agent_feed_item_handler(
             .bind(&tenant_id)
             .bind("Simulated Webhook")
             .bind(serde_json::json!({"description": "A new simulated event needs your attention."}).to_string())
-            .bind(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}).to_string())
+            .bind(serde_json::json!({"action_type": "Draft Reply", "draft_reply": "This is a simulated draft action payload."}).to_string())
             .bind("PENDING_APPROVAL")
             .execute(pool)
             .await {
@@ -3802,7 +3802,7 @@ pub async fn simulate_agent_feed_item_handler(
             "event_source": "Simulated Webhook",
             "lifecycle_state": "PENDING_APPROVAL",
             "context_payload": {"description": "A new simulated event needs your attention."},
-            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}
+            "proposed_action": {"action_type": "Draft Reply", "draft_reply": "This is a simulated draft action payload."}
         });
         if let Ok(payload_str) = serde_json::to_string(&item_json) {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
@@ -3839,7 +3839,7 @@ pub async fn simulate_agent_feed_item_handler(
             "tenant_id": tenant_id,
             "event_source": "Simulated Webhook",
             "context_payload": {"description": "A new simulated event needs your attention."},
-            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."},
+            "proposed_action": {"action_type": "Draft Reply", "draft_reply": "This is a simulated draft action payload."},
             "lifecycle_state": "PENDING_APPROVAL",
             "created_at": chrono::Utc::now().to_rfc3339(),
             "updated_at": chrono::Utc::now().to_rfc3339()
@@ -3865,7 +3865,7 @@ pub async fn simulate_agent_feed_item_handler(
         tenant_id: tenant_id.clone(),
         event_source: "Simulated Webhook".to_string(),
         context_payload: Some(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."}))),
-        proposed_action: Some(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}))),
+        proposed_action: Some(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "draft_reply": "This is a simulated draft action payload."}))),
         lifecycle_state: "PENDING_APPROVAL".to_string(),
         created_at: Some(chrono::Utc::now()),
         updated_at: Some(chrono::Utc::now()),
