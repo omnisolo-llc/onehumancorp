@@ -37,6 +37,7 @@ rust_library(
         "marketplace_tool.rs",
         "pydantic.rs",
         "native_state.rs",
+        "network_policy.rs",
         "repo_map.rs",
 
         "ollama.rs",
