@@ -44,7 +44,7 @@ impl AutoDreamWorker {
                 };
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
-                if let Err(e) = repository.prune_stale(stale_threshold, 20, 2).await {
+                if let Err(e) = repository.prune_stale(stale_threshold, 20, 2, &["TASK_SUMMARY"]).await {
                     debug!("AutoDream: pruning consolidated memory failed: {}", e);
                 }
 
