@@ -1708,7 +1708,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
-        fn get_customer_session_summaries<'a>(
+    fn get_customer_session_summaries<'a>(
         &'a self,
         _tenant_id: &'a str,
         _customer_id: &'a str,
