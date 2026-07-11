@@ -108,6 +108,83 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_sqlite_fallback_conflict_resolution() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .expect("Failed to connect to SQLite in-memory database");
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create consolidated_memory table");
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool.clone()));
+
+        // Insert two identical embedding records which will trigger a conflict resolution in the fallback path
+        let rec1 = EmbeddingRecord {
+            id: "fallback_conflict_1".to_string(),
+            tenant_id: "fallback_org".to_string(),
+            agent_id: "agent_a".to_string(),
+            content: "Context version 1".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: chrono::Utc::now() - chrono::Duration::days(1),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&rec1).await.expect("Failed to upsert first record");
+
+        let rec2 = EmbeddingRecord {
+            id: "fallback_conflict_2".to_string(),
+            tenant_id: "fallback_org".to_string(),
+            agent_id: "agent_a".to_string(),
+            content: "Context version 2".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "SESSION_DATA".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 90, // Higher score so rec2 wins
+            owner_override: false,
+            metadata: None,
+        };
+        repo.upsert(&rec2).await.expect("Failed to upsert second record");
+
+        // Verify that auto_resolve_conflicts successfully discovers and resolves it
+        let resolved_count = repo.auto_resolve_conflicts().await.expect("Auto resolve conflicts should succeed");
+        assert_eq!(resolved_count, 1, "Should resolve exactly 1 conflict using fallback method");
+
+        let results = sqlx::query("SELECT id FROM consolidated_memory")
+            .fetch_all(&pool)
+            .await
+            .expect("Failed to query DB");
+
+        assert_eq!(results.len(), 1, "Only one record should remain after conflict resolution");
+        let remaining_id: String = results[0].try_get("id").expect("Failed to get ID");
+        assert_eq!(remaining_id, "fallback_conflict_2", "The record with the higher reliability score should win");
+    }
+
+    #[tokio::test]
     async fn test_cross_department_context_sharing_fallback_edge_case() {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
         let pool = SqlitePoolOptions::new()
