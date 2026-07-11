@@ -4047,35 +4047,11 @@
 
           try {
             let startReq = null;
+            let data = null;
             const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-              const data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
-              if (!data) throw new Error("Empty response");
-
-              startReq = {
-                business_type: data.business_type || "Other",
-                company_name: data.business_name || "My Store",
-                company_description: bioInput,
-                selling_categories: data.categories || ["Other"],
-                payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
-                website_template: "Modern",
-                first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                domain_choice: "subdomain",
-                price_type: "fixed",
-                location: data.location || "Global",
-                target_audience: data.target_audience || "Everyone",
-                initial_products: data.initial_products || [],
-                ai_agents: [],
-                ai_auto_respond: false,
-                deposit_percentage: data.deposit_percentage,
-                lead_time_days: data.lead_time_days
-              };
-
+              data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
             } else {
                 // For web mode, hit the /intake endpoint directly
                 const intakeRes = await fetch(`${backendUrl}/api/onboarding/intake`, {
@@ -4087,33 +4063,33 @@
                 if (!intakeRes.ok) {
                     throw new Error("Failed to process intake data. Please try again.");
                 }
-
-                const data = await intakeRes.json();
-                if (!data) throw new Error("Empty intake response");
-
-                startReq = {
-                    business_type: data.business_type || "Other",
-                    company_name: data.business_name || "My Store",
-                    company_description: bioInput,
-                    selling_categories: data.categories || ["Other"],
-                    payment_pref: "online",
-                    admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                    admin_name: document.getElementById("admin-name")?.value || "Owner",
-                    admin_password: document.getElementById("admin-password")?.value || "password123",
-                    website_template: "Modern",
-                    first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                    first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                    domain_choice: "subdomain",
-                    price_type: "fixed",
-                    location: data.location || "Global",
-                    target_audience: data.target_audience || "Everyone",
-                    initial_products: data.initial_products || [],
-                    ai_agents: [],
-                    ai_auto_respond: false,
-                    deposit_percentage: data.deposit_percentage,
-                    lead_time_days: data.lead_time_days
-                };
+                data = await intakeRes.json();
             }
+
+            if (!data) throw new Error("Empty response from AI assistant");
+
+            startReq = {
+              business_type: data.business_type || "Other",
+              company_name: data.business_name || "My Store",
+              company_description: bioInput,
+              selling_categories: data.categories || ["Other"],
+              payment_pref: "online",
+              admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+              admin_name: document.getElementById("admin-name")?.value || "Owner",
+              admin_password: document.getElementById("admin-password")?.value || "password123",
+              website_template: "Modern",
+              first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
+              first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+              domain_choice: "subdomain",
+              price_type: "fixed",
+              location: data.location || "Global",
+              target_audience: data.target_audience || "Everyone",
+              initial_products: data.initial_products || [],
+              ai_agents: [],
+              ai_auto_respond: false,
+              deposit_percentage: data.deposit_percentage,
+              lead_time_days: data.lead_time_days
+            };
 
             window.pendingOnboardingReq = startReq;
             window.pendingImageUrl = imageUrl;
