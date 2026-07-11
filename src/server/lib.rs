@@ -5473,7 +5473,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
+    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, invoices_res) = tokio::join!(
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
@@ -5560,6 +5560,14 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
                     load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
+        }),
+
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            async move {
+                load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+            }
         })
     );
 
@@ -5571,6 +5579,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         "pending_approvals": approvals_res.unwrap_or_default(),
         "agent_feed": agent_feed_res.unwrap_or_default(),
         "priority_tasks": priority_tasks_res.unwrap_or_default(),
+        "invoices": invoices_res.unwrap_or_default(),
     })
 }
 
@@ -5765,6 +5774,70 @@ async fn list_ui_orders_handler(
     }
 }
 
+
+
+async fn load_ui_invoices_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(client_name, '') AS customer_name, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, CAST(COALESCE(total_amount, 0.0) AS REAL) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = ? AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(client_name, '') AS customer_name, CAST(COALESCE(total_amount, 0.0) AS REAL) AS total_amount, COALESCE(status, '') AS status, CAST(created_at AS TEXT) AS created_at FROM invoices WHERE tenant_id = ? AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        }
+    }
+}
 
 async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
