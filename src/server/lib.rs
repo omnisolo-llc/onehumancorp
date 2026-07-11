@@ -4038,16 +4038,30 @@ pub async fn update_ui_triage_action_handler(
                             let total_amount_cents = json_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                             let required_deposit_cents = json_payload.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
 
+                            let mut payment_link_str: Option<String> = None;
+                            if required_deposit_cents > 0 {
+                                let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                                let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                                if let Ok(link) = stripe_client.create_payment_link("Deposit for Quote", required_deposit_cents).await {
+                                    payment_link_str = Some(link);
+                                }
+                            }
+
                             let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
 
+                            // Quotes ID is UUID format in Postgres and String in Sqlite, handle based on backend.
+                            let sqlite_quote_id = quote_id.clone();
+                            let sqlite_cid = cid.clone();
+
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'SENT', $4, $5, $6, NOW(), NOW())"
                             )
-                            .bind(&quote_id)
+                            .bind(sqlite_quote_id)
                             .bind(&tenant_id)
-                            .bind(&cid)
+                            .bind(sqlite_cid)
                             .bind(total_amount_cents)
                             .bind(required_deposit_cents)
+                            .bind(&payment_link_str)
                             .execute(&mut *tx)
                             .await {
                                 tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
@@ -4295,6 +4309,15 @@ pub async fn update_ui_triage_action_handler(
                             let total_amount_cents = json_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                             let required_deposit_cents = json_payload.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
 
+                            let mut payment_link_str: Option<String> = None;
+                            if required_deposit_cents > 0 {
+                                let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                                let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                                if let Ok(link) = stripe_client.create_payment_link("Deposit for Quote", required_deposit_cents).await {
+                                    payment_link_str = Some(link);
+                                }
+                            }
+
                             let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
 
                             // Quotes ID is UUID format in Postgres and String in Sqlite, handle based on backend.
@@ -4302,13 +4325,14 @@ pub async fn update_ui_triage_action_handler(
                             let sqlite_cid = cid.clone();
 
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'SENT', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                             )
                             .bind(sqlite_quote_id)
                             .bind(&tenant_id)
                             .bind(sqlite_cid)
                             .bind(total_amount_cents)
                             .bind(required_deposit_cents)
+                            .bind(&payment_link_str)
                             .execute(&mut *tx)
                             .await {
                                 tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
