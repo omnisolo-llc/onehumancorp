@@ -33,7 +33,7 @@ test.describe('Offline-Tolerant Field Ops CUJ', () => {
     // 3. Go offline using CDP to simulate offline environment
     const context = page.context();
     await context.setOffline(true);
-    await expect(page.getByText('Offline Mode')).toBeVisible();
+    await expect(page.getByText('Offline Mode - Changes saved locally')).toBeVisible();
 
     // 4. Perform an action - change status
     const headingBtn = page.getByText('Heading to Job');
