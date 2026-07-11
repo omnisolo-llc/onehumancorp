@@ -474,25 +474,65 @@ mod tests {
         }
     }
 
+    const FENCED_MARKDOWN_COMPLETION: &str =
+        "```json\n{\n  \"result\": \"success_markdown\"\n}\n```";
+
+    struct MarkdownRecoveryLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for MarkdownRecoveryLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            match *count {
+                1 => Ok(create_text_resp(FENCED_MARKDOWN_COMPLETION)),
+                2 => {
+                    let feedback = req
+                        .messages
+                        .last()
+                        .and_then(|message| message.tool_results.first())
+                        .map(|result| format!("{}{}", result.content, result.error))
+                        .expect("retry request should contain structured-output feedback");
+                    assert!(
+                        feedback.contains(FENCED_MARKDOWN_COMPLETION),
+                        "feedback did not preserve the failed completion: {feedback}"
+                    );
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({
+                            "data": {"result": "recovered_from_markdown"}
+                        }),
+                    ))
+                }
+                call => panic!("unexpected markdown recovery call {call}"),
+            }
+        }
+    }
+
     #[tokio::test]
     async fn test_parse_structured_output_markdown_wrapper_fallback() {
         // Plain-text JSON is rejected and recovered through a native tool call.
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```"),
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"result": "success_markdown"}}),
-                ),
-            ]),
+        let client = Arc::new(MarkdownRecoveryLlmClient {
+            call_count: Mutex::new(0),
         });
 
         let req = create_test_req();
         let result: TestOutput =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
-                .await
-                .expect("Expected TestOutput in test");
-        assert_eq!(result.result, "success_markdown");
+            parse_structured_output(
+                &(client.clone() as Arc<dyn LlmClientForParser>),
+                req,
+                3,
+            )
+            .await
+            .expect("Expected TestOutput in test");
+        assert_eq!(result.result, "recovered_from_markdown");
+        assert_eq!(*client.call_count.lock().await, 2);
     }
 
     #[tokio::test]
