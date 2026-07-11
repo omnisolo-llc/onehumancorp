@@ -3,7 +3,6 @@ import { test, expect } from "./fixtures";
 test.describe("Documentation Features Flow", () => {
   test("User can navigate the Help Center and view an article", async ({
     page,
-    adminPage,
   }) => {
     // Navigate directly without mocking, allowing the real backend / fallback APIs to respond.
     await page.goto("/help");
