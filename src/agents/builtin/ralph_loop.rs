@@ -174,11 +174,7 @@ impl RalphLoop {
                         .notes
                         .push(format!("Failed feature {}: {}", feature_name, e));
                     let _ = self.save_progress(&progress).await;
-                    // The original loop used break here, meaning run() returns Ok(()).
-                    // In a production system, it's a design choice whether an interruption inside
-                    // the loop is fatal to `run()` or just pauses the loop.
-                    // The existing tests expect `run()` to return `Ok(())` even if it breaks internally.
-                    break;
+                    return Err(e);
                 }
             }
         }
@@ -487,10 +483,8 @@ mod tests {
         let ralph = RalphLoop::new(agent.clone(), config.clone(), progress_file_str);
 
         let result1 = ralph.run("Build a reliable feature").await;
-        // In the test, the second LLM call (for "Feature A") fails, which breaks the loop.
-        // We now correctly return Ok(()) instead of Err from the loop because the run itself didn't crash,
-        // it just stopped due to feature failure so it can be resumed later. Wait, run() returns Ok(()).
-        assert!(result1.is_ok());
+        // In the test, the second LLM call (for "Feature A") fails, which returns an error from the loop.
+        assert!(result1.is_err());
 
         // Verify that the error was recorded in the progress file before breaking
         let saved_progress_str1 = std::fs::read_to_string(&progress_file).unwrap();
