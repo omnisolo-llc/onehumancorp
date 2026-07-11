@@ -957,20 +957,27 @@ mod tests {
     }
 }
 
+fn extract_tenant_id_or_error(auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>) -> Result<String, axum::response::Response> {
+    match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                Err((axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" }))).into_response())
+            } else {
+                Ok(auth.org_id.clone())
+            }
+        },
+        None => Err((axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response())
+    }
+}
+
 pub async fn get_terminal_connection_token_handler(
     _headers: HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
 ) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" }))).into_response();
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
+    let tenant_id = match extract_tenant_id_or_error(auth_info) {
+        Ok(id) => id,
+        Err(response) => return response,
     };
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
