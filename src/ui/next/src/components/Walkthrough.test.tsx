@@ -166,6 +166,23 @@ describe('Walkthrough Component', () => {
     expect(container.innerHTML).toContain('aria-hidden="true"');
   });
 
+  it('WalkthroughTarget wraps children with WithTooltip when tooltipId is provided', async () => {
+    const { WalkthroughTarget } = await import('./Walkthrough');
+    const { TooltipProvider } = await import('./TooltipRegistry');
+    const { container } = render(
+      <TooltipProvider>
+        <WalkthroughTarget id="some-id" tooltipId="test-tooltip">
+          <div>Test Content</div>
+        </WalkthroughTarget>
+      </TooltipProvider>
+    );
+
+    expect(container.innerHTML).toContain('id="some-id"');
+    expect(container.innerHTML).toContain('Test Content');
+    // Ensure WithTooltip wrapper renders its ID correctly
+    expect(container.innerHTML).toContain('id="test-tooltip"');
+  });
+
   it('recalculates bounds on window resize', async () => {
     const handleClose = vi.fn();
     render(

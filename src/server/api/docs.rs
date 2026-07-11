@@ -127,6 +127,9 @@ pub async fn get_tooltips(
         tooltips.insert("total-sales-tooltip".to_string(), "Total revenue generated from your orders.".to_string());
         tooltips.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
         tooltips.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
+        tooltips.insert("help-advanced-toggle-tooltip".to_string(), "Show advanced developer options.".to_string());
+        tooltips.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
+        tooltips.insert("checkout-pay-tooltip".to_string(), "Click to process your payment.".to_string());
     }
 
     Ok(Json(tooltips))

@@ -12,6 +12,57 @@ type Message = {
   link?: { url: string; title: string };
 };
 
+function SpinnerIcon() {
+  return (
+    <svg
+      className="w-5 h-5 animate-spin"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+      />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+      />
+    </svg>
+  );
+}
+
+function createMarkup(msgText: string) {
+  return {
+    __html: DOMPurify.sanitize(
+      msgText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+             .replace(/\*(.*?)\*/g, '<em>$1</em>')
+             .replace(/\n\n/g, '</p><p>')
+             .replace(/^(.+)$/gm, '<p>$1</p>')
+             .replace(/<p><p>/g, '<p>')
+             .replace(/<\/p><\/p>/g, '</p>')
+             .replace(/\- (.*?)<\/p>/g, '<li>$1</li>')
+             .replace(/(<li>[\s\S]*?<\/li>)/, '<ul>$1</ul>')
+    )
+  };
+}
+
 function isSafeLink(url: unknown): url is string {
   return (
     typeof url === "string" &&
@@ -258,18 +309,7 @@ export function HelpChat() {
                       ? "bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-white/20"
                       : "bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
                   }`}
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                             .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                             .replace(/\n\n/g, '</p><p>')
-                             .replace(/^(.+)$/gm, '<p>$1</p>')
-                             .replace(/<p><p>/g, '<p>')
-                             .replace(/<\/p><\/p>/g, '</p>')
-                             .replace(/\- (.*?)<\/p>/g, '<li>$1</li>')
-                             .replace(/(<li>[\s\S]*?<\/li>)/, '<ul>$1</ul>')
-                    ),
-                  }}
+                  dangerouslySetInnerHTML={createMarkup(msg.text)}
                 />
                 {msg.link && (
                   <a
@@ -330,35 +370,7 @@ export function HelpChat() {
               className="bg-blue-600/95 backdrop-blur-md text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-md active:scale-95"
               aria-label="Send message"
             >
-              {isLoading ? (
-                <svg
-                  className="w-5 h-5 animate-spin"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-              )}
+              {isLoading ? <SpinnerIcon /> : <SendIcon />}
             </button>
           </form>
         </div>
