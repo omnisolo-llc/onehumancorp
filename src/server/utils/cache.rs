@@ -10,6 +10,8 @@ use dashmap::DashSet;
 struct CacheItem<T> {
     value: T,
     tags: Vec<String>,
+    #[serde(default)]
+    ttl_secs: u64,
 }
 
 use std::sync::atomic::Ordering;
@@ -243,7 +245,8 @@ where
             if let Ok(Some(data)) = res {
                 if let Ok(item) = serde_json::from_str::<CacheItem<T>>(&data) {
                     // Populate local cache
-                    self.set_local(key, item.value.clone(), &item.tags, Duration::from_secs(60));
+                    let ttl_secs = if item.ttl_secs > 0 { item.ttl_secs } else { 60 };
+                    self.set_local(key, item.value.clone(), &item.tags, Duration::from_secs(ttl_secs));
                     return Some((item.value, false));
                 } else if let Ok(val) = serde_json::from_str::<T>(&data) {
                     // Backwards compatibility for items saved before tags
@@ -266,7 +269,7 @@ where
         // 2. Set Redis if available
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
-            let item = CacheItem { value, tags: tags.clone() };
+            let item = CacheItem { value, tags: tags.clone(), ttl_secs: ttl.as_secs() };
             if let Ok(data) = serde_json::to_string(&item) {
                 let _: Result<(), _> = conn.set_ex(key, data, ttl.as_secs() as u64).await;
             }
