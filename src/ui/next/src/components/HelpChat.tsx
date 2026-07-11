@@ -219,7 +219,7 @@ export function HelpChat() {
             <button
               id="ai-chat-trigger-btn"
               onClick={() => setIsOpen(true)}
-              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
+              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.4)] hover:shadow-[0_12px_40px_rgba(37,99,235,0.5)] hover:-translate-y-1 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 group backdrop-blur-[40px] saturate-[210%] border border-blue-400/30"
               aria-label="Open help chat"
               aria-expanded={isOpen}
               aria-controls="ai-chat-interface"
@@ -235,7 +235,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-white/70 dark:bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"

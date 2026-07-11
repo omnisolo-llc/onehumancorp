@@ -12,15 +12,15 @@ function ArticleSections({ articles, hoverBg }: { articles: { category: string, 
       {Array.from(new Set(articles.map(a => a.category || "General"))).map((category) => (
         <section key={category} className="flex flex-col">
           <div className="flex items-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold font-outfit text-gray-900">{category}</h2>
-            <div className="ml-4 flex-grow border-t border-gray-200/50"></div>
+            <h2 className="text-xl sm:text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">{category}</h2>
+            <div className="ml-4 flex-grow border-t border-gray-200/50 dark:border-gray-700/50"></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-col">
             {articles.filter(a => (a.category || "General") === category).map((article, idx) => (
               <Link key={idx} href={article.link} className="block group">
-                <div className={`backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 p-5 sm:p-6 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px] ${hoverBg}`}>
-                  <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
-                  <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
+                <div className={`backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 p-5 sm:p-6 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] group-hover:border-blue-400 dark:group-hover:border-blue-600 group-hover:shadow-[0_12px_40px_rgba(59,130,246,0.15)] group-hover:-translate-y-1.5 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px] ${hoverBg}`}>
+                  <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 dark:text-blue-400 mb-2 sm:mb-3 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">{article.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed flex-grow">{article.desc}</p>
                 </div>
               </Link>
             ))}
