@@ -585,8 +585,8 @@ impl DB {
                 for row in customer_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let name: String = row.try_get("name").unwrap_or_default();
-                    let email: String = row.try_get("email").unwrap_or_default();
+                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "customer".to_string(),
@@ -609,8 +609,8 @@ impl DB {
                 for row in order_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
+                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -633,8 +633,8 @@ impl DB {
                 for row in message_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("original_content").unwrap_or_default();
+                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -669,8 +669,8 @@ impl DB {
                 for row in customer_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let name: String = row.try_get("name").unwrap_or_default();
-                    let email: String = row.try_get("email").unwrap_or_default();
+                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "customer".to_string(),
@@ -691,8 +691,8 @@ impl DB {
                 for row in order_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
+                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -714,8 +714,8 @@ impl DB {
                 for row in message_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("original_content").unwrap_or_default();
+                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
