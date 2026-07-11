@@ -25,8 +25,8 @@ const omniInboxMessages = new Table({
   updated_at: column.text
 });
 
-const pendingActions = new Table({
-  id: column.text, // added id column to make the insert work properly
+const localPendingActions = new Table({
+  id: column.text,
   type: column.text,
   payload: column.text,
   timestamp: column.integer
@@ -98,7 +98,7 @@ export const AppSchema = new Schema({
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions,
+  local_pending_actions: localPendingActions,
   pos_offline_transactions: posOfflineTransactions,
   pos_terminal_sessions: posTerminalSessions
 });

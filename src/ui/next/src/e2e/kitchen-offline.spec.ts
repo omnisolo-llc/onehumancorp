@@ -1,57 +1,56 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Kitchen Command Center Offline Sync', () => {
-  test.describe.configure({ mode: 'serial' });
+test.describe('Kitchen Command Center Offline-First Edge Client', () => {
+  test('optimistically updates UI and queues offline events then syncs when back online', async ({ page, context, request }) => {
+    await page.setViewportSize({ width: 375, height: 667 }); // Target Fatima's mobile context
 
-  test.beforeEach(async ({ page, context }) => {
-    // Clear cookies and state
-    await context.clearCookies();
+    // Create a product to ensure we have a menu item to click on
+    const loginRes = await request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    expect(loginRes.ok()).toBeTruthy();
+    const { token, user } = await loginRes.json();
+
+    const productTitle = 'E2E Offline Kitchen ' + Date.now();
+    const createRes = await request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            title: productTitle,
+            price_cents: 800,
+            inventory_count: 5
+        }
+    });
+    expect(createRes.ok()).toBeTruthy();
+
     await page.goto('/kitchen');
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    await page.evaluate(() => localStorage.setItem('tenant_id', 'tenant-e2e-kitchen'));
 
-    // Wait for page to load
-    await expect(page.locator('text=Kitchen Command Center')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('performs optimistic UI updates and syncs queue when offline', async ({ page, context }) => {
-    // Check initial state
-    await expect(page.locator('text=Active Orders')).toBeVisible();
-
-    // The backend might return empty orders or mock data based on our changes
-    // We want to test the toggle logic on Daily Menu items which should be present
-    await expect(page.locator('text=Daily Menu')).toBeVisible();
+    // Wait for the Kitchen UI to load completely
+    await expect(page.locator('text=Kitchen Command Center')).toBeVisible();
 
     const toggleButton = page.locator('button[id^="sold-out-toggle-"]').first();
+    await expect(toggleButton).toBeVisible({ timeout: 15000 });
 
-    // Check if there are menu items to toggle.
-    // If empty state, this test might need a seeded item, but let's assume we have items.
-    const hasMenuItems = await toggleButton.count() > 0;
-    if (!hasMenuItems) {
-        // If no menu items, test passes as vacuous true (nothing to toggle)
-        return;
-    }
-
-    const initialText = await toggleButton.textContent() || '';
-
-    // Set network to offline
+    // Go offline
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-    // Perform optimistic action: Toggle sold out
+    const initialText = await toggleButton.textContent() || '';
+
+    // Real user click
     await toggleButton.click();
 
-    // Expect the text to change optimistically
+    // Verify optimistic UI
     await expect(toggleButton).not.toHaveText(initialText);
 
-    // Expect the Pending Sync indicator to show up
-    await expect(page.locator('text=Pending Sync')).toBeVisible();
+    // Pending Sync Banner Check
+    await expect(page.locator('id=queue-dashboard')).toBeVisible({ timeout: 10000 });
 
-    // Restore network
+    // Go back online
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
 
-    // Expect offline badge to disappear (queue should process)
-    await expect(page.locator('text=Pending Sync')).toBeHidden({ timeout: 15000 });
+    // The SyncManager should trigger and clear the queue, hiding the banner
+    await expect(page.locator('id=queue-dashboard')).toBeHidden({ timeout: 15000 });
   });
 });

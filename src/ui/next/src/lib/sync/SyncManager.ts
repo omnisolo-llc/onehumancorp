@@ -170,22 +170,27 @@ export class SyncManager {
         .filter(m => m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT')
         .map(m => {
           if (m.type === 'UPDATE_ORDER_STATUS') {
+             // Extract payload correctly whether it's wrapped in payload or directly on the object
+             const payloadData = m.payload || m;
+             const orderId = payloadData.order_id || payloadData.orderId;
              return {
                 id: m.id,
                 entity_type: 'order',
-                entity_id: m.payload.order_id,
+                entity_id: orderId,
                 action_type: 'UpdateStatus',
-                payload: m.payload,
+                payload: payloadData,
                 base_version: 1,
                 timestamp: new Date(m.timestamp || Date.now()).toISOString()
              };
           } else {
+             const payloadData = m.payload || m;
+             const itemId = payloadData.item_id || payloadData.itemId;
              return {
                 id: m.id,
                 entity_type: 'product',
-                entity_id: m.payload.item_id,
+                entity_id: itemId,
                 action_type: 'ToggleSoldOut',
-                payload: m.payload,
+                payload: payloadData,
                 base_version: 1,
                 timestamp: new Date(m.timestamp || Date.now()).toISOString()
              };
