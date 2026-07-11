@@ -492,7 +492,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_get_products_optimization() {
-        let pool = crate::db::create_sqlite_pool_for_test().await;
+        let pool = crate::db::create_dummy_pg_pool().await;
 
         // Let's create the tables and insert test data
         sqlx::query(
@@ -515,7 +515,8 @@ mod tests {
             "INSERT INTO product_variants (id, tenant_id, product_id, name, price_modifier, inventory_count) VALUES ('v2', 't1', 'p1', 'Blue', 0, 5);"
         ).execute(&pool).await.unwrap();
 
-        let hub = Arc::new(Hub::new(pool.clone(), Arc::new(crate::hub::MockEventTracker {})));
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
 
         let claims = ::server_common::Claims {
             sub: "test-user".to_string(),
