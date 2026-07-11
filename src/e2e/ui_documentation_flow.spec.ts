@@ -3,10 +3,9 @@ import { test, expect } from "./fixtures";
 test.describe("Documentation Features Flow", () => {
   test("User can navigate the Help Center and view an article", async ({
     page,
-    adminPage,
   }) => {
     // Navigate directly without mocking, allowing the real backend / fallback APIs to respond.
-    await page.goto("/help");
+    await page.goto("/help.html");
 
     // Help Center Index
     await expect(page).toHaveURL(/\/help/);
@@ -54,7 +53,7 @@ test.describe("Documentation Features Flow", () => {
   test("User can search the Help Center and get no results", async ({
     page,
   }) => {
-    await page.goto("/help");
+    await page.goto("/help.html");
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.locator('[data-testid="help-search-input"]');
@@ -69,7 +68,7 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("User can open the AI Help Chat widget", async ({ page }) => {
-    await page.goto("/help");
+    await page.goto("/help.html");
     await page.waitForLoadState("networkidle");
 
     // The Ask anything button at the bottom right
@@ -98,7 +97,7 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("User can access the Changelog", async ({ page }) => {
-    await page.goto("/changelog");
+    await page.goto("/changelog.html");
     await page.waitForLoadState("networkidle");
 
     // Verify title
@@ -110,7 +109,7 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("Advanced User can access API Documentation", async ({ page }) => {
-    await page.goto("/api-docs");
+    await page.goto("/api-docs.html");
     await page.waitForLoadState("networkidle");
 
     // Verify the advanced disclaimer
