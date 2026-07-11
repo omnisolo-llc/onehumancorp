@@ -60,7 +60,7 @@ export function RateLimitWarningProvider({ children }: { children: ReactNode }) 
       {children}
       {warningMessage && (
         <div
-          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 text-amber-800 dark:text-amber-100 px-6 py-4 rounded-xl shadow-lg z-[9999] flex items-start gap-3 max-w-md w-full backdrop-blur-[30px] backdrop-saturate-[2.1]"
+          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 text-amber-800 dark:text-amber-100 px-6 py-4 rounded-xl shadow-lg z-[9999] flex items-start gap-3 max-w-md w-full"
           role="alert"
           aria-live="polite"
         >

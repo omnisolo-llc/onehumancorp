@@ -49,7 +49,7 @@ cargo_vendor_repository(
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.download(
     name = "go_sdk",
-    version = "1.22.1",
+    version = "1.24.0",
 )
 use_repo(go_sdk, "go_sdk")
 

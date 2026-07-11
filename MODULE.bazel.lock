@@ -550,7 +550,7 @@
     "@@googleapis+//:extensions.bzl%switched_rules": {
       "general": {
         "bzlTransitiveDigest": "1ZTg77R3Ks/ksx8QMNIoTRJetbJPRlzGFlJa9hoUn+Y=",
-        "usagesDigest": "phuibqqjsm5RJqquWNJ7BXJvnPPgSCBreyRLEH/JjIA=",
+        "usagesDigest": "ohussHx/bqkJyKheTzqkoYs+OK/vLzyIjRWJ7+MAnfM=",
         "recordedInputs": [],
         "generatedRepoSpecs": {}
       }
