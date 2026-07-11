@@ -170,7 +170,6 @@ impl Department for CustomerSuccessAgent {
                     }
 
                     return Ok(());
-                }
                 } else if orig.get("feature_type").and_then(|v| v.as_str()) == Some("loyalty_reward_notification") {
                     let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                     tracing::info!("EXECUTING APPROVED DRAFT: Applying VIP reward for customer: {}", customer_id);
