@@ -380,3 +380,21 @@ mod tests {
         assert_eq!(req2.image_url, Some("http://example.com/img.png".to_string()));
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_zero_click_generate_response_serialization() {
+        let resp = ZeroClickGenerateResponse {
+            organization_id: "org_123".to_string(),
+            user_id: "user_456".to_string(),
+            message: "Success".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("org_123"));
+        assert!(json.contains("user_456"));
+        assert!(json.contains("Success"));
+    }
+}
