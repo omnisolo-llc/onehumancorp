@@ -33,6 +33,7 @@ impl Department for CustomerSuccessAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
+            "loyalty.points_awarded".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
@@ -55,6 +56,36 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+
+        if event.event_type == "loyalty.points_awarded" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let points = event.payload.get("points").and_then(|v| v.as_i64()).unwrap_or(0);
+            let total_points = event.payload.get("total_points").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            if total_points >= 50 && total_points - points < 50 {
+                let draft_copy = format!("Hey {}! You just reached VIP status! Reply 'Claim' to use your 15% off reward on your next order.", customer_id);
+
+                let payload = serde_json::json!({
+                    "feature_type": "loyalty_reward_notification",
+                    "customer_id": customer_id,
+                    "total_points": total_points,
+                    "draft_copy": draft_copy,
+                    "channel": "sms_or_dm"
+                });
+
+                let description = format!("Send VIP reward notification to customer {}", customer_id);
+
+                return self.orchestrator.execute_action(
+                    DepartmentType::CustomerSuccess,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    payload,
+                ).await.map(|_| ());
+            }
+            return Ok(());
+        }
 
         if event.event_type == "job_status_updates" {
             let job_id = event.payload.get("job_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -139,6 +170,21 @@ impl Department for CustomerSuccessAgent {
                     }
 
                     return Ok(());
+                } else if orig.get("feature_type").and_then(|v| v.as_str()) == Some("loyalty_reward_notification") {
+                    let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                    tracing::info!("EXECUTING APPROVED DRAFT: Applying VIP reward for customer: {}", customer_id);
+
+                    let pool = crate::db::get_pool();
+                    let reward_id = uuid::Uuid::new_v4().to_string();
+                    let discount_code = format!("VIP-15-{}", uuid::Uuid::new_v4().to_string().chars().take(6).collect::<String>());
+                    let _ = sqlx::query("INSERT INTO reward_claims (id, tenant_id, customer_id, discount_code, status) VALUES ($1, $2, $3, $4, $5)")
+                        .bind(reward_id)
+                        .bind(&event.tenant_id)
+                        .bind(customer_id)
+                        .bind(discount_code)
+                        .bind("active")
+                        .execute(&pool).await;
+
                 }
             }
 
@@ -699,6 +745,7 @@ mod tests {
         assert!(events.contains(&"tenant.message.received".to_string()));
         assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
         assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));
+        assert!(events.contains(&"loyalty.points_awarded".to_string()));
         assert!(events.contains(&"agent:customer_success:approved".to_string()));
         assert!(events.contains(&"tenant.subscription.at_risk".to_string()));
         assert!(events.contains(&"job_status_updates".to_string()));
