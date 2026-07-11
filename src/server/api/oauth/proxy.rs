@@ -60,11 +60,19 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
-            if !tunnel_base_url.starts_with("https://") && !tunnel_base_url.starts_with("http://127.0.0.1") && !tunnel_base_url.starts_with("http://localhost") {
+            if tunnel_base_url.starts_with("http://127.0.0.1:") || tunnel_base_url.starts_with("http://localhost:") {
+                // allowed for local dev
+            } else if !tunnel_base_url.starts_with("https://") || tunnel_base_url.len() < 10 {
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     "Invalid tunnel_base_url: must be HTTPS or localhost.",
                 ).into_response();
+            } else {
+                let stripped = tunnel_base_url.strip_prefix("https://").unwrap_or(&tunnel_base_url);
+                let host = stripped.split('/').next().unwrap_or(stripped).split(':').next().unwrap_or(stripped);
+                if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
+                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                }
             }
 
             let mut redirect_url = format!("{}/{}/oauth/callback#code={}&state={}",
