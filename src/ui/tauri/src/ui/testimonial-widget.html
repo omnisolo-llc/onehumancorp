@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testimonial Widget 🌟</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f5f7; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; margin-bottom: 20px; color: #1d1d1f; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; color: #1d1d1f; }
+        input, textarea, select { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        textarea { resize: vertical; min-height: 100px; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+        .checkbox-group input { width: auto; }
+        .btn-primary { background: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 20px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
+        .theme-buttons { display: flex; gap: 10px; margin-bottom: 16px; }
+        .theme-btn { flex: 1; padding: 10px; border: 1px solid #d2d2d7; background: white; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .theme-btn.active { background: #1d1d1f; color: white; border-color: #1d1d1f; }
+
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 24px; border-radius: 16px; max-width: 400px; width: 90%; text-align: center; }
+        .modal h2 { margin-top: 0; color: #1d1d1f; }
+        .modal p { color: #86868b; margin-bottom: 20px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+        .btn-secondary { background: #f5f5f7; color: #1d1d1f; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; cursor: pointer; }
+
+        .embed-modal { max-width: 600px; }
+        .embed-modal textarea { height: 150px; margin-bottom: 16px; font-family: monospace; font-size: 14px; background: #f5f5f7; border: 1px solid #d2d2d7; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Testimonial Widget 🌟</h1>
+
+    <div class="form-group">
+        <label>Tenant Name</label>
+        <input type="text" id="tenantInput" placeholder="e.g. my-store">
+    </div>
+
+    <div class="form-group">
+        <label>Author Name</label>
+        <input type="text" id="authorInput" placeholder="e.g. Jane Doe">
+    </div>
+
+    <div class="form-group">
+        <label>Review Text</label>
+        <textarea id="reviewInput" placeholder="The cakes are absolutely amazing!"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>Rating</label>
+        <select id="ratingSelect">
+            <option value="5">5</option>
+            <option value="4">4</option>
+            <option value="3">3</option>
+            <option value="2">2</option>
+            <option value="1">1</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Theme</label>
+        <div class="theme-buttons">
+            <button class="theme-btn active" id="themeLight" onclick="setTheme('light')">Light</button>
+            <button class="theme-btn" id="themeDark" onclick="setTheme('dark')">Dark</button>
+        </div>
+    </div>
+
+    <div class="checkbox-group">
+        <input type="checkbox" id="removeBranding" aria-label="Remove &quot;Powered by OHC&quot; Badge">
+        <label for="removeBranding" style="margin: 0;">Remove "Powered by OHC" Badge</label>
+    </div>
+
+    <button class="btn-primary" id="getWidgetCode" onclick="generateCode()">Get Widget Code</button>
+</div>
+
+<!-- Paywall Modal -->
+<div class="modal-overlay" id="paywallModal">
+    <div class="modal">
+        <h2>Upgrade to Remove Branding</h2>
+        <p>Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="closePaywall()">Close paywall</button>
+            <button class="btn-primary" style="margin: 0; width: auto;" onclick="upgradePro()">Upgrade to Pro</button>
+        </div>
+    </div>
+</div>
+
+<!-- Embed Code Modal -->
+<div class="modal-overlay" id="embedModal">
+    <div class="modal embed-modal">
+        <h2>Embed Testimonial</h2>
+        <p>Copy this code and paste it into your website.</p>
+        <textarea id="embedCodeOutput" readonly></textarea>
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="closeEmbed()">Close</button>
+            <button class="btn-primary" style="margin: 0; width: auto;" id="copyCodeBtn" onclick="copyCode()">Copy Code</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTheme = 'light';
+    let isProUser = false; // Simulated user state
+
+    function setTheme(theme) {
+        currentTheme = theme;
+        document.getElementById('themeLight').classList.toggle('active', theme === 'light');
+        document.getElementById('themeDark').classList.toggle('active', theme === 'dark');
+    }
+
+    document.getElementById('removeBranding').addEventListener('click', function(e) {
+        if (!isProUser) {
+            e.preventDefault();
+            this.checked = false;
+            document.getElementById('paywallModal').style.display = 'flex';
+        }
+    });
+
+    function closePaywall() {
+        document.getElementById('paywallModal').style.display = 'none';
+    }
+
+    function upgradePro() {
+        isProUser = true;
+        closePaywall();
+        document.getElementById('removeBranding').checked = true;
+    }
+
+    function generateCode() {
+        const tenant = encodeURIComponent(document.getElementById('tenantInput').value || 'demo-store');
+        const authorName = encodeURIComponent(document.getElementById('authorInput').value || 'Anonymous');
+        const reviewText = encodeURIComponent(document.getElementById('reviewInput').value || 'Great service!');
+        const rating = document.getElementById('ratingSelect').value;
+        const branding = !document.getElementById('removeBranding').checked;
+
+        const iframeUrl = `https://ohc.app/api/v1/growth/testimonial/embed?tenant=${tenant}&authorName=${authorName}&reviewText=${reviewText}&rating=${rating}&theme=${currentTheme}&branding=${branding}`;
+
+        const embedCode = `<iframe src="${iframeUrl}" width="100%" height="250" frameborder="0" style="border:none; overflow:hidden; border-radius:12px;" allowtransparency="true"></iframe>`;
+
+        document.getElementById('embedCodeOutput').value = embedCode;
+        document.getElementById('embedModal').style.display = 'flex';
+        document.getElementById('copyCodeBtn').innerText = 'Copy Code'; // Reset button text
+    }
+
+    function closeEmbed() {
+        document.getElementById('embedModal').style.display = 'none';
+    }
+
+    function copyCode() {
+        const copyText = document.getElementById('embedCodeOutput');
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+        try {
+            document.execCommand('copy');
+            document.getElementById('copyCodeBtn').innerText = 'Copied!';
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    }
+</script>
+
+</body>
+</html>
