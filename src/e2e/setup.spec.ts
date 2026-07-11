@@ -5,7 +5,13 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
   test('should complete the interactive setup wizard flow smoothly on desktop', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
@@ -91,7 +97,13 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       });
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     await page.goto('http://mock/setup.html');
@@ -107,7 +119,13 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
   test('should auto-save progress and clear it on success', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
@@ -139,7 +157,13 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
   test('should show submit error if start fails', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
@@ -179,7 +203,13 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
   test.beforeEach(async ({ page }) => {
       const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
-          const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+          const content = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
           await route.fulfill({ contentType: 'text/html', body: content   });
         });
     });
@@ -238,7 +268,13 @@ test.describe('OHC Setup Wizard Dark Mode', () => {
     const path = require('path');
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
-        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        const htmlContent = (() => {
+    try {
+        return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+    } catch(e) {
+        return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+    }
+})();
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     await page.route('**/api/tooltips', async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
