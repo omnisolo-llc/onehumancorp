@@ -1044,7 +1044,7 @@
           let items = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
 
           if (!Array.isArray(items) || items.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty">All caught up! Your business is running smoothly.</div>';
             return;
           }
 
