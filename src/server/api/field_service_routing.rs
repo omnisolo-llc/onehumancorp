@@ -73,7 +73,6 @@ struct AppState {
 }
 
 static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> = std::sync::OnceLock::new();
-static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> = std::sync::OnceLock::new();
 
 async fn get_today_routes(
     State(state): State<AppState>,
@@ -86,24 +85,6 @@ async fn get_today_routes(
 
     let cache_key = format!("routes_today_{}", tenant_id);
     let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
-
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
-        }
-    }
-
-    let cache_key = format!("routes_today_{}", tenant_id);
-    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
-
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
-        }
-    }
-
-    let cache_key = format!("routes_today_{}", tenant_id);
-    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -316,11 +297,6 @@ mod tests {
     async fn test_dummy() {
         assert!(true);
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 
     #[test]
     fn test_field_service_routing_dummy() {
