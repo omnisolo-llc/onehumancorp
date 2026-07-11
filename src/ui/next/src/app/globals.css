@@ -856,7 +856,7 @@ button,
   min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #f7f9fb !important;
   color: #526070;
   box-shadow: none;
