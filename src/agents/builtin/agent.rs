@@ -11631,3 +11631,15 @@ mod multi_agent_split_tests {
         assert!(err_str.contains("Task requires multi-agent split: clear domain separation exists (>3 distinct tool domains)"));
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+
+    #[test]
+    fn test_agent_task_timeout_default() {
+        unsafe { std::env::set_var("OHC_AGENT_TASK_TIMEOUT_SECS", "60"); }
+        assert_eq!(agent_task_timeout().as_secs(), 60);
+    }
+}
