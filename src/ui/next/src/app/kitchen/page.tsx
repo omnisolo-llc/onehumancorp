@@ -63,8 +63,8 @@ export default function KitchenView() {
     // Add to sync queue for eventual consistency
     await SyncManager.getInstance().enqueue({
       id: `e2e-product-${itemId}`,
-      type: "inventory_toggle",
-      payload: { soldOut: !currentStatus },
+      type: "TOGGLE_SOLD_OUT",
+      payload: { item_id: itemId, is_sold_out: !currentStatus },
       timestamp: Date.now()
     });
   };
@@ -76,8 +76,7 @@ export default function KitchenView() {
     await SyncManager.getInstance().enqueue({
       id: `order-ready-${orderId}`,
       type: "UPDATE_ORDER_STATUS",
-      orderId: orderId,
-      status: "ready",
+      payload: { order_id: orderId, status: "ready" },
       timestamp: Date.now()
     });
   };
