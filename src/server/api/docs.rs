@@ -1317,25 +1317,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_articles() {
-        let res = list_articles(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = list_articles(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_not_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_list_videos() {
-        let res = list_videos(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = list_videos(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
