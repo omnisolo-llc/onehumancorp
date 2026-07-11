@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Scratch-Off Generator</title>
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --text-color: #1d1d1f;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --card-border: rgba(255, 255, 255, 0.4);
+      --primary-color: #0066FF;
+      --primary-hover: #0052cc;
+      --input-bg: rgba(255, 255, 255, 0.8);
+      --input-border: rgba(0,0,0,0.2);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #16161a;
+        --text-color: #F5F5F7;
+        --card-bg: rgba(22, 22, 26, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(255, 255, 255, 0.1);
+        --input-border: rgba(255, 255, 255, 0.2);
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 500px;
+      width: 100%;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .back-btn svg { width: 20px; height: 20px; margin-right: 4px; }
+    h1 { font-size: 24px; font-weight: 800; margin: 0; }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--input-border);
+      background: var(--input-bg); color: var(--text-color); font-size: 15px; font-family: inherit;
+      box-sizing: border-box;
+    }
+    .form-group input:focus, .form-group textarea:focus { outline: 2px solid var(--primary-color); }
+
+    .btn {
+      background: var(--primary-color); color: white; border: none; padding: 14px 24px;
+      border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%;
+      transition: background 0.2s, transform 0.1s; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:active { transform: scale(0.98); }
+
+    .preview-section { display: none; margin-top: 24px; }
+    .embed-code-box {
+      background: rgba(0,0,0,0.03); border: 1px solid var(--input-border);
+      border-radius: 8px; padding: 16px; font-family: monospace; font-size: 13px;
+      white-space: pre-wrap; word-break: break-all; margin-bottom: 16px; color: var(--text-color);
+    }
+    @media (prefers-color-scheme: dark) {
+      .embed-code-box { background: rgba(255,255,255,0.05); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <a href="dashboard.html" class="back-btn">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      Back
+    </a>
+    <h1>Scratch-Off Generator</h1>
+  </div>
+
+  <div class="card">
+    <p style="margin-top: 0; color: #86868b; font-size: 15px; line-height: 1.5;">
+      Embed a fun scratch-off ticket on your site to reveal a discount. It captures attention and includes your OHC referral link.
+    </p>
+
+    <div class="form-group">
+      <label for="offer-text">Hidden Offer</label>
+      <input type="text" id="offer-text" placeholder="e.g. 20% OFF! Code: SAVE20" value="20% OFF! Code: SAVE20">
+    </div>
+
+    <div class="form-group">
+      <label>Theme</label>
+      <div style="display: flex; gap: 10px;">
+        <label style="display:flex; align-items:center; font-weight:normal;">
+          <input type="radio" name="theme" value="light" checked style="width:auto; margin-right:6px;"> Light
+        </label>
+        <label style="display:flex; align-items:center; font-weight:normal;">
+          <input type="radio" name="theme" value="dark" style="width:auto; margin-right:6px;"> Dark
+        </label>
+      </div>
+    </div>
+
+    <button class="btn" id="generate-btn">Generate Widget</button>
+  </div>
+
+  <div class="card preview-section" id="preview-section">
+    <h2>Your Embed Code</h2>
+    <p style="font-size: 14px; color: #86868b;">Copy and paste this HTML anywhere on your website or blog.</p>
+
+    <div class="embed-code-box" id="embed-code"></div>
+
+    <button class="btn" id="copy-btn" style="background: #1d1d1f; box-shadow: none;">Copy Code</button>
+  </div>
+</div>
+
+<script>
+  document.getElementById('generate-btn').addEventListener('click', () => {
+    const offer = document.getElementById('offer-text').value.trim() || '20% OFF! Code: SAVE20';
+    const theme = document.querySelector('input[name="theme"]:checked').value;
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+
+    const urlParams = new URLSearchParams({
+      type: 'scratch_off',
+      tenant: tenantId,
+      theme: theme,
+      offer: offer
+    });
+
+    const embedUrl = `${window.location.origin}/api/v1/growth/embed/widget?${urlParams.toString()}`;
+
+    const embedCode = `<!-- OHC Scratch-Off Widget -->
+<div class="ohc-scratch-off-container" style="width: 100%; max-width: 400px; margin: 0 auto;">
+  <iframe src="${embedUrl}" width="100%" height="250" style="border:none; border-radius:16px; overflow:hidden;"></iframe>
+</div>`;
+
+    document.getElementById('embed-code').textContent = embedCode;
+    document.getElementById('preview-section').style.display = 'block';
+  });
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const code = document.getElementById('embed-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = document.getElementById('copy-btn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = originalText; }, 2000);
+    });
+  });
+</script>
+
+<script src="help-widget.mjs" type="module"></script>
+</body>
+</html>
