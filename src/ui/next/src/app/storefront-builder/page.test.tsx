@@ -5,7 +5,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/Walkthrough', () => ({
-  WalkthroughTarget: ({ children }: any) => <>{children}</>,
+  WalkthroughTarget: ({ children, id }: any) => <div id={id}>{children}</div>,
   InteractiveWalkthrough: () => null
 }));
 vi.mock('../../components/TooltipRegistry', () => ({

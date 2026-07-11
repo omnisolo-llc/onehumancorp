@@ -124,7 +124,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     if (await tapBtn.isVisible()) {
         await tapBtn.click();
         await expect(page.getByText('Offline Tap-to-Pay. Authorizing locally...')).toBeVisible({ timeout: 5000 });
-        await expect(page.getByText('Tap-to-Pay saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText('Saved Offline - Will sync when connected')).toBeVisible({ timeout: 5000 });
     }
   });
 

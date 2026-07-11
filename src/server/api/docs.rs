@@ -122,6 +122,11 @@ pub async fn get_tooltips(
         tooltips.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
         tooltips.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
         tooltips.insert("help-search-tooltip".to_string(), "Search for help articles and videos...".to_string());
+        tooltips.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+        tooltips.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
+        tooltips.insert("total-sales-tooltip".to_string(), "Total revenue generated from your orders.".to_string());
+        tooltips.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
+        tooltips.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
     }
 
     Ok(Json(tooltips))
@@ -175,6 +180,47 @@ pub async fn update_tooltip(
     }
 }
 
+pub async fn delete_tooltip(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap
+) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("DELETE FROM tooltips WHERE id = $1 AND tenant_id = $2")
+                .bind(id.clone())
+                .bind(tenant_id)
+                .execute(&db.pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to delete tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("DELETE FROM tooltips WHERE id = ? AND tenant_id = ?")
+                .bind(id.clone())
+                .bind(tenant_id)
+                .execute(pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to delete tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        }
+    }
+}
+
 
 
 pub fn get_articles() -> Vec<HelpArticle> {
@@ -185,7 +231,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
         HelpArticle { category: "Marketing".to_string(), title: "Grow Your Audience".to_string(), desc: "Use our built-in tools to run promotions and track performance.".to_string(), link: "/help/marketing-tools".to_string() },
         HelpArticle { category: "Account & Billing".to_string(), title: "Manage Billing".to_string(), desc: "Update your subscription and payment methods.".to_string(), link: "/help/billing-settings".to_string() },
-        HelpArticle { category: "Advanced".to_string(), title: "API Documentation".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs".to_string() },
     ]
 }
 
@@ -533,7 +579,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
     let spec = serde_json::json!({
         "openapi": "3.0.0",
         "info": {
-            "title": "OHC Advanced API Reference",
+            "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
             "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
         },
@@ -584,6 +630,39 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                     "schema": {
                                         "type": "object",
                                         "additionalProperties": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            "/api/tooltips/{id}": {
+                "delete": {
+                    "summary": "Delete a Tooltip",
+                    "description": "Deletes a tooltip by its element ID.",
+                    "tags": ["Documentation"],
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" }
+                                        }
                                     }
                                 }
                             }
@@ -1058,5 +1137,38 @@ mod tests {
             tooltips.get("test-tooltip-id").map(|s| s.as_str()),
             Some("This is a test tooltip")
         );
+    }
+
+    #[tokio::test]
+    async fn test_delete_tooltip_api() {
+        let db_pool = crate::db::create_sqlite_pool_for_test().await;
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        sqlx::query("CREATE TABLE IF NOT EXISTS tooltips (id TEXT, tenant_id TEXT, text TEXT, PRIMARY KEY (tenant_id, id))").execute(&db_pool).await.unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+
+        // Insert a tooltip manually
+        sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ('delete-test-id', 'test-tenant', 'Tooltip to delete')")
+            .execute(match &db.store { crate::db::DbStore::Sqlite(p) => p, _ => unreachable!() })
+            .await
+            .unwrap();
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
+
+        // Verify it exists
+        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), headers.clone()).await.unwrap();
+        assert_eq!(tooltips_res.0.get("delete-test-id").map(|s| s.as_str()), Some("Tooltip to delete"));
+
+        // Delete the tooltip
+        let res = delete_tooltip(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Path("delete-test-id".to_string()),
+            headers.clone(),
+        ).await.unwrap();
+        assert!(res.0.success);
+
+        // Fetch tooltips and verify the deletion
+        let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
+        assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
 }

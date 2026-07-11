@@ -286,6 +286,53 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice" && (
+              <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-xl" data-testid="invoice-card">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center text-xl">
+                    🧾
+                  </span>
+                  Invoice Follow-up
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
+                  Details: <span className="inline break-words font-semibold text-gray-800 dark:text-gray-200">{(approval.context_payload)?.description || "Invoice requires attention."}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                  <button
+                    type="button"
+                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-indigo-600 text-white rounded-[8px] font-medium hover:bg-indigo-700 shadow-md transition-all flex items-center justify-center"
+                    onClick={() =>
+                      wrapDecision(approval.id, true, undefined, "invoice")
+                    }
+                    disabled={loadingAction !== null}
+                    data-testid="feed-approve-btn"
+                  >
+                    {isActionLoading("approve") ? (
+                      <span className="animate-pulse">Processing...</span>
+                    ) : (
+                      "Send Reminder"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-[8px] font-medium transition-all"
+                    onClick={() =>
+                      wrapDecision(approval.id, false, undefined, "invoice")
+                    }
+                    disabled={loadingAction !== null}
+                    data-testid="feed-dismiss-btn"
+                  >
+                    {isActionLoading("dismiss") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Dismiss"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "invoice_followup" && (
               <div className="flex flex-col gap-3">
                 <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
@@ -397,47 +444,104 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "triage" && (
-              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
-                  <span className="w-5 h-5 flex items-center justify-center">
-                    ✉️
+              <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-xl">
+                <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center text-xl">
+                    ✨
                   </span>
                   Message Requires Attention
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200">
-                  {approval.context_payload?.description ||
-                    "You have an open customer conversation waiting for your reply."}
-                </p>
-                <div className="flex gap-2 w-full mt-1">
-                  <button
-                    type="button"
-                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]"
-                    onClick={() =>
-                      wrapDecision(approval.id, true, undefined, "triage")
-                    }
-                    disabled={loadingAction !== null}
-                  >
-                    {isActionLoading("approve") ? (
-                      <span className="animate-pulse">Loading...</span>
-                    ) : (
-                      "Resolve Message"
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
-                    onClick={() =>
-                      wrapDecision(approval.id, false, undefined, "triage")
-                    }
-                    disabled={loadingAction !== null}
-                  >
-                    {isActionLoading("dismiss") ? (
-                      <span className="animate-pulse">Loading...</span>
-                    ) : (
-                      "Dismiss"
-                    )}
-                  </button>
+                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
+                  Customer: <div className="triage-context inline break-words font-semibold text-gray-800 dark:text-gray-200">{(approval.context_payload)?.description || "You have an open customer conversation waiting for your reply."}</div>
                 </div>
+                <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm mt-1 border border-gray-100 dark:border-gray-800">
+                  <div className="font-semibold text-xs uppercase mb-1 block tracking-wider text-blue-600 dark:text-blue-400">Drafted Action:</div>
+                  <div className="whitespace-pre-wrap">{approval.proposed_action?.draft_reply || approval.proposed_action?.message || "Resolve Message"}</div>
+                </div>
+
+                {editingId === approval.id ? (
+                  <div className="flex flex-col gap-3 w-full mt-2">
+                    <textarea
+                      className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                      rows={4}
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      data-testid="edit-triage-reply-textarea"
+                      autoFocus
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          wrapDecision(
+                            approval.id,
+                            true,
+                            editContent,
+                            "triage",
+                          );
+                          setEditingId(null);
+                        }}
+                        className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                        data-testid="save-send-triage-reply"
+                      >
+                        Save & Send
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                        data-testid="cancel-edit-triage-reply"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                    <button
+                      type="button"
+                      className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px] font-medium hover:bg-[#0052CC] shadow-md transition-all flex items-center justify-center"
+                      onClick={() =>
+                        wrapDecision(approval.id, true, undefined, "triage")
+                      }
+                      disabled={loadingAction !== null}
+                      data-testid="feed-approve-btn"
+                    >
+                      {isActionLoading("approve") ? (
+                        <span className="animate-pulse flex items-center gap-2">Processing...</span>
+                      ) : (
+                        "Approve & Send"
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-[8px] font-medium transition-all"
+                      onClick={() => {
+                        setEditingId(approval.id);
+                        setEditContent(approval.proposed_action?.draft_reply || approval.proposed_action?.message || "");
+                      }}
+                      disabled={loadingAction !== null}
+                      data-testid="feed-modify-btn"
+                    >
+                      Modify
+                    </button>
+
+                    <button
+                      type="button"
+                      className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-[8px] font-medium transition-all"
+                      onClick={() =>
+                        wrapDecision(approval.id, false, undefined, "triage")
+                      }
+                      disabled={loadingAction !== null}
+                      data-testid="feed-dismiss-btn"
+                    >
+                      {isActionLoading("dismiss") ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : (
+                        "Dismiss"
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
@@ -2075,7 +2179,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "proactive_ops" ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "invoice_followup" ? null : (
+            ?.feature_type === "invoice_followup" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice" ? null : (
             approval.proposed_action || approval.context_payload
           )?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (

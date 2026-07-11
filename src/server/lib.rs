@@ -3497,6 +3497,20 @@ pub async fn simulate_ui_triage_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(sqlx::types::Json(serde_json::json!({"customer_message": "Do you have vegan chocolate cake available this weekend?"})))
+            .bind(sqlx::types::Json(serde_json::json!({"draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "action_type": "Draft Reply"})))
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert agent_feed_items: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
             if let Err(e) = tx.commit().await {
                  tracing::error!("Failed to commit transaction: {:?}", e);
                  return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3537,6 +3551,20 @@ pub async fn simulate_ui_triage_item_handler(
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(serde_json::json!({"customer_message": "Do you have vegan chocolate cake available this weekend?"}).to_string())
+            .bind(serde_json::json!({"draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "action_type": "Draft Reply"}).to_string())
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert agent_feed_items: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
@@ -5445,7 +5473,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
+    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, invoices_res) = tokio::join!(
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
@@ -5532,6 +5560,14 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
                     load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
+        }),
+
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            async move {
+                load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+            }
         })
     );
 
@@ -5543,6 +5579,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         "pending_approvals": approvals_res.unwrap_or_default(),
         "agent_feed": agent_feed_res.unwrap_or_default(),
         "priority_tasks": priority_tasks_res.unwrap_or_default(),
+        "invoices": invoices_res.unwrap_or_default(),
     })
 }
 
@@ -5737,6 +5774,70 @@ async fn list_ui_orders_handler(
     }
 }
 
+
+
+async fn load_ui_invoices_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(client_name, '') AS customer_name, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&db.pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, CAST(COALESCE(total_amount, 0.0) AS REAL) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = ? AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(client_name, '') AS customer_name, CAST(COALESCE(total_amount, 0.0) AS REAL) AS total_amount, COALESCE(status, '') AS status, CAST(created_at AS TEXT) AS created_at FROM invoices WHERE tenant_id = ? AND status != 'paid' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        }
+    }
+}
 
 async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
@@ -6854,6 +6955,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))

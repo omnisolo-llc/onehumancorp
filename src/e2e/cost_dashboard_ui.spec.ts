@@ -58,7 +58,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify data placeholders or limits are populated
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Estimated Next Bill' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
 
     // Verify actions

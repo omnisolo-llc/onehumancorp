@@ -36,7 +36,7 @@ test.describe('Zero-Click Onboarding Flow', () => {
     await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#approval-details')).toBeVisible();
     await expect(page.locator('#approval-details')).toContainText('Suggested Deposit Policy');
-    await expect(page.locator('#approval-details')).toContainText(/Requires a \d+% upfront deposit/);
+    await expect(page.locator('#approval-details')).toContainText(/Requires a \\d+% upfront deposit/);
 
     // Click Approve & Publish
     const approveBtn = page.locator('#approve-publish-btn');

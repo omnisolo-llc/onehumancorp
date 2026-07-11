@@ -2100,7 +2100,8 @@
             const actionType = item.action_type || item.proposed_action?.action_type;
             const description = item.context || item.proposed_action?.message || item.context_payload?.description || item.payload?.description || actionType || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true || item.context_payload?.weekly_health_report === true;
-            const approveText = isDraft ? "Yes, draft it!" : "Approve";
+            let finalApproveText = isDraft ? "Yes, draft it!" : "Approve";
+            if (actionType === "share_milestone") { finalApproveText = "Share & Earn"; }
 
 
             if (item.thread && item.triage_actions && item.triage_actions.length > 0) {
