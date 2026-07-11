@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "operations",
+    srcs = ["handler.go"],
+    importpath = "mono/src/server/ohc/api/operations",
+    visibility = ["//visibility:public"],
+    deps = ["//src/server/ohc/domain/operations"],
+)
+
+go_test(
+    name = "operations_test",
+    srcs = ["handler_test.go"],
+    embed = [":operations"],
+    deps = [
+        "//src/server/ohc/domain/operations",
+    ],
+)
