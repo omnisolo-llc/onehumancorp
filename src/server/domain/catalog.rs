@@ -23,7 +23,7 @@ pub async fn handle_create_product(tenant_id: &str, payload: &Value, pool: &PgPo
     let item_type = payload.get("item_type").and_then(|v| v.as_str()).unwrap_or("Product");
     let product_id = uuid::Uuid::new_v4().to_string();
 
-    tracing::info!("Creating product via action_router for tenant: {}, title: {}", tenant_id, title);
+    tracing::info!("Creating product via action_router for tenant: {}, title: {}", tenant_id, title); // pii-safe
 
     sqlx::query(
         "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count, is_subscribable, subscription_frequency, subscription_discount_percent) VALUES ($1, $2, $3, $4, $5, $6, 100, false, null, 0)"
