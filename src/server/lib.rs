@@ -6854,6 +6854,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))

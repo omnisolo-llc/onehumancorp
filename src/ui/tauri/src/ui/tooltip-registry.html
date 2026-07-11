@@ -125,7 +125,12 @@
                     tbody.innerHTML += `<tr>
                         <td>${id}</td>
                         <td><input type="text" id="input-${id}" value="${text.replace(/"/g, '&quot;')}" /></td>
-                        <td><button onclick="update('${id}', event)">Save</button></td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="update('${id}', event)">Save</button>
+                                <button onclick="deleteTooltip('${id}', event)" style="background-color: #EF4444; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);">Delete</button>
+                            </div>
+                        </td>
                     </tr>`;
                 }
             } catch (e) {
@@ -133,6 +138,30 @@
                 showToast("Failed to load tooltips", true);
             }
         }
+        window.deleteTooltip = async function(id, event) {
+            if (!confirm('Are you sure you want to delete this tooltip?')) return;
+            const btn = event ? event.target : null;
+            let originalText = '';
+            if (btn) {
+                originalText = btn.innerText;
+                btn.innerText = 'Deleting...';
+                btn.disabled = true;
+            }
+            try {
+                const res = await fetch('/api/tooltips/' + id, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete');
+                showToast("Tooltip deleted successfully");
+                await loadTooltips();
+            } catch (e) {
+                console.error('Failed to delete tooltip', e);
+                showToast("Failed to delete tooltip", true);
+            } finally {
+                if (btn) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+        };
         window.update = async function(id, event) {
             const text = document.getElementById('input-' + id).value;
             const btn = event ? event.target : null;

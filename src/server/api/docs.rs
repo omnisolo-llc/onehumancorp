@@ -175,6 +175,47 @@ pub async fn update_tooltip(
     }
 }
 
+pub async fn delete_tooltip(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    headers: axum::http::HeaderMap
+) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("DELETE FROM tooltips WHERE id = $1 AND tenant_id = $2")
+                .bind(id.clone())
+                .bind(tenant_id)
+                .execute(&db.pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to delete tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("DELETE FROM tooltips WHERE id = ? AND tenant_id = ?")
+                .bind(id.clone())
+                .bind(tenant_id)
+                .execute(pool)
+                .await
+            {
+                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                Err(e) => {
+                    tracing::error!("Failed to delete tooltip: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        }
+    }
+}
+
 
 
 pub fn get_articles() -> Vec<HelpArticle> {
@@ -584,6 +625,39 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                     "schema": {
                                         "type": "object",
                                         "additionalProperties": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            "/api/tooltips/{id}": {
+                "delete": {
+                    "summary": "Delete a Tooltip",
+                    "description": "Deletes a tooltip by its element ID.",
+                    "tags": ["Documentation"],
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" }
+                                        }
                                     }
                                 }
                             }
@@ -1058,5 +1132,38 @@ mod tests {
             tooltips.get("test-tooltip-id").map(|s| s.as_str()),
             Some("This is a test tooltip")
         );
+    }
+
+    #[tokio::test]
+    async fn test_delete_tooltip_api() {
+        let db_pool = crate::db::create_sqlite_pool_for_test().await;
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        sqlx::query("CREATE TABLE IF NOT EXISTS tooltips (id TEXT, tenant_id TEXT, text TEXT, PRIMARY KEY (tenant_id, id))").execute(&db_pool).await.unwrap();
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+
+        // Insert a tooltip manually
+        sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ('delete-test-id', 'test-tenant', 'Tooltip to delete')")
+            .execute(match &db.store { crate::db::DbStore::Sqlite(p) => p, _ => unreachable!() })
+            .await
+            .unwrap();
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
+
+        // Verify it exists
+        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), headers.clone()).await.unwrap();
+        assert_eq!(tooltips_res.0.get("delete-test-id").map(|s| s.as_str()), Some("Tooltip to delete"));
+
+        // Delete the tooltip
+        let res = delete_tooltip(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Path("delete-test-id".to_string()),
+            headers.clone(),
+        ).await.unwrap();
+        assert!(res.0.success);
+
+        // Fetch tooltips and verify the deletion
+        let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
+        assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
 }
