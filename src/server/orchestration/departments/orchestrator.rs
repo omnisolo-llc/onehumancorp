@@ -1596,23 +1596,69 @@ pub async fn execute_action(
     }
 
     pub async fn simulate_smart_pricing(&self, tenant_id: &str) -> Result<(), String> {
+        let product_id = uuid::Uuid::new_v4();
+        let policy_id = uuid::Uuid::new_v4();
+
+        // 1. Create a dummy smart pricing policy
+        let _ = sqlx::query(
+            "INSERT INTO smart_pricing_policies (id, tenant_id, product_id, min_margin_percent, auto_discount_trigger_days_stagnant, max_discount_percent) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(policy_id)
+        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
+        .bind(product_id)
+        .bind(10.0)
+        .bind(30)
+        .bind(20.0)
+        .execute(&*self.pool)
+        .await;
+
+        // 2. Create the active discount
+        let active_discount_id = uuid::Uuid::new_v4();
+        let expires_at = chrono::Utc::now() + chrono::Duration::days(2);
+
+        let _ = sqlx::query(
+            "INSERT INTO active_discounts (id, tenant_id, policy_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(active_discount_id)
+        .bind(uuid::Uuid::parse_str(tenant_id).unwrap_or(uuid::Uuid::new_v4()))
+        .bind(policy_id)
+        .bind(product_id)
+        .bind(20.0)
+        .bind(expires_at)
+        .execute(&*self.pool)
+        .await;
+
         let payload = serde_json::json!({
             "context": {
                 "smart_pricing": true,
-                "product_id": uuid::Uuid::new_v4().to_string(),
-                "product_name": "Winter Scarf",
+                "product_id": product_id.to_string(),
+                "product_name": "Red Summer Dress, Summer Hats",
                 "old_price": 50.0,
-                "new_price": 42.5,
-                "discount_amount": 7.5,
-                "sales_projection": "+$120",
-                "stagnant_days": 60,
-                "margin_percent": 40
+                "new_price": 40.0,
+                "discount_amount": 20.0,
+                "sales_projection": "+$450.00",
+                "stagnant_days": 30,
+                "margin_percent": 30
             }
         });
 
+        // 3. Draft marketing email
+        self.execute_action(
+            DepartmentType::Marketing,
+            "Flash Sale on Summer Dresses!".to_string(),
+            tenant_id.to_string(),
+            ActionRisk::Low,
+            serde_json::json!({
+                "action": "send_email",
+                "audience": "Past 150 customers",
+                "subject": "Flash Sale on Summer Dresses!",
+                "body": "20% off for 48 hours."
+            })
+        ).await.ok();
+
         self.execute_action(
             DepartmentType::BusinessAdvisory,
-            "Smart Price Suggestion: Winter Scarf".to_string(),
+            "Smart Price Suggestion: Red Summer Dress, Summer Hats".to_string(),
             tenant_id.to_string(),
             ActionRisk::DraftForReview,
             payload
