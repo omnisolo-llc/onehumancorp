@@ -27,11 +27,10 @@ impl McpSyncWorker {
         }
         info!("Starting McpSyncWorker...");
         loop {
-            if ::server_config::is_telemetry_enabled() {
-                if let Err(e) = self.sync_metrics().await {
+            if ::server_config::is_telemetry_enabled()
+                && let Err(e) = self.sync_metrics().await {
                     warn!("McpSyncWorker error: {}", e);
                 }
-            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }

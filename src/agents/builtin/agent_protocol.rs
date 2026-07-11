@@ -302,7 +302,6 @@ impl AgentProtocolServer {
     }
 
     /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}/content
-
     pub async fn list_checkpoints(&self, task_id: &str) -> serde_json::Value {
         if let Some(cp) = &self.runner.core.agent.checkpointer {
             match cp.list_checkpoints(task_id).await {

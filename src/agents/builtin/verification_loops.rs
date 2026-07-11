@@ -199,11 +199,10 @@ impl VerificationManager {
     /// Run sensors *after* an action is taken to observe its result.
     pub async fn run_sensors_after_action(&self, output: &str, task: &str, ui_state_path: Option<&str>) -> Result<(), String> {
         let mut errors = Vec::new();
-        if let Some(path) = ui_state_path {
-            if let Err(e) = self.run_visual_verifiers(path).await {
+        if let Some(path) = ui_state_path
+            && let Err(e) = self.run_visual_verifiers(path).await {
                 errors.push(e);
             }
-        }
         if let Err(e) = self.run_inferential_sensors(output, task).await {
             errors.push(e);
         }
