@@ -656,14 +656,14 @@
         }
 
         const listEl = document.getElementById("triage-list");
-        if (items.length === 0) {
+        if (!items || items.length === 0) {
           listEl.innerHTML = `
-            <div class="triage-card app-list-item" style="text-align: center; padding: 48px 24px; color: #6b7280; box-shadow: none; border: 1px dashed rgba(0, 0, 0, 0.2); background: transparent;">
+            <div data-testid="triage-feed-empty" class="triage-card app-list-item" style="text-align: center; padding: 48px 24px; color: #6b7280; box-shadow: none; border: 1px dashed rgba(0, 0, 0, 0.2); background: transparent;">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; opacity: 0.5;">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
-              <h3 style="margin: 0 0 8px 0; color: #111827; font-weight: 600;">All clear. No pending tasks.</h3>
+              <h3 style="margin: 0 0 8px 0; color: #111827; font-weight: 600;">All caught up! You're a hero.</h3>
             </div>
           `;
           return;
@@ -807,7 +807,7 @@
 
           return `
             <div class="triage-card app-list-item" data-testid="triage-card-${item.id}">
-              <div class="triage-header">
+              <div class="triage-header" data-testid="triage-card-header-${item.id}" onclick="selectItem('${item.id}')" style="cursor: pointer;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div class="triage-source">
                         <span>💬</span> ${displaySource}
@@ -821,31 +821,49 @@
                  <span>${createdTime}</span>
                  <span>${createdDate}</span>
               </div>
-              ${buttonsHtml}
+              ${!selectedId || selectedId !== item.id ? buttonsHtml : ''}
             </div>
           `;
         }).join('');
 
-        if (selectedId) {
-          const selectedItem = items.find(i => i.id === selectedId);
-          if (selectedItem && selectedItem.intent === "missed_lead_recovery") {
-            const customerName = selectedItem.customer_info?.name || "Customer";
-            const message = selectedItem.customer_info?.message || "No message provided";
-            let draftReply = selectedItem.suggested_actions?.draft_reply || "";
-            detailEl.innerHTML = `
-              <div style="padding: 24px;">
-                <h3 style="margin-top: 0; font-size: 20px; font-weight: 600;">${customerName}</h3>
-                <p style="font-size: 15px; color: #4b5563; line-height: 1.5; margin-bottom: 24px;">${message}</p>
-                <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Edit Draft:</div>
-                <textarea id="edit-draft-reply" class="triage-textarea" style="min-height: 120px; width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 24px;">${draftReply}</textarea>
-                <button class="triage-btn primary" data-testid="approve-btn" onclick="handleDecision('${selectedItem.id}', true, document.getElementById('edit-draft-reply').value)" style="width: 100%; min-height: 48px; font-size: 16px;">✨ Take Over</button>
-              </div>
-            `;
+        if (detailEl) {
+          if (selectedId) {
+            const selectedItem = items.find(i => i.id === selectedId);
+            if (selectedItem) {
+              if (selectedItem.intent === "missed_lead_recovery") {
+                const customerName = selectedItem.customer_info?.name || "Customer";
+                const message = selectedItem.customer_info?.message || "No message provided";
+                let draftReply = selectedItem.suggested_actions?.draft_reply || "";
+                detailEl.innerHTML = `
+                  <div style="padding: 24px;">
+                    <h3 style="margin-top: 0; font-size: 20px; font-weight: 600;">${customerName}</h3>
+                    <p style="font-size: 15px; color: #4b5563; line-height: 1.5; margin-bottom: 24px;">${message}</p>
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Edit Draft:</div>
+                    <textarea id="edit-draft-reply" class="triage-textarea" style="min-height: 120px; width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 24px;">${draftReply}</textarea>
+                    <button class="triage-btn primary" data-testid="approve-btn" onclick="handleDecision('${selectedItem.id}', true, document.getElementById('edit-draft-reply').value)" style="width: 100%; min-height: 48px; font-size: 16px;">✨ Take Over</button>
+                  </div>
+                `;
+              } else {
+                const displayContext = selectedItem.context || selectedItem.customer_info?.message || selectedItem.intent || "No context provided";
+                let draftReply = selectedItem.action_payload || selectedItem.draft_reply || (selectedItem.proposed_action ? selectedItem.proposed_action.message || selectedItem.proposed_action.draft_reply : null) || (selectedItem.context_payload ? selectedItem.context_payload.draft_reply : null) || "";
+                detailEl.innerHTML = `
+                  <div style="padding: 24px;">
+                    <h3 style="margin-top: 0; font-size: 20px; font-weight: 600;">Item Details</h3>
+                    <p style="font-size: 15px; color: #4b5563; line-height: 1.5; margin-bottom: 24px;">${displayContext}</p>
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Edit Draft:</div>
+                    <textarea id="triage-edit-textarea-${selectedItem.id}" data-testid="triage-edit-textarea-${selectedItem.id}" class="triage-textarea" style="min-height: 120px; width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 24px;">${draftReply}</textarea>
+                    <div style="display: flex; gap: 12px; width: 100%;">
+                      <button class="triage-btn primary" data-testid="triage-save-btn-${selectedItem.id}" onclick="handleDecision('${selectedItem.id}', true, document.getElementById('triage-edit-textarea-${selectedItem.id}').value)" style="flex: 1; min-height: 44px;">Save & Send</button>
+                    </div>
+                  </div>
+                `;
+              }
+            } else {
+               detailEl.innerHTML = '<div class="app-empty">Select a triage item to review it.</div>';
+            }
           } else {
-             detailEl.innerHTML = '<div class="app-empty">Select a triage item to review it.</div>';
+            detailEl.innerHTML = '<div class="app-empty">Select a triage item to review it.</div>';
           }
-        } else {
-          detailEl.innerHTML = '<div class="app-empty">Select a triage item to review it.</div>';
         }
       }
 

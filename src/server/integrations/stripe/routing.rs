@@ -207,6 +207,29 @@ mod mercadopago_tests {
 }
 
 #[cfg(test)]
+mod alipay_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_alipay() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"), PaymentMethod::Alipay);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(1000.0, "cny"), PaymentMethod::Alipay);
+    }
+}
+
+#[cfg(test)]
+mod batch_payout_tests {
+    use super::*;
+
+    #[test]
+    fn test_should_batch_payout() {
+        assert!(PaymentRouter::should_batch_payout(5000));
+        assert!(!PaymentRouter::should_batch_payout(10000));
+        assert!(!PaymentRouter::should_batch_payout(15000));
+    }
+}
+
+#[cfg(test)]
 mod cost_analysis_tests {
     use super::*;
 
