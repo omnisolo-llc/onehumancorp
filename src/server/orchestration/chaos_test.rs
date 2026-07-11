@@ -1014,11 +1014,17 @@ async fn test_redis_agent_lock_race_condition() {
     let l2 = mock_lock.clone();
 
     // Spawn two tasks racing to acquire the same lock, with simulated network lag
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+
+    let b1 = barrier.clone();
     let h1 = tokio::spawn(async move {
+        b1.wait().await;
         l1.acquire_with_chaos(".agent-lock/test", 10).await.unwrap()
     });
 
+    let b2 = barrier.clone();
     let h2 = tokio::spawn(async move {
+        b2.wait().await;
         l2.acquire_with_chaos(".agent-lock/test", 12).await.unwrap()
     });
 
