@@ -33,7 +33,7 @@ test.describe('Degradation Validation (Mobile/Thin Client)', () => {
     await context.setOffline(true);
     await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-    await expect(memberPage.getByText('Offline Mode')).toBeVisible({ timeout: 5000 });
+    await expect(memberPage.getByText('Offline - Changes saved locally')).toBeVisible({ timeout: 5000 });
 
     // Simulate write operation offline
     const quickChargeBtn = memberPage.getByText('Quick Charge $50');

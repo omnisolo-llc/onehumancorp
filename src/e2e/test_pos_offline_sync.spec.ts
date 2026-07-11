@@ -26,7 +26,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline - Changes saved locally').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Click "Quick Charge $50" while offline
     await memberPage.getByRole('button', { name: 'Quick Charge $50' }).click();
@@ -201,7 +201,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.evaluate(() => {
       window.dispatchEvent(new Event('offline'));
     });
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline - Changes saved locally').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Inject failed payment mock directly into IndexedDB Offline Queue
     await memberPage.evaluate(async () => {

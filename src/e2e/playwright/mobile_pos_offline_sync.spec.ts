@@ -55,7 +55,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Verify offline banner
-    await expect(page.locator('text=Offline Mode')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Offline - Changes saved locally')).toBeVisible({ timeout: 10000 });
 
     // Open Cash Sale Panel
     const cashMethodBtn = page.getByRole('button', { name: 'Cash' });

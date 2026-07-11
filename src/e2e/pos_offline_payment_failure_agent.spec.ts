@@ -26,7 +26,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout - Payment Failure Agentic 
     });
 
     // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline - Changes saved locally').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Select the product we seeded that costs $40.02
     await memberPage.waitForSelector('text=Product Catalog', { timeout: 10000 });
