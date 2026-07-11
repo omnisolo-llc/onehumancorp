@@ -7,13 +7,6 @@ test.describe('Edge-Cached Dynamic Multi-Tenant Storefronts', () => {
         const customDomain = 'mayascakes.test';
         const baseUrl = process.env.BASE_URL || 'http://localhost:18789';
 
-        try {
-            await request.get(`${baseUrl}/api/v1/health`);
-        } catch (e) {
-            console.log('Skipping test, backend not reachable at ', baseUrl);
-            return;
-        }
-
         // Make request to the custom domain resolution endpoint
         const response = await request.get(`${baseUrl}/api/v1/storefront/resolve_domain`, {
             headers: {
@@ -24,5 +17,19 @@ test.describe('Edge-Cached Dynamic Multi-Tenant Storefronts', () => {
 
         // The domain is not seeded, so it should be a 404 NOT_FOUND from our logic instead of 500
         expect(response.status()).toBe(404);
+
+        // Assert that the middleware still intercepted it and handled caching
+        const headers = response.headers();
+        expect(headers['x-cache']).toBeDefined();
+
+        // Let's do another request to see if it gets a HIT or MISS from CDN cache (even for 404s depending on setup, but typically 404s aren't cached or are MISS)
+        const secondResponse = await request.get(`${baseUrl}/api/v1/storefront/resolve_domain`, {
+            headers: {
+                'Host': customDomain,
+                'X-Forwarded-Host': customDomain
+            }
+        });
+
+        expect(secondResponse.status()).toBe(404);
     });
 });
