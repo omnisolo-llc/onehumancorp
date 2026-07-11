@@ -107,112 +107,74 @@ impl AgentFeedRepository {
     }
 
     pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64, mobile_optimized: bool) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
+        let is_pg = match &self.db.store {
+            crate::db::DbStore::Postgres => true,
+            crate::db::DbStore::Sqlite(_) => false,
+        };
         let query = if mobile_optimized {
-            r#"
-            SELECT
-                id,
-                tenant_id,
-                event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
-                lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_feed_items
-            WHERE tenant_id = $1
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                department as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
-                CASE
-                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'REJECTED' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_approvals
-            WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
-                CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_action_requests
-            WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
-            "#
+            if is_pg {
+                r#"
+                SELECT id, tenant_id, event_source, NULL as context_payload, NULL as proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+                UNION ALL
+                SELECT id, tenant_id, department as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+                UNION ALL
+                SELECT id, tenant_id, 'orders' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+                UNION ALL
+                SELECT id, tenant_id, 'invoices' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+                ORDER BY created_at DESC LIMIT $2 OFFSET $3
+                "#
+            } else {
+                r#"
+                SELECT id, tenant_id, event_source, NULL as context_payload, NULL as proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+                UNION ALL
+                SELECT id, tenant_id, department as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+                UNION ALL
+                SELECT id, tenant_id, 'orders' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+                UNION ALL
+                SELECT id, tenant_id, 'invoices' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+                ORDER BY created_at DESC LIMIT $2 OFFSET $3
+                "#
+            }
         } else {
-            r#"
-            SELECT
-                id,
-                tenant_id,
-                event_source,
-                context_payload,
-                proposed_action,
-                lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_feed_items
-            WHERE tenant_id = $1
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                department as event_source,
-                jsonb_build_object('description', description) as context_payload,
-                payload as proposed_action,
-                CASE
-                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'REJECTED' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_approvals
-            WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload,
-                payload as proposed_action,
-                CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_action_requests
-            WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-
-            ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
-            "#
+            if is_pg {
+                r#"
+                SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+                UNION ALL
+                SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+                UNION ALL
+                SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+                UNION ALL
+                SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+                ORDER BY created_at DESC LIMIT $2 OFFSET $3
+                "#
+            } else {
+                r#"
+                SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+                UNION ALL
+                SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
+                UNION ALL
+                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+                UNION ALL
+                SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+                UNION ALL
+                SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+                ORDER BY created_at DESC LIMIT $2 OFFSET $3
+                "#
+            }
         };
 
         let items = sqlx::query_as::<_, AgentFeedItem>(query)
@@ -257,12 +219,65 @@ impl AgentFeedRepository {
         if rows_affected == 0 {
              // Fallback to agent_action_requests
              let request_status = if new_state == "APPROVED" { "Approved" } else if new_state == "DISMISSED" { "Rejected" } else { "Pending" };
-             sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+             let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                  .bind(request_status)
                  .bind(tenant_id)
                  .bind(id)
                  .execute(&self.db.pool)
-                 .await?;
+                 .await?.rows_affected();
+
+             if request_rows_affected == 0 {
+                 let is_pg = match &self.db.store {
+                     crate::db::DbStore::Postgres => true,
+                     crate::db::DbStore::Sqlite(_) => false,
+                 };
+                 // Fallback to omni_inbox_messages
+                 let inbox_status = if new_state == "APPROVED" { "sent" } else if new_state == "DISMISSED" { "dismissed" } else { "unread" };
+                 let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                     .bind(inbox_status)
+                     .bind(tenant_id)
+                     .bind(id)
+                     .execute(&self.db.pool)
+                     .await?.rows_affected();
+
+                 if inbox_rows_affected == 0 {
+                     let order_status = if new_state == "APPROVED" { "processing" } else { "cancelled" };
+                     let order_rows_affected = if is_pg {
+                        sqlx::query("UPDATE orders SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                             .bind(order_status)
+                             .bind(tenant_id)
+                             .bind(id)
+                             .execute(&self.db.pool)
+                             .await?.rows_affected()
+                     } else {
+                        sqlx::query("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                             .bind(order_status)
+                             .bind(tenant_id)
+                             .bind(id)
+                             .execute(&self.db.pool)
+                             .await?.rows_affected()
+                     };
+
+                     if order_rows_affected == 0 {
+                         let invoice_status = if new_state == "APPROVED" { "sent" } else { "cancelled" };
+                         if is_pg {
+                             sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                                 .bind(invoice_status)
+                                 .bind(tenant_id)
+                                 .bind(id)
+                                 .execute(&self.db.pool)
+                                 .await?;
+                         } else {
+                             sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                                 .bind(invoice_status)
+                                 .bind(tenant_id)
+                                 .bind(id)
+                                 .execute(&self.db.pool)
+                                 .await?;
+                         }
+                     }
+                 }
+             }
         }
 
         let fetched = self.get(tenant_id, id).await?;
