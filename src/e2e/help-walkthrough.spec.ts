@@ -26,6 +26,33 @@ test.describe('Help Walkthrough', () => {
     await expect(overlay).not.toBeVisible();
   });
 
+  test('should navigate through walkthrough via next and finish', async ({ page }) => {
+    await adminPage(page);
+    await page.goto('/dashboard.html');
+
+    // Wait for the start tour button to be available
+    const tourBtn = page.locator('#dashboard-walkthrough-btn');
+    await tourBtn.waitFor({ state: 'visible' });
+
+    // Click it to start the walkthrough
+    await tourBtn.click();
+
+    // Assert the overlay is visible
+    const overlay = page.locator('#walkthrough-overlay');
+    await expect(overlay).toBeVisible();
+
+    // Assert the bubble is visible
+    const bubble = page.locator('#walkthrough-bubble');
+    await expect(bubble).toBeVisible();
+
+    // Click next
+    await page.locator('#wt-next').click();
+    // The walkthrough for dashboard has 2 steps, so the second step is the last one
+    await page.locator('#wt-next').click(); // This is the Finish button
+
+    await expect(overlay).not.toBeVisible();
+  });
+
   test('should open and play video tutorial', async ({ page }) => {
     await adminPage(page);
     await page.goto('/help');
