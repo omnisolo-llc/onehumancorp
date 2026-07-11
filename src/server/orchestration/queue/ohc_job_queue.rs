@@ -156,10 +156,10 @@ impl OHCJobQueue {
         }
 
         let query_str = if is_standalone {
-            "DELETE FROM ohc_job_queue
+            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
         } else {
-            "DELETE FROM ohc_job_queue
+            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
