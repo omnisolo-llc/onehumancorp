@@ -5,7 +5,14 @@ use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+    workspace_path,
+};
+
+const MAX_SELECTED_LINES: usize = 1_000;
+const MAX_SELECTED_BYTES: usize = 1_048_576;
 
 // Pydantic-first tool schema validation: ReadArgs
 #[derive(Deserialize)]
@@ -18,85 +25,97 @@ struct ReadArgs {
 }
 
 struct ReadExecutor {
-    working_dir: Option<std::path::PathBuf>,
+    workspace_root: Result<std::path::PathBuf, String>,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
     async fn execute_typed(&self, args: ReadArgs) -> Result<String, ToolError> {
-        let path = args.path.clone();
-
-        // Basic path sanitization: disallow relative path traversal
-        if path.contains("..") {
-            return Err(ToolError::LlmRecoverable("read: path traversal via '..' is not allowed".to_string()));
-        }
-
-        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
+        let path = args.path;
+        let root = self.workspace_root.as_ref().map_err(|error| {
+            ToolError::LlmRecoverable(format!("read: workspace root is unavailable: {error}"))
+        })?;
+        let actual_path = workspace_path::existing(root, &path).await?;
 
         // Context Management (Preventing Context Rot): JetBrains JIT Retrieval (grep, glob) Mechanic:
         // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
         let file = fs::File::open(&actual_path)
             .await
-            .map_err(|e| format!("read: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|error| ToolError::LlmRecoverable(format!("read: {}: {}", path, error)))?;
 
         use tokio::io::{AsyncBufReadExt, BufReader};
         let mut reader = BufReader::new(file);
         let mut line_buffer = String::new();
-        let mut result_lines = Vec::new();
-        let mut line_count = 0;
+        let mut result = String::new();
+        let mut line_index = 0;
+        let mut selected_lines = 0;
+        let mut selected_bytes = 0;
 
-        let req_start = args.start_line.map(|n| n.saturating_sub(1) as usize);
-        let req_end = args.end_line.map(|n| n as usize);
+        if args.start_line == Some(0) || args.end_line == Some(0) {
+            return Err(ToolError::LlmRecoverable(
+                "read: line numbers are 1-indexed".to_string(),
+            ));
+        }
+        let start = args.start_line.unwrap_or(1) - 1;
+        let end = args.end_line;
+        let unbounded_read = args.start_line.is_none() && args.end_line.is_none();
 
-        if let (Some(s), Some(e)) = (req_start, req_end) {
-            if s >= e {
-                return Err(ToolError::LlmRecoverable(format!("read: invalid line range {}-{}", s + 1, e)));
+        if let Some(end) = end {
+            if start >= end {
+                return Err(ToolError::LlmRecoverable(format!(
+                    "read: invalid line range {}-{}",
+                    start + 1,
+                    end
+                )));
             }
-            if e - s > 1000 {
+            if end - start > MAX_SELECTED_LINES {
                 return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please use start_line and end_line to paginate.".to_string()));
-            }
-        } else {
-            // No range specified, check if file is small enough by just reading it line by line
-            // If it exceeds 1000 lines, reject it early without loading it entirely.
-            let mut test_reader = BufReader::new(fs::File::open(&actual_path).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?);
-            let mut test_buffer = String::new();
-            let mut total_lines = 0;
-            while let Ok(bytes) = test_reader.read_line(&mut test_buffer).await {
-                if bytes == 0 { break; }
-                total_lines += 1;
-                test_buffer.clear();
-                if total_lines > 1000 {
-                    return Err(ToolError::LlmRecoverable(
-                        "JIT Retrieval Error: File is too large (> 1000 lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).".to_string()
-                    ));
-                }
             }
         }
 
-        let start = req_start.unwrap_or(0);
-        let end = req_end.unwrap_or(1000); // capped at 1000 if not specified (already validated above)
-
-        while let Ok(bytes) = reader.read_line(&mut line_buffer).await {
+        loop {
+            if end.is_some_and(|end| line_index >= end) {
+                break;
+            }
+            let bytes = reader
+                .read_line(&mut line_buffer)
+                .await
+                .map_err(|error| ToolError::LlmRecoverable(format!("read: {}: {}", path, error)))?;
             if bytes == 0 {
                 break;
             }
-            if line_count >= start && line_count < end {
-                result_lines.push(line_buffer.trim_end_matches('\n').trim_end_matches('\r').to_string());
+            if line_index >= start {
+                if selected_lines == MAX_SELECTED_LINES {
+                    if unbounded_read {
+                        return Err(ToolError::LlmRecoverable(
+                            "JIT Retrieval Error: File is too large (> 1000 lines). Never load full files. Please use start_line and end_line to paginate (max 1000 lines per request).".to_string()
+                        ));
+                    }
+                    break;
+                }
+                if bytes > MAX_SELECTED_BYTES.saturating_sub(selected_bytes) {
+                    return Err(ToolError::LlmRecoverable(
+                        "JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a smaller line range.".to_string(),
+                    ));
+                }
+                if !result.is_empty() {
+                    result.push('\n');
+                }
+                result.push_str(line_buffer.trim_end_matches('\n').trim_end_matches('\r'));
+                selected_lines += 1;
+                selected_bytes += bytes;
             }
-            line_count += 1;
+            line_index += 1;
             line_buffer.clear();
-
-            if line_count >= end {
-                break; // Stop reading early if we reached the end of the requested range
-            }
         }
 
-        Ok(result_lines.join("\n"))
+        Ok(result)
     }
 }
 
 pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
+    let workspace_root =
+        workspace_path::configured_root(working_dir).map_err(|error| error.to_string());
     Tool {
         name: "Read".to_string(),
         description: "Read the contents of a file. Optionally specify start_line and end_line for partial reads.".to_string(),
@@ -119,7 +138,7 @@ pub fn read_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["path"]
         }),
-        execute: Arc::new(PydanticAdapter::new(ReadExecutor { working_dir })),
+        execute: Arc::new(PydanticAdapter::new(ReadExecutor { workspace_root })),
     }
 }
 
@@ -130,8 +149,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_large_file_streaming() {
-        let temp_dir = std::env::temp_dir();
-        let test_file = temp_dir.join("jit_streaming_test_large.txt");
+        let temp_dir = tempfile::tempdir().unwrap();
+        let test_file = temp_dir.path().join("jit_streaming_test_large.txt");
 
         let mut file = std::fs::File::create(&test_file).unwrap();
         // Generate a large file to test memory constraint
@@ -139,10 +158,12 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
+        let executor = PydanticAdapter::new(ReadExecutor {
+            workspace_root: Ok(temp_dir.path().to_path_buf()),
+        });
 
         let args = json!({
-            "path": test_file.to_string_lossy().to_string(),
+            "path": "jit_streaming_test_large.txt",
             "start_line": 4900,
             "end_line": 4903
         });
@@ -150,14 +171,12 @@ mod tests {
         let result: String = crate::ToolExecutor::execute(&executor, args).await.unwrap();
         let expected = "Line 4900\nLine 4901\nLine 4902\nLine 4903";
         assert_eq!(result, expected);
-
-        let _ = std::fs::remove_file(&test_file);
     }
 
     #[tokio::test]
     async fn test_read_jit_retrieval_limit() {
-        let temp_dir = std::env::temp_dir();
-        let test_file = temp_dir.join("jit_test_large.txt");
+        let temp_dir = tempfile::tempdir().unwrap();
+        let test_file = temp_dir.path().join("jit_test_large.txt");
 
         // Create a file with 1500 lines
         let mut file = std::fs::File::create(&test_file).unwrap();
@@ -165,11 +184,14 @@ mod tests {
             writeln!(file, "Line {}", i).unwrap();
         }
 
-        let executor = PydanticAdapter::new(ReadExecutor { working_dir: None });
+        let executor = PydanticAdapter::new(ReadExecutor {
+            workspace_root: Ok(temp_dir.path().to_path_buf()),
+        });
 
         // 1. Try reading the whole file - should fail
-        let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args).await;
+        let args = json!({ "path": "jit_test_large.txt" });
+        let result: Result<String, ohc_builtin_agent_core::types::ToolError> =
+            crate::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("JIT Retrieval Error: File is too large"));
@@ -179,11 +201,12 @@ mod tests {
 
         // 2. Try reading a slice larger than 1000 lines - should fail
         let args2 = json!({
-            "path": test_file.to_string_lossy().to_string(),
+            "path": "jit_test_large.txt",
             "start_line": 1,
             "end_line": 1200
         });
-        let result2: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args2).await;
+        let result2: Result<String, ohc_builtin_agent_core::types::ToolError> =
+            crate::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result2 {
             assert!(msg.contains("Cannot read more than 1000 lines at once"));
@@ -193,13 +216,47 @@ mod tests {
 
         // 3. Try reading a valid slice - should succeed
         let args3 = json!({
-            "path": test_file.to_string_lossy().to_string(),
+            "path": "jit_test_large.txt",
             "start_line": 500,
             "end_line": 600
         });
-        let result3: Result<String, ohc_builtin_agent_core::types::ToolError> = crate::ToolExecutor::execute(&executor, args3).await;
+        let result3: Result<String, ohc_builtin_agent_core::types::ToolError> =
+            crate::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_ok());
+    }
 
-        let _ = std::fs::remove_file(&test_file);
+    #[tokio::test]
+    async fn test_read_rejects_selected_content_over_one_mib() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("large.txt"), vec![b'a'; 1_048_577])
+            .await
+            .unwrap();
+        let executor = PydanticAdapter::new(ReadExecutor {
+            workspace_root: Ok(dir.path().to_path_buf()),
+        });
+
+        let result = crate::ToolExecutor::execute(&executor, json!({"path": "large.txt"})).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("1 MiB"));
+    }
+
+    #[tokio::test]
+    async fn test_read_rejects_absolute_paths_outside_workspace() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(outside.path(), "secret").unwrap();
+        let executor = PydanticAdapter::new(ReadExecutor {
+            workspace_root: Ok(root.path().to_path_buf()),
+        });
+
+        let result = crate::ToolExecutor::execute(
+            &executor,
+            json!({"path": outside.path().to_string_lossy()}),
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert!(!result.unwrap_err().to_string().contains("secret"));
     }
 }

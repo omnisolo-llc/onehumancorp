@@ -63,6 +63,7 @@ rust_library(
         "webfetch.rs",
         "websearch.rs",
         "workflow.rs",
+        "workspace_path.rs",
         "write.rs",
     ],
     crate_root = "mod.rs",

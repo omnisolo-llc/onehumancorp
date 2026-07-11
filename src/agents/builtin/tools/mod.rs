@@ -10,6 +10,7 @@ pub mod network_policy;
 pub mod bash;
 pub mod python;
 pub mod read;
+pub mod workspace_path;
 pub mod write;
 pub mod edit;
 pub mod glob;
