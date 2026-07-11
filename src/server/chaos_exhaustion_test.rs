@@ -40,7 +40,8 @@ mod chaos_exhaustion_tests {
 
         // Test timeout degradation
         let timeout_res: Result<(), String> = db.execute_with_retry("exhaustion_timeout", || async {
-             tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+             tokio::time::advance(std::time::Duration::from_secs(65)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
              Err("Should not happen".to_string())
         }).await;
 
