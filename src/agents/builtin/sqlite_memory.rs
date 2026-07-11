@@ -1,6 +1,5 @@
 use crate::memory_store::LongTermMemory;
 /// Master Catalog B.3. Memory: Long-term (OpenAI/LangGraph): Sessions backed by SQLite/Redis, or namespace-organized JSON Stores. Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
-
 use async_trait::async_trait;
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 
@@ -194,13 +193,41 @@ impl LongTermMemory for SqliteMemoryStore {
         }
     }
 
-        fn get_customer_session_summaries<'a>(
+    fn get_customer_session_summaries<'a>(
         &'a self,
-        _tenant_id: &'a str,
-        _customer_id: &'a str,
-        _limit: i64,
+        tenant_id: &'a str,
+        customer_id: &'a str,
+        limit: i64,
     ) -> crate::langgraph::BoxFuture<'a, Result<Vec<crate::memory_store::AgentSessionSummary>, String>> {
-        Box::pin(async move { Ok(vec![]) })
+        Box::pin(async move {
+            let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = ? AND customer_id = ? ORDER BY updated_at DESC LIMIT ?")
+                .bind(tenant_id)
+                .bind(customer_id)
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut results = Vec::new();
+            for row in rows {
+                use sqlx::Row;
+                let emb_str: String = row.try_get("summary_embedding").unwrap_or_else(|_| "[]".to_string());
+                let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                results.push(crate::memory_store::AgentSessionSummary {
+                    id: row.get("id"),
+                    tenant_id: row.get("tenant_id"),
+                    agent_id: row.get("agent_id"),
+                    customer_id: row.get("customer_id"),
+                    session_id: row.get("session_id"),
+                    turn_index: row.get("turn_index"),
+                    summary_embedding: emb,
+                    raw_state: row.try_get("raw_state").unwrap_or(None),
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                });
+            }
+            Ok(results)
+        })
     }
 
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
@@ -563,6 +590,82 @@ mod tests {
             .unwrap();
         assert_eq!(summarized.len(), 1);
         assert!(summarized[0].contains("Summarized session context regarding plans"));
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_get_customer_session_summaries() {
+        use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant(""),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![])
+            }
+        }
+        let llm = Arc::new(MockLlm);
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
+
+        // Need to create the agent_session_summaries table for tests manually if it doesn't exist in memory store setup
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_session_summaries (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                agent_id TEXT,
+                customer_id TEXT,
+                session_id TEXT,
+                turn_index INTEGER,
+                summary_embedding TEXT,
+                raw_state TEXT,
+                created_at INTEGER,
+                updated_at INTEGER
+            )",
+        )
+        .execute(&store.pool)
+        .await
+        .unwrap();
+
+        let id = "test-id";
+        let tenant_id = "tenant-1";
+        let agent_id = "agent-1";
+        let customer_id = "customer-1";
+        let session_id = "session-1";
+        let turn_index = 0;
+        let summary_embedding = "[]";
+        let raw_state = None::<String>;
+        let created_at = chrono::Utc::now().timestamp();
+        let updated_at = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            "INSERT INTO agent_session_summaries (id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(agent_id)
+        .bind(customer_id)
+        .bind(session_id)
+        .bind(turn_index)
+        .bind(summary_embedding)
+        .bind(raw_state)
+        .bind(created_at)
+        .bind(updated_at)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+
+        let summaries = store.get_customer_session_summaries(tenant_id, customer_id, 10).await.unwrap();
+        assert_eq!(summaries.len(), 1);
+        assert_eq!(summaries[0].id, id);
+        assert_eq!(summaries[0].tenant_id, tenant_id);
     }
 
     #[tokio::test]

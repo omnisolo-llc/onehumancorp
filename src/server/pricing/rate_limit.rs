@@ -162,11 +162,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
-        if let Some(entry) = self.tier_cache.get(tenant_id) {
-            if entry.1.elapsed() < Duration::from_secs(300) {
+        if let Some(entry) = self.tier_cache.get(tenant_id)
+            && entry.1.elapsed() < Duration::from_secs(300) {
                 return Ok(entry.0.clone());
             }
-        }
 
         let mut conn = self.get_connection().await?;
         let redis_key = format!("tenant:{}:tier", tenant_id);
@@ -244,7 +243,7 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);

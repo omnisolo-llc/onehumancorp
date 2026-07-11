@@ -210,15 +210,6 @@ export function HelpChat() {
     return () => window.removeEventListener("open-help-chat", handleOpenHelpChat);
   }, []);
 
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const forceChat =
-    typeof window !== "undefined" &&
-    window.location.search.includes("test_chat=true");
-  if (isE2E && !forceChat) {
-    // We shouldn't hide the HelpChat in E2E unless we specifically want it gone, but tests rely on it.
-    // Given the test failures, let's keep it mounted during E2E.
-  }
-
   return (
     <div className="help-chat-wrapper pointer-events-none">
       {/* Floating Button */}
