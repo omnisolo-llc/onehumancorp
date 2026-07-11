@@ -102,7 +102,6 @@ impl MyDashboardService {
                 // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
                 for item in snapshot.iter_mut() {
                     item.0.clear();
-                    item.5 = 0; // storage_usage_bytes
                 }
             }
             (
@@ -893,11 +892,6 @@ mod tests {
         }
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
-        }
-        if let Some(ref cost_summary) = res_mobile.cost_summary {
-            if !cost_summary.agents.is_empty() {
-                assert_eq!(cost_summary.agents[0].storage_usage_bytes, 0, "Mobile optimization should clear agent storage_usage_bytes");
-            }
         }
         if !res_mobile.bookings.is_empty() {
             assert_eq!(res_mobile.bookings[0].organization_id, "", "Mobile optimization should clear booking organization_id");
