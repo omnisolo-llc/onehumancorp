@@ -36,7 +36,7 @@ impl ConsolidationWorker {
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count).await {
+        let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count, &["TASK_SUMMARY"]).await {
             Ok(_) => true,
             Err(e) => {
                 tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);

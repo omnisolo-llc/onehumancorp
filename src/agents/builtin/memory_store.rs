@@ -588,26 +588,39 @@ impl VectorRepository {
         older_than: DateTime<Utc>,
         min_reliability: i32,
         max_reference_count: i32,
+        source_types: &[&str],
     ) -> Result<(), String> {
+        if source_types.is_empty() {
+            return Ok(());
+        }
+        let placeholders: Vec<String> = (1..=source_types.len()).map(|i| format!("${}", i + 3)).collect();
+        let in_clause = placeholders.join(", ");
+        let query_pg = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type IN ({})) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)", in_clause);
+
+        let placeholders_sqlite: Vec<String> = source_types.iter().map(|_| "?".to_string()).collect();
+        let in_clause_sqlite = placeholders_sqlite.join(", ");
+        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = FALSE AND last_referenced_at < ?)", in_clause_sqlite);
+
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = 'TASK_SUMMARY') OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)")
+                let mut query = sqlx::query(&query_pg)
                     .bind(older_than)
                     .bind(max_reference_count)
-                    .bind(min_reliability)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .bind(min_reliability);
+                for st in source_types {
+                    query = query.bind(st);
+                }
+                query.execute(pool).await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < ? AND source_type = 'TASK_SUMMARY') OR (reliability_score < ? AND owner_override = FALSE AND last_referenced_at < ?)")
+                let mut query = sqlx::query(&query_sqlite)
                     .bind(older_than)
-                    .bind(max_reference_count)
-                    .bind(min_reliability)
-                    .bind(older_than)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .bind(max_reference_count);
+                for st in source_types {
+                    query = query.bind(st);
+                }
+                query = query.bind(min_reliability).bind(older_than);
+                query.execute(pool).await.map_err(|e| e.to_string())?;
             }
         }
         Ok(())
@@ -1252,7 +1265,7 @@ mod tests {
         repo.upsert(&prune_low_refs).await.unwrap();
 
         // Pass 30 for min_reliability and 4 for max_reference_count
-        repo.prune_stale(threshold_time, 30, 4).await.unwrap();
+        repo.prune_stale(threshold_time, 30, 4, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(
             repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
@@ -1366,7 +1379,7 @@ mod tests {
         repo.upsert(&rec3).await.unwrap();
         repo.upsert(&rec4).await.unwrap();
 
-        repo.prune_stale(threshold_date, 20, 2).await.unwrap();
+        repo.prune_stale(threshold_date, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(repo.get_by_id("rec1").await.unwrap().is_none());
         assert!(repo.get_by_id("rec2").await.unwrap().is_some());
@@ -2279,7 +2292,7 @@ mod get_conflicts_tests {
         repo.upsert(&record4).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"])
             .await
             .unwrap();
 
@@ -2527,7 +2540,7 @@ mod get_conflicts_tests {
         repo.upsert(&record2).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"])
             .await
             .unwrap();
 
@@ -3206,7 +3219,7 @@ mod anthropic_memory_tests {
         repo.upsert(&old_record).await.unwrap();
         repo.upsert(&new_record).await.unwrap();
 
-        repo.prune_stale(threshold, 20, 2).await.unwrap();
+        repo.prune_stale(threshold, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
@@ -3271,7 +3284,7 @@ mod anthropic_memory_tests {
         repo.upsert(&record1).await.unwrap();
 
         // Prune stale test
-        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"])
             .await
             .unwrap();
 
@@ -3779,7 +3792,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&keep_new).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"])
             .await
             .unwrap();
 
@@ -3852,7 +3865,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&stale_low_rel_but_override).await.unwrap();
 
         // Run pruning with threshold 180 days ago
-        repo.prune_stale(now - chrono::Duration::days(180), 20, 2)
+        repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"])
             .await
             .unwrap();
 
@@ -4475,7 +4488,7 @@ mod get_and_delete_tests {
         repo.upsert(&keep_wrong_type).await.unwrap();
         repo.upsert(&prune_unreliable_old).await.unwrap();
 
-        repo.prune_stale(threshold_time, 20, 2).await.unwrap();
+        repo.prune_stale(threshold_time, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(
             repo.get_by_id("prune_stale").await.unwrap().is_none(),
