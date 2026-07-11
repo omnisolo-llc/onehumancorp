@@ -68,11 +68,7 @@ function KairosContent() {
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
 
   useEffect(() => {
-    const forceWalkthrough = typeof window !== "undefined" && (
-      window.localStorage.getItem("TEST_WALKTHROUGH") === "true" ||
-      window.location.search.includes("test_walkthrough=true")
-    );
-    if ((searchParams.get("walkthrough") === "true" || forceWalkthrough) && !walkthroughStarted.current) {
+    if (searchParams.get("walkthrough") === "true" && !walkthroughStarted.current) {
       const timeoutId = window.setTimeout(() => {
         walkthroughStarted.current = true;
         setIsWalkthroughOpen(true);
