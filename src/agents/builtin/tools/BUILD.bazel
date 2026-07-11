@@ -7,6 +7,8 @@ rust_library(
     srcs = [
         "aider_pair_programming.rs",
         "agent_tool.rs",
+        "agent_protocol.rs",
+        "agent_protocol_test.rs",
         "anthropic_memory.rs",
         "bash.rs",
         "python.rs",
