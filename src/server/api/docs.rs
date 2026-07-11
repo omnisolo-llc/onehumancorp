@@ -38,28 +38,76 @@ pub struct WalkthroughStep {
 }
 
 
-pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
-    let steps = match page.as_str() {
-        "store-setup" => vec![
-            WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Set up your store".to_string(), content: "Learn how to easily set up your store and accept your first payment.".to_string() },
-            WalkthroughStep { target_id: "bio-input-tooltip".to_string(), title: "Describe your business".to_string(), content: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
-            WalkthroughStep { target_id: "generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), content: "Click here and watch our AI build your store from scratch.".to_string() },
-        ],
-        "dashboard" => vec![
-            WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Welcome".to_string(), content: "Welcome to your dashboard! This is your control center.".to_string() },
-            WalkthroughStep { target_id: "wrapped-summary".to_string(), title: "AI Savings".to_string(), content: "Here you can see the time and effort your agents have saved you.".to_string() }
-        ],
-        "pos" => vec![
-            WalkthroughStep { target_id: "pos-keypad".to_string(), title: "Enter Amount".to_string(), content: "Type in the total sale amount using the keypad.".to_string() },
-            WalkthroughStep { target_id: "charge-btn".to_string(), title: "Charge Customer".to_string(), content: "Tap here to process the payment. It's that easy!".to_string() }
-        ],
-        "assistant" => vec![
-            WalkthroughStep { target_id: "ai-chat-trigger".to_string(), title: "Open Assistant".to_string(), content: "Click here to open your AI Support Agent.".to_string() },
-            WalkthroughStep { target_id: "ohc-help-input-area".to_string(), title: "Ask Anything".to_string(), content: "Type your request here and the agent will handle it while you sleep.".to_string() }
-        ],
-        _ => vec![],
+pub async fn get_walkthrough(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap,
+    axum::extract::Path(page): axum::extract::Path<String>
+) -> Result<Json<Vec<WalkthroughStep>>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let steps = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("SELECT selector, title, text FROM walkthrough_steps WHERE tenant_id = $1 AND page = $2 ORDER BY step_order ASC")
+                .bind(tenant_id.to_string())
+                .bind(page.clone())
+                .fetch_all(&db.pool)
+                .await
+            {
+                Ok(rows) => {
+                    rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        WalkthroughStep {
+                            target_id: row.get("selector"),
+                            title: row.get("title"),
+                            content: row.get("text"),
+                        }
+                    }).collect()
+                }
+                Err(_) => vec![]
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("SELECT selector, title, text FROM walkthrough_steps WHERE tenant_id = ? AND page = ? ORDER BY step_order ASC")
+                .bind(tenant_id.to_string())
+                .bind(page.clone())
+                .fetch_all(pool)
+                .await
+            {
+                Ok(rows) => {
+                    rows.into_iter().map(|row| {
+                        use sqlx::Row;
+                        WalkthroughStep {
+                            target_id: row.get("selector"),
+                            title: row.get("title"),
+                            content: row.get("text"),
+                        }
+                    }).collect()
+                }
+                Err(_) => vec![]
+            }
+        }
     };
-    Json(steps)
+
+    if steps.is_empty() {
+        let fb = match page.as_str() {
+            "store-setup" => vec![
+                WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Set up your store".to_string(), content: "Learn how to easily set up your store and accept your first payment.".to_string() },
+                WalkthroughStep { target_id: "bio-input-tooltip".to_string(), title: "Describe your business".to_string(), content: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
+                WalkthroughStep { target_id: "generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), content: "Click here and watch our AI build your store from scratch.".to_string() },
+            ],
+            "dashboard" => vec![
+                WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Welcome".to_string(), content: "Welcome to your dashboard! This is your control center.".to_string() },
+                WalkthroughStep { target_id: "wrapped-summary".to_string(), title: "AI Savings".to_string(), content: "Here you can see the time and effort your agents have saved you.".to_string() }
+            ],
+            _ => vec![],
+        };
+        Ok(Json(fb))
+    } else {
+        Ok(Json(steps))
+    }
 }
 
 pub async fn get_tooltips(
@@ -285,11 +333,73 @@ macro_rules! with_cache_fallback {
 static DOCS_ARTICLES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<HelpArticle>>> = std::sync::OnceLock::new();
 static DOCS_VIDEOS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<VideoTutorial>>> = std::sync::OnceLock::new();
 
-pub async fn list_articles(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json::Value>> {
-    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
-    let articles = with_cache_fallback!(cache, "docs:articles:all", || get_articles()).0;
-    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+pub async fn list_articles(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap,
+    Query(query): Query<DocsQuery>
+) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
 
+    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache_key = format!("docs:articles:all:{}", tenant_id);
+    let mut articles: Vec<HelpArticle> = vec![];
+    if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
+        articles = cached;
+    } else {
+        let db_clone = db.clone();
+        let t_id = tenant_id.to_string();
+        articles = match &db_clone.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
+                    .bind(t_id.clone())
+                    .fetch_all(&db_clone.pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            HelpArticle {
+                                category: row.get("category"),
+                                title: row.get("title"),
+                                desc: row.get("desc_text"),
+                                link: row.get("link"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ?")
+                    .bind(t_id.clone())
+                    .fetch_all(pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            HelpArticle {
+                                category: row.get("category"),
+                                title: row.get("title"),
+                                desc: row.get("text"),
+                                link: row.get("link"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+        };
+        if articles.is_empty() {
+            articles = get_articles();
+        }
+        let _ = cache.set(&cache_key, articles.clone(), std::time::Duration::from_secs(3600)).await;
+    }
+
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let json_articles = articles.into_iter().map(|a| {
         if mobile_optimized {
             serde_json::json!({
@@ -306,19 +416,83 @@ pub async fn list_articles(Query(query): Query<DocsQuery>) -> Json<Vec<serde_jso
             })
         }
     }).collect();
-    Json(json_articles)
+    Ok(Json(json_articles))
 }
 
-pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<serde_json::Value>> {
+pub async fn search_articles(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap,
+    Query(query): Query<SearchQuery>
+) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
     let q = query.q.to_lowercase();
-    let cache_key = format!("docs:articles:search:{}", q);
+    let cache_key = format!("docs:articles:search:{}:{}", tenant_id, q);
     let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
-    let articles = with_cache_fallback!(cache, cache_key, || {
-        get_articles().into_iter().filter(|a| {
-            a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
-        }).collect::<Vec<HelpArticle>>()
-    }).0;
+    let mut articles: Vec<HelpArticle> = vec![];
+    if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
+        articles = cached;
+    } else {
+        let db_clone = db.clone();
+        let t_id = tenant_id.to_string();
+        let query_str = format!("%{}%", q);
+        articles = match &db_clone.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
+                    .bind(t_id.clone())
+                    .bind(query_str.clone())
+                    .fetch_all(&db_clone.pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            HelpArticle {
+                                category: row.get("category"),
+                                title: row.get("title"),
+                                desc: row.get("desc_text"),
+                                link: row.get("link"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ? AND (category LIKE ? OR title LIKE ? OR desc_text LIKE ?)")
+                    .bind(t_id.clone())
+                    .bind(query_str.clone())
+                    .bind(query_str.clone())
+                    .bind(query_str.clone())
+                    .fetch_all(pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            HelpArticle {
+                                category: row.get("category"),
+                                title: row.get("title"),
+                                desc: row.get("text"), // Sqlite might alias desc_text
+                                link: row.get("link"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+        };
+        if articles.is_empty() {
+            articles = get_articles().into_iter().filter(|a| {
+                a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
+            }).collect();
+        }
+        let _ = cache.set(&cache_key, articles.clone(), std::time::Duration::from_secs(3600)).await;
+    }
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -338,12 +512,76 @@ pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<serde
             })
         }
     }).collect();
-    Json(json_articles)
+    Ok(Json(json_articles))
 }
 
-pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json::Value>> {
+pub async fn list_videos(
+    axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+    headers: axum::http::HeaderMap,
+    Query(query): Query<DocsQuery>
+) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
     let cache = DOCS_VIDEOS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
-    let videos = with_cache_fallback!(cache, "docs:videos:all", || get_videos()).0;
+    let cache_key = format!("docs:videos:all:{}", tenant_id);
+    let mut videos: Vec<VideoTutorial> = vec![];
+    if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
+        videos = cached;
+    } else {
+        let db_clone = db.clone();
+        let t_id = tenant_id.to_string();
+        videos = match &db_clone.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query("SELECT id, title, duration, video_url FROM video_tutorials WHERE tenant_id = $1 ORDER BY id ASC")
+                    .bind(t_id.clone())
+                    .fetch_all(&db_clone.pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            let id_val: i32 = row.get("id");
+                            VideoTutorial {
+                                id: id_val,
+                                title: row.get("title"),
+                                duration: row.get("duration"),
+                                video_url: row.get("video_url"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT id, title, duration, video_url FROM video_tutorials WHERE tenant_id = ? ORDER BY id ASC")
+                    .bind(t_id.clone())
+                    .fetch_all(pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            let id_val: i32 = row.get("id");
+                            VideoTutorial {
+                                id: id_val,
+                                title: row.get("title"),
+                                duration: row.get("duration"),
+                                video_url: row.get("video_url"),
+                            }
+                        }).collect()
+                    }
+                    Err(_) => vec![]
+                }
+            }
+        };
+        if videos.is_empty() {
+            videos = get_videos();
+        }
+        let _ = cache.set(&cache_key, videos.clone(), std::time::Duration::from_secs(3600)).await;
+    }
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -356,7 +594,7 @@ pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json:
                 "video_url": v.video_url
             })
         }).collect();
-        return Json(json_videos);
+        return Ok(Json(json_videos));
     }
     let json_videos = videos.into_iter().map(|v| {
         serde_json::json!({
@@ -366,7 +604,7 @@ pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json:
             "video_url": v.video_url
         })
     }).collect();
-    Json(json_videos)
+    Ok(Json(json_videos))
 }
 
 
@@ -1082,25 +1320,33 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_articles() {
-        let res = list_articles(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = list_articles(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_not_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_list_videos() {
-        let res = list_videos(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
+        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
+        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
+        let res = list_videos(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 

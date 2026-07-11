@@ -6978,14 +6978,14 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
-        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
+        .route("/api/help", axum::routing::get(crate::api::docs::list_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
-        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
+        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {
