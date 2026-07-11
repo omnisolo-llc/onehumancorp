@@ -9,7 +9,6 @@ use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, To
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
-use ::server_pricing::prompt_caching::PromptCache;
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -79,7 +78,6 @@ pub struct OpenAIClient {
     organization: Option<String>,
     project: Option<String>,
     client: Client,
-    cache: PromptCache,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -179,7 +177,6 @@ impl OpenAIClient {
             embedding_format: config.embedding_format,
             organization: config.organization,
             project: config.project,
-            cache: PromptCache::new(std::time::Duration::from_secs(300)),
             client: Client::builder()
                 .timeout(config.timeout)
                 .build()
@@ -474,36 +471,8 @@ impl LlmClient for OpenAIClient {
             tools,
         };
 
-        let payload_str = serde_json::to_string(&payload).unwrap_or_default();
-        let optimized_prompt = PromptCache::truncate_context(&payload_str, 2000);
-
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &payload.model) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
-            return Ok(ChatResponse {
-                message: Message {
-                    role: Role::Assistant,
-                    content: cached.text,
-                    tool_calls: vec![],
-                    tool_results: vec![],
-                    response_id: Some("cached".to_string()),
-                    previous_response_id: None,
-                },
-                usage: Usage::default(),
-                stop_reason: "stop".to_string(),
-                response_id: Some("cached".to_string()),
-            });
-        }
-
-        // Enable prompt caching for supported models (gpt-4o, gpt-4o-mini)
-        // Note: OpenAI prompt caching is automatic but we can nudge it by including
-        // 'user' role messages that are likely to be reused.
-        // We also check for OHC_OPENAI_CACHE_BYPASS env var.
-        let cache_bypass = std::env::var("OHC_OPENAI_CACHE_BYPASS").unwrap_or_default() == "true";
-        if !cache_bypass && (req.model.contains("gpt-4o") || req.model.contains("gpt-4.1")) {
-            // In some scenarios we might want to specifically structure the prompt
-            // to maximize cache hits (e.g. putting static system instructions first).
-            // Our build_hierarchical_system_prompt already does this.
-        }
+        // OpenAI prompt caching is provider-managed. Keeping stable system content
+        // first allows provider-side reuse without caching complete responses here.
 
         let url = self.chat_completions_url();
         let resp = self
@@ -531,8 +500,6 @@ impl LlmClient for OpenAIClient {
         let finish_reason = choice.finish_reason.unwrap_or_default();
 
         let text = choice.message.content.unwrap_or_default();
-        let prompt_tokens = result.usage.as_ref().map(|u| u.prompt_tokens).unwrap_or(0);
-        self.cache.set(&optimized_prompt, &text, prompt_tokens as usize);
 
         let tool_calls: Vec<ToolCall> = choice
             .message
@@ -651,6 +618,117 @@ impl LlmClient for OpenAIClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    async fn read_http_request(stream: &mut tokio::net::TcpStream) {
+        let mut request = Vec::new();
+        let mut buffer = [0_u8; 4096];
+        let mut expected_len = None;
+
+        loop {
+            let bytes_read = stream.read(&mut buffer).await.unwrap();
+            if bytes_read == 0 {
+                break;
+            }
+            request.extend_from_slice(&buffer[..bytes_read]);
+
+            if expected_len.is_none()
+                && let Some(header_end) =
+                    request.windows(4).position(|window| window == b"\r\n\r\n")
+            {
+                let headers = String::from_utf8_lossy(&request[..header_end]);
+                let content_length = headers
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())
+                            .flatten()
+                    })
+                    .unwrap_or(0);
+                expected_len = Some(header_end + 4 + content_length);
+            }
+
+            if expected_len.is_some_and(|len| request.len() >= len) {
+                break;
+            }
+        }
+    }
+
+    async fn write_json_response(stream: &mut tokio::net::TcpStream, body: &str) {
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream.write_all(response.as_bytes()).await.unwrap();
+    }
+
+    fn colliding_request(final_user_content: &str) -> ChatRequest {
+        ChatRequest {
+            model: "test-model".to_string(),
+            system: "shared-prefix-".to_string() + &"x".repeat(9_000),
+            messages: vec![Message::user(final_user_content)],
+            tools: vec![],
+            max_tokens: 64,
+            temperature: 0.0,
+        }
+    }
+
+    #[tokio::test]
+    async fn truncated_prompt_prefixes_do_not_share_responses() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let request_count = Arc::new(AtomicUsize::new(0));
+        let server_count = request_count.clone();
+        let server = tokio::spawn(async move {
+            let responses = [
+                r#"{"id":"response-1","choices":[{"message":{"role":"assistant","content":"first response"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}"#,
+                r#"{"id":"response-2","choices":[{"message":{"role":"assistant","content":"second response","tool_calls":[{"id":"call-2","type":"function","function":{"name":"Lookup","arguments":"{\"id\":\"42\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}"#,
+            ];
+
+            for body in responses {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                read_http_request(&mut stream).await;
+                server_count.fetch_add(1, Ordering::SeqCst);
+                write_json_response(&mut stream, body).await;
+            }
+        });
+
+        let client = OpenAIClient::with_base_url("test-key", format!("http://{address}/v1"));
+        let first = tokio::time::timeout(
+            Duration::from_secs(5),
+            client.chat(colliding_request("first tail")),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let second = tokio::time::timeout(
+            Duration::from_secs(5),
+            client.chat(colliding_request("second tail")),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        server.abort();
+        let _ = server.await;
+
+        assert_eq!(first.message.content, "first response");
+        assert_eq!(second.message.content, "second response");
+        assert_eq!(second.message.tool_calls.len(), 1);
+        assert_eq!(second.message.tool_calls[0].name, "Lookup");
+        assert_eq!(
+            second.message.tool_calls[0].arguments,
+            serde_json::json!({"id": "42"})
+        );
+        assert_eq!(request_count.load(Ordering::SeqCst), 2);
+    }
 
     #[test]
     fn normalizes_chat_completion_url_to_api_root() {
