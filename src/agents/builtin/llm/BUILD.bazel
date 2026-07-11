@@ -18,7 +18,6 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
-        "//src/server/pricing:server_pricing",
         "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",
