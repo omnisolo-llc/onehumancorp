@@ -3760,10 +3760,26 @@ impl Agent {
                 "llm_interaction",
                 agent_id = %final_cfg.agent_id,
                 model = %final_cfg.model,
+                estimated_input_tokens = tracing::field::Empty,
+                system_chars = tracing::field::Empty,
+                history_chars = tracing::field::Empty,
+                tool_schema_chars = tracing::field::Empty,
                 input_tokens = tracing::field::Empty,
                 output_tokens = tracing::field::Empty,
                 total_tokens = tracing::field::Empty,
                 estimated_cost_usd = tracing::field::Empty,
+            );
+
+            let request_profile = crate::request_profile::profile_request(&req);
+            llm_span.record(
+                "estimated_input_tokens",
+                request_profile.estimated_input_tokens as i64,
+            );
+            llm_span.record("system_chars", request_profile.system_chars as i64);
+            llm_span.record("history_chars", request_profile.history_chars as i64);
+            llm_span.record(
+                "tool_schema_chars",
+                request_profile.tool_schema_chars as i64,
             );
 
             let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
@@ -8134,7 +8150,7 @@ mod tests {
         )
         .build();
 
-        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
+        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
         assert_eq!(prompt, expected);
     }

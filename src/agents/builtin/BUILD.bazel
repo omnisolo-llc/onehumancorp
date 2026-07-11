@@ -382,6 +382,7 @@ rust_test(
         ":ohc_builtin_agent_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin/llm",
+        "@crates//:serde_json",
         "@crates//:tokio",
     ],
 )
