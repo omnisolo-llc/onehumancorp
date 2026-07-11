@@ -273,22 +273,26 @@ pub async fn regenerate_product_cache(
 
             if let Ok(Some(row)) = seo_res {
                 if let Some(seo_title) = row.seo_title {
+                    let safe_title = seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
                     if let Some(start) = html.find("<title>") {
                         if let Some(end) = html[start..].find("</title>") {
                             let end = start + end + "</title>".len();
-                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n<meta property=\"og:title\" content=\"{}\">", safe_title, safe_title, safe_title));
                         }
+                    } else if let Some(head_end) = html.find("</head>") {
+                        html.insert_str(head_end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n<meta property=\"og:title\" content=\"{}\">\n", safe_title, safe_title, safe_title));
                     }
                 }
 
                 if let Some(seo_desc) = row.seo_description {
+                    let safe_desc = seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
                     if let Some(start) = html.find("<meta name=\"description\"") {
                         if let Some(end) = html[start..].find(">") {
                             let end = start + end + ">".len();
-                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">\n<meta property=\"og:description\" content=\"{}\">", safe_desc, safe_desc));
                         }
                     } else if let Some(head_end) = html.find("</head>") {
-                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n<meta property=\"og:description\" content=\"{}\">\n", safe_desc, safe_desc));
                     }
                 }
 

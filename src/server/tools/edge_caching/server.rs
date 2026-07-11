@@ -2,11 +2,13 @@ use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProt
 use tracing::Instrument;
 
 pub struct EdgeCachingMcpServer {
+    pub pool: Option<sqlx::PgPool>,
+    pub redis: Option<redis::Client>,
 }
 
 impl EdgeCachingMcpServer {
-    pub fn new() -> Self {
-        Self { }
+    pub fn new(pool: Option<sqlx::PgPool>, redis: Option<redis::Client>) -> Self {
+        Self { pool, redis }
     }
 
     pub fn get_tools(&self) -> Vec<McpToolProto> {
@@ -41,26 +43,61 @@ impl EdgeCachingMcpServer {
 
         match req.tool_id.as_str() {
             "mcp_seo_generator" => {
-                let tenant_id = params["tenant_id"].as_str().unwrap_or("unknown_tenant");
-                let product_data = &params["product_data"];
+                let tenant_id = params["tenant_id"].as_str().unwrap_or("unknown_tenant").to_string();
+                let product_id = params["product_id"].as_str().unwrap_or("unknown_product").to_string();
+                let product_data = params["product_data"].clone();
 
-                async {
+                let pool = self.pool.clone();
+                let redis_client = self.redis.clone();
+
+                async move {
+                    let seo_title = product_data["name"].as_str().unwrap_or("Unknown Product").to_string();
+                    let seo_description = product_data["description"].as_str().unwrap_or("").to_string();
+
                     let seo_metadata = serde_json::json!({
                         "json_ld": {
                             "@context": "https://schema.org/",
                             "@type": "Product",
-                            "name": product_data["name"].as_str().unwrap_or("Unknown Product"),
-                            "description": product_data["description"].as_str().unwrap_or(""),
+                            "name": &seo_title,
+                            "description": &seo_description,
                         },
                         "open_graph": {
-                            "og:title": product_data["name"].as_str().unwrap_or("Unknown Product"),
-                            "og:description": product_data["description"].as_str().unwrap_or(""),
+                            "og:title": &seo_title,
+                            "og:description": &seo_description,
                         }
                     });
+
+                    if let Some(pool) = pool {
+                        if tenant_id != "unknown_tenant" && product_id != "unknown_product" {
+                            let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, seo_schema_json = $3 WHERE id = $4 AND tenant_id = $5")
+                                .bind(&seo_title)
+                                .bind(&seo_description)
+                                .bind(&seo_metadata["json_ld"])
+                                .bind(&product_id)
+                                .bind(&tenant_id)
+                                .execute(&pool)
+                                .await;
+                        }
+                    }
+
+                    if let Some(client) = redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "seo.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", tenant_id),
+                                    format!("entity:product:{}", product_id)
+                                ]
+                            }).to_string();
+                            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                        }
+                    }
 
                     let resp = serde_json::json!({
                         "status": "success",
                         "tenant_id": tenant_id,
+                        "product_id": product_id,
                         "seo_metadata": seo_metadata
                     });
                     Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })

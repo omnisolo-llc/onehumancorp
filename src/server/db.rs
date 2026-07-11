@@ -358,57 +358,47 @@ impl DB {
 
                         // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
                         // to prevent them from inheriting the default umask (e.g. 0644).
-                        let wal_path = format!("{}-wal", db_path.display());
-                        let shm_path = format!("{}-shm", db_path.display());
+                        #[cfg(unix)]
+                        {
+                            let wal_path = format!("{}-wal", db_path.display());
+                            let shm_path = format!("{}-shm", db_path.display());
 
-                        for ext_path in [&wal_path, &shm_path] {
-                                    if !std::path::Path::new(ext_path).exists() {
-                                        let mut aux_opts = OpenOptions::new();
-                                        aux_opts.read(true).write(true).create_new(true).mode(0o600);
-                                        #[cfg(target_os = "linux")]
-                                        aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                        #[cfg(target_os = "macos")]
-                                        aux_opts.custom_flags(0x0100); // O_NOFOLLOW
-                                        if let Ok(file) = aux_opts.open(ext_path) {
-                                            if let Ok(metadata) = file.metadata() {
-                                                let mut p = metadata.permissions();
-                                                if (p.mode() & 0o777) != 0o600 {
-                                                    p.set_mode(0o600);
-                                                    let _ = file.set_permissions(p);
+                            for ext_path in [&wal_path, &shm_path] {
+                                        if !std::path::Path::new(ext_path).exists() {
+                                            let mut aux_opts = OpenOptions::new();
+                                            aux_opts.read(true).write(true).create_new(true).mode(0o600);
+                                            #[cfg(target_os = "linux")]
+                                            aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                            #[cfg(target_os = "macos")]
+                                            aux_opts.custom_flags(0x0100); // O_NOFOLLOW
+                                            if let Ok(file) = aux_opts.open(ext_path) {
+                                                if let Ok(metadata) = file.metadata() {
+                                                    let mut p = metadata.permissions();
+                                                    if (p.mode() & 0o777) != 0o600 {
+                                                        p.set_mode(0o600);
+                                                        let _ = file.set_permissions(p);
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            let mut opts = OpenOptions::new();
+                                            opts.read(true).write(true);
+                                            #[cfg(target_os = "linux")]
+                                            opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                            #[cfg(target_os = "macos")]
+                                            opts.custom_flags(0x0100); // O_NOFOLLOW
+                                            if let Ok(file) = opts.open(ext_path) {
+                                                if let Ok(metadata) = file.metadata() {
+                                                    let mut p = metadata.permissions();
+                                                    if (p.mode() & 0o777) != 0o600 {
+                                                        p.set_mode(0o600);
+                                                        let _ = file.set_permissions(p);
+                                                    }
                                                 }
                                             }
                                         }
-                                    } else {
-                                        let mut opts = OpenOptions::new();
-                                        opts.read(true).write(true);
-                                        #[cfg(target_os = "linux")]
-                                        opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                        #[cfg(target_os = "macos")]
-                                        opts.custom_flags(0x0100); // O_NOFOLLOW
-                                        if let Ok(file) = opts.open(ext_path) {
-                                            if let Ok(metadata) = file.metadata() {
-                                                let mut p = metadata.permissions();
-                                                if (p.mode() & 0o777) != 0o600 {
-                                                    p.set_mode(0o600);
-                                                    let _ = file.set_permissions(p);
-                                                }
-                                    }
-                                }
                             }
                         }
-                    }
-                }
-                #[cfg(unix)]
-                {
-                    if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        use std::os::unix::fs::OpenOptionsExt;
-                        let mut file_opts = std::fs::OpenOptions::new();
-                        file_opts.read(true).write(true).create(true).mode(0o600);
-                        #[cfg(target_os = "linux")]
-                        file_opts.custom_flags(0x00020000);
-                        #[cfg(target_os = "macos")]
-                        file_opts.custom_flags(0x0100);
-                        let _ = file_opts.open(&db_path);
                     }
                 }
                 #[cfg(not(unix))]
@@ -595,8 +585,8 @@ impl DB {
                 for row in customer_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let name: String = row.try_get("name").unwrap_or_default();
-                    let email: String = row.try_get("email").unwrap_or_default();
+                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "customer".to_string(),
@@ -619,8 +609,8 @@ impl DB {
                 for row in order_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
+                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -643,8 +633,8 @@ impl DB {
                 for row in message_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("original_content").unwrap_or_default();
+                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {
@@ -679,8 +669,8 @@ impl DB {
                 for row in customer_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let name: String = row.try_get("name").unwrap_or_default();
-                    let email: String = row.try_get("email").unwrap_or_default();
+                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "customer".to_string(),
@@ -701,8 +691,8 @@ impl DB {
                 for row in order_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
+                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -724,8 +714,8 @@ impl DB {
                 for row in message_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
-                    let source: String = row.try_get("source").unwrap_or_default();
-                    let content: String = row.try_get("original_content").unwrap_or_default();
+                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
                     let snippet = if content.len() > 50 {
                         format!("{}...", &content[0..47])
                     } else {

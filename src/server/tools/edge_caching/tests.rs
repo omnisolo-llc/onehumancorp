@@ -6,7 +6,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mcp_seo_generator() {
-        let server = EdgeCachingMcpServer::new();
+        let server = EdgeCachingMcpServer::new(None, None);
         let req = McpInvokeRequest {
             tool_id: "mcp_seo_generator".to_string(),
             params: serde_json::json!({
@@ -31,7 +31,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mcp_edge_kv_sync() {
-        let server = EdgeCachingMcpServer::new();
+        let server = EdgeCachingMcpServer::new(None, None);
         let req = McpInvokeRequest {
             tool_id: "mcp_edge_kv_sync".to_string(),
             params: serde_json::json!({

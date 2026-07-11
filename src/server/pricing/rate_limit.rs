@@ -162,11 +162,10 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
-        if let Some(entry) = self.tier_cache.get(tenant_id) {
-            if entry.1.elapsed() < Duration::from_secs(300) {
+        if let Some(entry) = self.tier_cache.get(tenant_id)
+            && entry.1.elapsed() < Duration::from_secs(300) {
                 return Ok(entry.0.clone());
             }
-        }
 
         let mut conn = self.get_connection().await?;
         let redis_key = format!("tenant:{}:tier", tenant_id);

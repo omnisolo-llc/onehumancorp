@@ -965,7 +965,7 @@ pub async fn get_staff_tasks_handler(
                 "staff_id": row.get::<String, _>("staff_id"),
                 "status": row.get::<String, _>("status"),
                 "priority": row.get::<String, _>("priority"),
-                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()) },
             })
         } else {
             serde_json::json!({
@@ -975,8 +975,8 @@ pub async fn get_staff_tasks_handler(
                 "description": row.get::<String, _>("description"),
                 "status": row.get::<String, _>("status"),
                 "priority": row.get::<String, _>("priority"),
-                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
-                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()) },
+                "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()) },
             })
         }
     }).collect::<Vec<_>>()).unwrap_or_default();
@@ -1011,8 +1011,8 @@ pub async fn get_shift_summaries_handler(
                 "tenant_id": row.get::<String, _>("tenant_id"),
                 "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
                 "summary_text": row.get::<String, _>("summary_text"),
-                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
-                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()) },
+                "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()) },
             })
         } else {
             serde_json::json!({
@@ -1021,8 +1021,8 @@ pub async fn get_shift_summaries_handler(
                 "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
                 "summary_text": row.get::<String, _>("summary_text"),
                 "metrics": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("metrics"),
-                "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
-                "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()) },
+                "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()) },
             })
         }
     }).collect::<Vec<_>>()).unwrap_or_default();
