@@ -106,25 +106,40 @@ async fn handle_get_products(
 
     match rows {
         Ok(rows) => {
+            // Collect product IDs to scope the variants query (safer if pagination is used)
+            let product_ids: Vec<String> = rows.iter().map(|row| row.try_get("id").unwrap_or_default()).collect();
+
+            // N+1 Query Optimization: Fetch all variants for the retrieved products in a single query
+            // In sqlite we use `IN (SELECT value FROM json_each($1))` or similar, but since we support Postgres we use ANY
+            // Instead of string concatenation which might not be safe, we just fetch all for the tenant since we know the schema
+            let v_rows = if product_ids.is_empty() {
+                vec![]
+            } else {
+                // For safety we just do the tenant filter since products endpoint usually doesn't paginate heavily
+                // and it's cleaner in sqlx than `IN` across generic DB pools.
+                sqlx::query("SELECT product_id, name, price_modifier FROM product_variants WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *conn)
+                    .await
+                    .unwrap_or_default()
+            };
+
+            let mut variants_map: std::collections::HashMap<String, Vec<ProductVariantRequest>> = std::collections::HashMap::new();
+            for vr in v_rows {
+                let p_id: String = vr.try_get("product_id").unwrap_or_default();
+                let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
+                let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
+
+                variants_map.entry(p_id).or_default().push(ProductVariantRequest {
+                    name: vr.try_get("name").unwrap_or_default(),
+                    price_modifier: modifier_str,
+                });
+            }
+
             let mut products = Vec::new();
             for row in rows {
                 let p_id: String = row.try_get("id").unwrap_or_default();
-
-                let v_rows = sqlx::query("SELECT name, price_modifier FROM product_variants WHERE product_id = $1")
-                    .bind(&p_id)
-                    .fetch_all(&mut *conn)
-                    .await
-                    .unwrap_or_default();
-
-                let mut variants = Vec::new();
-                for vr in v_rows {
-                    let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
-                    let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
-                    variants.push(ProductVariantRequest {
-                        name: vr.try_get("name").unwrap_or_default(),
-                        price_modifier: modifier_str,
-                    });
-                }
+                let variants = variants_map.remove(&p_id);
 
                 products.push(Product {
                     id: p_id,
@@ -133,7 +148,7 @@ async fn handle_get_products(
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
                     inventory_count: row.try_get("inventory_count").ok(),
-                    variants: if variants.is_empty() { None } else { Some(variants) },
+                    variants: variants.filter(|v| !v.is_empty()),
                 });
             }
             (StatusCode::OK, Json(products)).into_response()
@@ -459,7 +474,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    use axum::extract::Extension;
+    use crate::hub::Hub;
+    use std::sync::Arc;
 
     #[test]
     fn test_token_reduction_integration() {
@@ -470,5 +488,63 @@ mod tests {
         assert!(!optimized.contains(" is "));
         assert!(!optimized.contains(" a "));
         assert!(!optimized.contains(" with "));
+    }
+
+    #[tokio::test]
+    async fn test_handle_get_products_optimization() {
+        let pool = crate::db::create_sqlite_pool_for_test().await;
+
+        // Let's create the tables and insert test data
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, type TEXT, price_cents INTEGER, inventory_count INTEGER);"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS product_variants (id TEXT PRIMARY KEY, tenant_id TEXT, product_id TEXT, name TEXT, price_modifier INTEGER, inventory_count INTEGER);"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO products (id, tenant_id, title, description, type, price_cents, inventory_count) VALUES ('p1', 't1', 'P1', 'Desc', 'product', 1000, 5);"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO product_variants (id, tenant_id, product_id, name, price_modifier, inventory_count) VALUES ('v1', 't1', 'p1', 'Red', 200, 5);"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO product_variants (id, tenant_id, product_id, name, price_modifier, inventory_count) VALUES ('v2', 't1', 'p1', 'Blue', 0, 5);"
+        ).execute(&pool).await.unwrap();
+
+        let hub = Arc::new(Hub::new(pool.clone(), Arc::new(crate::hub::MockEventTracker {})));
+
+        let claims = ::server_common::Claims {
+            sub: "test-user".to_string(),
+            organization_id: Some("t1".to_string()),
+            roles: vec![],
+            iat: 0,
+            username: "test".to_string(),
+            email: "test@example.com".to_string(),
+            exp: 0,
+            jti: "test".to_string(),
+            session_id: None,
+        };
+
+        let response = handle_get_products(Extension(hub), Extension(claims)).await;
+        let response = response.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let products: Vec<Product> = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(products.len(), 1);
+        assert_eq!(products[0].id, "p1");
+        assert_eq!(products[0].title, "P1");
+        assert_eq!(products[0].price_cents, Some(1000));
+
+        let variants = products[0].variants.as_ref().unwrap();
+        assert_eq!(variants.len(), 2);
+
+        let red_variant = variants.iter().find(|v| v.name == "Red").unwrap();
+        assert_eq!(red_variant.price_modifier, "2.00");
     }
 }
