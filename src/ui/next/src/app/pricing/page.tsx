@@ -74,7 +74,7 @@ export default function PricingPage() {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ tier, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
+        body: JSON.stringify({ tier, is_subscription: true, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
       });
 
       if (!response.ok) {
