@@ -4972,7 +4972,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             match &db1.store {
                 crate::db::DbStore::Postgres => {
                     if mobile_optimized {
-                        let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
+                        let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type, source, context FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type, t.source, t.context FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type, t.channel AS source, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                         if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
                             for row in rows {
                                 use sqlx::Row;
@@ -4981,6 +4981,8 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                 });
                                 legacy_rows_json.push(item);
                             }
@@ -5009,7 +5011,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     if mobile_optimized {
-                        let query_str = "SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
+                        let query_str = "SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type, source, context FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type, t.source, t.context FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type, t.channel AS source, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                         if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(pool).await {
                             for row in rows {
                                 use sqlx::Row;
@@ -5018,6 +5020,8 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                 });
                                 legacy_rows_json.push(item);
                             }
