@@ -87,6 +87,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:urlencoding",
+        "@crates//:url",
         "@crates//:uuid",
         "@crates//:sqlx",
         "@crates//:tree-sitter",
