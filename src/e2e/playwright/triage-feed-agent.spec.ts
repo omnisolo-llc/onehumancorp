@@ -60,7 +60,7 @@ test.describe('Agentic Work Triage Feed', () => {
 
     // It should either show the empty state or an empty feed, but given we might have real data,
     // let's just ensure it loads without crashing and either shows items or caught up state.
-    const emptyState = page.locator('text=No items need your attention right now');
+    const emptyState = page.locator('text=All caught up! Your business is running smoothly.');
     const feed = page.locator('[data-testid^="triage-card-"]').first();
 
     // Wait for either to be visible
