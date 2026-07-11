@@ -60,6 +60,7 @@ pub struct OnboardingAgent {
 }
 
 
+#[allow(dead_code)]
 fn repair_truncated_json(input: &str) -> Result<IntakeData, String> {
     serde_json::from_str(input).or_else(|_| {
         let mut clean = String::with_capacity(input.len() + 10);
