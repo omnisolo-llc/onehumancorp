@@ -52,8 +52,12 @@ pub struct CreateFulfillmentBatchRequest {
 async fn get_plans(
     Extension(hub): Extension<Arc<Hub>>,
 
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -91,8 +95,12 @@ async fn get_plans(
 async fn get_subscribers(
     Extension(hub): Extension<Arc<Hub>>,
 
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -128,8 +136,12 @@ async fn get_subscribers(
 async fn get_fulfillment_batches(
     Extension(hub): Extension<Arc<Hub>>,
 
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -168,10 +180,14 @@ async fn get_fulfillment_batches(
 async fn create_fulfillment_batch(
     Extension(hub): Extension<Arc<Hub>>,
 
+    Extension(claims): Extension<::server_common::Claims>,
     Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
     Json(payload): Json<CreateFulfillmentBatchRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let service = SubscriptionService::new(Arc::new(hub.pool.clone()));
     let batch = match service
@@ -340,8 +356,12 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 async fn get_subscription_by_id(
     Extension(hub): Extension<Arc<Hub>>,
     axum::extract::Path(id): axum::extract::Path<String>,
+Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -402,11 +422,15 @@ pub struct SubscriptionActionRequest {
 }
 
 async fn subscription_action(
-    Extension(hub): Extension<Arc<Hub>>,
     axum::extract::Path(id): axum::extract::Path<String>,
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<SubscriptionActionRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = ::server_common::auth_utils::get_default_tenant();
+    let tenant_id = match ::server_config::get().multitenant {
+        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
+        false => ::server_common::auth_utils::get_default_tenant(),
+    };
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
