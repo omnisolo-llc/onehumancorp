@@ -1064,8 +1064,15 @@ impl VectorRepository {
                             })
                             .collect();
 
+                        let mut skip_set = std::collections::HashSet::new();
                         for i in 0..records.len() {
+                            if skip_set.contains(&i) {
+                                continue;
+                            }
                             for j in (i + 1)..records.len() {
+                                if skip_set.contains(&j) {
+                                    continue;
+                                }
                                 let a = &records[i];
                                 let b = &records[j];
 
@@ -1085,6 +1092,7 @@ impl VectorRepository {
                                         (b.id.clone(), a.id.clone())
                                     };
                                     conflicting_pairs_ids.push((id_a, id_b));
+                                    skip_set.insert(j);
                                     match_count += 1;
                                     if match_count >= 100 {
                                         break 'outer;
