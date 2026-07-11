@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub mod runner;
+pub mod network_policy;
 pub mod bash;
 pub mod python;
 pub mod read;
