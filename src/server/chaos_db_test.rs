@@ -299,6 +299,16 @@ mod chaos_db_tests {
             .await
             .unwrap();
 
+        sqlx::query("DROP TABLE IF EXISTS parity_audit;")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        sqlx::query("DROP TABLE IF EXISTS parity_audit;")
+            .execute(&pg_pool)
+            .await
+            .unwrap();
+
         sqlx::query("CREATE TABLE IF NOT EXISTS parity_audit (id TEXT PRIMARY KEY, val TEXT, num_val INTEGER);")
             .execute(&sqlite_pool)
             .await
@@ -310,7 +320,7 @@ mod chaos_db_tests {
             .unwrap();
 
         // Run identical insert
-        sqlx::query("INSERT INTO parity_audit (id, val, num_val) VALUES ($1, $2, $3) ON CONFLICT(id) DO NOTHING")
+        sqlx::query("INSERT INTO parity_audit (id, val, num_val) VALUES ($1, $2, $3)")
             .bind("test_id")
             .bind("test_val")
             .bind(42)
