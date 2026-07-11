@@ -100,7 +100,7 @@ describe('PricingPage', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tier: 'Starter', subscription_interval: 'month' }),
+        body: JSON.stringify({ tier: 'Starter', is_subscription: true, subscription_interval: 'month' }),
       });
       expect(window.location.href).toBe(mockCheckoutUrl);
     });
