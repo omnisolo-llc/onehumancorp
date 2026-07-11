@@ -18,9 +18,9 @@ export async function GET(request: Request) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({});
+    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
   } catch (e) {
-    return NextResponse.json({});
+    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
   }
 }
 
@@ -42,11 +42,12 @@ export async function POST(request: Request) {
     });
 
     if (res.ok) {
-      return new NextResponse(null, { status: 200 });
+      const data = await res.json();
+      return NextResponse.json(data);
     }
 
-    return new NextResponse(null, { status: 200 });
+    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
   } catch (e) {
-    return new NextResponse(null, { status: 200 });
+    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
   }
 }
