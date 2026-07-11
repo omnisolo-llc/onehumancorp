@@ -608,7 +608,7 @@ export default function FeedPage() {
                       </button>
                     </div>
                   )
-                ) : null}
+                  : null}
               </div>
             );
           })}
