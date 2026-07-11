@@ -482,6 +482,15 @@ impl Department for OperationsAgent {
                         return Ok(());
                     }
 
+                    // Notify customer success to draft a message to the customer
+                    let _ = self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        format!("Draft out of stock apology for {} (tx: {})", product_id, transaction_id),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        event.payload.clone(),
+                    ).await;
+
                     // Create an actionable task in the owner's Triage Feed asking how to resolve it
                     let pool = crate::db::get_pool();
                     let triage_id = uuid::Uuid::new_v4().to_string();

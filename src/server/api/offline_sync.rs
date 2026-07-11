@@ -222,7 +222,7 @@ pub async fn offline_sync_handler(
                     .await;
             }
 
-            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let query = "SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE";
             let current_stock = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
@@ -231,7 +231,7 @@ pub async fn offline_sync_handler(
 
             match current_stock {
                 Ok(Some(row)) => {
-                    let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                    let stock: i32 = sqlx::Row::get(&row, "available_count");
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
@@ -239,6 +239,14 @@ pub async fn offline_sync_handler(
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
                     let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
+                    let _ = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $4) WHERE variant_id = $2 AND tenant_id = $3")
+                        .bind(new_stock)
+                        .bind(&mutation.product_id)
+                        .bind(&tenant_id_clone)
+                        .bind(mutation.quantity_deducted)
+                        .execute(&mut *db_tx)
+                        .await;
 
                     let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $4, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $4)), available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
                         .bind(new_stock)
@@ -378,8 +386,145 @@ pub async fn offline_sync_handler(
                     }
                 }
                 Ok(None) => {
-                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone); // pii-safe // pii-safe
-                    Err("Product not found or unauthorized".to_string())
+                    // Fallback to legacy products
+                    let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+                    let current_stock_legacy = sqlx::query(query)
+                        .bind(&mutation.product_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_optional(&mut *db_tx)
+                        .await;
+
+                    if let Ok(Some(row)) = current_stock_legacy {
+                        let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                        let mut is_conflict = false;
+                        if stock < mutation.quantity_deducted {
+                            is_conflict = true;
+                        }
+                        let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+                        let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
+
+                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $4, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $4)), available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
+                            .bind(new_stock)
+                            .bind(&mutation.product_id)
+                            .bind(&tenant_id_clone)
+                            .bind(mutation.quantity_deducted)
+                            .execute(&mut *db_tx)
+                            .await;
+
+                        // Also duplicate conflict resolution + queue code
+                        if is_conflict {
+                            let ai_task_id = uuid::Uuid::new_v4().to_string();
+                            let ai_payload = serde_json::json!({
+                                "transaction_id": mutation.transaction_id,
+                                "product_id": mutation.product_id,
+                                "expected_stock": mutation.quantity_deducted,
+                                "actual_stock": stock,
+                                "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", mutation.product_id)
+                            }).to_string();
+
+                            let _ = sqlx::query(
+                                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                 VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
+                            )
+                            .bind(&ai_task_id)
+                            .bind(&tenant_id_clone)
+                            .bind(&ai_payload)
+                            .execute(&mut *db_tx)
+                            .await;
+
+                            let conflict_payload = serde_json::json!({
+                                "transaction_id": mutation.transaction_id,
+                                "product_id": mutation.product_id,
+                                "shortage": mutation.quantity_deducted - stock,
+                                "timestamp": mutation_ts
+                            }).to_string();
+
+                            let _ = sqlx::query(
+                                "UPDATE pos_terminal_sessions
+                                 SET sync_status = 'CONFLICTS_PENDING',
+                                     pending_reconciliation = pending_reconciliation || $1::jsonb
+                                 WHERE tenant_id = $2
+                                 AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
+                            )
+                            .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                            .bind(&tenant_id_clone)
+                            .bind(&mutation.transaction_id)
+                            .execute(&mut *db_tx)
+                            .await;
+                        }
+
+                        let job_id = uuid::Uuid::new_v4().to_string();
+                        let job_payload = serde_json::json!({
+                            "transaction_id": mutation.transaction_id,
+                            "product_id": mutation.product_id,
+                            "quantity_deducted": mutation.quantity_deducted,
+                            "amount": mutation.amount,
+                            "payment_method": mutation.payment_method,
+                            "payment_intent_id": mutation.payment_intent_id,
+                            "currency": mutation.currency,
+                        }).to_string();
+
+                        let job_res = sqlx::query(
+                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                             VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                        )
+                        .bind(&job_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&job_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        if let Err(e) = job_res {
+                            tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
+                        }
+
+                        let redis_client_opt = crate::get_redis_client();
+                        let redis_tenant_id = tenant_id_clone.clone();
+                        let redis_product_id = mutation.product_id.clone();
+                        tokio::spawn(async move {
+                            if let Some(client) = redis_client_opt {
+                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                    let topic = format!("inventory:{}", redis_tenant_id);
+                                    let payload = serde_json::json!({
+                                        "event": "inventory_updated",
+                                        "product_id": redis_product_id,
+                                        "timestamp": mutation_ts
+                                    }).to_string();
+                                    let _: () = redis::cmd("PUBLISH").arg(topic.trim()).arg(payload).query_async(&mut conn).await.unwrap_or(());
+                                }
+                            }
+                        });
+
+                        db_tx.commit().await.unwrap();
+
+                        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                            action: "InventoryUpdated".to_string(),
+                            agent_id: "system".to_string(),
+                            status: "".to_string(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                            payload: serde_json::json!({
+                                "product_id": mutation.product_id,
+                                "transaction_id": mutation.transaction_id,
+                                "quantity_deducted": mutation.quantity_deducted,
+                                "tenant_id": tenant_id_clone
+                            }).to_string().into_bytes(),
+                        };
+                        let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
+                        if is_conflict {
+                            let conflict_payload_val = serde_json::json!({
+                                "transaction_id": mutation.transaction_id,
+                                "product_id": mutation.product_id,
+                                "shortage": mutation.quantity_deducted - stock,
+                                "timestamp": mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339())
+                            });
+                            Ok(Some(conflict_payload_val))
+                        } else {
+                            Ok(None)
+                        }
+                    } else {
+                        tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone); // pii-safe
+                        Err("Product not found or unauthorized".to_string())
+                    }
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("[bug] Failed to deduct inventory for product ");
