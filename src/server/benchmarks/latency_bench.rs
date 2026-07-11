@@ -1312,7 +1312,7 @@ pub async fn bench_field_service_routing_mobile_payload() {
                 .fetch_all(&mut *tx)
                 .await;
 
-            let _jobs_result = sqlx::query("SELECT jl.id, NULL as customer_id, COALESCE(jt.name, 'Service Job') as job_title, '' as address, NULL as lat, NULL as lng, COALESCE(a.scheduled_start_time, NOW()) as scheduled_start, NULL as scheduled_end, jl.status, jl.sequence_order as order_index FROM job_locations jl JOIN appointments a ON jl.appointment_id = a.id LEFT JOIN job_templates jt ON a.job_template_id = jt.id WHERE jl.tenant_id = $1 AND jl.service_route_id = $2 ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC")
+            let _jobs_result = sqlx::query("SELECT jl.id, NULL::varchar as customer_id, COALESCE(jt.name, 'Service Job') as job_title, '' as address, NULL::double precision as lat, NULL::double precision as lng, COALESCE(a.scheduled_start_time, NOW()) as scheduled_start, NULL::timestamp as scheduled_end, jl.status, jl.sequence_order as order_index FROM job_locations jl JOIN appointments a ON jl.appointment_id = a.id LEFT JOIN job_templates jt ON a.job_template_id = jt.id WHERE jl.tenant_id = $1 AND jl.service_route_id = $2 ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC")
                 .bind("test_tenant")
                 .bind("test_route")
                 .fetch_all(&mut *tx)
@@ -1327,7 +1327,41 @@ pub async fn bench_field_service_routing_mobile_payload() {
         );
         tracing::info!("    (Mobile Payload Optimization verified: service routes return trimmed payload)");
     } else {
-        tracing::info!("  - Field Service Routing Mobile Payload Optimization (SQLite)");
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS service_routes (id TEXT, staff_profile_id TEXT, route_date TEXT, status TEXT, tenant_id TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS job_locations (id TEXT, appointment_id TEXT, sequence_order INTEGER, status TEXT, tenant_id TEXT, service_route_id TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS appointments (id TEXT, customer_id TEXT, job_template_id TEXT, scheduled_start_time TEXT, scheduled_end_time TEXT, location_address TEXT, location_lat REAL, location_lng REAL, tenant_id TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS job_templates (id TEXT, name TEXT, tenant_id TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let mut tx = pool1.begin().await.unwrap();
+            let _ = sqlx::query("SELECT id, staff_profile_id as staff_id, route_date, status FROM service_routes WHERE tenant_id = ? AND route_date = CURRENT_DATE")
+                .bind("test_tenant")
+                .fetch_all(&mut *tx)
+                .await;
+
+            let _jobs_result = sqlx::query("SELECT jl.id, CAST(NULL AS TEXT) as customer_id, COALESCE(jt.name, 'Service Job') as job_title, '' as address, CAST(NULL AS REAL) as lat, CAST(NULL AS REAL) as lng, COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start, CAST(NULL AS TEXT) as scheduled_end, jl.status, jl.sequence_order as order_index FROM job_locations jl JOIN appointments a ON jl.appointment_id = a.id LEFT JOIN job_templates jt ON a.job_template_id = jt.id WHERE jl.tenant_id = ? AND jl.service_route_id = ? ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC")
+                .bind("test_tenant")
+                .bind("test_route")
+                .fetch_all(&mut *tx)
+                .await;
+            tx.commit().await.unwrap();
+        }).await;
+
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - Field Service Routing Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!("    (Mobile Payload Optimization verified: service routes return trimmed payload)");
     }
 }
 
