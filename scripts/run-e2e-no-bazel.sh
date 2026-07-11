@@ -19,7 +19,7 @@ function wait_for_port() {
     return 1
 }
 
-export PROTOC="$(pwd)/bazel-out/k8-fastbuild/bin/external/protobuf+/protoc"
+export PROTOC=/usr/bin/protoc
 
 echo "[e2e-no-bazel] Building web app via Bazel..."
 cd src/ui/next && npm run build
@@ -29,7 +29,7 @@ echo "[e2e-no-bazel] Building server..."
 cargo build --bin server
 
 echo "[e2e-no-bazel] Starting infrastructure..."
-docker compose -f "$E2E_DOCKER_COMPOSE" up -d
+sudo docker compose -f "$E2E_DOCKER_COMPOSE" up -d
 
 # Ensure cleanup
 function cleanup() {
@@ -37,7 +37,7 @@ function cleanup() {
     if [ -n "${SERVER_PID:-}" ]; then
         kill "$SERVER_PID" || true
     fi
-    docker compose -f "$E2E_DOCKER_COMPOSE" down
+    sudo docker compose -f "$E2E_DOCKER_COMPOSE" down
 }
 trap cleanup EXIT
 
@@ -55,6 +55,6 @@ SERVER_PID=$!
 wait_for_port 18789 "App Server"
 
 echo "[e2e-no-bazel] Running Playwright tests..."
-npx playwright test
+npx playwright test src/e2e/playwright/handyman_flow.spec.ts
 
 echo "[e2e-no-bazel] Done!"

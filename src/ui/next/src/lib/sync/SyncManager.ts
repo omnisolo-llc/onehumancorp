@@ -135,7 +135,7 @@ export class SyncManager {
   }
 
   public async sync(retryCount = 0) {
-    if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
+let allOk = true;
 
     let queue = await this.getQueue();
     if (queue.length === 0) return;
@@ -227,7 +227,6 @@ export class SyncManager {
 
 
 
-      let allOk = true;
 
       // Sync CRDT Deltas
       if (crdtDeltas.length > 0) {

@@ -232,7 +232,7 @@ export default function FeedPage() {
   const simulateBookingDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-booking-draft', { method: 'POST' });
+      await fetch('/api/agents/approvals/simulate-autonomous-booking-quote', { method: 'POST' });
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
