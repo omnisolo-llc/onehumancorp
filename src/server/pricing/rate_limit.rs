@@ -244,7 +244,7 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
