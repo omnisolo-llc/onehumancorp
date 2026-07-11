@@ -1241,6 +1241,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_app_server_json_rpc() {
+        let ralph_dir = tempfile::tempdir().unwrap();
+        let ralph_progress_file = ralph_dir.path().join("progress.json");
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![ChatResponse {
                 message: Message::assistant("rpc success"),
@@ -1291,8 +1293,17 @@ mod tests {
         assert_eq!(outputs[1].as_str().unwrap(), "default output");
 
         // Test run_ralph_loop method
-        let req_json_ralph = r#"{"jsonrpc": "2.0", "id": "3", "method": "run_ralph_loop", "params": {"task": "test task", "progress_file": ".test_ralph_progress.json"}}"#;
-        let resp_json_ralph = app_server.handle_request(req_json_ralph).await;
+        let req_json_ralph = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": "3",
+            "method": "run_ralph_loop",
+            "params": {
+                "task": "test task",
+                "progress_file": ralph_progress_file,
+            }
+        })
+        .to_string();
+        let resp_json_ralph = app_server.handle_request(&req_json_ralph).await;
         let resp_ralph: JsonRpcResponse = serde_json::from_str(&resp_json_ralph).unwrap();
         assert!(resp_ralph.error.is_none());
         assert_eq!(
@@ -1305,9 +1316,7 @@ mod tests {
                 .unwrap(),
             "success"
         );
-
-        // Clean up test file if it exists
-        let _ = std::fs::remove_file(".test_ralph_progress.json");
+        assert!(ralph_dir.path().join(".git").is_dir());
 
         // Test Agent Protocol ap_create_task method
         let req_json_ap_create = r#"{"jsonrpc": "2.0", "id": "10", "method": "ap_create_task", "params": {"input": "do this task"}}"#;
