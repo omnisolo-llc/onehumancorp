@@ -268,7 +268,7 @@ export default function SettingsPage() {
       <div className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
           <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
-          <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and system security.</p>
+          <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and advanced system security.</p>
         </header>
 
 

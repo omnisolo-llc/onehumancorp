@@ -7,6 +7,7 @@ rust_library(
     srcs = [
         "client.rs",
         "mod.rs",
+        "client_test.rs",
         "provider.rs",
     ],
     crate_root = "mod.rs",
