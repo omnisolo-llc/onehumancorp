@@ -11,12 +11,12 @@ test.describe('Kitchen Command Center Offline Sync', () => {
     await page.reload();
 
     // Wait for page to load
-    await expect(page.locator('text=Kitchen Command Center')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Kitchen Command Center').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('performs optimistic UI updates and syncs queue when offline', async ({ page, context }) => {
     // Check initial state
-    await expect(page.locator('text=Active Orders')).toBeVisible();
+    await expect(page.locator('text=Active Orders').first()).toBeVisible();
 
     // The backend might return empty orders or mock data based on our changes
     // We want to test the toggle logic on Daily Menu items which should be present
