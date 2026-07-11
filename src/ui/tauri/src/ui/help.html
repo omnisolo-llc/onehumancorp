@@ -396,7 +396,7 @@
 
       <div class="header-card">
         <h1 data-testid="help-center-title">In-App Help Center</h1>
-        <input type="text" id="search-input" data-testid="help-search-input" data-tooltip-id="help-search-tooltip" placeholder="Search for help articles and videos..." data-tooltip="Search for articles, videos, and guides" />
+        <input type="text" id="help-search-input" data-testid="help-search-input" data-tooltip-id="help-search-tooltip" placeholder="Search for help articles and videos..." data-tooltip="Search for articles, videos, and guides" />
       </div>
 
       <div id="content-area">
@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let allArticles = [];
       let allVideos = [];
 
-      const searchInput = document.getElementById('search-input');
+      const searchInput = document.getElementById('help-search-input');
       const resultsContainer = document.getElementById('results');
       const loadingState = document.getElementById('loading-state');
       const videoModal = document.getElementById('video-modal');

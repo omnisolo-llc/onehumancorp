@@ -57,6 +57,11 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
             WalkthroughStep { target_id: "ai-chat-trigger".to_string(), title: "Open Assistant".to_string(), content: "Click here to open your AI Support Agent.".to_string() },
             WalkthroughStep { target_id: "ohc-help-input-area".to_string(), title: "Ask Anything".to_string(), content: "Type your request here and the agent will handle it while you sleep.".to_string() }
         ],
+        "help" => vec![
+            WalkthroughStep { target_id: "help-search-input".to_string(), title: "Search for anything".to_string(), content: "Looking for a specific answer? Type it here and we'll find the right guide or video.".to_string() },
+            WalkthroughStep { target_id: "ask-ai-tooltip".to_string(), title: "Ask your AI Assistant".to_string(), content: "Can't find what you need? Your AI assistant can answer questions about your business right here.".to_string() },
+            WalkthroughStep { target_id: "video-tab".to_string(), title: "Watch and learn".to_string(), content: "Prefer watching? Check out these short video tutorials to master your workspace.".to_string() }
+        ],
         _ => vec![],
     };
     Json(steps)
@@ -228,28 +233,28 @@ pub async fn delete_tooltip(
 
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
-        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started with Your Store".to_string(), desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/add-products".to_string() },
-        HelpArticle { category: "Payments".to_string(), title: "Accepting Payments".to_string(), desc: "Learn how to accept credit cards and manage your payouts.".to_string(), link: "/help/accept-payments".to_string() },
-        HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
-        HelpArticle { category: "Marketing".to_string(), title: "Grow Your Audience".to_string(), desc: "Use our built-in tools to run promotions and track performance.".to_string(), link: "/help/marketing-tools".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Manage Billing".to_string(), desc: "Update your subscription and payment methods.".to_string(), link: "/help/billing-settings".to_string() },
-        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle { category: "Getting Started".to_string(), title: "Setting up your workspace".to_string(), desc: "Welcome to OneHumanCorp! Let's configure your workspace, connect your calendar, and set your availability.".to_string(), link: "/help/getting-started".to_string() },
+        HelpArticle { category: "My Store".to_string(), title: "Managing services and offers".to_string(), desc: "Learn how to add services, physical products, or packages and track inventory or schedule capacity.".to_string(), link: "/help/manage-services".to_string() },
+        HelpArticle { category: "Payments".to_string(), title: "Accepting payments and deposits".to_string(), desc: "Connect your bank account to securely accept credit cards, manage invoices, and collect upfront deposits.".to_string(), link: "/help/payments".to_string() },
+        HelpArticle { category: "AI Agents".to_string(), title: "Delegating to your AI Assistant".to_string(), desc: "Discover how your AI assistant can draft emails, triage your inbox, and answer routine customer questions while you sleep.".to_string(), link: "/help/ai-assistant".to_string() },
+        HelpArticle { category: "Marketing".to_string(), title: "Running promotions and discounts".to_string(), desc: "Use our built-in tools to create discount codes, run seasonal sales, and track how many customers use them.".to_string(), link: "/help/promotions".to_string() },
+        HelpArticle { category: "Account & Billing".to_string(), title: "Managing your OHC subscription".to_string(), desc: "Update your billing details, change your plan, and view past invoices for your OneHumanCorp account.".to_string(), link: "/help/billing".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services and custom integrations to your workspace.".to_string(), link: "/api-docs".to_string() },
     ]
 }
 
 pub fn get_videos() -> Vec<VideoTutorial> {
     vec![
-        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 2, title: "Connecting a bank account to accept payments".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 3, title: "Activating your AI Support Agent".to_string(), duration: "1:25".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 4, title: "Adding a new product to your inventory".to_string(), duration: "0:50".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 5, title: "Managing staff and user permissions".to_string(), duration: "1:10".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 6, title: "Creating a marketing campaign".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Using the Analytics Dashboard".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 8, title: "How to handle refunds and returns".to_string(), duration: "1:05".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 9, title: "Customizing your storefront design".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 10, title: "Setting up automated email receipts".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 1, title: "How to navigate your owner dashboard".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 2, title: "Connecting your bank account securely".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 3, title: "Activating your first AI assistant".to_string(), duration: "1:25".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 4, title: "Adding a service or product".to_string(), duration: "0:50".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 5, title: "Managing staff and your team".to_string(), duration: "1:10".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 6, title: "Creating a quick discount code".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 7, title: "Understanding your daily summary".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 8, title: "Handling a customer refund".to_string(), duration: "1:05".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 9, title: "Customizing your public profile".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 10, title: "Setting up your email signature".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
     ]
 }
 

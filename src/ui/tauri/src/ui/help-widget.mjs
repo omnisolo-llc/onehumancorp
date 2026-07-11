@@ -11,6 +11,9 @@
 }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    tooltipEl.style.opacity = '0';
+    tooltipEl.style.transform = 'translateY(5px)';
     if (document.body) document.body.appendChild(tooltipEl);
     else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltipEl));
 
@@ -35,10 +38,18 @@
         tooltipEl.style.top = `${top}px`;
         tooltipEl.style.left = `${left}px`;
         tooltipEl.classList.add('visible');
+        tooltipEl.style.opacity = '1';
+        tooltipEl.style.transform = 'translateY(0)';
     }
 
     function hideTooltip() {
-        tooltipEl.classList.remove('visible');
+        tooltipEl.style.opacity = '0';
+        tooltipEl.style.transform = 'translateY(5px)';
+        setTimeout(() => {
+            if (tooltipEl.style.opacity === '0') {
+                tooltipEl.classList.remove('visible');
+            }
+        }, 200);
     }
 
     document.addEventListener('mouseover', (e) => {
