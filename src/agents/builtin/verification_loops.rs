@@ -100,7 +100,55 @@ impl ComputationalGuide for CargoTestGuide {
     }
 }
 
+
+use ohc_builtin_agent_core::types::Role;
+
+pub struct LlmJudgeInferentialSensor {
+    pub client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser>,
+    pub model: String,
+    pub system_prompt: String,
+}
+
+#[async_trait::async_trait]
+impl InferentialSensor for LlmJudgeInferentialSensor {
+    async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
+        let user_message = ohc_builtin_agent_core::types::Message {
+            role: Role::User,
+            content: format!("Task: {}\n\nOutput to verify: {}", task, output),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        };
+
+        let req = ohc_builtin_agent_core::types::ChatRequest {
+            messages: vec![user_message],
+            system: self.system_prompt.clone(),
+            model: self.model.clone(),
+            temperature: 0.0,
+            max_tokens: 500,
+            tools: vec![],
+        };
+
+        match self.client.chat(req).await {
+            Ok(resp) => {
+                let content_str = resp.message.content;
+                if content_str.trim().starts_with("PASS") {
+                    Ok(())
+                } else if content_str.trim().starts_with("FAIL:") {
+                    let reason = content_str.trim().trim_start_matches("FAIL:").trim();
+                    Err(format!("LLM Judge verification failed: {}", reason))
+                } else {
+                    Err(format!("LLM Judge verification failed: output did not match expected 'PASS' or 'FAIL: <reason>' format. Output: {}", content_str))
+                }
+            }
+            Err(e) => Err(format!("LLM Judge verification failed with error: {}", e)),
+        }
+    }
+}
+
 pub struct BashVisualVerifier {
+
     pub command: String,
     pub workspace_path: Option<String>,
 }
@@ -371,6 +419,83 @@ impl InferentialSensor for LlmJudgeSensor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct MockLlmClientForSensor {
+        response_content: String,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::output_parser::LlmClientForParser for MockLlmClientForSensor {
+        async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ohc_builtin_agent_core::types::ChatResponse {
+                message: ohc_builtin_agent_core::types::Message {
+                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                    content: self.response_content.clone(),
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: ohc_builtin_agent_core::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: None,
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_inferential_sensor_pass() {
+        let client = std::sync::Arc::new(MockLlmClientForSensor {
+            response_content: "PASS".to_string(),
+        });
+
+        let judge = super::LlmJudgeInferentialSensor {
+            client,
+            model: "test_model".to_string(),
+            system_prompt: "You are a judge.".to_string(),
+        };
+
+        use super::InferentialSensor;
+        let result = judge.verify_inferential("4", "What is 2+2?").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_inferential_sensor_fail() {
+        let client = std::sync::Arc::new(MockLlmClientForSensor {
+            response_content: "FAIL: The answer is wrong. 2+2 is 4, not 5.".to_string(),
+        });
+
+        let judge = super::LlmJudgeInferentialSensor {
+            client,
+            model: "test_model".to_string(),
+            system_prompt: "You are a judge.".to_string(),
+        };
+
+        use super::InferentialSensor;
+        let result = judge.verify_inferential("5", "What is 2+2?").await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "LLM Judge verification failed: The answer is wrong. 2+2 is 4, not 5.");
+    }
+
+    #[tokio::test]
+    async fn test_llm_judge_inferential_sensor_invalid_format() {
+        let client = std::sync::Arc::new(MockLlmClientForSensor {
+            response_content: "I think the answer is mostly correct but could be better.".to_string(),
+        });
+
+        let judge = super::LlmJudgeInferentialSensor {
+            client,
+            model: "test_model".to_string(),
+            system_prompt: "You are a judge.".to_string(),
+        };
+
+        use super::InferentialSensor;
+        let result = judge.verify_inferential("4.0", "What is 2+2?").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("output did not match expected 'PASS' or 'FAIL: <reason>' format"));
+    }
+
     use ohc_builtin_agent_core::types::Usage;
 
     struct MockComputationalGuide {
