@@ -899,9 +899,10 @@ impl VectorRepository {
                         FROM consolidated_memory b_inner
                         WHERE b_inner.tenant_id = a.tenant_id
                           AND b_inner.id > a.id
+                          AND b_inner.embedding <=> a.embedding < 0.05
                         ORDER BY b_inner.embedding <=> a.embedding
                         LIMIT 1
-                    ) b ON a.embedding <=> b.embedding < 0.05
+                    ) b ON true
                     LIMIT 100
                 ";
                 let rows = sqlx::query(query)
