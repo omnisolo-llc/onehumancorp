@@ -219,7 +219,7 @@ impl InteropProtocol {
         use prost::Message as ProstMessage;
         use std::sync::atomic::Ordering;
 
-        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job"); // pii-safe // pii-safe
+        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job"); // pii-safe
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
