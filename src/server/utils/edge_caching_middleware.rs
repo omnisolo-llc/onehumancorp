@@ -32,10 +32,17 @@ pub async fn edge_caching_middleware(
     let uri = req.uri().to_string();
     let is_get = method == axum::http::Method::GET;
 
+    let bypass_cache = req
+        .headers()
+        .get(header::CACHE_CONTROL)
+        .and_then(|val| val.to_str().ok())
+        .map(|val| val.contains("no-cache"))
+        .unwrap_or(false);
+
     let cdn_cache = get_cdn_cache();
     let cache_key = format!("cdn:{}", uri);
 
-    if is_get {
+    if is_get && !bypass_cache {
         if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
             let body = Body::from(cached.body);
             let mut response = Response::builder()
@@ -74,7 +81,7 @@ pub async fn edge_caching_middleware(
         Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     };
 
-    if !bytes.is_empty() {
+    if !bytes.is_empty() && !parts.headers.contains_key(header::ETAG) {
         let mut hasher = DefaultHasher::new();
         bytes.hash(&mut hasher);
         let etag = format!("W/\"{:x}\"", hasher.finish());
@@ -122,4 +129,80 @@ pub async fn edge_caching_middleware(
     let new_body = Body::from(bytes.to_vec());
     let new_response = Response::from_parts(parts, new_body);
     Ok(new_response.into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::{Body, to_bytes},
+        http::{Request, Response, StatusCode},
+        middleware::from_fn,
+        routing::get,
+        Router,
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_edge_caching_middleware_hit_miss() {
+        let app = Router::new()
+            .route("/", get(|| async { "Hello, World!" }))
+            .layer(from_fn(edge_caching_middleware));
+
+        let req1 = Request::builder().uri("/").body(Body::empty()).unwrap();
+        let res1 = app.clone().oneshot(req1).await.unwrap();
+        assert_eq!(res1.status(), StatusCode::OK);
+        assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
+
+        // Allow cache to be saved asynchronously
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let req2 = Request::builder().uri("/").body(Body::empty()).unwrap();
+        let res2 = app.clone().oneshot(req2).await.unwrap();
+        assert_eq!(res2.status(), StatusCode::OK);
+        assert_eq!(res2.headers().get("X-Cache").unwrap(), "HIT");
+
+        let body_bytes = to_bytes(res2.into_body(), 1024).await.unwrap();
+        assert_eq!(body_bytes, "Hello, World!");
+    }
+
+    #[tokio::test]
+    async fn test_edge_caching_middleware_bypass_no_cache() {
+        let app = Router::new()
+            .route("/bypass", get(|| async { "Hello, Bypass!" }))
+            .layer(from_fn(edge_caching_middleware));
+
+        // Initial request -> MISS
+        let req1 = Request::builder().uri("/bypass").body(Body::empty()).unwrap();
+        let res1 = app.clone().oneshot(req1).await.unwrap();
+        assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        // Second request with no-cache -> MISS (bypassed)
+        let req2 = Request::builder()
+            .uri("/bypass")
+            .header(header::CACHE_CONTROL, "no-cache")
+            .body(Body::empty())
+            .unwrap();
+        let res2 = app.clone().oneshot(req2).await.unwrap();
+        assert_eq!(res2.headers().get("X-Cache").unwrap(), "MISS");
+    }
+
+    #[tokio::test]
+    async fn test_edge_caching_middleware_surrogate_key() {
+        let app = Router::new()
+            .route("/surrogate", get(|| async {
+                let mut res = Response::new(Body::from("Surrogate Content"));
+                res.headers_mut().insert("Cache-Tag", "tag1, tag2".parse().unwrap());
+                res
+            }))
+            .layer(from_fn(edge_caching_middleware));
+
+        let req = Request::builder().uri("/surrogate").body(Body::empty()).unwrap();
+        let res = app.oneshot(req).await.unwrap();
+
+        assert_eq!(res.headers().get("Surrogate-Key").unwrap(), "tag1 tag2");
+        assert_eq!(res.headers().get("X-Cache").unwrap(), "MISS");
+    }
 }
