@@ -1268,7 +1268,8 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const continueButton = screen.getAllByRole("button", { name: /Next/i }).pop()!;
+    // Since `renderOnboardingWizard` triggers a delayed effect that sets state, we need to wait for the UI to show the Next button
+    const continueButton = await screen.findByRole("button", { name: /Next/i });
     await user.click(continueButton);
 
     await waitFor(() => {
