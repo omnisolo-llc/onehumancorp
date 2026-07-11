@@ -11,6 +11,7 @@ pub struct ConsolidationWorker {
     pub pruning_threshold_days: i64,
     pub pruning_min_reliability: i32,
     pub pruning_max_reference_count: i32,
+    pub pruning_source_types: Vec<String>,
     pub telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
 }
 
@@ -21,6 +22,7 @@ impl ConsolidationWorker {
         pruning_threshold_days: i64,
         pruning_min_reliability: i32,
         pruning_max_reference_count: i32,
+        pruning_source_types: Vec<String>,
         telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
     ) -> Self {
         Self {
@@ -29,6 +31,7 @@ impl ConsolidationWorker {
             pruning_threshold_days,
             pruning_min_reliability,
             pruning_max_reference_count,
+            pruning_source_types,
             telemetry_error_callback,
         }
     }
@@ -36,7 +39,8 @@ impl ConsolidationWorker {
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count, &["TASK_SUMMARY"]).await {
+        let pruning_source_types_refs: Vec<&str> = self.pruning_source_types.iter().map(|s| s.as_str()).collect();
+        let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count, &pruning_source_types_refs).await {
             Ok(_) => true,
             Err(e) => {
                 tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
@@ -119,7 +123,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_run_once() {
         let repo = setup_sqlite_repo().await;
-        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180, 20, 2, None);
+        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180, 20, 2, vec!["TASK_SUMMARY".to_string()], None);
 
         // Insert a stale record that should be pruned
         let mut v1 = vec![0.0; 10];
@@ -166,6 +170,7 @@ mod tests {
             180,
             20,
             2,
+            vec!["TASK_SUMMARY".to_string()],
             None,
         ));
 
@@ -240,6 +245,7 @@ mod tests {
             180,
             20,
             2,
+            vec!["TASK_SUMMARY".to_string()],
             None,
         ));
         let handle = worker.spawn_background_task();

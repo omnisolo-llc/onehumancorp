@@ -204,6 +204,7 @@ impl AgentServiceImpl {
                                 180,
                                 20,
                                 2,
+                                vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()],
                                 None,
                             ))
                             .spawn_background_task(),
@@ -225,6 +226,7 @@ impl AgentServiceImpl {
                                 180,
                                 20,
                                 2,
+                                vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()],
                                 None,
                             ))
                             .spawn_background_task(),

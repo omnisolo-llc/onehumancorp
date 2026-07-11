@@ -2465,7 +2465,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, Some(cb)));
+    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()], Some(cb)));
     let _ = consolidation_worker.spawn_background_task();
 
     let retention_job = crate::workers::subscription_retention_job::SubscriptionRetentionJob::new(db.clone());
