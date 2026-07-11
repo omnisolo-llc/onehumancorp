@@ -137,7 +137,7 @@ pub struct SearchResult {
 pub fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
         .or_else(|_| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f"))
-        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+        .map(|nd| nd.and_utc())
         .or_else(|_| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&chrono::Utc)))
         .map_err(|e| sqlx::Error::Decode(Box::new(e)))
 }
@@ -759,8 +759,6 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        // Use tokio::time::Instant everywhere so that time paused in tests (like via tokio::time::advance)
-        // accurately increments the clock to simulate delays.
         let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
@@ -773,7 +771,6 @@ impl DB {
             }
 
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
-
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
