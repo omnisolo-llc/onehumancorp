@@ -762,3 +762,34 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO referrals (id, tenant_id, conversions, total_clicks, total_signups, created_at, updated_at)
 VALUES ('e2e-referral-1', 'e2e-tenant', 1, 5, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+
+-- Seed help_articles
+INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
+('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help/getting-started-1'),
+('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help/add-products'),
+('e2e-tenant', 'Payments', 'Accepting Payments', 'Learn how to accept credit cards and manage your payouts.', '/help/accept-payments'),
+('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help/ai-support'),
+('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help/marketing-tools'),
+('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help/billing-settings'),
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs')
+ON CONFLICT DO NOTHING;
+
+-- Seed video_tutorials
+INSERT INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES
+('e2e-tenant', 1, 'How to set up your first store easily', '1:20', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 2, 'Connecting a bank account to accept payments', '0:45', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 3, 'Activating your AI Support Agent', '1:25', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 4, 'Adding a new product to your inventory', '0:50', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 5, 'Managing staff and user permissions', '1:10', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 6, 'Creating a marketing campaign', '1:20', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 7, 'Using the Analytics Dashboard', '1:20', 'https://www.w3schools.com/html/mov_bbb.mp4')
+ON CONFLICT DO NOTHING;
+
+-- Seed walkthrough_steps
+INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, text) VALUES
+('e2e-tenant', 'store-setup', 1, 'dashboard-title', 'Set up your store', 'Learn how to easily set up your store and accept your first payment.'),
+('e2e-tenant', 'store-setup', 2, 'bio-input-tooltip', 'Describe your business', 'Tell us what you sell so we can create the perfect storefront for you.'),
+('e2e-tenant', 'store-setup', 3, 'generate-btn-tooltip', 'Generate Store', 'Click here and watch our AI build your store from scratch.'),
+('e2e-tenant', 'dashboard', 1, 'dashboard-title', 'Welcome', 'Welcome to your dashboard! This is your control center.'),
+('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
+ON CONFLICT DO NOTHING;
