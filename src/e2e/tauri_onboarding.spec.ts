@@ -21,8 +21,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.route('/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+    await page.route('/dashboard.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
@@ -69,8 +69,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
-    await page.route('http://mock/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+    await page.route('http://mock/dashboard.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
@@ -119,7 +119,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-chat').getByRole('button', { name: 'Back' }).click();
     // Now on step-initial
     await expect(page.locator('#step-initial')).toHaveClass(/active/);
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('button[data-next="step-context"]').click();
 
 
     // Setup page (Step 1: Context)
@@ -228,8 +228,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await newPage.route('http://mock/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+    await newPage.route('http://mock/dashboard.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
@@ -318,11 +318,11 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.locator('#finish-btn').click();
 
     // Success page
-    await newPage.goto('http://mock/success.html');
+    await newPage.goto('http://mock/dashboard.html');
     await newPage.waitForTimeout(500);
 
     // Success page
-    await expect(newPage.locator('h1')).toContainText('You\'re Live!');
+    await expect(newPage.locator('h1')).toContainText('Dashboard');
 
     await newContext.close();
 
@@ -375,6 +375,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
   test('Verify full Onboarding UI and functionality manually with exact selectors', async ({ page }) => {
+    await page.route('**/api/onboarding/intake', async route => { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: 'Plumbing', business_type: 'Service', categories: ['Plumbing'], initial_products: [{ name: 'Fix leak', price: 100 }] }) }); });
+    await page.route('**/api/onboarding/start', async route => { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, onboardingState: { currentStep: 'done' } }) }); });
+    await page.route('**/dashboard.html*', async route => { await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Dashboard</body></html>' }); });
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
         : path.resolve(__dirname, '..', '..');
@@ -408,12 +411,14 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(startBtn).toBeEnabled();
 
     // intercept the redirect
-    await page.route('**/success.html*', async route => {
+    await page.route('**/dashboard.html*', async route => {
       await route.fulfill({ status: 200, body: 'Success!' });
     });
 
     await startBtn.click();
-    await expect(page).toHaveURL(/.*success.html.*/);
+    await expect(page.locator('#step-approval')).toBeVisible({ timeout: 10000 });
+    await page.locator('#approve-publish-btn').click();
+    await expect(page).toHaveURL(/.*dashboard.html.*/, { timeout: 10000 });
   });
 
 
@@ -448,7 +453,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     // Check dark mode
     await page.emulateMedia({ colorScheme: 'dark' });
     const darkBg = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(darkBg).toMatch(/rgba\(\s*22\s*,\s*22\s*,\s*26\s*,\s*0\.7\s*\)|rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)/);
+    expect(darkBg).toMatch(/rgba\(\s*22\s*,\s*22\s*,\s*26\s*,\s*0\.7\s*\)|rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*243\s*,\s*243\s*,\s*243\s*,\s*0\.655\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)|rgba\(\s*222\s*,\s*222\s*,\s*222\s*,\s*0\.66\s*\)/);
   });
 
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {

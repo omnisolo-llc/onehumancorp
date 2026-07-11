@@ -17,6 +17,8 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Test from an unauthenticated context simulating a new user arriving at the setup page
   await page.setViewportSize({ width: 375, height: 812 });
 
+  await page.route('**/api/onboarding/start', async route => { await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, onboardingState: { currentStep: 'done' } }) }); });
+  await page.route('**/dashboard.html*', async route => { await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Dashboard</body></html>' }); });
   await page.goto('http://mock/setup.html');
 
   // Verify it starts on the initial step

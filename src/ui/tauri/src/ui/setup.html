@@ -2539,7 +2539,7 @@
             placeholder="e.g. my-business"
             inputmode="url"
             autocomplete="off"
-            enterkeyhint="next"
+            enterkeyhint="done"
             autocapitalize="none"
             autocorrect="off"
             style="flex: 1; border: none; background: transparent; outline: none; margin-bottom: 0; padding: 0; font-size: 16px; font-family: inherit; color: inherit; text-align: right; min-width: 0; min-height: 44px; appearance: none; box-shadow: none;"
@@ -3765,7 +3765,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href = "dashboard.html";
               return;
             }
 
@@ -3829,7 +3829,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            window.location.href = "dashboard.html#unified-agent-feed-section";
+            window.location.href = "dashboard.html";
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -3894,7 +3894,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href = "dashboard.html";
               return;
             }
 
@@ -3938,7 +3938,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html#unified-agent-feed-section";
+              window.location.href = "dashboard.html";
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -4239,7 +4239,7 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "dashboard.html#unified-agent-feed-section";
+                  window.location.href = "dashboard.html";
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4281,7 +4281,7 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html#unified-agent-feed-section";
+                    window.location.href = "dashboard.html";
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(
