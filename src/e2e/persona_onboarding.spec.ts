@@ -1,27 +1,10 @@
 import { test, expect } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
 
 test.describe('Persona-Driven Onboarding E2E', () => {
 
-  const setupMockRoutes = async (page) => {
-    // DO NOT use global network rejections in the file here because it's forbidden.
-    // E2E Tests should ideally run against real backend.
-    // We are mocking ONLY the frontend setup.html routing because the test instructs us to start from the tauri setup page.
-    await page.route('**/*success.html*', async route => {
-        await route.fulfill({ contentType: 'text/html', body: 'Success' });
-    });
-    await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: fileContent });
-    });
-    // This is already in the file at line 144
-  };
-
   test('Maya the Baker persona journey', async ({ page }) => {
-    await setupMockRoutes(page);
-    await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.goto('/setup.html');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
 
     await expect(page.getByText("How do you work?")).toBeVisible();
     const bakerChip = page.getByText("I'm a Baker");
@@ -58,9 +41,8 @@ test.describe('Persona-Driven Onboarding E2E', () => {
   });
 
   test('Carlos the Handyman persona journey', async ({ page }) => {
-    await setupMockRoutes(page);
-    await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.goto('/setup.html');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
 
     await page.getByText("I'm a Handyman").click();
     await expect(page.getByText("Applied!")).toBeVisible();
@@ -93,27 +75,24 @@ test.describe('Persona-Driven Onboarding E2E', () => {
   });
 
   test('Priya the Boutique Owner persona journey', async ({ page }) => {
-    await setupMockRoutes(page);
-    await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.goto('/setup.html');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     await page.getByText("I'm a Boutique Owner").click();
     await page.locator('#step-context .next-step-btn').click();
     await expect(page.locator('#business-categories')).toHaveValue('Boutique');
   });
 
   test('Leo the Tutor persona journey', async ({ page }) => {
-    await setupMockRoutes(page);
-    await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.goto('/setup.html');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     await page.getByText("I'm a Tutor").click();
     await page.locator('#step-context .next-step-btn').click();
     await expect(page.locator('#business-categories')).toHaveValue('Tutoring');
   });
 
   test('Manual setup flow without persona', async ({ page }) => {
-    await setupMockRoutes(page);
-    await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.goto('/setup.html');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
 
     await page.getByText('Agency or Studio').click();
     await page.locator('#step-context .next-step-btn').click();
@@ -148,12 +127,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#step-template')).toBeVisible();
     await page.locator('#template-selection').selectOption('Modern');
 
-    // Finish Setup - This matches the original test's logic for mocking the final api call before finish
-    await page.route('**/api/onboarding/start', async route => {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
-    });
+    // Finish Setup
     await page.locator('#finish-btn').click();
 
-    await expect(page).toHaveURL(/.*success.html.*/);
+    await expect(page).toHaveURL(/.*dashboard.html.*/, { timeout: 15000 });
   });
 });

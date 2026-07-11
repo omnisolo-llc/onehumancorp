@@ -1,55 +1,54 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding UI Audit', () => {
+
   test('Should navigate the setup successfully via Conversational Setup', async ({ page }) => {
     // Start at the onboarding page
-    await page.goto('http://localhost:3000/onboarding');
+    await page.goto('/setup.html');
 
-    // Check initial state title
-    await expect(page.locator('h1').filter({ hasText: 'Setup' })).toBeVisible();
+    // Wait until start button is visible
+    await expect(page.locator('[data-testid="next-step-btn"][data-next="step-context"]')).toBeVisible();
 
-    // Step -2: Welcome Screen
-    await expect(page.getByText('Tell us about your business')).toBeVisible();
+    // Click start setup
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
 
-    // "Start My Business" navigates to `step: 1` which is "Tell us about your business" in the conversational setup.
-    await page.getByRole('button', { name: 'Conversational Setup' }).click();
+    await page.getByText('Agency or Studio').click();
+    await page.locator('#step-context .next-step-btn').click();
 
-    await expect(page.getByText('What\'s the name of your business?')).toBeVisible({ timeout: 10000 });
+    await page.locator('#business-categories').selectOption('Design');
+    await page.locator('#step-categories .next-step-btn').click();
 
-    await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('My Test Store');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('#business-name').fill("Nora Studio");
+    await page.locator('#step-name .next-step-btn').click();
 
-    // Enter what you sell
-    await expect(page.getByText('What do you sell?')).toBeVisible();
-    await page.locator('textarea').fill('Cookies');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByTestId('team-operations').click();
+    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.locator('#step-assistant .next-step-btn').click();
 
-    // Location
-    await expect(page.getByText('Where are you located?')).toBeVisible();
-    await page.getByPlaceholder('e.g. Portland, OR').fill('New York');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('#admin-name').fill('Admin');
+    await page.locator('#admin-email').fill('nora@example.com');
+    await page.locator('#admin-password').fill('securepassword123');
+    await page.locator('#step-admin .next-step-btn').click();
 
-    // Target Audience
-    await expect(page.getByText('Who is your target audience?')).toBeVisible();
-    await page.getByPlaceholder('e.g. Local families, Tech startups').fill('Everyone');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.locator('#first-offer').fill("Logo Design");
+    await page.locator('#step-offer .next-step-btn').click();
 
-    // Wait for the processing to finish by looking for the Review Details screen
-    await expect(page.getByText('Review Details')).toBeVisible({ timeout: 30000 });
+    await page.locator('#location-input').fill('Portland, OR');
+    await page.locator('#step-location .next-step-btn').click();
 
-    // Advance to Style
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.locator('#target-audience').fill('Everyone');
+    await page.locator('#step-target-audience .next-step-btn').click();
 
-    // Fill in Account Setup fields
-    await expect(page.getByText('Style & Team')).toBeVisible();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Test User');
-    await page.getByPlaceholder('you@example.com').fill('testuser@example.com');
-    await page.getByPlaceholder('••••••••').fill('password123');
+    await page.locator('#domain-name').fill('nora-studio');
+    await page.locator('#step-domain .next-step-btn').click();
 
-    // Submit
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await expect(page.locator('#step-template')).toBeVisible();
+    await page.locator('#template-selection').selectOption('Modern');
 
-    // Verify Success Screen
-    await expect(page.getByText('You\'re Live!')).toBeVisible({ timeout: 20000 });
+    // Finish Setup
+    await page.locator('#finish-btn').click();
+
+    await expect(page).toHaveURL(/.*dashboard.html.*/, { timeout: 15000 });
+
   });
 });
