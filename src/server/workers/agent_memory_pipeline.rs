@@ -271,22 +271,6 @@ impl AgentMemoryPipeline {
         Ok(())
     }
 
-    pub async fn prune_stale_memory(&self) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.db.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < datetime('now', '-180 days') AND reference_count < 5 AND owner_override = FALSE")
-                    .execute(sqlite_pool)
-                    .await?;
-            }
-            DbStore::Postgres => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < NOW() - INTERVAL '180 days' AND reference_count < 5 AND owner_override = FALSE")
-                    .execute(&self.db.pool)
-                    .await?;
-            }
-        }
-        Ok(())
-    }
-
     pub async fn process_fs_memories(&self) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
@@ -352,7 +336,6 @@ impl AgentMemoryPipeline {
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.process_session_data().await?;
         self.process_fs_memories().await?;
-        self.prune_stale_memory().await?;
         Ok(())
     }
 }
