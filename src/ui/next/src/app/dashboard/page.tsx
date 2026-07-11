@@ -3,6 +3,7 @@ import { AIPaywallWidget } from "../components/AIPaywallWidget";
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
+import { PerformanceSeoCard } from "./PerformanceSeoCard";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
@@ -368,6 +369,9 @@ export default function Dashboard() {
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
+      </div>
+      <div className="mb-6 w-full overflow-hidden">
+        <PerformanceSeoCard tenantId={tenantId} />
       </div>
 
       <div className="hidden md:block">
