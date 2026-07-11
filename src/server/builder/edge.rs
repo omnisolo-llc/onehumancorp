@@ -272,11 +272,18 @@ pub async fn regenerate_product_cache(
         if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
 
             if let Ok(Some(row)) = seo_res {
+                let mut title_replaced = false;
                 if let Some(seo_title) = row.seo_title {
                     if let Some(start) = html.find("<title>") {
                         if let Some(end) = html[start..].find("</title>") {
                             let end = start + end + "</title>".len();
                             html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                            title_replaced = true;
+                        }
+                    }
+                    if !title_replaced {
+                        if let Some(head_end) = html.find("</head>") {
+                            html.insert_str(head_end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                         }
                     }
                 }
