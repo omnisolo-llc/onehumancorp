@@ -59,6 +59,47 @@ pub struct OnboardingAgent {
     minimax: Option<std::sync::Arc<MinimaxClient>>,
 }
 
+
+fn repair_truncated_json(input: &str) -> Result<IntakeData, String> {
+    serde_json::from_str(input).or_else(|_| {
+        let mut clean = String::with_capacity(input.len() + 10);
+        let mut in_string = false;
+        let mut escape = false;
+        let mut stack = Vec::new();
+
+        for c in input.chars() {
+            if escape {
+                escape = false;
+            } else if c == '\\' {
+                escape = true;
+            } else if c == '"' {
+                in_string = !in_string;
+            } else if !in_string {
+                match c {
+                    '{' | '[' => stack.push(c),
+                    '}' => { if stack.last() == Some(&'{') { stack.pop(); } }
+                    ']' => { if stack.last() == Some(&'[') { stack.pop(); } }
+                    _ => {}
+                }
+            }
+            clean.push(c);
+        }
+
+        if in_string {
+            clean.push('"');
+        }
+
+        while let Some(c) = stack.pop() {
+            match c {
+                '{' => clean.push('}'),
+                '[' => clean.push(']'),
+                _ => {}
+            }
+        }
+        serde_json::from_str(&clean).map_err(|e| e.to_string())
+    })
+}
+
 impl OnboardingAgent {
     pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
         let minimax = std::env::var("MINIMAX_API_KEY")
@@ -285,41 +326,39 @@ Your response:",
             }
         }
 
-        // Basic structural repair for truncated LLM JSON output
-        let mut string_literal = false;
-        let mut escaped = false;
-        let mut open_braces: usize = 0;
-        let mut open_brackets: usize = 0;
+                let data: IntakeData = serde_json::from_str(&clean_json).or_else(|_| {
+            let mut stack = Vec::new();
+            let mut in_str = false;
+            let mut escaped = false;
+            for c in clean_json.chars() {
+                if c == '"' && !escaped {
+                    in_str = !in_str;
+                }
+                escaped = if c == '\\' && !escaped { true } else { false };
 
-        for c in clean_json.chars() {
-            if c == '"' && !escaped {
-                string_literal = !string_literal;
+                if !in_str {
+                    match c {
+                        '{' | '[' => stack.push(c),
+                        '}' => if stack.last() == Some(&'{') { stack.pop(); },
+                        ']' => if stack.last() == Some(&'[') { stack.pop(); },
+                        _ => {}
+                    }
+                }
             }
-            escaped = if c == '\\' { !escaped } else { false };
 
-            if !string_literal {
+            let mut repaired = clean_json.clone();
+            if in_str {
+                repaired.push('"');
+            }
+            while let Some(c) = stack.pop() {
                 match c {
-                    '{' => open_braces += 1,
-                    '}' => open_braces = open_braces.saturating_sub(1),
-                    '[' => open_brackets += 1,
-                    ']' => open_brackets = open_brackets.saturating_sub(1),
+                    '{' => repaired.push('}'),
+                    '[' => repaired.push(']'),
                     _ => {}
                 }
             }
-        }
-
-        if string_literal {
-            clean_json.push('"');
-        }
-        for _ in 0..open_brackets {
-            clean_json.push(']');
-        }
-        for _ in 0..open_braces {
-            clean_json.push('}');
-        }
-
-        let data: IntakeData = serde_json::from_str(&clean_json)
-            .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
+            serde_json::from_str(&repaired).map_err(|e| format!("Failed to parse AI response as JSON: {}. Repaired string was: {}", e, repaired))
+        }).map_err(|e| e)?;
 
         Ok(data)
     }
@@ -3387,5 +3426,36 @@ mod tests {
             .bind(org_id2)
             .fetch_all(&db.pool).await.unwrap();
         assert!(products2.iter().any(|p| p.get::<String, _>("name") == "Standard Repair Visit"));
+    }
+
+    #[test]
+    fn test_process_intake_fallback_truncated_json() {
+        let partial = r#"{"business_name": "Maya Studio", "business_type": "bakery", "missing"#;
+        let _repaired = repair_truncated_json(partial);
+
+        let valid_but_truncated = r#"{
+            "business_name": "Maya",
+            "business_type": "Bakery",
+            "categories": ["physical"],
+            "features": ["storefront"],
+            "target_audience": "all",
+            "location": "CA",
+            "goals": ["sell"],
+            "admin_email": "a@b.com",
+            "admin_name": "A",
+            "website_template": "Modern",
+            "primary_color": "Blue",
+            "selling_categories": ["physical"],
+            "payment_pref": "online",
+            "domain_choice": "subdomain",
+            "initial_products": [{"name": "Cake", "price": "20.00", "category": "food", "description": "A cake"}],
+            "price_type": "fixed",
+            "ai_auto_respond": true"#;
+
+        let res = repair_truncated_json(valid_but_truncated);
+        println!("{:?}", res);
+        assert!(res.is_ok());
+        let data = res.unwrap();
+        assert_eq!(data.business_name, "Maya");
     }
 }
