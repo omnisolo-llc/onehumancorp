@@ -1028,8 +1028,8 @@ impl VectorRepository {
                         .collect();
 
                     'outer: for current_tenant_id in tenant_ids {
-                        // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks
-                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
+                        // Limit to the latest 2000 records to prevent memory exhaustion and CPU bottlenecks while allowing more coverage
+                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 2000";
                         let rows = sqlx::query(query)
                             .bind(&current_tenant_id)
                             .fetch_all(pool)
@@ -1086,7 +1086,7 @@ impl VectorRepository {
                                     };
                                     conflicting_pairs_ids.push((id_a, id_b));
                                     match_count += 1;
-                                    if match_count >= 10 {
+                                    if match_count >= 100 {
                                         break 'outer;
                                     }
                                 }
