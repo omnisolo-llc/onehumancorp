@@ -71,7 +71,7 @@ export default function GooseMcpPage() {
       ) : (
         <ul className="mb-4">
           {extensions.map((ext, idx) => (
-            <li key={idx} className="p-6 border border-white/40 rounded-2xl shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism mb-4">
+            <li key={idx} className="p-6 border border-white/20 dark:border-white/10 rounded-2xl shadow-xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl saturate-[210%] mb-4 transition-all hover:bg-white/50 dark:hover:bg-black/50 hover:shadow-2xl">
               <h3 className="font-bold" id={`extension-${ext.id}`}>{ext.name}</h3>
               <p>{ext.description}</p>
               <button
@@ -86,14 +86,14 @@ export default function GooseMcpPage() {
         </ul>
       )}
       <button
-        className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors font-medium mb-8 bg-white/80 backdrop-blur-[30px] saturate-[210%]"
+        className="px-6 py-3 border border-white/20 dark:border-white/10 rounded-xl shadow-lg hover:shadow-xl hover:bg-white/60 dark:hover:bg-black/60 transition-all font-medium mb-8 bg-white/40 dark:bg-black/40 backdrop-blur-2xl saturate-[210%]"
         onClick={fetchExtensions}
       >
         Refresh List
       </button>
 
       <h2 className="text-xl font-semibold mb-2">Execute Extension</h2>
-      <div className="p-6 border border-gray-300 rounded-2xl min-h-[100px] shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism" id="exec-result">
+      <div className="p-6 border border-white/20 dark:border-white/10 rounded-3xl min-h-[150px] shadow-2xl bg-white/40 dark:bg-black/40 backdrop-blur-2xl saturate-[210%] overflow-hidden" id="exec-result">
         {execResult ? (
           <pre>{execResult}</pre>
         ) : (

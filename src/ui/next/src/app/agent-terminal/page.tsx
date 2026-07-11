@@ -65,7 +65,7 @@ export default function AgentTerminalPage() {
         </p>
       </div>
 
-      <div className="glass-panel p-6 shadow-sm mb-6">
+      <div className="backdrop-blur-xl bg-white/40 dark:bg-black/40 border border-white/20 dark:border-white/10 rounded-2xl p-6 shadow-2xl mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <label className="font-semibold text-gray-700 dark:text-gray-200">
             Terminal Backend:
@@ -80,7 +80,7 @@ export default function AgentTerminalPage() {
           </label>
         </div>
 
-        <div className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-96 overflow-y-auto shadow-inner mb-4 flex flex-col">
+        <div className="bg-black/90 text-green-400 font-mono text-sm p-4 rounded-xl h-96 overflow-y-auto shadow-inner mb-4 flex flex-col backdrop-blur-md border border-white/10">
           {output.length === 0 ? (
             <div className="text-gray-500 italic">Welcome to the Multi-Backend Agent Terminal.</div>
           ) : (
@@ -98,7 +98,7 @@ export default function AgentTerminalPage() {
             onChange={(e) => setCommand(e.target.value)}
             disabled={loading}
             placeholder="Enter command (e.g. echo hello)..."
-            className="flex-1 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+            className="flex-1 p-3 border border-white/20 dark:border-white/10 rounded-lg bg-white/50 dark:bg-black/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-md transition-all"
           />
           <button
             type="submit"
