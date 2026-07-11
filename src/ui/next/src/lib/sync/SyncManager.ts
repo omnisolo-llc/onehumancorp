@@ -128,7 +128,7 @@ export class SyncManager {
          mutation_type: 'agent_intent',
          payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
       };
-    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice' || m.type === 'sync_event') {
+    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'fulfillment_action' || m.type === 'generate_invoice' || m.type === 'sync_event') {
         return m; // keep them for specific APIs
     }
     return m;
@@ -327,7 +327,7 @@ export class SyncManager {
       }
 
       // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
 
       if (operationIntents.length > 0) {
         const mappedIntents = operationIntents.map(m => ({
@@ -383,7 +383,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
       if (generalGenMutations.length > 0) {
         try {
           const resGen = await fetch('/api/v1/sync/offline', {
@@ -509,6 +509,29 @@ export class SyncManager {
           }
         } catch (err) {
           console.error("Field Ops Status Sync error:", err);
+          allOk = false;
+        }
+      }
+      // Sync fulfillment actions
+      const fulfillmentActions = generalMutations.filter(m => m.type === 'fulfillment_action');
+      for (const action of fulfillmentActions) {
+        try {
+          const res = await fetch(`/api/fulfillment/execute/${action.payload.id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
+              'Idempotency-Key': action.id
+            },
+            body: JSON.stringify({ action: action.payload.action })
+          });
+          if (!res.ok) {
+            try { this.checkRateLimit(res); } catch(e) {}
+            console.error(`Fulfillment Action Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Fulfillment Action Sync error:", err);
           allOk = false;
         }
       }
