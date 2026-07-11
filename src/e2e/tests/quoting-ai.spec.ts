@@ -55,7 +55,7 @@ test.describe('Agentic Automated Quoting & Proposal Generator', () => {
     await draftButton.click();
 
     // The UI handles navigation to /quotes/mock-quote-id-123
-    await page.waitForURL('**/quotes/mock-quote-id-123*');
+    await page.waitForURL('**/ui/quote.html*');
 
     // Now mock the quote fetching
     await page.route('**/api/quotes/mock-quote-id-123', async (route) => {
@@ -79,10 +79,10 @@ test.describe('Agentic Automated Quoting & Proposal Generator', () => {
     await expect(page.locator('text=AI Labor')).toBeVisible();
 
     // 6. Approve and Send Quote
-    const approveButton = page.locator('button:has-text("Approve & Send Quote")');
+    const approveButton = page.locator('button:has-text("Approve & Send to Customer")');
     await expect(approveButton).toBeVisible();
 
-    await page.route('**/api/quotes/mock-quote-id-123/approve', async (route) => {
+    await page.route('**/api/v1/quotes/mock-quote-id-123', async (route) => {
       await route.fulfill({
         json: {
           id: 'mock-quote-id-123',

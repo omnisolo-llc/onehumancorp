@@ -93,7 +93,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     await expect(page.getByTestId('quote-draft-card').first()).toBeVisible({ timeout: 15000 });
 
     // Click Approve
-    const approveBtn = page.getByTestId('approve-quote-draft').first();
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     await approveBtn.click();
 
     // Optimistic update removes it
