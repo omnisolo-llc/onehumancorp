@@ -16,7 +16,7 @@ test.describe('API Docs Page', () => {
       });
     });
 
-    await page.goto('/api-docs');
+    await page.goto("/api/ui/api-docs.html");
 
     // Wait for the warning banner to appear
     await expect(page.locator('[data-testid="api-docs-title"]')).toBeVisible();
