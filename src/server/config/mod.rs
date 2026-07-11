@@ -214,6 +214,33 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                                 }
                             }
                         }
+
+                        // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
+                        // to prevent them from inheriting the default umask (e.g. 0644).
+                        #[cfg(unix)]
+                        {
+                            let wal_path = format!("{}-wal", db_path);
+                            let shm_path = format!("{}-shm", db_path);
+
+                            for ext_path in [&wal_path, &shm_path] {
+                                let mut aux_opts = OpenOptions::new();
+                                aux_opts.read(true).write(true).create(true).mode(0o600);
+                                #[cfg(target_os = "linux")]
+                                aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                #[cfg(target_os = "macos")]
+                                aux_opts.custom_flags(0x0100); // O_NOFOLLOW
+
+                                if let Ok(aux_file) = aux_opts.open(ext_path) {
+                                    if let Ok(metadata) = aux_file.metadata() {
+                                        let mut p = metadata.permissions();
+                                        if (p.mode() & 0o777) != 0o600 {
+                                            p.set_mode(0o600);
+                                            let _ = aux_file.set_permissions(p);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     Err(e) => {
                         panic!("Failed to securely create or open standalone database file with restricted permissions: {}", e);
