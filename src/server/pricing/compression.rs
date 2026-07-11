@@ -109,23 +109,9 @@ pub fn reduce_tokens(data: &str) -> String {
         });
 
     if cache.len() > 10_000 {
-        // Fast eviction pass: retain items with access_count > 0,
-        // halve the count of retained items.
-        // We use retain() to avoid manual iteration and locking.
-        cache.retain(|_, v| {
-            let count = v.access_count.load(Ordering::Relaxed);
-            if count == 0 {
-                false
-            } else {
-                v.access_count.store(count / 2, Ordering::Relaxed);
-                true
-            }
-        });
-
-        // If still too large, forcefully clear out some
-        if cache.len() > 9_500 {
-            cache.clear();
-        }
+        // Clear cache entirely instead of DashMap::retain to avoid deadlocks
+        // across shards under concurrent load.
+        cache.clear();
     }
 
     cache.insert(data.to_string(), CacheEntry {

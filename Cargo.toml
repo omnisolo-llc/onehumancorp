@@ -42,6 +42,7 @@ async-nats = "0.47.0"
 tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
+server_pricing= { version = "0.1.0", path = "src/server/pricing" }
 
 [build-dependencies]
 tonic-build = "0.12"
@@ -139,9 +140,6 @@ workspace = true
 
 [dependencies.prost-types]
 workspace = true
-
-[dependencies.server_pricing]
-path = "src/server/pricing"
 
 [dependencies.server_common]
 path = "src/server/common"
