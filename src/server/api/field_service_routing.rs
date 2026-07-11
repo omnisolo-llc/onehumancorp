@@ -74,8 +74,14 @@ struct AppState {
 
 static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> = std::sync::OnceLock::new();
 
+#[derive(Deserialize)]
+pub struct GetTodayRoutesQuery {
+    pub mobile_optimized: Option<bool>,
+}
+
 async fn get_today_routes(
     State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<GetTodayRoutesQuery>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
@@ -83,7 +89,8 @@ async fn get_today_routes(
         return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response();
     }
 
-    let cache_key = format!("routes_today_{}", tenant_id);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("routes_today_{}:{}", tenant_id, mobile_optimized);
     let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -138,10 +145,55 @@ async fn get_today_routes(
             let t_id = tenant_id.clone();
             let route_id = r_id.clone();
             let pool = pool.clone();
+            let is_mobile = mobile_optimized;
+            let db_store = state.db.store.clone();
 
             job_futures.push(tokio::spawn(async move {
                 let mut conn = pool.acquire().await.unwrap();
-                let jobs_result = sqlx::query(
+                let query_str = if is_mobile {
+                    match db_store {
+                        crate::db::DbStore::Postgres => {
+                            r#"
+                            SELECT
+                                jl.id,
+                                NULL::varchar as customer_id,
+                                COALESCE(jt.name, 'Service Job') as job_title,
+                                '' as address,
+                                NULL::double precision as lat,
+                                NULL::double precision as lng,
+                                COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                                NULL::timestamp as scheduled_end,
+                                jl.status,
+                                jl.sequence_order as order_index
+                            FROM job_locations jl
+                            JOIN appointments a ON jl.appointment_id = a.id
+                            LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                            WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
+                            ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
+                            "#
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                            r#"
+                            SELECT
+                                jl.id,
+                                CAST(NULL AS TEXT) as customer_id,
+                                COALESCE(jt.name, 'Service Job') as job_title,
+                                '' as address,
+                                CAST(NULL AS REAL) as lat,
+                                CAST(NULL AS REAL) as lng,
+                                COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                                CAST(NULL AS TEXT) as scheduled_end,
+                                jl.status,
+                                jl.sequence_order as order_index
+                            FROM job_locations jl
+                            JOIN appointments a ON jl.appointment_id = a.id
+                            LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                            WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
+                            ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
+                            "#
+                        }
+                    }
+                } else {
                     r#"
                     SELECT
                         jl.id,
@@ -150,7 +202,7 @@ async fn get_today_routes(
                         COALESCE(a.location_address, 'No Address Provided') as address,
                         a.location_lat as lat,
                         a.location_lng as lng,
-                        COALESCE(a.scheduled_start_time, NOW()) as scheduled_start,
+                        COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
                         a.scheduled_end_time as scheduled_end,
                         jl.status,
                         jl.sequence_order as order_index
@@ -159,8 +211,10 @@ async fn get_today_routes(
                     LEFT JOIN job_templates jt ON a.job_template_id = jt.id
                     WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
                     ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                    "#,
-                )
+                    "#
+                };
+
+                let jobs_result = sqlx::query(query_str)
                 .bind(&t_id)
                 .bind(&route_id)
                 .fetch_all(&mut *conn)
