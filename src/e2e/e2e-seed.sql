@@ -738,6 +738,12 @@ INSERT INTO tooltips (id, tenant_id, text) VALUES ('api-docs-tooltip', 'e2e-tena
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('kairos-nav-link-tooltip', 'e2e-tenant', 'Click here to see what your AI helpers are working on and how they plan.') ON CONFLICT DO NOTHING;
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('generate-link-btn', 'e2e-tenant', 'Click here to share access with a team member.') ON CONFLICT DO NOTHING;
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('ask-ai-tooltip', 'e2e-tenant', 'Open AI Help Chat to get answers instantly.') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('dashboard-tooltip', 'e2e-tenant', 'This is your dashboard') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('inventory-tooltip', 'e2e-tenant', 'Manage your inventory') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('orders-tooltip', 'e2e-tenant', 'View your orders') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('total-sales-tooltip', 'e2e-tenant', 'Total sales this month') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('recent-orders-tooltip', 'e2e-tenant', 'Recent orders') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('inbox-activity-tooltip', 'e2e-tenant', 'Inbox activity') ON CONFLICT DO NOTHING;
 
 -- Add subscription churn risk seed data
 INSERT INTO customers (id, tenant_id, name, email)
