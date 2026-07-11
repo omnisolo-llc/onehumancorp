@@ -10,6 +10,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
     let mut db_price = 0.0;
     let mut db_scope = String::new();
     let mut db_client_id = String::new();
+    let mut db_deposit_cents = 0;
 
     if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
         tracing::info!("Approved quote draft: {}", quote_id);
@@ -21,7 +22,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
             .await?;
 
         // Fetch quote details to ensure we use correct values
-        let row = sqlx::query("SELECT customer_id, total_amount_cents FROM quotes WHERE id = $1 AND tenant_id = $2")
+        let row = sqlx::query("SELECT customer_id, total_amount_cents, required_deposit_cents FROM quotes WHERE id = $1 AND tenant_id = $2")
             .bind(quote_uuid)
             .bind(tenant_id)
             .fetch_optional(pool)
@@ -33,6 +34,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
             db_price = (total_cents as f64) / 100.0;
             let cust_uuid: uuid::Uuid = r.try_get("customer_id").unwrap_or_default();
             db_client_id = cust_uuid.to_string();
+            db_deposit_cents = r.try_get("required_deposit_cents").unwrap_or(total_cents / 2);
         }
 
         let lines = sqlx::query("SELECT description FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2")
@@ -82,8 +84,11 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
         let mut stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
+        let deposit_price = if db_deposit_cents > 0 { (db_deposit_cents as f64) / 100.0 } else { price / 2.0 };
+
         // Fallback to fake url if external integration fails to prevent silently erroring
-        match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
+        // Use create_payment_link for deposits or checkout session if we prefer, but issue asks for Payment Link
+        match stripe_client.create_payment_link(&format!("Deposit: {}", scope), (deposit_price * 100.0) as i64).await {
              Ok(link) => {
                  stripe_payment_link = link;
              }

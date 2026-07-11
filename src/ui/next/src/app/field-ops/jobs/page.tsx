@@ -583,7 +583,16 @@ function FieldOpsJobsPageContent() {
 
                 <div className="flex gap-2 mt-2">
                    <button
-                     onClick={() => {
+                     onClick={async () => {
+                        if (draftQuoteResult?.quote?.id) {
+                            try {
+                                await fetch(`/api/v1/quotes/${draftQuoteResult.quote.id}/approve`, {
+                                    method: 'PATCH',
+                                });
+                            } catch (e) {
+                                console.error('Failed to approve quote:', e);
+                            }
+                        }
                         setVoiceQuoteJobId(null);
                         setDraftQuoteResult(null);
                         setVoiceTranscript("");

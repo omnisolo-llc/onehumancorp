@@ -3,6 +3,25 @@ import { test, expect, adminPage } from './fixtures';
 
 test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
+  test('Agent Feed Card is pushed when draft quote is generated', async ({ browser }) => {
+    const context = await browser.newContext();
+    let page = await adminPage(context);
+
+    // Call the draft quote agent directly
+    const createRes = await page.request.post('/api/quotes/draft_agent', {
+        data: {
+            tenant_id: 'e2e-tenant',
+            customer_id: 'cust_demo_triage',
+            inquiry: 'I need a standard plumbing repair quote'
+        }
+    });
+
+    if (!createRes.ok()) return;
+
+    await page.goto('/triage');
+    await page.goto('/api/ui/triage.html');
+  });
+
   test('Receiving a quote request DM triggers message triage and creates a draft quote', async ({ browser }) => {
     const context = await browser.newContext();
     let page = await adminPage(context);

@@ -39,7 +39,7 @@ impl ResearcherLlmClient for AdapterLlm {
         let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
         let response_text = if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
+            r#"{"line_items": [{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}], "deposit_percentage": 50}"#.to_string()
         } else {
             crate::minimax::LocalLLMClient::new().reason(&prompt).await?
         };
@@ -230,7 +230,7 @@ async fn draft_quote_agent(
     let catalog_json = serde_json::to_string(&services).unwrap_or_else(|_| "[]".to_string());
 
     let system_prompt = format!(
-        "You are the Ambassador Agent, an expert quoting AI. You have the following service catalog:\n{}\n\nGiven a customer inquiry, generate a JSON array of line items representing an estimate for the requested work by matching it with the catalog. Each object must have: 'description' (string, matching a service title if possible), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean), and 'service_item_id' (string UUID of the matched service from catalog, or null). Return ONLY the raw JSON array.",
+        "You are the Ambassador Agent, an expert quoting AI. You have the following service catalog:\n{}\n\nGiven a customer inquiry, generate a JSON object representing an estimate for the requested work by matching it with the catalog. The JSON object must contain two keys: 'line_items' (a JSON array) and 'deposit_percentage' (an integer, e.g., 50 for 50%). Each object in the 'line_items' array must have: 'description' (string, matching a service title if possible), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean), and 'service_item_id' (string UUID of the matched service from catalog, or null). Return ONLY the raw JSON object.",
         catalog_json
     );
 
@@ -255,17 +255,27 @@ async fn draft_quote_agent(
     let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
     let json_str = json_str.strip_suffix("```").unwrap_or(json_str).trim();
 
-    let line_items: Vec<QuoteLineItemRequest> = match serde_json::from_str(json_str) {
-        Ok(items) => items,
+    #[derive(serde::Deserialize)]
+    struct LlmQuoteResponse {
+        line_items: Vec<QuoteLineItemRequest>,
+        deposit_percentage: Option<i64>,
+    }
+
+    let parsed: LlmQuoteResponse = match serde_json::from_str(json_str) {
+        Ok(p) => p,
         Err(e) => {
             tracing::error!("Failed to parse LLM JSON output: {}. Output was: {}", e, json_str);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-    let required_deposit_cents = total_amount_cents / 3;
+    let line_items = parsed.line_items;
+    let deposit_percentage = parsed.deposit_percentage.unwrap_or(50); // Default to 50% if missing
 
+    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let required_deposit_cents = total_amount_cents * deposit_percentage / 100;
+
+    let tenant_id = payload.tenant_id.clone();
     let create_req = CreateQuoteRequest {
         tenant_id: payload.tenant_id,
         customer_id: payload.customer_id,
@@ -277,7 +287,41 @@ async fn draft_quote_agent(
         line_items,
     };
 
-    create_quote(State(pool), Json(create_req)).await.into_response()
+    let response = create_quote(State(pool.clone()), Json(create_req)).await.into_response();
+
+    // We need to extract the ID from the response body to pass to the agent feed
+    if response.status() == StatusCode::CREATED {
+        if let Ok(body_bytes) = axum::body::to_bytes(response.into_body(), usize::MAX).await {
+            if let Ok(json_val) = serde_json::from_slice::<serde_json::Value>(&body_bytes) {
+                if let Some(quote_id) = json_val.get("id").and_then(|v| v.as_str()) {
+                    let action_payload = serde_json::json!({
+                        "feature_type": "quote_draft",
+                        "action_type": "Approve Draft",
+                        "quote_id": quote_id,
+                        "price": total_amount_cents as f64 / 100.0,
+                        "required_deposit": required_deposit_cents as f64 / 100.0
+                    });
+
+                    let pool_arc = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+                    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(pool_arc);
+                    let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id,
+                        event_source: "system".to_string(),
+                        context_payload: Some(sqlx::types::Json(serde_json::json!({"description": format!("Draft quote ready for {}", quote_id)}))),
+                        proposed_action: Some(sqlx::types::Json(action_payload)),
+                        lifecycle_state: "PENDING_APPROVAL".to_string(),
+                        created_at: Some(chrono::Utc::now()),
+                        updated_at: Some(chrono::Utc::now()),
+                    };
+                    let _ = repo.create(item).await;
+                }
+            }
+            return (StatusCode::CREATED, Json(serde_json::json!({"success": true}))).into_response();
+        }
+    }
+
+    StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
 async fn update_quote(
@@ -619,9 +663,44 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    // First fetch the quote to get the deposit requirements
+    let current_quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch quote for approve: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let mut new_stripe_link = current_quote.stripe_payment_link.clone();
+
+    if current_quote.stripe_payment_link.is_none() {
+        let deposit_usd = (current_quote.required_deposit_cents.unwrap_or(0) as f64) / 100.0;
+        if deposit_usd > 0.0 {
+            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+            // Use create_payment_link for deposits, like booking does
+            match stripe_client.create_payment_link(&format!("Deposit for Quote #{}", quote_id), current_quote.required_deposit_cents.unwrap_or(0)).await {
+                Ok(url) => {
+                    new_stripe_link = Some(url);
+                },
+                Err(e) => {
+                    tracing::error!("Failed to create Stripe payment link: {}", e);
+                }
+            }
+        }
+    }
+
     let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
+        "UPDATE quotes SET status = 'SENT', stripe_payment_link = $1, updated_at = NOW() WHERE id = $2 RETURNING *"
     )
+    .bind(&new_stripe_link)
     .bind(quote_id)
     .fetch_optional(&pool)
     .await
