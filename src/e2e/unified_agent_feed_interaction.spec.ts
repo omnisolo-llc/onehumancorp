@@ -7,7 +7,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await loginAs(page, E2E_ADMIN_USER);
 
     // Seed a triage item to ensure it's in the list
-    await request.post('/api/dev/simulate-agent-feed-item', {
+    await request.post(process.env.BASE_URL ? `${process.env.BASE_URL}/api/dev/simulate-agent-feed-item` : 'http://127.0.0.1:18789/api/dev/simulate-agent-feed-item', {
         data: {
           tenant_id: 'phslc',
           priority: 'High',
