@@ -246,7 +246,7 @@ impl Department for OperationsAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.inventory.updated" {
+        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
             cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
@@ -481,6 +481,15 @@ impl Department for OperationsAgent {
                         ).await;
                         return Ok(());
                     }
+
+                    // Notify customer success to draft a message to the customer
+                    let _ = self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        format!("Draft out of stock apology for {} (tx: {})", product_id, transaction_id),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        event.payload.clone(),
+                    ).await;
 
                     // Create an actionable task in the owner's Triage Feed asking how to resolve it
                     let pool = crate::db::get_pool();

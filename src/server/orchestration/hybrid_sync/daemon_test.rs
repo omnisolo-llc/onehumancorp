@@ -550,10 +550,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .unwrap();
 
         // Insert stuck tasks
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_sqlite', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1', '{}')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, updated_at, tenant_id, payload) VALUES ('stuck_mission_sqlite', 'IN_PROGRESS', datetime('now', '-2 hour'), datetime('now', '-2 hour'), 'tenant1', '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, updated_at, tenant_id, payload) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
@@ -758,10 +758,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck mission
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1', '{}')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, updated_at, tenant_id, payload) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'), datetime('now', '-2 hour'), 'tenant1', '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg_cat', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, updated_at, tenant_id, payload) VALUES ('stuck_mission_pg_cat', 'RUNNING', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());

@@ -299,8 +299,18 @@ Output JSON format:
             let omni_result = omni_result_res.unwrap();
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload_str = omni_result.final_draft;
-            let action_payload = action_payload_str.as_str();
+
+            let mut action_payload_str = omni_result.final_draft;
+            if action_type == "Draft Quote" || action_type == "Draft Booking" {
+                if let Some(payload) = extracted.get("action_payload") {
+                    if payload.is_object() || payload.is_array() {
+                        action_payload_str = serde_json::to_string(payload).unwrap_or(action_payload_str);
+                    } else if let Some(s) = payload.as_str() {
+                        action_payload_str = s.to_string();
+                    }
+                }
+            }
+            let mut action_payload = action_payload_str.clone();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
@@ -384,6 +394,7 @@ Output JSON format:
                 }
             } else if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                    let mut modified_quote_data = quote_data.clone();
                     let draft_quote_id = Uuid::new_v4();
                     quote_id_opt = Some(draft_quote_id.to_string());
                     let total_amount_cents = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -404,7 +415,13 @@ Output JSON format:
                                 .execute(&mut *tx).await;
 
                                 if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                    let mut scope = String::new();
                                     for item in items {
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                        if !scope.is_empty() {
+                                            scope.push_str(", ");
+                                        }
+                                        scope.push_str(desc);
                                         let item_id = Uuid::new_v4();
                                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                                         let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -424,6 +441,22 @@ Output JSON format:
                                     }
                                 }
                                 let _ = tx.commit().await;
+
+                                modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                                if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                    let mut scope = String::new();
+                                    for item in items {
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                        if !scope.is_empty() {
+                                            scope.push_str(", ");
+                                        }
+                                        scope.push_str(desc);
+                                    }
+                                    modified_quote_data["scope"] = serde_json::json!(scope);
+                                }
+                                modified_quote_data["client_name"] = serde_json::json!("Client");
+                                action_payload_str = serde_json::to_string(&modified_quote_data).unwrap_or(action_payload_str);
+                                action_payload = action_payload_str.clone();
                             }
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
@@ -457,6 +490,22 @@ Output JSON format:
                                     .execute(&*sqlite_pool).await;
                                 }
                             }
+
+                            modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                            if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
+                                let mut scope = String::new();
+                                for item in items {
+                                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                    if !scope.is_empty() {
+                                        scope.push_str(", ");
+                                    }
+                                    scope.push_str(desc);
+                                }
+                                modified_quote_data["scope"] = serde_json::json!(scope);
+                            }
+                            modified_quote_data["client_name"] = serde_json::json!("Client");
+                            action_payload_str = serde_json::to_string(&modified_quote_data).unwrap_or(action_payload_str);
+                            action_payload = action_payload_str.clone();
                         }
                     }
                 }
@@ -553,7 +602,8 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
+                        "action_payload": action_payload
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -681,7 +731,8 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
+                        "action_payload": action_payload
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);

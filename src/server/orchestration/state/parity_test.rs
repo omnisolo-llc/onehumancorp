@@ -428,7 +428,8 @@ mod parity_tests {
                 .fetch_one(pool)
                 .await
                 .unwrap();
-            let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
+            let created_at_str: String = row.get("created_at");
+            let created_at = crate::db::parse_sqlite_datetime(&created_at_str).unwrap();
 
             // SQLite strips milliseconds to certain precisions based on formatting,
             // but the timezone itself (UTC) must match.
@@ -483,7 +484,8 @@ mod parity_tests {
                 .fetch_one(pool)
                 .await
                 .unwrap();
-            let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
+            let created_at_str: String = row.get("created_at");
+            let created_at = crate::db::parse_sqlite_datetime(&created_at_str).unwrap();
             assert_eq!(created_at.timestamp(), dt.timestamp());
         }
 

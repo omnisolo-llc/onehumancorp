@@ -212,12 +212,54 @@ mod tests {
             assert_eq!(item.total_cost, 0);
         }
     }
+
+    #[test]
+    fn test_process_agent_cost_rows() {
+        let rows = vec![
+            AgentCostRawRow {
+                agent_id: Some("agent1".to_string()),
+                total: Some(100.0),
+            },
+            AgentCostRawRow {
+                agent_id: None,
+                total: Some(200.0),
+            },
+            AgentCostRawRow {
+                agent_id: Some("agent3".to_string()),
+                total: Some(0.0), // Should be filtered out
+            },
+            AgentCostRawRow {
+                agent_id: Some("agent4".to_string()),
+                total: None, // Should be filtered out
+            },
+        ];
+        let res = process_agent_cost_rows(rows);
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0].agent_id, "agent1");
+        assert_eq!(res[0].cost_cents, 100);
+        assert_eq!(res[1].agent_id, "unknown");
+        assert_eq!(res[1].cost_cents, 200);
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct AgentCostRow {
     pub agent_id: String,
     pub cost_cents: i64,
+}
+
+pub struct AgentCostRawRow {
+    pub agent_id: Option<String>,
+    pub total: Option<f64>,
+}
+
+pub fn process_agent_cost_rows(rows: Vec<AgentCostRawRow>) -> Vec<AgentCostRow> {
+    rows.into_iter().map(|r| AgentCostRow {
+        agent_id: r.agent_id.unwrap_or_else(|| "unknown".to_string()),
+        cost_cents: r.total.unwrap_or(0.0) as i64,
+    })
+    .filter(|r| r.cost_cents > 0)
+    .collect()
 }
 
 pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentCostRow> {
@@ -247,14 +289,10 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
         }
     };
 
-    raw_rows.into_iter().map(|r| AgentCostRow {
-        agent_id: r.try_get::<Option<String>, _>("agent_id")
-            .unwrap_or(None)
-            .unwrap_or_else(|| "unknown".to_string()),
-        cost_cents: r.try_get::<Option<f64>, _>("total")
-            .unwrap_or(None)
-            .unwrap_or(0.0) as i64,
-    })
-    .filter(|r| r.cost_cents > 0)
-    .collect()
+    let processed_rows = raw_rows.into_iter().map(|r| AgentCostRawRow {
+        agent_id: r.try_get::<Option<String>, _>("agent_id").unwrap_or(None),
+        total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
+    }).collect();
+
+    process_agent_cost_rows(processed_rows)
 }
