@@ -1,98 +1,60 @@
 import { test, expect } from '@playwright/test';
-import { e2eConfig, setupTenantAndUser } from '../playwright.config';
+import { adminPage } from '../fixtures';
 
 test.describe('Agentic Automated Quoting & Proposal Generator', () => {
-  let context: any;
 
-  test.beforeEach(async ({ browser }) => {
-    context = await setupTenantAndUser(browser);
-  });
+  test('draft quote with AI from inbox message on mobile view', async ({ browser }) => {
+    // 1. Context setup and login
+    const context = await browser.newContext();
+    const page = await adminPage(context);
 
-  test('draft quote with AI from inbox message on mobile view', async () => {
-    // 1. Mobile viewport (375px)
-    const page = await context.newPage();
+    // Mobile viewport (375px)
     await page.setViewportSize({ width: 375, height: 812 });
 
-    // 2. Go to inbox
-    await page.goto(`${e2eConfig.baseURL}/inbox`);
+    const tenantId = 'e2e-tenant'; // Fallback / standard e2e tenant id
+
+    // 2. Inject a test message into the real UI/DB using a webhook to simulate receiving it
+    const webhookResponse = await page.request.post('/api/v1/omnichannel/webhook', {
+      data: {
+        tenant_id: tenantId,
+        channel: 'instagram_dm',
+        sender_id: 'test-customer-123',
+        message: 'Can you fix a leaky pipe tomorrow?',
+      }
+    });
+
+    expect(webhookResponse.ok()).toBeTruthy();
+
+    // 3. Go to inbox
+    await page.goto(`/inbox`);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('.app-panel-title').first()).toContainText('Message Queue');
 
-    // 3. Inject a test message into the UI
-    await page.route('**/api/ui/inbox/messages*', async (route) => {
-      const json = [
-        {
-          id: 'test-msg-1',
-          source: 'Instagram DM',
-          content: 'Can you fix a leaky pipe tomorrow?',
-          status: 'new',
-          customer_id: 'test-customer-123',
-          created_at: new Date().toISOString(),
-        }
-      ];
-      await route.fulfill({ json });
-    });
-
-    // We need to reload to trigger the route
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
     // Wait for message to appear
-    await expect(page.locator('text=Can you fix a leaky pipe tomorrow?')).toBeVisible();
+    await expect(page.locator('text=Can you fix a leaky pipe tomorrow?').first()).toBeVisible({ timeout: 15000 });
 
     // 4. Select the message
-    await page.locator('text=Can you fix a leaky pipe tomorrow?').click();
+    await page.locator('text=Can you fix a leaky pipe tomorrow?').first().click();
 
     // 5. Look for and click the "Draft Quote with AI" button
     const draftButton = page.locator('button:has-text("✨ Draft Quote with AI")');
     await expect(draftButton).toBeVisible();
 
-    // Intercept quote generation locally to be fast and hermetic for E2E
-    await page.route('**/api/quotes/draft_agent', async (route) => {
-      await route.fulfill({ json: { id: 'mock-quote-id-123' } });
-    });
-
     await draftButton.click();
 
-    // The UI handles navigation to /quotes/mock-quote-id-123
-    await page.waitForURL('**/quotes/mock-quote-id-123*');
+    // Wait for the URL to navigate to the generated quote
+    await page.waitForURL('**/quotes/*', { timeout: 30000 });
 
-    // Now mock the quote fetching
-    await page.route('**/api/quotes/mock-quote-id-123', async (route) => {
-      await route.fulfill({
-        json: {
-          id: 'mock-quote-id-123',
-          status: 'DRAFT',
-          total_amount_cents: 15000,
-          required_deposit_cents: 5000,
-          line_items: [
-            { id: 'li-1', description: 'AI Labor', unit_price_cents: 15000, quantity: 1, is_optional: false }
-          ]
-        }
-      });
-    });
+    // We expect the Review Estimate UI and the AI to have generated something for "leaky pipe"
+    await expect(page.locator('text=Review Estimate')).toBeVisible({ timeout: 15000 });
 
-    await page.reload(); // Reload to pick up the mock quote data
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.locator('text=Review Estimate')).toBeVisible();
-    await expect(page.locator('text=AI Labor')).toBeVisible();
+    // We can't know the exact text the AI will generate, but it should generate some line items.
+    // Ensure the table/list shows up
+    await expect(page.locator('.quote-line-item, tr')).not.toHaveCount(0);
 
     // 6. Approve and Send Quote
     const approveButton = page.locator('button:has-text("Approve & Send Quote")');
     await expect(approveButton).toBeVisible();
-
-    await page.route('**/api/quotes/mock-quote-id-123/approve', async (route) => {
-      await route.fulfill({
-        json: {
-          id: 'mock-quote-id-123',
-          status: 'ACCEPTED',
-          total_amount_cents: 15000,
-          required_deposit_cents: 5000,
-          stripe_payment_link: 'https://checkout.stripe.com/test',
-        }
-      });
-    });
 
     // Accept the alert generated by `QuoteReviewPage`
     page.on('dialog', dialog => dialog.accept());
@@ -100,7 +62,7 @@ test.describe('Agentic Automated Quoting & Proposal Generator', () => {
     await approveButton.click();
 
     // Wait for the button to disappear or status to update
-    await expect(page.locator('text=ACCEPTED')).toBeVisible();
-    await expect(page.locator('text=Stripe Payment Link')).toBeVisible();
+    await expect(page.locator('text=ACCEPTED')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Stripe Payment Link')).toBeVisible({ timeout: 15000 });
   });
 });
