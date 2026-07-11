@@ -1206,7 +1206,7 @@ html.dark .glass-panel {
   }
 }
 /* Global border radius to fix UI regression */
-.glassmorphism, .glass-card {
+.app-card, .glassmorphism, .glass-card {
   border-radius: 16px !important;
 }
 .glass-control {

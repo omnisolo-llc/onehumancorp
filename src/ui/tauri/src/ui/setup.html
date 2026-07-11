@@ -1049,11 +1049,11 @@
           min-height: 44px;
         }
         .persona-row {
-          flex-direction: column;
+          flex-direction: column !important;
         }
-        .work-context-cards {
+        .work-context-cards, #context-group {
           display: flex;
-          flex-direction: column;
+          flex-direction: column !important;
         }
       }
 
@@ -4353,13 +4353,11 @@
         if (el) {
           el.addEventListener('input', () => {
             // Remove error styling instantly
-            if (el.value.trim().length > 0) {
-              if (errEl) errEl.style.display = 'none';
-              el.classList.remove('invalid-input');
-            }
+            if (errEl) errEl.style.display = 'none';
+            el.classList.remove('invalid-input');
 
             // Sync to state and localStorage for cross-device resume
-            state[field.stateKey] = el.value.trim();
+            state[field.stateKey] = el.value;
             localStorage.setItem("onboardingState", JSON.stringify(state));
           });
         }
