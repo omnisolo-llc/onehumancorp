@@ -203,6 +203,28 @@ pub async fn update_appointment(
         }
     }
 
+    if let Some(idempotency_key) = headers.get("Idempotency-Key").and_then(|h| h.to_str().ok()) {
+        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+            .bind(idempotency_key)
+            .bind(&tenant_id)
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap_or((0,));
+
+        if exists.0 > 0 {
+            tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", idempotency_key);
+            let _ = tx.rollback().await;
+            return Ok(Json(UpdateAppointmentResponse {
+                success: true,
+                id: payload.id.clone(),
+                status: payload.status.clone(),
+                location_lat: payload.location_lat,
+                location_lng: payload.location_lng,
+                notes: payload.notes.clone(),
+            }));
+        }
+    }
+
     sqlx::query(
         r#"
         UPDATE appointments
@@ -221,6 +243,14 @@ pub async fn update_appointment(
             e.to_string(),
         )
     })?;
+
+    if let Some(idempotency_key) = headers.get("Idempotency-Key").and_then(|h| h.to_str().ok()) {
+        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+            .bind(idempotency_key)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await;
+    }
 
     if payload.status == "Completed" {
         let task_id = uuid::Uuid::new_v4().to_string();

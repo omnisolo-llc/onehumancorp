@@ -196,15 +196,24 @@ export class SyncManager {
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       if (posSyncEvents.length > 0) {
-        const resSyncEvents = await fetch('/api/v1/sync/events', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-spiffe-id': spiffeId
-          },
-          body: JSON.stringify({ events: posSyncEvents })
-        });
-        this.checkRateLimit(resSyncEvents);
+        try {
+          const resSyncEvents = await fetch('/api/v1/sync/events', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ events: posSyncEvents })
+          });
+          this.checkRateLimit(resSyncEvents);
+          if (!resSyncEvents.ok) {
+            console.error(`POS Sync Events failed with status ${resSyncEvents.status}`);
+            if (resSyncEvents.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("POS Sync Events error:", err);
+          allOk = false;
+        }
       }
 
       const crdtDeltas = queue.filter(m => m.type === 'CRDT_MUTATION').map(m => {
@@ -222,61 +231,98 @@ export class SyncManager {
 
       // Sync CRDT Deltas
       if (crdtDeltas.length > 0) {
-        const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-spiffe-id': spiffeId
-          },
-          body: JSON.stringify({ deltas: crdtDeltas })
-        });
-        this.checkRateLimit(resCrdt);
+        try {
+          const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ deltas: crdtDeltas })
+          });
+          this.checkRateLimit(resCrdt);
+          if (!resCrdt.ok) {
+            console.error(`CRDT Sync failed with status ${resCrdt.status}`);
+            if (resCrdt.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("CRDT Sync error:", err);
+          allOk = false;
+        }
       }
 
       // Sync Quote Actions
       const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
       for (const update of quoteUpdates) {
-        const res = await fetch(`/api/quotes?id=${update.quoteId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
-          body: JSON.stringify(update.payload)
-        });
-        this.checkRateLimit(res);
+        try {
+          const res = await fetch(`/api/quotes?id=${update.quoteId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+            body: JSON.stringify(update.payload)
+          });
+          this.checkRateLimit(res);
+          if (!res.ok) {
+            console.error(`Quote Update Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Quote Update Sync error:", err);
+          allOk = false;
+        }
       }
 
       const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
       for (const approval of quoteApprovals) {
-        const res = await fetch(`/api/quotes/${approval.quoteId}/approve`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
-        });
-        this.checkRateLimit(res);
+        try {
+          const res = await fetch(`/api/quotes/${approval.quoteId}/approve`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
+          });
+          this.checkRateLimit(res);
+          if (!res.ok) {
+            console.error(`Quote Approval Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Quote Approval Sync error:", err);
+          allOk = false;
+        }
       }
 
       // Sync POS transactions
       if (posTransactions.length > 0) {
         const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
-        const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-spiffe-id': spiffeId
-          },
-          body: JSON.stringify({
-            session_id: sessionId || undefined,
-            transactions: posTransactions
-          })
-        });
-        this.checkRateLimit(resPos);
         try {
-          const resPosData = await resPos.json();
-          if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
-             if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
-             }
+          const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({
+              session_id: sessionId || undefined,
+              transactions: posTransactions
+            })
+          });
+          this.checkRateLimit(resPos);
+          if (!resPos.ok) {
+            console.error(`POS Terminal Sync failed with status ${resPos.status}`);
+            if (resPos.status >= 500) allOk = false;
+          } else {
+            try {
+              const resPosData = await resPos.json();
+              if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resPosData.pending_reconciliation } }));
+                }
+              }
+            } catch (e) {
+              console.error("Failed to parse POS Sync response", e);
+            }
           }
-        } catch (e) {
-          console.error("Failed to parse POS Sync response", e);
+        } catch (err) {
+          console.error("POS Terminal Sync error:", err);
+          allOk = false;
         }
       }
 
@@ -339,24 +385,34 @@ export class SyncManager {
       // Sync general mutations
       const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
       if (generalGenMutations.length > 0) {
-        const resGen = await fetch('/api/v1/sync/offline', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-spiffe-id': spiffeId
-          },
-          body: JSON.stringify({ mutations: generalGenMutations })
-        });
-        this.checkRateLimit(resGen);
         try {
-          const resGenData = await resGen.json();
-          if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
-             if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
-             }
+          const resGen = await fetch('/api/v1/sync/offline', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ mutations: generalGenMutations })
+          });
+          this.checkRateLimit(resGen);
+          if (!resGen.ok) {
+            console.error(`General Sync failed with status ${resGen.status}`);
+            if (resGen.status >= 500) allOk = false;
+          } else {
+            try {
+              const resGenData = await resGen.json();
+              if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('ohc_sync_reconciliation', { detail: { pending_reconciliation: resGenData.pending_reconciliation } }));
+                }
+              }
+            } catch (e) {
+              console.error("Failed to parse General Sync response", e);
+            }
           }
-        } catch (e) {
-          console.error("Failed to parse General Sync response", e);
+        } catch (err) {
+          console.error("General Sync error:", err);
+          allOk = false;
         }
       }
 
@@ -467,6 +523,10 @@ export class SyncManager {
       }
     } catch (e) {
       console.error('Failed to sync offline queue:', e);
+      allOk = false;
+    }
+
+    if (!allOk) {
       if (retryCount < this.maxRetries) {
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
         setTimeout(() => {
@@ -475,9 +535,9 @@ export class SyncManager {
         }, delay);
         return; // Don't unset syncInProgress yet
       }
-    } finally {
-      this.syncInProgress = false;
     }
+
+    this.syncInProgress = false;
   }
   private checkRateLimit(res: Response) {
     if (res.status === 429) {

@@ -97,7 +97,7 @@ describe('FieldOpsJobsPage', () => {
     const startWorkButton = await screen.findByText('Start Work');
     fireEvent.click(startWorkButton);
 
-    const completeButton = await screen.findByText('Complete & Pay');
+    const completeButton = await screen.findByText('Job Done');
     fireEvent.click(completeButton);
 
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();

@@ -296,8 +296,8 @@ function FieldOpsJobsPageContent() {
           Today's Route
         </h1>
         {isOffline && (
-          <div className="flex items-center text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-sm font-semibold">
-            <span className="mr-2">☁️</span> Offline Mode
+          <div className="flex items-center bg-white/60 backdrop-blur-[30px] border border-gray-200 shadow-sm text-gray-800 px-3 py-1.5 min-h-[44px] rounded-full text-sm font-semibold">
+            <span className="mr-2">☁️</span> Offline Mode - Changes saved locally
           </div>
         )}
       </div>
@@ -485,7 +485,7 @@ function FieldOpsJobsPageContent() {
                         className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleComplete(job.id)}
                       >
-                        Complete & Pay
+                        Job Done
                       </button>
                       <button
                         className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
