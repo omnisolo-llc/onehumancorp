@@ -172,6 +172,9 @@ impl BlockConnectUI for WorkflowGraph {
         if matches!(target_node.node_type, NodeType::Input { .. }) {
             return Err("Input nodes cannot have incoming connections.".to_string());
         }
+        if matches!(source_node.node_type, NodeType::Input { .. }) && matches!(target_node.node_type, NodeType::Output) {
+            return Err("Direct connection from Input to Output is not allowed.".to_string());
+        }
         Ok(())
     }
 }
@@ -1604,6 +1607,6 @@ mod additional_tests {
         let res1 = graph.validate_connection(&out_node, &in_node);
         assert!(res1.is_err());
         let res2 = graph.validate_connection(&in_node, &out_node);
-        assert!(res2.is_ok());
+        assert!(res2.is_err());
     }
 }
