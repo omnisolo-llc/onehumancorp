@@ -348,6 +348,7 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/discount-code/embed", get(handle_discount_code_embed))
         .route("/footer-branding/embed.js", get(handle_footer_branding_embed))
+        .route("/testimonial/embed", get(handle_testimonial_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
         .route("/post-purchase/embed", get(handle_post_purchase_embed))
                 .route("/storefront/og-card", get(handle_og_card))
@@ -5938,6 +5939,131 @@ async fn handle_countdown_embed(
 </body>
 </html>"#,
         title, branding_html, time
+    );
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TestimonialEmbedQuery {
+    pub tenant: Option<String>,
+    #[serde(rename = "authorName")]
+    pub author_name: Option<String>,
+    #[serde(rename = "reviewText")]
+    pub review_text: Option<String>,
+    pub rating: Option<u8>,
+    pub theme: Option<String>,
+    pub branding: Option<bool>,
+}
+
+async fn handle_testimonial_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<TestimonialEmbedQuery>
+) -> impl IntoResponse {
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let author_name = escape_html(query.author_name.as_deref().unwrap_or("Anonymous"));
+    let review_text = escape_html(query.review_text.as_deref().unwrap_or("Great experience!"));
+    let rating = query.rating.unwrap_or(5).clamp(1, 5);
+    let theme = escape_html(query.theme.as_deref().unwrap_or("light"));
+    let show_branding = query.branding.unwrap_or(true);
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#ffffff" } else { "#1d1d1f" };
+    let subtext_color = if theme == "dark" { "#a1a1a6" } else { "#86868b" };
+
+    let stars: String = (0..5)
+        .map(|i| if i < rating { "★" } else { "☆" })
+        .collect();
+
+    let mut html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: transparent;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }}
+        .testimonial-card {{
+            background-color: {bg_color};
+            color: {text_color};
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            position: relative;
+        }}
+        .stars {{
+            color: #FFB800;
+            font-size: 20px;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }}
+        .review-text {{
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            font-weight: 500;
+            font-style: italic;
+        }}
+        .author {{
+            font-size: 16px;
+            font-weight: 600;
+        }}
+        .branding {{
+            margin-top: 24px;
+            text-align: right;
+            font-size: 12px;
+        }}
+        .branding a {{
+            color: {subtext_color};
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }}
+        .branding a:hover {{
+            color: {text_color};
+        }}
+    </style>
+</head>
+<body>
+    <div class="testimonial-card">
+        <div class="stars">{stars}</div>
+        <div class="review-text">"{review_text}"</div>
+        <div class="author">— {author_name}</div>
+"#,
+        bg_color = bg_color,
+        text_color = text_color,
+        stars = stars,
+        review_text = review_text,
+        author_name = author_name,
+        subtext_color = subtext_color
+    );
+
+    if show_branding {
+        html.push_str(&format!(
+            r#"        <div class="branding">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=testimonial_embed" target="_blank">⚡ Powered by OHC</a>
+        </div>"#
+        , tenant = tenant));
+    }
+
+    html.push_str(
+        r#"
+    </div>
+</body>
+</html>"#
     );
 
     axum::response::Html(html)
