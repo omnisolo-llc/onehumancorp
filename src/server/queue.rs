@@ -434,7 +434,7 @@ impl TaskQueue for PostgresTaskQueue {
         .map_err(|e| e.to_string())?;
 
         let stagnant_result = sqlx::query(
-            "DELETE FROM sub_agent_queue
+            "UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'QUEUED' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )
         .execute(&mut *tx)
@@ -1157,7 +1157,7 @@ impl TaskQueue for SqliteTaskQueue {
         .await;
 
         let stagnant_result = sqlx::query(
-            "DELETE FROM sub_agent_queue
+            "UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')"
         )
         .execute(&self.pool)

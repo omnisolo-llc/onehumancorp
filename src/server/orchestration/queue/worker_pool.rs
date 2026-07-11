@@ -90,9 +90,7 @@ impl WorkerPool {
                                     // No jobs, loop back and sleep with backoff
                                     current_sleep_ms = std::cmp::min(current_sleep_ms * 2, 500);
                                 }
-                                Err(e) => {
-                                    ::server_telemetry::record_error_signal("[bug] Worker failed to dequeue");
-                                    tracing::trace!("Worker {} failed to dequeue: {}", i, e);
+                                Err(_) => {
                                     current_sleep_ms = std::cmp::min(current_sleep_ms * 2, 500);
                                 }
                             }
