@@ -432,7 +432,7 @@ mod tests {
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Draft quote for Plumbing Fix")) {
+            if pending.iter().any(|req| req.description.contains("Action Required: Approve Estimate for Plumbing Fix")) {
                 has_quote_draft = true;
                 break;
             }
@@ -720,7 +720,7 @@ mod tests {
         let mut failed_to_lock_count = 0;
 
         for req in pending {
-            if req.description.contains("Draft quote for Handyman Fix") {
+            if req.description.contains("Action Required: Approve Estimate for Handyman Fix") {
                 if let Some(payload) = req.payload {
                     if payload.get("proposed_slot_id").and_then(|v| v.as_str()).is_some() {
                         soft_locked_count += 1;

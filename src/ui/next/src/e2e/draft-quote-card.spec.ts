@@ -26,7 +26,7 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await expect(page.getByTestId('quote-draft-card').first()).toBeVisible();
 
     // 4. Verify card contents
-    await expect(page.getByText('Quote Ready for Review: 2-Bedroom Apartment Painting for Customer')).toBeVisible();
+    await expect(page.getByText('Action Required: Approve Estimate for 2-Bedroom Apartment Painting')).toBeVisible();
     await expect(page.getByText('Calculated Total:')).toBeVisible();
 
     // 5. Tap "Edit"

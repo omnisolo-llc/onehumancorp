@@ -30,7 +30,7 @@ test.describe('Agentic Field Service Scheduling & Quoting', () => {
         await page.goto('/team');
 
         // Wait for the quote card to appear. It should contain our text.
-        await expect(page.locator('text=Quote Ready for Review:').first()).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('text=Action Required: Approve Estimate').first()).toBeVisible({ timeout: 15000 });
         await expect(page.locator('text=My sink is leaking, can you fix it tomorrow at 2 PM?').first()).toBeVisible();
         await expect(page.locator('text=Proposed Time:').first()).toBeVisible();
 
@@ -40,7 +40,7 @@ test.describe('Agentic Field Service Scheduling & Quoting', () => {
         await approveBtn.click();
 
         // Wait for it to disappear or show a success state.
-        await expect(page.locator('text=Quote Ready for Review:').first()).toBeHidden({ timeout: 10000 });
+        await expect(page.locator('text=Action Required: Approve Estimate').first()).toBeHidden({ timeout: 10000 });
 
         // Verification: The backend lock test confirms the logic; the UI test confirms the owner sees it and can approve it.
     });

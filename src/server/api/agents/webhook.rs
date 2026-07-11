@@ -215,7 +215,7 @@ async fn handle_webhook(
 
         match orchestrator.execute_action(
             DepartmentType::Sales,
-            format!("Draft proposal for new intake: {}", service_name),
+            format!("Action Required: Approve Estimate for {}", service_name),
             tenant_id,
             ActionRisk::DraftForReview,
             action_payload,

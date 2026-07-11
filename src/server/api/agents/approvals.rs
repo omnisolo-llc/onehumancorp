@@ -207,7 +207,7 @@ async fn simulate_quote_draft(
 
     match orchestrator.execute_action(
         crate::orchestration::departments::types::DepartmentType::Sales,
-        "Draft quote for 2-Bedroom Apartment Painting".to_string(),
+        "Action Required: Approve Estimate for 2-Bedroom Apartment Painting".to_string(),
         tenant_id,
         crate::orchestration::departments::types::ActionRisk::DraftForReview,
         payload,

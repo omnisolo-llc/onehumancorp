@@ -196,7 +196,7 @@ export default function TeamChatPage() {
 
                     {msg.card.feature_type === 'quote_draft' ? (
                       <div data-testid="quote-draft-card">
-                        <p className="text-sm font-semibold text-gray-900 mb-1">Draft Quote: {msg.card.department} for Customer</p>
+                        <p className="text-sm font-semibold text-gray-900 mb-1">Action Required: Approve Estimate for {msg.card.department}</p>
                         <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
                         <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
                       </div>

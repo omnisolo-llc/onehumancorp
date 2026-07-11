@@ -568,7 +568,7 @@ impl Department for SalesAgent {
                 self.orchestrator
                     .execute_action(
                         DepartmentType::Sales,
-                        format!("Draft quote for {}", service_name),
+                        format!("Action Required: Approve Estimate for {}", service_name),
                         event.tenant_id.clone(),
                         risk,
                         action_payload,
