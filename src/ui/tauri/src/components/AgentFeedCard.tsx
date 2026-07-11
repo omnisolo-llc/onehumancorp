@@ -10,6 +10,9 @@ export interface ActionRequiredDraft {
     response: string;
     status: string;
     created_at?: string;
+    action_type?: string;
+    proposed_action?: Record<string, any>;
+    context_payload?: Record<string, any>;
 }
 
 interface AgentFeedCardProps {
