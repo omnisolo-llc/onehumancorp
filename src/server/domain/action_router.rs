@@ -71,7 +71,7 @@ pub async fn dispatch_action(
             }
         }
         "loyalty_reward_notification" => {
-            tracing::info!("Approved loyalty reward notification for tenant: {}", tenant_id);
+            tracing::info!("Approved loyalty reward notification for tenant: {}", tenant_id); // pii-safe
             if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {
                 let id = uuid::Uuid::new_v4().to_string();
                 let discount_code = format!("LOYALTY-{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>().to_uppercase());
