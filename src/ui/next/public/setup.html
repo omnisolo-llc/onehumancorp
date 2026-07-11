@@ -2928,6 +2928,19 @@
         }
       });
 
+
+      if (inputs.domain_name) {
+        inputs.domain_name.addEventListener("input", () => {
+          const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+          const val = inputs.domain_name.value.trim();
+          if (val.length >= 3 && domainRegex.test(val)) {
+            const errEl = document.getElementById("domain-error");
+            if (errEl) errEl.style.display = "none";
+            inputs.domain_name.classList.remove("invalid-input");
+          }
+        });
+      }
+
       inputs.admin_email.addEventListener("input", () => {
         if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
           errors.admin_email.style.display = "none";
@@ -3312,7 +3325,8 @@
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.domain_name.style.display = "none";
+            const errEl = document.getElementById("domain-error");
+            if (errEl) errEl.style.display = "none";
             inputs.domain_name.classList.remove("invalid-input");
             state.domain = inputs.domain_name.value.trim();
           }
