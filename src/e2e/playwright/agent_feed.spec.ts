@@ -38,5 +38,10 @@ test.describe('Agent Feed', () => {
 
     // 6. Card is marked resolved (disappears)
     await expect(card).not.toBeVisible({ timeout: 15000 });
+
+    // Verify cache invalidation (card stays gone on reload)
+    await page.reload();
+    await expect(page.getByTestId('agent-feed')).toBeVisible();
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 });

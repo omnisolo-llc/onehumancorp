@@ -384,6 +384,27 @@ async fn update_feed_item_state(
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
+
+            // Invalidate dashboard caches to ensure the UI updates correctly
+            let c = crate::api::agent_feed::get_redis_client();
+            let val_cache = ::server_utils::cache::HybridCache::<serde_json::Value>::new(Some(c.clone()));
+            let vec_cache = ::server_utils::cache::HybridCache::<Vec<serde_json::Value>>::new(Some(c.clone()));
+
+            let suffixes = ["mobile:false", "mobile:true"];
+
+            for suffix in suffixes.iter() {
+                let _ = val_cache.invalidate(&format!("ui_ledger:{}:{}", tenant_id, suffix)).await;
+                let _ = val_cache.invalidate(&format!("ui_unified_agent_feed:{}:{}", tenant_id, suffix)).await;
+                let _ = val_cache.invalidate(&format!("ui_unified_feed:{}:{}", tenant_id, suffix)).await;
+                let _ = val_cache.invalidate(&format!("ui_dashboard_metrics:{}:{}", tenant_id, suffix)).await;
+
+                let _ = vec_cache.invalidate(&format!("ui_triage:{}:{}", tenant_id, suffix)).await;
+                let _ = vec_cache.invalidate(&format!("ui_orders:{}:{}", tenant_id, suffix)).await;
+                let _ = vec_cache.invalidate(&format!("ui_inbox:{}:{}", tenant_id, suffix)).await;
+                let _ = vec_cache.invalidate(&format!("ui_priority_tasks:{}:{}", tenant_id, suffix)).await;
+                let _ = vec_cache.invalidate(&format!("ui_approvals:{}:{}", tenant_id, suffix)).await;
+            }
+
             (StatusCode::OK, Json(updated_item)).into_response()
         },
         Err(e) => {
