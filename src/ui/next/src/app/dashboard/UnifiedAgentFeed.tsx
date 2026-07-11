@@ -353,7 +353,37 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               ];
             }
 
+
+            // Integrate Invoices
+            if (unifiedData.invoices && Array.isArray(unifiedData.invoices)) {
+              combinedItems = [
+                ...combinedItems,
+                ...unifiedData.invoices.map((inv: any) => ({
+                  id: inv.id,
+                  tenant_id: inv.tenant_id || "default",
+                  event_source: "invoice",
+                  context_payload: {
+                    description: `Invoice ${inv.id} for ${inv.customer_name || 'Customer'} - $${(inv.total_amount || 0).toFixed(2)}`,
+                    feature_type: "invoice",
+                    invoice: inv
+                  },
+                  proposed_action: {
+                    message: "Follow up on invoice",
+                    action_type: "invoice_followup",
+                    feature_type: "invoice"
+                  },
+                  lifecycle_state:
+                    inv.status !== "paid"
+                      ? "PENDING_APPROVAL"
+                      : "DISMISSED",
+                  created_at: inv.created_at || new Date().toISOString(),
+                  updated_at: inv.created_at || new Date().toISOString(),
+                })),
+              ];
+            }
+
             // Sort by created_at desc
+
             combinedItems.sort(
               (a, b) =>
                 new Date(b.created_at).getTime() -
