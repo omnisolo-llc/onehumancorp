@@ -53,6 +53,9 @@ importers:
       google-protobuf:
         specifier: ^3.21.4
         version: 3.21.4
+      isomorphic-dompurify:
+        specifier: ^3.18.0
+        version: 3.18.0
       marked:
         specifier: ^18.0.5
         version: 18.0.5
