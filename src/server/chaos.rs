@@ -93,6 +93,7 @@ mod tests {
 
             assert_eq!(pg_row.0, "1");
             assert_eq!(pg_row.1, None, "NULL handling parity must be maintained between SQLite and Postgres");
+            assert_eq!(pg_row.1, row.1, "NULL handling parity must be exactly maintained between SQLite and Postgres schema types");
             assert!(pg_row.2.timestamp() > 0);
             let _ = sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name)).execute(&pg_pool).await;
         }
