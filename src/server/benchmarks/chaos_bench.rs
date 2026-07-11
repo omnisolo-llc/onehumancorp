@@ -32,6 +32,8 @@ mod tests {
         // We use tokio::time::advance to instantly bypass the 2s lock duration
         // without sleeping in real-time, removing flakiness in CI.
         tokio::time::advance(Duration::from_secs(3)).await;
+        tokio::task::yield_now().await;
+        tokio::task::yield_now().await;
 
         let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false);
         assert!(acquired2_retry, "Agent 2 failed to acquire lock after wait");
