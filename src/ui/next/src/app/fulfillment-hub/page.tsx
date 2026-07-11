@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { MutationService } from '../../lib/sync/MutationService';
+import { NetworkStatusIndicator } from '../../components/NetworkStatusIndicator';
+
 
 type Order = {
   id: string;
@@ -42,18 +45,39 @@ export default function FulfillmentHub() {
   }, []);
 
   const handleAction = async (id: string, action: string) => {
-    try {
-      const res = await fetch(`/api/fulfillment/execute/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (res.ok) {
-        fetchOrders(); // refresh queue
+    const previousToPack = [...toPack];
+    const previousAwaitingPickup = [...awaitingPickup];
+
+    const optimisticUpdate = () => {
+      if (action === 'mark_ready' || action === 'print_label') {
+        const orderIndex = toPack.findIndex(o => o.id === id);
+        if (orderIndex > -1) {
+          const order = toPack[orderIndex];
+          setToPack(prev => prev.filter(o => o.id !== id));
+          setAwaitingPickup(prev => [...prev, { ...order, status: 'ReadyForPickup' }]);
+        }
+      } else if (action === 'hand_off') {
+        setAwaitingPickup(prev => prev.filter(o => o.id !== id));
+      } else if (action === 'request_driver') {
+        const orderIndex = awaitingPickup.findIndex(o => o.id === id);
+        if (orderIndex > -1) {
+          const order = awaitingPickup[orderIndex];
+          setAwaitingPickup(prev => prev.map(o => o.id === id ? { ...o, status: 'DriverRequested' } : o));
+        }
       }
-    } catch (e) {
-      console.error('Failed to execute action', e);
-    }
+    };
+
+    const rollback = () => {
+      setToPack(previousToPack);
+      setAwaitingPickup(previousAwaitingPickup);
+    };
+
+    await MutationService.getInstance().executeMutation(
+      'fulfillment_action',
+      { id, action },
+      optimisticUpdate,
+      rollback
+    );
   };
 
   const driverBadge = (order: Order) => {
@@ -65,6 +89,7 @@ export default function FulfillmentHub() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center">
+      <NetworkStatusIndicator />
       <div className="w-full max-w-[375px] bg-white relative pb-20 shadow-xl overflow-hidden">
         {/* App Bar (Translucent Glass) */}
         <div className="sticky top-0 z-50 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 flex items-center justify-between">
