@@ -28,6 +28,9 @@ impl TelemetrySyncDaemon {
     }
 
     pub fn start(self) {
+        if !::server_config::is_telemetry_enabled() {
+            return;
+        }
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
             loop {

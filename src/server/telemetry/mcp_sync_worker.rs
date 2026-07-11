@@ -22,6 +22,9 @@ impl McpSyncWorker {
     }
 
     pub async fn run(&self) {
+        if !::server_config::is_telemetry_enabled() {
+            return;
+        }
         info!("Starting McpSyncWorker...");
         loop {
             if ::server_config::is_telemetry_enabled() {

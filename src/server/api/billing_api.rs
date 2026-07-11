@@ -312,7 +312,7 @@ pub async fn create_checkout_session_handler(
     if let Some(client) = &hub.tracker().stripe_client {
         let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
         if savings > 0.0 {
-            tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees", savings);
+            tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees", savings); // pii-safe
         }
 
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
