@@ -23,6 +23,7 @@ pub struct OmnichannelWebhookState {
 #[derive(Deserialize)]
 pub struct OmnichannelPayload {
     pub tenant_id: String,
+    #[serde(alias = "channel")]
     pub source: String,
     pub sender_id: String,
     pub message: String,

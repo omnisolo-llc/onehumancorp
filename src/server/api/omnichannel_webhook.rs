@@ -13,6 +13,7 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 #[derive(Deserialize, Debug, Clone)]
 pub struct OmnichannelPayload {
     pub tenant_id: String,
+    #[serde(alias = "source")]
     pub channel: String,
     pub sender_id: String,
     pub message: String,
