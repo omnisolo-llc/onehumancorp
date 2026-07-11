@@ -34,8 +34,14 @@ pub struct CreateProgramResponse {
 
 pub async fn create_program_handler(
     State(state): State<AppState>,
-    Json(payload): Json<CreateProgramRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<CreateProgramRequest>,
 ) -> Result<Json<CreateProgramResponse>, axum::http::StatusCode> {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
     match engine::create_loyalty_program(&state.pool, &payload.tenant_id, &payload.name, &payload.program_type, payload.config).await {
         Ok(id) => Ok(Json(CreateProgramResponse { id })),
         Err(e) => {
@@ -77,8 +83,14 @@ pub struct EnrollCustomerResponse {
 
 pub async fn enroll_customer_handler(
     State(state): State<AppState>,
-    Json(payload): Json<EnrollCustomerRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<EnrollCustomerRequest>,
 ) -> Result<Json<EnrollCustomerResponse>, axum::http::StatusCode> {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
     match engine::enroll_customer(&state.pool, &payload.tenant_id, &payload.program_id, &payload.customer_id).await {
         Ok(account_id) => Ok(Json(EnrollCustomerResponse { account_id })),
         Err(e) => {
@@ -124,8 +136,14 @@ pub struct RecordTransactionResponse {
 
 pub async fn record_transaction_handler(
     State(state): State<AppState>,
-    Json(payload): Json<RecordTransactionRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<RecordTransactionRequest>,
 ) -> Result<Json<RecordTransactionResponse>, axum::http::StatusCode> {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
     match engine::record_transaction(&state.pool, &payload.tenant_id, &payload.account_id, &payload.transaction_type, payload.amount, payload.reason.as_deref(), state.orchestrator.clone()).await {
         Ok(_) => Ok(Json(RecordTransactionResponse { success: true })),
         Err(e) => {
@@ -154,8 +172,14 @@ pub struct CreateRewardResponse {
 
 pub async fn create_reward_handler(
     State(state): State<AppState>,
-    Json(payload): Json<CreateRewardRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<CreateRewardRequest>,
 ) -> Result<Json<CreateRewardResponse>, axum::http::StatusCode> {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
     match engine::create_reward(&state.pool, &payload.tenant_id, &payload.program_id, &payload.name, payload.description.as_deref(), payload.cost_in_points, &payload.reward_type, payload.reward_value).await {
         Ok(id) => Ok(Json(CreateRewardResponse { id })),
         Err(e) => {

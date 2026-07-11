@@ -233,8 +233,14 @@ fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 
 pub async fn optimize_route(
     State(state): State<Arc<FieldOpsState>>,
-    Json(payload): Json<OptimizeRouteRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<OptimizeRouteRequest>,
 ) -> Result<Json<OptimizeRouteResponse>, (axum::http::StatusCode, String)> {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = Some(auth_info.spiffe_id.clone());
+    } else {
+        return Err((axum::http::StatusCode::UNAUTHORIZED, "missing tenant identity in session".to_string()));
+    }
     let mut completed = Vec::new();
     let mut pending = Vec::new();
 
@@ -484,6 +490,7 @@ mod tests {
             .method("POST")
             .uri("/optimize-route")
             .header("Content-Type", "application/json")
+            .extension(::server_auth::orchestration::AuthInfo { spiffe_id: "t1".to_string(), org_id: "".to_string(), agent_id: "".to_string() })
             .body(Body::from(serde_json::to_vec(&payload).unwrap()))
             .unwrap();
 

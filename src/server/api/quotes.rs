@@ -110,8 +110,14 @@ pub struct QuoteLineItemRequest {
 
 async fn create_quote(
     State(pool): State<PgPool>,
-    Json(payload): Json<CreateQuoteRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<CreateQuoteRequest>,
 ) -> impl IntoResponse {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "missing tenant identity in session"}))).into_response();
+    }
     let quote_id = Uuid::new_v4();
 
     let mut tx = match pool.begin().await {
@@ -209,8 +215,14 @@ async fn create_quote(
 
 async fn draft_quote_agent(
     State(pool): State<PgPool>,
-    Json(payload): Json<DraftAgentRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "missing tenant identity in session"}))).into_response();
+    }
     let llm = Arc::new(AdapterLlm {});
 
     // Fetch the services catalog for this tenant
@@ -277,7 +289,7 @@ async fn draft_quote_agent(
         line_items,
     };
 
-    create_quote(State(pool), Json(create_req)).await.into_response()
+    create_quote(State(pool), axum::extract::Extension(auth_info.clone()), Json(create_req)).await.into_response()
 }
 
 async fn update_quote(

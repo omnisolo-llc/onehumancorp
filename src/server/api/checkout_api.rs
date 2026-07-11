@@ -23,8 +23,14 @@ pub struct CreateCheckoutSessionResponse {
 pub async fn create_checkout_session_handler(
     _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
-    req_data: axum::extract::Json<CreateCheckoutSessionRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    mut req_data: axum::extract::Json<CreateCheckoutSessionRequest>,
 ) -> axum::response::Response {
+    if !auth_info.spiffe_id.is_empty() {
+        req_data.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"success": false, "error_message": "missing tenant identity in session"}))).into_response();
+    }
     let session_id = uuid::Uuid::new_v4().to_string();
     let tenant_id = req_data.tenant_id.clone();
 

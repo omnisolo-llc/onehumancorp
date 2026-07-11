@@ -103,8 +103,14 @@ where
 
 async fn draft_agent(
     State(pool): State<PgPool>,
-    Json(payload): Json<DraftAgentRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
+    if !auth_info.spiffe_id.is_empty() {
+        payload.tenant_id = auth_info.spiffe_id.clone();
+    } else {
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "missing tenant identity in session"}))).into_response();
+    }
     let llm = Arc::new(AdapterLlm {});
     let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
 
