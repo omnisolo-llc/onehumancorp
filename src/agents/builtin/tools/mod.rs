@@ -198,3 +198,6 @@ mod finance_test;
 
 #[cfg(test)]
 mod glob_test;
+pub mod agent_protocol;
+#[cfg(test)]
+mod agent_protocol_test;
