@@ -436,8 +436,11 @@
       .btn-instant-build:hover {
         background: #0052cc;
       }
-      .btn-instant-build:disabled {
-        opacity: 0.5;
+      .btn-instant-build:disabled,
+      button:disabled,
+      button[disabled],
+      .btn-primary:disabled {
+        opacity: 0.55;
         cursor: not-allowed;
       }
 
@@ -1451,7 +1454,7 @@
               display: flex;
               align-items: center;
               gap: 8px;
-              opacity: 0.5;
+              opacity: 0.55;
               transition: opacity 0.3s;
             "
           >
@@ -1472,7 +1475,7 @@
               display: flex;
               align-items: center;
               gap: 8px;
-              opacity: 0.5;
+              opacity: 0.55;
               transition: opacity 0.3s;
             "
           >
@@ -1493,7 +1496,7 @@
               display: flex;
               align-items: center;
               gap: 8px;
-              opacity: 0.5;
+              opacity: 0.55;
               transition: opacity 0.3s;
             "
           >
