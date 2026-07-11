@@ -1972,3 +1972,36 @@ pub fn record_sandbox_network_io(agent_id: &str, value: f64) {
         ],
     );
 }
+
+#[cfg(test)]
+mod pii_pattern_tests {
+    use super::*;
+
+    #[test]
+    fn test_is_pii_value_pattern() {
+        // SSN
+        assert!(is_pii_value_pattern("123-45-6789"));
+        assert!(is_pii_value_pattern("123-456-7890")); // Valid phone format
+
+        // Credit Card
+        assert!(is_pii_value_pattern("1234-5678-9012-3456"));
+        assert!(is_pii_value_pattern("1234567890123456"));
+        assert!(!is_pii_value_pattern("1234-5678-9012")); // Too short
+
+        // API Keys
+        assert!(is_pii_value_pattern("sk-AbCdEfGhIjKlMnOpQrStUvWxYz123456"));
+        assert!(is_pii_value_pattern("ak-1234567890abcdef"));
+        assert!(is_pii_value_pattern("tok_abcdef1234567890"));
+        assert!(!is_pii_value_pattern("pk-1234567890")); // Unmatched prefix
+
+        // Phone numbers
+        assert!(is_pii_value_pattern("+1-555-123-4567"));
+        assert!(is_pii_value_pattern("(555) 123-4567"));
+        assert!(is_pii_value_pattern("555.123.4567"));
+        assert!(!is_pii_value_pattern("12345")); // Too short
+
+        // Safe strings
+        assert!(!is_pii_value_pattern("hello world"));
+        assert!(!is_pii_value_pattern("1234"));
+    }
+}
