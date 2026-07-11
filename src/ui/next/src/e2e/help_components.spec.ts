@@ -28,7 +28,7 @@ test.describe('Help Components', () => {
   });
 
   test('Help Chat opens and sends a message', async ({ page }) => {
-    await page.goto('/help?test_chat=true');
+    await page.goto('/help');
 
     // Open chat
     const chatButton = page.locator('button[aria-label="Open help chat"]');
@@ -47,7 +47,7 @@ test.describe('Help Components', () => {
   });
 
   test('Help Chat clears messages', async ({ page }) => {
-    await page.goto('/help?test_chat=true');
+    await page.goto('/help');
 
     // Open chat
     const chatButton = page.locator('button[aria-label="Open help chat"]');
@@ -74,7 +74,7 @@ test.describe('Help Components', () => {
   });
 
   test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {
-    await page.goto('/dashboard?test_walkthrough=true');
+    await page.goto('/dashboard');
 
     const startTourBtn = page.locator('button:has-text("Start Tour")');
     await expect(startTourBtn).toBeVisible();
