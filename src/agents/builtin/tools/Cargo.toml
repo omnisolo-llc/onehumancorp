@@ -38,5 +38,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 axum = "0.8.9"
 
 [dev-dependencies]
-temp-env = "0.3.6"
+axum = "0.8.1"
+temp-env = { version = "0.3.6", features = ["async_closure"] }
 tempfile = "3.27.0"
