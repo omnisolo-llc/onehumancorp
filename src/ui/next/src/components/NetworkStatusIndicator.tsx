@@ -42,7 +42,7 @@ export function NetworkStatusIndicator() {
         <div className={`bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto animate-in slide-in-from-top duration-300`}>
           <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-blue-500 animate-pulse'}`}></div>
           <span className="text-sm font-semibold text-gray-800">
-            {isOffline ? 'Offline Mode' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
+            {isOffline ? 'Offline - Changes saved locally' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
           </span>
         </div>
       </WithTooltip>
