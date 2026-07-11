@@ -16,6 +16,10 @@
 
     function showTooltip(e, text) {
         if (!text) return;
+        let sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+        if (sentences.length > 2) {
+            text = sentences.slice(0, 2).join(' ').trim();
+        }
         tooltipEl.textContent = text;
         const targetRect = e.target.closest('[data-tooltip], [id]') ? e.target.closest('[data-tooltip], [id]').getBoundingClientRect() : e.target.getBoundingClientRect();
 
