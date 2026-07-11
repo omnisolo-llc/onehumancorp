@@ -790,3 +790,30 @@ fn test_record_harness_init_latency_respects_standalone() {
         assert!(!config.telemetry_enabled, "telemetry should be disabled in standalone mode");
     });
 }
+
+#[test]
+fn test_telemetry_network_disk_usage() {
+    let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+
+    // With telemetry disabled, running sync_metrics should just return Ok(()) instead of trying to hit the dummy network
+    temp_env::with_vars(
+        [
+            ("OHC_STANDALONE_MODE", Some("true")),
+            ("OHC_TELEMETRY_ENABLED", Some("false")),
+        ],
+        || {
+            std::thread::spawn(|| {
+                let pool = tokio::runtime::Runtime::new().unwrap().block_on(sqlx::sqlite::SqlitePoolOptions::new()
+                    .connect("sqlite::memory:")).unwrap();
+                let pg_pool = tokio::runtime::Runtime::new().unwrap().block_on(async { sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy/dummy") }).unwrap();
+
+                let config = ::server_config::load().unwrap();
+                assert!(!config.telemetry_enabled, "telemetry should be disabled");
+
+                let worker = ::server_telemetry::mcp_sync_worker::McpSyncWorker::new(pool.clone(), pg_pool.clone());
+                let result = tokio::runtime::Runtime::new().unwrap().block_on(worker.sync_metrics());
+                assert!(result.is_ok(), "sync_metrics should return early when telemetry is disabled");
+            }).join().unwrap();
+        }
+    );
+}
