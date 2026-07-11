@@ -7,7 +7,7 @@ vi.mock("../../components/help", () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() }),
 }));
 vi.mock("../../components/Walkthrough", () => ({
-  WalkthroughTarget: ({ children }: any) => <>{children}</>,
+  WalkthroughTarget: ({ children, id }: any) => <div id={id}>{children}</div>,
 }));
 
 global.fetch = vi.fn();
