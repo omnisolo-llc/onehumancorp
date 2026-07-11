@@ -2100,7 +2100,8 @@
             const actionType = item.action_type || item.proposed_action?.action_type;
             const description = item.context || item.proposed_action?.message || item.context_payload?.description || item.payload?.description || actionType || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true || item.context_payload?.weekly_health_report === true;
-            const approveText = isDraft ? "Yes, draft it!" : "Approve";
+            let finalApproveText = isDraft ? "Yes, draft it!" : "Approve";
+            if (actionType === "share_milestone") { finalApproveText = "Share & Earn"; }
 
 
             if (item.thread && item.triage_actions && item.triage_actions.length > 0) {
@@ -2593,7 +2594,7 @@
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
               <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
+                <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${finalApproveText}</button>
                 <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
               </div>
             </div>
