@@ -1,0 +1,5 @@
+{
+  "task": "Fix AI-powered autonomous quoting and estimate generation",
+  "solution": "Modified message_triage_worker.rs to correctly extract the action_payload from the LLM JSON, format it as a valid string, and ensure modified_quote_data passes along the needed attributes. Updated handle_quote_action in quotes.rs to correctly grab quote details directly from the database prior to creating the Stripe invoice, ensuring price and scope are up-to-date and the Stripe payment link is saved back to the quotes table.",
+  "learning": "The LLM's output payload format was mismatched with what the router passed down as the final_draft string. Always ensure the JSON values extracted match the parsed strings and handle edge cases where JSON payloads can arrive inside parsed structured strings. Playwright E2E tests for OHC must use real DB setup without network mocks."
+}
