@@ -476,11 +476,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_structured_output_markdown_wrapper_fallback() {
-        // Fallback mechanic now seamlessly extracts the JSON without an extra LLM roundtrip
+        // Plain-text JSON is rejected and recovered through a native tool call.
         let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_text_resp(
-                "```json\n{\n  \"result\": \"success_markdown\"\n}\n```",
-            )]),
+            responses: Mutex::new(vec![
+                create_text_resp("```json\n{\n  \"result\": \"success_markdown\"\n}\n```"),
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success_markdown"}}),
+                ),
+            ]),
         });
 
         let req = create_test_req();
@@ -1041,15 +1045,22 @@ mod tests_clamped {
                 let last_msg = req.messages.last().unwrap();
                 assert_eq!(last_msg.role, crate::types::Role::Tool);
                 assert!(last_msg.tool_results[0].content.contains("Validation Error") || last_msg.tool_results[0].error.contains("Validation Error"), "content was: {}, error was: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
-                assert!(last_msg.tool_results[0].content.contains("{ invalid json") || last_msg.tool_results[0].error.contains("{ invalid json") || last_msg.tool_results[0].error.contains("Failed completion: Here is the data: { invalid json"), "content: {}, error: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
+                assert!(
+                    last_msg.tool_results[0].content.contains("{ invalid json")
+                        || last_msg.tool_results[0].error.contains("{ invalid json")
+                        || last_msg.tool_results[0]
+                            .error
+                            .contains("Failed completion: Here is the data: { invalid json"),
+                    "content was: {}, error was: {}",
+                    last_msg.tool_results[0].content,
+                    last_msg.tool_results[0].error
+                );
 
-                // Then return valid json
-                Ok(ChatResponse {
-                    message: super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})).message,
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("resp_2".to_string()),
-                })
+                // Then return valid structured output through the required native tool call.
+                Ok(super::tests::create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success"}}),
+                ))
             }
         }
     }
