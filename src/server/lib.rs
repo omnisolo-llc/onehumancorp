@@ -3497,6 +3497,20 @@ pub async fn simulate_ui_triage_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(sqlx::types::Json(serde_json::json!({"customer_message": "Do you have vegan chocolate cake available this weekend?"})))
+            .bind(sqlx::types::Json(serde_json::json!({"draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "action_type": "Draft Reply"})))
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert agent_feed_items: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
             if let Err(e) = tx.commit().await {
                  tracing::error!("Failed to commit transaction: {:?}", e);
                  return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3537,6 +3551,20 @@ pub async fn simulate_ui_triage_item_handler(
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(serde_json::json!({"customer_message": "Do you have vegan chocolate cake available this weekend?"}).to_string())
+            .bind(serde_json::json!({"draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "action_type": "Draft Reply"}).to_string())
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to insert agent_feed_items: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
