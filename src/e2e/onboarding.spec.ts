@@ -391,3 +391,65 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
   });
 });
+
+test.describe('Premium Translucent Glass UI Extensions', () => {
+  test('Verifies explicit injection of glassmorphism style sheet in exit intent builder', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/exit-intent-builder.html', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'exit-intent-builder.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.route('**/style.css', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'style.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: fileContent });
+    });
+
+    await page.goto('/exit-intent-builder.html');
+    const container = page.locator('.container');
+    await expect(container).toBeVisible({ timeout: 5000 });
+    await expect(container).toHaveClass(/glassmorphism/);
+  });
+
+  test('Verifies explicit injection of glassmorphism style sheet in post purchase share', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/post-purchase-share.html', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'post-purchase-share.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.route('**/style.css', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'style.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: fileContent });
+    });
+
+    await page.goto('/post-purchase-share.html');
+    const container = page.locator('.container');
+    await expect(container).toBeVisible({ timeout: 5000 });
+    await expect(container).toHaveClass(/glassmorphism/);
+  });
+
+  test('Verifies explicit injection of glassmorphism style sheet in ROI embed', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/roi-embed.html', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'roi-embed.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.route('**/style.css', async route => {
+        const fileContent = require('fs').readFileSync(require('path').join(tauriUiDir, 'style.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: fileContent });
+    });
+
+    await page.goto('/roi-embed.html');
+    const container = page.locator('.widget-container');
+    await expect(container).toBeVisible({ timeout: 5000 });
+    await expect(container).toHaveClass(/glassmorphism/);
+  });
+});
