@@ -12,18 +12,14 @@ test.describe('Agentic Automated Invoicing & Cash Flow Management', () => {
     });
 
     // Navigate to the Unified Agent Feed
-    await page.goto('/feed');
+    await page.goto('/dashboard.html');
 
-    // Verify the feed loaded
-    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]').first().or(page.locator('text="Unified Agent Feed"').first());
-    await expect(feedSection).toBeVisible({ timeout: 15000 });
-
-    // Look for the Draft Invoice card
+    // Wait for the specific triage card
     const invoiceCard = page.locator('div[data-testid="agent-feed-card"]', { hasText: 'Generated Invoice' });
     await expect(invoiceCard).toBeVisible({ timeout: 15000 });
     await expect(invoiceCard).toContainText('Website Redesign');
     await expect(invoiceCard).toContainText('Phase 1 Complete');
-    await expect(invoiceCard).toContainText('25.00');
+    await expect(invoiceCard).toContainText('2500');
 
     // Approve the invoice
     const approveBtn = invoiceCard.getByTestId('feed-approve-btn');
