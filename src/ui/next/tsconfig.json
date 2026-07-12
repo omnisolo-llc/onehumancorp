@@ -6,6 +6,9 @@
       "esnext"
     ],
     "allowJs": true,
+    "types": [
+      "vitest/globals"
+    ],
     "skipLibCheck": true,
     "strict": false,
     "noEmit": true,

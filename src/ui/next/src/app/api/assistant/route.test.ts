@@ -47,6 +47,10 @@ function patchRequest(url: string, body: unknown) {
   });
 }
 
+function taskContext(id: string) {
+  return { params: Promise.resolve({ id }) };
+}
+
 
 vi.mock('./tasks/route', async () => {
   const store = await import('./store');
@@ -414,28 +418,28 @@ describe('assistant API contract', () => {
   test('manages task stop resume archive and approval actions', async () => {
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'approve_changes' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     );
     let body = await (await getTasks()).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').changes[0].approvalStatus).toBe('approved');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'stop' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     );
     body = await (await getTasks()).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('blocked');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'resume' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     );
     body = await (await getTasks()).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('running');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     );
     body = await (await getTasks()).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('archived');
@@ -941,13 +945,13 @@ describe('assistant API contract', () => {
   test('supports task pin rename save to workspace archived rename and hard delete', async () => {
     let body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'pin' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.pinned).toBe(true);
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename', title: 'Weekly operating review' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.title).toBe('Weekly operating review');
 
@@ -957,37 +961,37 @@ describe('assistant API contract', () => {
         workspace: 'Leadership',
         workDirectory: '/workspace/leadership',
       }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task).toMatchObject({ workspace: 'Leadership', workDirectory: '/workspace/leadership' });
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('archived');
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'unarchive' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('completed');
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('archived');
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename_archived', title: 'Archived review' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.title).toBe('Archived review');
 
     body = await (await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'hard_delete', confirm: 'DELETE' }),
-      { params: { id: 'task-weekly-brief' } },
+      taskContext('task-weekly-brief'),
     )).json();
     expect(body.deletedTask.id).toBe('task-weekly-brief');
   });
