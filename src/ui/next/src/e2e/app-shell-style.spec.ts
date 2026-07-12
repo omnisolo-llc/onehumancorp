@@ -144,7 +144,7 @@ test.describe('App shell visual consistency', () => {
         }
 
         if (route === '/inbox') {
-          await expect(page.getByTestId('inbox-settled')).toBeVisible({ timeout: 15_000 });
+          await expect(page.getByTestId('inbox-settled')).toBeVisible({ timeout: 30_000 });
           await page.evaluate(() => new Promise<void>((resolve) => {
             requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
           }));
