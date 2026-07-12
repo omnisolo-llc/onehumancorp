@@ -117,23 +117,23 @@ git commit -m "security: scope agent memory to its tenant capability"
 **Files:**
 - Modify: `docs/reports/production_agent_optimization_report.md`
 
-- [ ] **Step 1: Run formatting and static checks**
+- [x] **Step 1: Run formatting and static checks**
 
 Run targeted `rustfmt` on the changed Rust files, then run `cargo check -p ohc_builtin_agent_tools -p ohc_builtin_agent`.
 
 Expected: formatting succeeds and both crates check successfully.
 
-- [ ] **Step 2: Run final tenant-boundary searches**
+- [x] **Step 2: Run final tenant-boundary searches**
 
 Run: `rg -n 'OHC_ORGANIZATION_ID|pub tenant_id|"tenant_id"' src/agents/builtin/service.rs src/agents/builtin/tools/booking.rs src/agents/builtin/tools/quote.rs`
 
 Expected: no task-time environment reads and no model argument/schema tenant fields; tenant IDs may remain only in trusted SQL/result fields.
 
-- [ ] **Step 3: Record finding status and evidence**
+- [x] **Step 3: Record finding status and evidence**
 
 Mark audit findings F-03 and F-05 remediated with the capability, schema, memory, Cargo, and Bazel test evidence. Preserve the original finding text and add status rather than rewriting history.
 
-- [ ] **Step 4: Commit the report update**
+- [x] **Step 4: Commit the report update**
 
 ```bash
 git add docs/reports/production_agent_optimization_report.md
