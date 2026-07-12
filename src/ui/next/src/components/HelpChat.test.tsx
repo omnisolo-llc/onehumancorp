@@ -13,7 +13,7 @@ describe('HelpChat Component', () => {
         ok: true,
         json: () => Promise.resolve({ reply: 'Hello from AI' }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -209,7 +209,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
           link: { url: 'javascript:alert(1)', title: 'Click me' }
         }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<HelpChat />);
     const user = userEvent.setup({ delay: null });
@@ -238,7 +238,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
         ok: true,
         json: () => Promise.resolve(null),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<HelpChat />);
     const user = userEvent.setup({ delay: null });
@@ -258,7 +258,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
         ok: true,
         json: () => Promise.resolve({ reply: '   ' }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     await act(async () => {
       await user.type(screen.getByPlaceholderText('Ask anything...'), 'Test empty reply');
@@ -308,7 +308,7 @@ describe('HelpChat safe link handling', () => {
           link: { url: 'https://example.com/safe', title: 'Safe Link' }
         }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<HelpChat />);
     const user = userEvent.setup({ delay: null });
@@ -347,16 +347,14 @@ describe('HelpChat remaining branches', () => {
     const originalEnv = process.env.NEXT_PUBLIC_E2E;
     process.env.NEXT_PUBLIC_E2E = 'true';
 
-    const originalLocation = window.location;
-    // @ts-ignore
-    delete window.location;
-    window.location = { ...originalLocation, search: '?test_chat=true' };
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, '', '?test_chat=true');
 
     render(<HelpChat />);
     expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
 
     process.env.NEXT_PUBLIC_E2E = originalEnv;
-    window.location = originalLocation;
+    window.history.replaceState({}, '', originalUrl);
   });
 
   it('prevents submitting empty messages', async () => {

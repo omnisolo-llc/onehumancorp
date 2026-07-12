@@ -16,7 +16,7 @@ describe('HelpArticlePage', () => {
 
   it('renders loading state initially', () => {
     vi.mocked(navigation.useParams).mockReturnValue({ articleId: 'getting-started-1' });
-    global.fetch = vi.fn(() => new Promise(() => {})); // Never resolves
+    global.fetch = vi.fn(() => new Promise<Response>(() => {})); // Never resolves
 
     render(<HelpArticlePage />);
     expect(screen.getByText('Loading article...')).toBeInTheDocument();

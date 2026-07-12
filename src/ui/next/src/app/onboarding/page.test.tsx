@@ -68,6 +68,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("Step 1: Renders initial screen correctly", async () => {
+    const user = userEvent.setup({ delay: null });
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
@@ -681,6 +682,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("Step 5: Shows Live Screen with correct links", async () => {
+    const user = userEvent.setup({ delay: null });
     act(() => {
       useOnboardingStore.setState({
         step: 5,

@@ -31,9 +31,12 @@ describe('VoiceAssistant', () => {
     (global as any).MediaRecorder = MockMediaRecorder;
 
     originalMediaDevices = global.navigator.mediaDevices;
-    global.navigator.mediaDevices = {
-      getUserMedia: vi.fn().mockResolvedValue({ getTracks: mockGetTracks })
-    } as any;
+    Object.defineProperty(global.navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue({ getTracks: mockGetTracks })
+      }
+    });
 
     originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation(() =>
@@ -47,7 +50,10 @@ describe('VoiceAssistant', () => {
 
   afterEach(() => {
     (global as any).MediaRecorder = originalMediaRecorder;
-    global.navigator.mediaDevices = originalMediaDevices;
+    Object.defineProperty(global.navigator, 'mediaDevices', {
+      configurable: true,
+      value: originalMediaDevices
+    });
     global.fetch = originalFetch;
   });
 

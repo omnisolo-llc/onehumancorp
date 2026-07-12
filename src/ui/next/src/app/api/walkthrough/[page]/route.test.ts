@@ -10,7 +10,7 @@ describe('Walkthrough API Route', () => {
     });
 
     const req = new NextRequest('http://localhost:3000/api/walkthrough/test-page');
-    const res = await GET(req, { params: { page: 'test-page' } });
+    const res = await GET(req, { params: Promise.resolve({ page: 'test-page' }) });
     const data = await res.json();
     expect(data).toEqual([{ targetId: 'test-target', title: 'Test Step', content: 'Step content', position: 'bottom' }]);
   });
@@ -20,7 +20,7 @@ describe('Walkthrough API Route', () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const req = new NextRequest('http://localhost:3000/api/walkthrough/test-page');
-    const res = await GET(req, { params: { page: 'test-page' } });
+    const res = await GET(req, { params: Promise.resolve({ page: 'test-page' }) });
     const data = await res.json();
     expect(res.status).toBe(502);
     expect(data).toEqual({ error: 'Backend walkthrough service unavailable' });
