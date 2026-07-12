@@ -405,7 +405,7 @@ mod chaos_tests {
 
         let task_id = "corrupted-task-id";
         sqlx::query(
-            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies)
+            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies, tenant_id)
              VALUES (?, 'IN_PROGRESS', 'Stuck Task', 'corrupted { json[', 'bad_deps_format')"
         )
         .bind(task_id)
@@ -435,7 +435,7 @@ mod chaos_tests {
 
         // Now simulate a task that is PENDING but has corrupted dependencies
         sqlx::query(
-            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies)
+            "INSERT INTO swarm_tasks (id, status, title, payload, dependencies, tenant_id)
              VALUES (?, 'PENDING', 'Pending Corrupt Task', '{}', 'invalid_json')"
         )
         .bind("pending-corrupt")

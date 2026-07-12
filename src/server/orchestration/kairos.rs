@@ -1020,7 +1020,7 @@ mod tests {
         sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('100', 'test-tenant', 'm100', 'Task A', 'PENDING', '[]')")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, mission_id, title, status, dependencies) VALUES ('200', 'test-tenant', 'm100', 'Task B', 'PENDING', '[]')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('200', '100')")
+        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id) VALUES ('200', '100', 'test-tenant')")
             .execute(&pool).await.unwrap();
 
         // Task A is claimed

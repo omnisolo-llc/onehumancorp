@@ -156,8 +156,8 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES ($1, $2)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id)
+                    VALUES ($1, $2, 'default_tenant')
                     ON CONFLICT DO NOTHING
                     "#
                 )
@@ -170,8 +170,8 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     r#"
-                    INSERT INTO task_dependencies (task_id, depends_on_task_id)
-                    VALUES (?, ?)
+                    INSERT INTO task_dependencies (task_id, depends_on_task_id, tenant_id)
+                    VALUES (?, ?, 'default_tenant')
                     ON CONFLICT DO NOTHING
                     "#
                 )
@@ -384,6 +384,7 @@ mod tests {
         sqlx::query(
             r#"
             CREATE TABLE task_dependencies (
+                tenant_id TEXT DEFAULT 'default_tenant',
                 task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 PRIMARY KEY (task_id, depends_on_task_id)
@@ -402,6 +403,7 @@ mod tests {
         let _ = sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS task_dependencies (
+                tenant_id TEXT DEFAULT 'default_tenant',
                 task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 PRIMARY KEY (task_id, depends_on_task_id)

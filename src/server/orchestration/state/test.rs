@@ -296,7 +296,7 @@ async fn test_missing_dependency_blocking() {
 
     // Insert task 1 that depends on non-existent task "missing-id"
     sqlx::query(
-        "INSERT INTO swarm_tasks (id, title, status, dependencies) VALUES (?, 'Task 1', 'PENDING', '[\"missing-id\"]')"
+        "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies, tenant_id) VALUES (?, 'm1', 'Task 1', 'PENDING', '[\"missing-id\"]', 'default_tenant')"
     )
     .bind("task-1")
     .execute(&pool)
@@ -309,7 +309,7 @@ async fn test_missing_dependency_blocking() {
 
     // Insert the missing dependency, but as PENDING
     sqlx::query(
-        "INSERT INTO swarm_tasks (id, title, status, dependencies) VALUES (?, 'Missing Task', 'PENDING', '[]')"
+        "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies, tenant_id) VALUES (?, 'm1', 'Missing Task', 'PENDING', '[]', 'default_tenant')"
     )
     .bind("missing-id")
     .execute(&pool)
