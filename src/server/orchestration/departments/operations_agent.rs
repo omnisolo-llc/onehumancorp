@@ -243,6 +243,15 @@ impl Department for OperationsAgent {
 
         if event.event_type == "POS_SALE_COMPLETED" {
             tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id); // pii-safe
+
+            // Check if stock is depleted to trigger a restock notification
+            let stock_remaining = event.payload.get("stock_remaining").and_then(|v| v.as_i64()).unwrap_or(0);
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Item");
+
+            if stock_remaining <= 0 {
+                let msg = format!("{} sold out. Would you like to draft a restock order?", product_name);
+                let _ = self.orchestrator.notify_owner(&event.tenant_id, &msg).await;
+            }
             return Ok(());
         }
 
