@@ -593,7 +593,7 @@
 
         <!-- Hidden button to simulate the tap for E2E tests and web mode -->
         <button class="simulate-tap-btn" id="simulate-tap-btn" style="display: block;">Simulate Customer Tap (Test)</button>
-        <button class="simulate-tap-btn" id="record-cash-sale-btn" style="margin-top: 10px; background: rgba(0,0,0,0.05); color: #000; border: 1px solid rgba(0,0,0,0.1);" onclick="simulateTapBtn.click()">Record Cash Sale</button>
+        <button class="simulate-tap-btn" id="record-cash-sale-btn" style="margin-top: 10px; background: rgba(0,0,0,0.05); color: #000; border: 1px solid rgba(0,0,0,0.1);" onclick="recordCashSale()">Record Offline Cash Sale</button>
         <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1);">Cancel</button>
       </div>
 
@@ -1053,6 +1053,73 @@
         updateDisplay();
       }
 
+
+
+      async function recordCashSale() {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          if (!navigator.onLine) {
+              document.querySelector('.receipt-text').innerText = "Cash sale saved offline. Will sync when network is restored.";
+              enqueueOfflineMutation({
+                  type: 'cash_sale',
+                  id: 'tx_' + Date.now(),
+                  amount: currentAmountCents,
+                  currency: 'usd',
+                  product_id: currentProductId,
+                  quantity: 1,
+                  timestamp: new Date().toISOString(),
+                  device_signature: `sig_offline_${crypto.randomUUID()}`
+              });
+
+              // Optimistically update local inventory
+              const cacheKey = `ohc_catalog_${tenantId}`;
+              const updateCache = (key) => {
+                  try {
+                      const cached = localStorage.getItem(key);
+                      if (cached) {
+                          const catalog = JSON.parse(cached);
+                          const updated = catalog.map(p => {
+                              if (p.id === currentProductId && p.inventory_count !== undefined && p.inventory_count !== null) {
+                                  return { ...p, inventory_count: Math.max(0, p.inventory_count - 1), stock: Math.max(0, (p.stock || p.inventory_count) - 1) };
+                              }
+                              return p;
+                          });
+                          localStorage.setItem(key, JSON.stringify(updated));
+                          if (key === cacheKey && window.renderCatalog) {
+                              window.renderCatalog(updated);
+                          }
+                      }
+                  } catch (e) { }
+              };
+              updateCache(cacheKey);
+              if (cacheKey !== 'ohc_catalog_default') updateCache('ohc_catalog_default');
+
+              tapOverlay.style.display = 'none';
+              posView.style.display = 'none';
+              receiptScreen.style.display = 'flex';
+          } else {
+              // Online cash sale logic here, simple fetch to commit
+              fetch('/api/v1/payments/terminal/commit', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                  body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, mutation_type: 'cash_sale' })
+              }).then(res => res.json()).then(data => {
+                  if (data.success && data.invoice_id) {
+                      document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
+                  } else {
+                      document.querySelector('.receipt-text').innerText = "Payment Successful";
+                  }
+                  tapOverlay.style.display = 'none';
+                  posView.style.display = 'none';
+                  receiptScreen.style.display = 'flex';
+              }).catch(e => {
+                  console.error(e);
+                  document.querySelector('.receipt-text').innerText = "Error saving cash sale";
+                  tapOverlay.style.display = 'none';
+                  posView.style.display = 'none';
+                  receiptScreen.style.display = 'flex';
+              });
+          }
+      }
 
       async function initiateCharge() {
         tapOverlay.style.display = 'flex';
@@ -2065,7 +2132,7 @@ initWalkthrough();
         const posTransactions = [];
         const generalMutations = [];
         queue.forEach(m => {
-            if (m.type === "tap_to_pay") {
+            if (m.type === "tap_to_pay" || m.type === "cash_sale") {
                 posTransactions.push({
                     id: m.id,
                     client_id: "terminal_client",
@@ -2073,7 +2140,8 @@ initWalkthrough();
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
                     timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-                    device_signature: m.device_signature || `sig_offline_${m.id}_${crypto.randomUUID()}`
+                    device_signature: m.device_signature || `sig_offline_${m.id}_${crypto.randomUUID()}`,
+                    mutation_type: m.type
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
@@ -2099,7 +2167,7 @@ initWalkthrough();
                 const res = await fetch("/api/v1/payments/terminal/sync_offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ transactions: posTransactions })
+                    body: JSON.stringify({ session_id: localStorage.getItem('ohc_active_terminal_session_id') || undefined, transactions: posTransactions })
                 });
                 if (!res.ok) {
                     allOk = false;

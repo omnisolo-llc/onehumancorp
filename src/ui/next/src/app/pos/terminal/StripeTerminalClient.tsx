@@ -108,13 +108,31 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        // Offline Mode Payment Enqueue
        setStatus('Offline Tap-to-Pay. Authorizing locally...');
 
-       cart?.forEach(item => {
+       if (cart && cart.length > 0) {
+           cart.forEach(item => {
+               MutationService.getInstance().executeMutation(
+                   'tap_to_pay',
+                   {
+                       amount_cents: item.product.price_cents * item.quantity,
+                       product_id: item.product.id,
+                       quantity: item.quantity,
+                   },
+                   () => {
+                       if (onOptimisticReserve) onOptimisticReserve();
+                   },
+                   () => {
+                       if (onOptimisticRollback) onOptimisticRollback();
+                       setStatus('Failed to save offline payment.');
+                   }
+               );
+           });
+       } else {
            MutationService.getInstance().executeMutation(
                'tap_to_pay',
                {
-                   amount_cents: item.product.price_cents * item.quantity,
-                   product_id: item.product.id,
-                   quantity: item.quantity,
+                   amount_cents: amount,
+                   product_id: productId || 'custom-charge',
+                   quantity: 1,
                },
                () => {
                    if (onOptimisticReserve) onOptimisticReserve();
@@ -124,7 +142,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    setStatus('Failed to save offline payment.');
                }
            );
-       });
+       }
 
        setTimeout(() => {
          setStatus('Saved Offline - Will sync when connected');
@@ -191,23 +209,41 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   const processCashSale = async () => {
      if (typeof window !== 'undefined' && !navigator.onLine) {
-         cart?.forEach(item => {
-            MutationService.getInstance().executeMutation(
-                'cash_sale',
-                {
-                    amount_cents: item.product.price_cents * item.quantity,
-                    product_id: item.product.id,
-                    quantity: item.quantity
-                },
-                () => {
-                    if (onOptimisticReserve) onOptimisticReserve();
-                },
-                () => {
-                    if (onOptimisticRollback) onOptimisticRollback();
-                    setStatus('Failed to save offline cash sale.');
-                }
-            );
-         });
+         if (cart && cart.length > 0) {
+             cart.forEach(item => {
+                MutationService.getInstance().executeMutation(
+                    'cash_sale',
+                    {
+                        amount_cents: item.product.price_cents * item.quantity,
+                        product_id: item.product.id,
+                        quantity: item.quantity
+                    },
+                    () => {
+                        if (onOptimisticReserve) onOptimisticReserve();
+                    },
+                    () => {
+                        if (onOptimisticRollback) onOptimisticRollback();
+                        setStatus('Failed to save offline cash sale.');
+                    }
+                );
+             });
+         } else {
+             MutationService.getInstance().executeMutation(
+                 'cash_sale',
+                 {
+                     amount_cents: amount,
+                     product_id: productId || 'custom-charge',
+                     quantity: 1
+                 },
+                 () => {
+                     if (onOptimisticReserve) onOptimisticReserve();
+                 },
+                 () => {
+                     if (onOptimisticRollback) onOptimisticRollback();
+                     setStatus('Failed to save offline cash sale.');
+                 }
+             );
+         }
          setTimeout(() => {
            setStatus('Saved Offline - Will sync when connected');
            if (onSuccess) onSuccess();

@@ -11,6 +11,9 @@ test.describe('Viral Receipt Lottery', () => {
       await expect(page.locator('h1')).toHaveText('Viral Receipt Lottery 🎟');
       await expect(page.locator('.receipt-mockup')).toBeVisible();
 
+      // Wait for loadTenantLink to populate the true URL natively
+      await expect(page.locator('#preview-url')).toHaveText(/ohc\.app\/win\//, { timeout: 5000 });
+
       const generateBtn = page.locator('#generate-btn');
       await expect(generateBtn).toBeVisible();
       await expect(page.locator('#result-area')).not.toBeVisible();

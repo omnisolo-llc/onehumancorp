@@ -56,11 +56,11 @@
       }
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
+        border-radius: 16px !important;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px !important;
         }
       }
 
@@ -96,9 +96,16 @@
       }
 
       @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         select,
         textarea,
         input {
+
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
@@ -320,6 +327,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -616,6 +624,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -829,7 +838,7 @@
         gap: 10px;
       }
 
-      .persona-row {
+      .persona-row, #step-context {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
@@ -955,6 +964,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -1048,7 +1058,7 @@
           border-radius: 8px;
           min-height: 44px;
         }
-        .persona-row {
+        .persona-row, #step-context {
           flex-direction: column !important;
         }
         .work-context-cards, #context-group {
@@ -1137,10 +1147,9 @@
       .glassmorphism.container,
       .glassmorphism.card,
       .glassmorphism.panel {
-        border-radius: 16px !important;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px; }
+      .context-card { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; }
 
       /* --- OHC Premium Dark Mode & Animations --- */
       @media (prefers-color-scheme: dark) {
@@ -1156,7 +1165,6 @@
           backdrop-filter: blur(30px) saturate(210%) !important;
           -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 16px !important;
       }
         .context-card:hover {
           background: rgba(40, 40, 45, 0.7) !important;
@@ -1298,6 +1306,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -1324,8 +1333,8 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px; }
+      .context-card { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; }
     </style>
 
 
@@ -1401,7 +1410,7 @@
             aria-label="Generate Storefront"
             title="Generate Storefront"
             data-testid="generate-storefront-btn"
-            class="btn-primary" style="width: 100%; min-height: 44px;"
+            class="btn-primary" style="width: 100%; min-height: 44px !important; padding: 12px; margin: 4px;"
             disabled
           >
             Generate My Workspace
@@ -2121,7 +2130,7 @@
 
         <input
           type="text"
-          id="admin-name" autocomplete="name" enterkeyhint="next"
+          id="admin-name" autocomplete="name" autocorrect="off" enterkeyhint="next"
           data-testid="admin-name"
           class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
@@ -2136,7 +2145,7 @@
 
         <input
           type="email"
-          id="admin-email" inputmode="email" autocomplete="email" enterkeyhint="next"
+          id="admin-email" inputmode="email" autocomplete="email" autocorrect="off" enterkeyhint="next"
           data-testid="admin-email"
           class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
@@ -2160,7 +2169,7 @@
         >
           <input
             type="password"
-            id="admin-password" autocomplete="new-password" enterkeyhint="next"
+            id="admin-password" autocomplete="new-password" autocorrect="off" enterkeyhint="next"
             data-testid="admin-password"
             class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
@@ -2409,6 +2418,7 @@
         <textarea
           id="first-offer"
           data-testid="first-offer"
+          autocorrect="off"
           class="glass-control glassmorphism"
           placeholder="e.g. I bake custom vegan cakes"
           inputmode="text"
@@ -4394,8 +4404,8 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         // Hybrid Setup Health Check
-        fetch("/api/onboarding/setup-health?mode=standalone")
-          .then((res) => res.json())
+        window.__TAURI__.core.invoke("setup_health_check", { mode: "standalone" })
+
           .then((data) => {
             if (data.status === "error") {
               const errorDiv = document.createElement("div");
@@ -4798,8 +4808,8 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
-      .context-card { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px; }
+      .context-card { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; }
     </style>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -5041,7 +5051,6 @@
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(30px) saturate(210%);
     border-top: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 16px !important;
     width: 100%;
     box-sizing: border-box;
   "
