@@ -253,7 +253,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </p>
                 </div>
                 <div className="space-y-3 mt-2">
-                  <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                  <div className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-lg border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-sm">
                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                       Project
                     </p>
@@ -270,7 +270,37 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       }
                     </p>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+
+                  {/* Draft Message Rendering */}
+                  {(approval.proposed_action || approval.context_payload)?.draft_message && (
+                    <div className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-lg border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        Drafted Message
+                      </p>
+                      <p className="text-[13px] text-gray-800 dark:text-gray-200">
+                        {editingId === approval.id ? "" : (approval.proposed_action || approval.context_payload)?.draft_message}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Line Items Rendering */}
+                  {(approval.proposed_action || approval.context_payload)?.line_items && (
+                    <div className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-lg border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        Line Items
+                      </p>
+                      <ul className="space-y-2">
+                        {((approval.proposed_action || approval.context_payload)?.line_items as any[]).map((item, idx) => (
+                          <li key={idx} className="flex justify-between items-center text-[12px]">
+                            <span className="text-gray-800 dark:text-gray-200">{item.description}</span>
+                            <span className="text-gray-900 dark:text-white font-medium">${(item.amount_cents / 100).toFixed(2)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-lg border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">
                       Total Amount Due
                     </span>
@@ -2129,45 +2159,84 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ? (
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  true,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              disabled={isActionLoading(approval.id)}
-              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center opacity-100"
-              data-testid="feed-approve-btn"
-            >
-              {isActionLoading(approval.id) ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Processing...
-                </span>
-              ) : (
-                "Approve & Send"
-              )}
-            </button>
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  false,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              disabled={isActionLoading(approval.id)}
-              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-              data-testid="feed-dismiss-btn"
-            >
-              Dismiss
-            </button>
-          </div>
+          editingId === approval.id ? (
+            <div className="flex flex-col gap-3 w-full">
+              <textarea
+                className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                data-testid="edit-invoice-draft-textarea"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleDecision(
+                      approval.id,
+                      true,
+                      editContent,
+                      approval.event_source,
+                    );
+                    setEditingId(null);
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  data-testid="save-send-invoice-draft"
+                >
+                  Approve & Send
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingId(null);
+                    setEditContent("");
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  data-testid="cancel-edit-invoice-draft"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                disabled={isActionLoading(approval.id)}
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center opacity-100"
+                data-testid="feed-approve-btn"
+              >
+                {isActionLoading(approval.id) ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Processing...
+                  </span>
+                ) : (
+                  "Approve & Send"
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingId(approval.id);
+                  setEditContent(
+                    (approval.proposed_action || approval.context_payload)
+                      ?.draft_message || ""
+                  );
+                }}
+                disabled={isActionLoading(approval.id)}
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                data-testid="edit-invoice-draft-btn"
+              >
+                Edit Message
+              </button>
+            </div>
+          )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "review" ||
           (approval.proposed_action || approval.context_payload)
