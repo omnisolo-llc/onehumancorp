@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 const MEMORY_PROVIDER_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+const POSTGRES_FAILURE_RESET_SQL: &str = "UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1 AND agent_id = $2";
 
 #[async_trait]
 pub trait MemoryEmbeddingApi: Send + Sync {
@@ -58,6 +59,22 @@ async fn summarize_with_deadline(
             fallback.to_string()
         }
     }
+}
+
+async fn reset_postgres_session(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    session_id: &str,
+    agent_id: &str,
+) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+    sqlx::query(POSTGRES_FAILURE_RESET_SQL)
+        .bind(session_id)
+        .bind(agent_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await
 }
 
 pub struct DefaultMemoryEmbeddingApi {
@@ -221,8 +238,9 @@ impl AgentMemoryPipeline {
             DbStore::Postgres => {
                 let fetched = {
                     let mut tx = self.db.pool.begin().await?;
-                    // Fetch up to 100 rows, bypassing RLS locally for the read
-                    sqlx::query("SET LOCAL app.current_tenant = ''").execute(&mut *tx).await?;
+                    // This system worker must discover work across tenants before
+                    // processing every row under that row's organization context.
+                    ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
                     let fetched = sqlx::query("
                         SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id
@@ -286,10 +304,13 @@ impl AgentMemoryPipeline {
                             tracing::error!("AgentMemoryPipeline: failed to generate embedding");
 
                             // Revert status on failure
-                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1")
-                                .bind(&session_id)
-                                .execute(&self.db.pool)
-                                .await?;
+                            reset_postgres_session(
+                                &self.db.pool,
+                                &tenant_id,
+                                &session_id,
+                                &agent_id,
+                            )
+                            .await?;
                             continue;
                         }
                         Err(_) => {
@@ -297,10 +318,13 @@ impl AgentMemoryPipeline {
                             tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
 
                             // Revert status on failure
-                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1")
-                                .bind(&session_id)
-                                .execute(&self.db.pool)
-                                .await?;
+                            reset_postgres_session(
+                                &self.db.pool,
+                                &tenant_id,
+                                &session_id,
+                                &agent_id,
+                            )
+                            .await?;
                             continue;
                         }
                     };
@@ -322,8 +346,11 @@ impl AgentMemoryPipeline {
                         .execute(&mut *tx)
                         .await?;
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                    sqlx::query(
+                        "DELETE FROM agent_session_data WHERE session_id = $1 AND agent_id = $2",
+                    )
                         .bind(&session_id)
+                        .bind(&agent_id)
                         .execute(&mut *tx)
                         .await?;
                     tx.commit().await?;
@@ -367,6 +394,8 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
+                                let mut tx = self.db.pool.begin().await?;
+                                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
                                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id.to_string())
                                     .bind("system")
@@ -374,8 +403,9 @@ impl AgentMemoryPipeline {
                                     .bind("FS_MEMORY")
                                     .bind(&content)
                                     .bind(&emb_str)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await?;
+                                tx.commit().await?;
                             }
                         }
 
@@ -465,6 +495,12 @@ mod tests {
 
         assert_eq!(result, "original context");
         assert!(dropped.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn memory_failure_update_is_tenant_scoped() {
+        assert!(POSTGRES_FAILURE_RESET_SQL.contains("session_id = $1"));
+        assert!(POSTGRES_FAILURE_RESET_SQL.contains("agent_id = $2"));
     }
 
     #[tokio::test]

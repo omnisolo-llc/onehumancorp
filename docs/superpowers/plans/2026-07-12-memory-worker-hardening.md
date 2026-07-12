@@ -47,27 +47,27 @@ git commit -m "perf: bound memory worker summarization"
 **Files:**
 - Modify: `src/server/workers/agent_memory_pipeline.rs`
 
-- [ ] **Step 1: Write failing SQL-boundary tests**
+- [x] **Step 1: Write failing SQL-boundary tests**
 
 Add source-level unit assertions around extracted constants/helpers proving failure resets require both `session_id` and `agent_id`, and add a configured-Postgres regression that verifies an organization-scoped reset cannot modify another organization's session when `OHC_DATABASE_URL` is present.
 
-- [ ] **Step 2: Verify current failure updates are tenant-unscoped**
+- [x] **Step 2: Verify current failure updates are tenant-unscoped**
 
 Run: `cargo test -p ohc-mono --lib memory_failure_update_is_tenant_scoped`
 
 Expected: FAIL because current pool updates filter only by `session_id` and do not set organization context.
 
-- [ ] **Step 3: Implement explicit system and tenant transactions**
+- [x] **Step 3: Implement explicit system and tenant transactions**
 
 Use `set_system_context` for cross-tenant queue acquisition and filesystem-memory Postgres inserts. Add a failure-reset helper that begins a transaction, calls `set_org_context(tenant_id)`, and updates only the matching `session_id` and `agent_id`. Keep final consolidated-memory insert/delete inside the existing organization-scoped transaction.
 
-- [ ] **Step 4: Run Cargo and Bazel regressions**
+- [x] **Step 4: Run Cargo and Bazel regressions**
 
 Run: `cargo test -p ohc-mono --lib agent_memory_pipeline && bazel test //src/server/workers:server_workers_unit_test`
 
 Expected: Cargo tests PASS; configured Postgres isolation is reported separately if unavailable; Bazel worker test PASSes.
 
-- [ ] **Step 5: Commit tenant-scoped worker SQL**
+- [x] **Step 5: Commit tenant-scoped worker SQL**
 
 ```bash
 git add src/server/workers/agent_memory_pipeline.rs
