@@ -56,11 +56,11 @@
       }
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
+        border-radius: 16px !important;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px !important;
         }
       }
 
@@ -1137,7 +1137,6 @@
       .glassmorphism.container,
       .glassmorphism.card,
       .glassmorphism.panel {
-        border-radius: 16px !important;
       }
           #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
@@ -1156,7 +1155,6 @@
           backdrop-filter: blur(30px) saturate(210%) !important;
           -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 16px !important;
       }
         .context-card:hover {
           background: rgba(40, 40, 45, 0.7) !important;
@@ -2121,7 +2119,7 @@
 
         <input
           type="text"
-          id="admin-name" autocomplete="name" enterkeyhint="next"
+          id="admin-name" autocomplete="name" autocorrect="off" enterkeyhint="next"
           data-testid="admin-name"
           class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
@@ -2136,7 +2134,7 @@
 
         <input
           type="email"
-          id="admin-email" inputmode="email" autocomplete="email" enterkeyhint="next"
+          id="admin-email" inputmode="email" autocomplete="email" autocorrect="off" enterkeyhint="next"
           data-testid="admin-email"
           class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
@@ -2160,7 +2158,7 @@
         >
           <input
             type="password"
-            id="admin-password" autocomplete="new-password" enterkeyhint="next"
+            id="admin-password" autocomplete="new-password" autocorrect="off" enterkeyhint="next"
             data-testid="admin-password"
             class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
@@ -2409,6 +2407,7 @@
         <textarea
           id="first-offer"
           data-testid="first-offer"
+          autocorrect="off"
           class="glass-control glassmorphism"
           placeholder="e.g. I bake custom vegan cakes"
           inputmode="text"
@@ -5041,7 +5040,6 @@
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(30px) saturate(210%);
     border-top: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 16px !important;
     width: 100%;
     box-sizing: border-box;
   "
