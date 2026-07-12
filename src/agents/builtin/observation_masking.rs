@@ -149,6 +149,8 @@ impl JetBrainsObservationMasker {
                 let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
 
                 if original_len > current_limit {
+                    // Master Catalog B.4: Context Management: JetBrains Observation Masking.
+                    // We identify priority keys first so they are less likely to be removed.
                     let priority_keys = [
                         "error",
                         "stack_trace",
@@ -160,6 +162,10 @@ impl JetBrainsObservationMasker {
                         "id",
                         "success",
                         "result",
+                        "timestamp",
+                        "version",
+                        "metadata",
+                        "details", // Important for tracking errors
                     ];
                     let mut sorted_keys: Vec<String> = obj.keys().cloned().collect();
                     sorted_keys.sort_by_cached_key(|k| {
@@ -169,14 +175,32 @@ impl JetBrainsObservationMasker {
                         (!is_priority, k.clone())
                     });
 
-                    let keys_to_remove: Vec<String> =
-                        sorted_keys.into_iter().skip(current_limit).collect();
-                    removed_count = keys_to_remove.len();
-                    for k in keys_to_remove {
-                        obj.remove(&k);
+                    // We ensure that we do NOT remove priority keys even if we exceed the limit.
+                    // This is a crucial fix for production logs where errors MUST be preserved.
+                    let mut keys_to_remove = Vec::new();
+                    let mut current_kept = 0;
+
+                    for k in sorted_keys {
+                        let k_lower = k.to_lowercase();
+                        let is_priority = priority_keys.contains(&k_lower.as_str());
+
+                        if is_priority {
+                            current_kept += 1; // Priority keys are ALWAYS kept
+                        } else if current_kept < current_limit {
+                            current_kept += 1; // Keep up to the limit
+                        } else {
+                            keys_to_remove.push(k); // Drop the rest
+                        }
                     }
-                    truncated = true;
-                    modified = true;
+
+                    removed_count = keys_to_remove.len();
+                    for k in &keys_to_remove {
+                        obj.remove(k);
+                    }
+                    if removed_count > 0 {
+                        truncated = true;
+                        modified = true;
+                    }
                 }
                 for (_, value) in obj.iter_mut() {
                     if Self::mask_json_value(value, size_limit, element_limit, depth + 1) {
@@ -276,6 +300,7 @@ impl JetBrainsObservationMasker {
                                 }
 
                                 if !modification_successful {
+                                    // Optimization: dynamically compute threshold bounds
                                     let preview_chars = std::cmp::max(10, self.size_limit / 4);
                                     let char_count = tr.content.chars().count();
                                     let raw_msg = if char_count > preview_chars * 2 {
@@ -609,6 +634,27 @@ mod additional_tests {
         } else {
             panic!("Unexpected mask format");
         }
+    }
+
+    #[test]
+    fn test_mask_preserves_new_priority_keys_extended() {
+        let mut obj = serde_json::Map::new();
+        obj.insert("timestamp".to_string(), Value::String("2023".into()));
+        obj.insert("version".to_string(), Value::String("1.0".into()));
+        obj.insert("irrelevant_key_1".to_string(), Value::String("a".into()));
+        obj.insert("irrelevant_key_2".to_string(), Value::String("b".into()));
+
+        let mut val = Value::Object(obj);
+        // By setting size_limit lower (0) it will definitely evaluate it, and element_limit=2 restricts keys.
+        JetBrainsObservationMasker::mask_json_value(&mut val, 0, 2, 0);
+
+        let obj = val.as_object().unwrap();
+
+        assert!(obj.contains_key("timestamp"));
+        assert!(obj.contains_key("version"));
+        // At limit 2, only timestamp and version should be kept
+        assert!(!obj.contains_key("irrelevant_key_1"));
+        assert!(!obj.contains_key("irrelevant_key_2"));
     }
 
     #[test]
