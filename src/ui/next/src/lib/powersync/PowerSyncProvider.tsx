@@ -44,35 +44,76 @@ export const PowerSyncProvider = ({
   const [powerSync, setPowerSync] = useState<PowerSyncDatabase | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const supported = browserSupportsPowerSync();
+  const [supported, setSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!supported) return;
-    let _powerSync: PowerSyncDatabase;
-    const init = async () => {
-      _powerSync = await getPowerSyncDB();
+    setSupported(browserSupportsPowerSync());
+  }, []);
 
-      await _powerSync.init();
+  useEffect(() => {
+    if (supported !== true) return;
+
+    let cancelled = false;
+    let powerSyncDatabase: PowerSyncDatabase | null = null;
+    let closing = false;
+
+    const closeDatabase = async () => {
+      if (!powerSyncDatabase || closing) return;
+      closing = true;
+
+      try {
+        await powerSyncDatabase.disconnect();
+      } catch (err) {
+        console.error(err);
+      }
+
+      try {
+        await powerSyncDatabase.close();
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const init = async () => {
+      powerSyncDatabase = await getPowerSyncDB();
+      if (cancelled) {
+        await closeDatabase();
+        return;
+      }
+
+      await powerSyncDatabase.init();
+      if (cancelled) {
+        await closeDatabase();
+        return;
+      }
 
       const connector = new BackendConnector();
-      _powerSync.connect(connector);
+      await powerSyncDatabase.connect(connector);
+      if (cancelled) {
+        await closeDatabase();
+        return;
+      }
 
-      setPowerSync(_powerSync);
+      setPowerSync(powerSyncDatabase);
       setReady(true);
     };
 
-    init().catch((err) => {
+    void init().catch((err) => {
+      if (cancelled) return;
       console.error(err);
       setError(err instanceof Error ? err : new Error('Failed to initialize PowerSync'));
+      void closeDatabase();
     });
 
     return () => {
-       if (_powerSync) {
-         _powerSync.disconnect();
-         _powerSync.close();
-       }
+      cancelled = true;
+      void closeDatabase();
     };
   }, [supported]);
+
+  if (supported === null) {
+    return fallback || <div>Loading local database...</div>;
+  }
 
   if (!supported || error) {
     return unsupportedFallback || fallback || <div>Local database is unavailable in this browser context.</div>;
