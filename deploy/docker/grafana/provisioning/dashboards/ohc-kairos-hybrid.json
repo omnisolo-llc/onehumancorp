@@ -43,7 +43,8 @@
         "orientation": "auto",
         "displayMode": "gradient",
         "showUnfilled": true
-      }
+      },
+      "transparent": true
     },
     {
       "type": "stat",
@@ -75,7 +76,8 @@
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto"
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -102,7 +104,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -129,7 +132,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -161,7 +165,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -188,7 +193,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -215,7 +221,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -247,7 +254,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -274,7 +282,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "gridPos": {

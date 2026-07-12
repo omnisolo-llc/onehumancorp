@@ -107,7 +107,8 @@
         }
       ],
       "title": "LLM Cost by Agent (USD/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": "Prometheus",
@@ -182,7 +183,8 @@
         }
       ],
       "title": "API Cost by Integration (USD/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": "Prometheus",
@@ -257,7 +259,8 @@
         }
       ],
       "title": "Storage Cost (Bytes/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": "Prometheus",
@@ -332,7 +335,8 @@
         }
       ],
       "title": "Email Send Cost (Count/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": false,

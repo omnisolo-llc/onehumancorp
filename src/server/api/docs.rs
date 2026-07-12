@@ -307,6 +307,7 @@ pub fn get_videos() -> Vec<VideoTutorial> {
 
 
 
+#[allow(unused_macros)]
 macro_rules! with_cache_fallback {
     ($cache:expr, $cache_key:expr, $fetch_fn:expr) => {{
         let cache_key_str = $cache_key.to_string();
