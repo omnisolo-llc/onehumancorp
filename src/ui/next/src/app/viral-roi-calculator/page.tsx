@@ -1,6 +1,5 @@
-import { PoweredByOHC } from "../components/PoweredByOHC";
 "use client";
-
+import { PoweredByOHC } from "../components/PoweredByOHC";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
