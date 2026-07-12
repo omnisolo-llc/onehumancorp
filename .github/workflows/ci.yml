@@ -65,6 +65,34 @@ jobs:
       - name: Check tracked artifacts
         run: .github/scripts/check_repo_hygiene.sh
 
+  dependency-audit:
+    name: Production dependency audit
+    needs:
+      - check-changes
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Audit root pnpm lock
+        run: npx --yes pnpm@11.9.0 audit --prod
+
+      - name: Audit UI pnpm lock
+        working-directory: src/ui/next
+        run: npx --yes pnpm@11.9.0 audit --prod
+
+      - name: Audit root npm lock
+        run: npm audit --omit=dev
+
+      - name: Audit UI npm lock
+        working-directory: src/ui/next
+        run: npm audit --omit=dev
+
   bazel-build:
     name: Bazel build (${{ matrix.name }})
     needs:

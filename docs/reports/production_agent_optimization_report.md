@@ -11,7 +11,7 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
-Remediation update: F-01 through F-07 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Dependency upgrades and explicit Postgres CI coverage remain open.
+Remediation update: F-01 through F-08 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Explicit Postgres CI coverage remains open.
 
 ## Completed optimization work
 
@@ -29,6 +29,7 @@ Remediation update: F-01 through F-07 have now been addressed in focused follow-
 | Stream cancellation | Replaced the unbounded query stream with a 64-event buffer and raced query execution, gRPC runs, retry backoff, and completion-memory writes against receiver closure | Two drop-observable LLM regressions, 519 agent tests, and the Bazel agent library test passed |
 | Memory worker boundaries | Added injectable, deadline-bound summarization; explicit system authority for cross-tenant acquisition/filesystem ingestion; and organization-scoped failure/final mutations | 5 Cargo worker tests and the Bazel workers target passed; real Postgres/RLS assertions remained skipped because `OHC_DATABASE_URL` was unset |
 | Telemetry privacy | Removed raw task and error bodies from LangSmith/Langfuse logs while retaining provider, event, run ID, and coarse error class | Emitted-log capture regression, 2 observability tests, and all 520 agent tests passed |
+| JavaScript supply chain | Constrained vulnerable transitive releases in root/UI pnpm and npm graphs and added four production audit gates to CI | Root/UI pnpm and npm production audits report zero vulnerabilities; 817 UI tests, 58 CLI tests, MCP smoke test, and Bazel UI target pass |
 
 ## Boundary matrix
 
@@ -96,6 +97,8 @@ Smallest regression: `observability_logs_metadata_without_task_or_error_body`.
 
 ### F-08 — High — production JavaScript dependency advisories
 
+**Status (2026-07-12): Remediated.** Root and standalone UI pnpm policies now constrain patched MCP SDK, DOMPurify, `form-data`, `undici`, `ws`, PostCSS, `js-yaml`, `esbuild`, and `brace-expansion` releases; equivalent npm overrides keep both tracked npm lockfiles safe. All four production audits report zero vulnerabilities. CI now audits both package-manager graphs. Compatibility evidence includes 217 UI test files/817 tests, 13 CLI test files/58 tests, an MCP stdio startup smoke test, and `//src/ui/next:next_vitest`. The deprecated `@modelcontextprotocol/server-github` wrapper remains a maintenance risk, but its transitive SDK is patched. Existing UI and CLI standalone TypeScript-check failures remain separate baseline defects, not introduced test failures.
+
 `pnpm audit --prod` reports 14 advisories: 7 high, 4 moderate, and 3 low. High-severity paths include `@modelcontextprotocol/sdk` ReDoS and DNS-rebinding issues, `form-data` CRLF injection, three `undici` proxy/TLS/routing issues, and legacy `ws` memory-exhaustion DoS. Patched versions were identified by the audit and should be applied with targeted compatibility tests.
 
 Smallest regression: lockfile audit in CI with an explicit, expiring advisory allowlist.
@@ -128,7 +131,7 @@ Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 ## Dependency and secret scanning
 
 - `cargo audit` is not installed, so Rust advisory status is unverified. `cargo tree -d` completed and showed substantial duplicate dependency families, including Axum 0.7/0.8 and Tower 0.4/0.5; this is maintenance and binary-size debt, not itself a vulnerability.
-- `pnpm audit --prod` completed with 14 advisories (7 high, 4 moderate, 3 low).
+- The audit snapshot initially reported 14 pnpm advisories (7 high, 4 moderate, 3 low). After remediation, root/UI pnpm and root/UI npm production audits each report zero vulnerabilities.
 - No private-key PEM blocks or the removed `default_auth_key_change_me` fallback were found.
 - The credentialed-Postgres-URL pattern matched 66 files in the scan scope (the `docs/` tree was excluded). Most inspected paths are tests, local defaults, or deployment templates; they need environment-by-environment validation before being classified as real credentials. No values are reproduced here.
 
