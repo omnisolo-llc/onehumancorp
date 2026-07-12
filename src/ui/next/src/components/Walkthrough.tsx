@@ -144,7 +144,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.2)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -153,7 +153,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
         <div className="flex justify-between items-start mb-3">
           <h4 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} id="wt-close" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
+          <button onClick={handleSkip} id="wt-close" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>

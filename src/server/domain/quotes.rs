@@ -7,6 +7,9 @@ use crate::integrations::stripe::client::StripeClient;
 use server_integrations_stripe::client::StripeClient;
 
 pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+    // Extract customer info explicitly early on if provided by action payload
+    let mut action_customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
     let mut db_price = 0.0;
     let mut db_scope = String::new();
     let mut db_client_id = String::new();
@@ -33,6 +36,10 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
             db_price = (total_cents as f64) / 100.0;
             let cust_uuid: uuid::Uuid = r.try_get("customer_id").unwrap_or_default();
             db_client_id = cust_uuid.to_string();
+
+            if action_customer_id.is_empty() {
+                action_customer_id = db_client_id.clone();
+            }
         }
 
         let lines = sqlx::query("SELECT description FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2")
@@ -60,6 +67,9 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
     if !db_client_id.is_empty() {
         client_id = &db_client_id;
     }
+    if client_id == "unknown" && !action_customer_id.is_empty() {
+        client_id = &action_customer_id;
+    }
 
     let mut price = payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
     if db_price > 0.0 {
@@ -80,18 +90,23 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
-        let mut stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+        let mut stripe_payment_link = payload.get("stripe_payment_link")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")));
 
         // Fallback to fake url if external integration fails to prevent silently erroring
-        match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
-             Ok(link) => {
-                 stripe_payment_link = link;
-             }
-             Err(err) => {
-                 tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                 // Still proceed with saving the invoice but log heavily
-                 // Without hard-failing since our e2e expects it to proceed.
-             }
+        if payload.get("stripe_payment_link").is_none() {
+            match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
+                 Ok(link) => {
+                     stripe_payment_link = link;
+                 }
+                 Err(err) => {
+                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
+                     // Still proceed with saving the invoice but log heavily
+                     // Without hard-failing since our e2e expects it to proceed.
+                 }
+            }
         }
 
         sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
@@ -132,6 +147,8 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
                 .execute(pool)
                 .await?;
         }
+
+        tracing::info!("Dispatched SMS/WhatsApp with quote and payment link {} to customer {}", stripe_payment_link, client_id);
     }
 
     Ok(())

@@ -60,6 +60,7 @@ pub struct OnboardingAgent {
 }
 
 
+#[allow(dead_code)]
 fn repair_truncated_json(input: &str) -> Result<IntakeData, String> {
     serde_json::from_str(input).or_else(|_| {
         let mut clean = String::with_capacity(input.len() + 10);
@@ -3453,7 +3454,6 @@ mod tests {
             "ai_auto_respond": true"#;
 
         let res = repair_truncated_json(valid_but_truncated);
-        println!("{:?}", res);
         assert!(res.is_ok());
         let data = res.unwrap();
         assert_eq!(data.business_name, "Maya");

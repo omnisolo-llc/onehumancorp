@@ -112,7 +112,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   fi
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
+      export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"

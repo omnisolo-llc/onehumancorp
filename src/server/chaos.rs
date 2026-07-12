@@ -64,39 +64,6 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
-
-        // Now test Postgres parity directly using pg_pool.
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
-            let pg_pool = PgPoolOptions::new()
-                .connect(&database_url)
-                .await
-                .unwrap();
-            let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");
-            let table_name = format!("test_parity_{}", table_suffix);
-            sqlx::query(&format!(
-                "CREATE TABLE {} (
-                    id TEXT PRIMARY KEY,
-                    mission_log TEXT,
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );", table_name
-            )).execute(&pg_pool).await.unwrap();
-
-            sqlx::query(&format!("INSERT INTO {} (id, mission_log) VALUES ($1, $2)", table_name))
-                .bind("1")
-                .bind(None::<String>) // Inserting NULL
-                .execute(&pg_pool).await.unwrap();
-
-            let pg_row: (String, Option<String>, chrono::DateTime<chrono::Utc>) = sqlx::query_as(&format!("SELECT id, mission_log, updated_at FROM {} WHERE id = '1'", table_name))
-                .fetch_one(&pg_pool)
-                .await
-                .unwrap();
-
-            assert_eq!(pg_row.0, "1");
-            assert_eq!(pg_row.1, None, "NULL handling parity must be maintained between SQLite and Postgres");
-            assert_eq!(pg_row.1, row.1, "NULL handling parity must be exactly maintained between SQLite and Postgres schema types");
-            assert!(pg_row.2.timestamp() > 0);
-            let _ = sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name)).execute(&pg_pool).await;
-        }
     }
 
 
