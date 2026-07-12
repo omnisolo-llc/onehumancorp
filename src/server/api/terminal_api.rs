@@ -70,7 +70,7 @@ pub struct StartTerminalSessionResponse {
 }
 
 pub async fn start_terminal_session_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<StartTerminalSessionRequest>,
@@ -133,7 +133,7 @@ pub struct UpdateTerminalSessionStatusResponse {
 }
 
 pub async fn update_terminal_session_status_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<UpdateTerminalSessionStatusRequest>,
@@ -202,7 +202,7 @@ pub struct EndTerminalSessionResponse {
 }
 
 pub async fn end_terminal_session_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<EndTerminalSessionRequest>,
@@ -265,7 +265,7 @@ pub struct CommitInventoryRequest {
 }
 
 pub async fn reserve_inventory_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<ReserveInventoryRequest>,
@@ -337,7 +337,7 @@ pub struct SyncOfflineTransactionsResponse {
 }
 
 pub async fn sync_offline_transactions_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<SyncOfflineTransactionsRequest>,
@@ -630,7 +630,7 @@ pub async fn sync_offline_transactions_handler(
 
 
 pub async fn commit_inventory_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<CommitInventoryRequest>,
@@ -726,7 +726,7 @@ pub async fn commit_inventory_handler(
 }
 
 pub async fn create_payment_intent_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<PaymentIntentRequest>,
@@ -980,7 +980,16 @@ mod tests {
     }
 }
 
-fn extract_tenant_id_or_error(auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>) -> Result<String, axum::response::Response> {
+fn extract_tenant_id_or_error(
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: &axum::http::HeaderMap
+) -> Result<String, axum::response::Response> {
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    if !spiffe_id_str.is_empty() {
+        if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+            return Ok(id);
+        }
+    }
     match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
@@ -994,11 +1003,11 @@ fn extract_tenant_id_or_error(auth_info: Option<axum::extract::Extension<::serve
 }
 
 pub async fn get_terminal_connection_token_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
 ) -> axum::response::Response {
-    let tenant_id = match extract_tenant_id_or_error(auth_info) {
+    let tenant_id = match extract_tenant_id_or_error(auth_info, &_headers) {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -1017,7 +1026,7 @@ pub async fn get_terminal_connection_token_handler(
 }
 
 pub async fn capture_payment_intent_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<CapturePaymentIntentRequest>,
