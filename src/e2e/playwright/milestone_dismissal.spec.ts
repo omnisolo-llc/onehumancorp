@@ -26,7 +26,7 @@ test.describe('Milestone Dismissal E2E', () => {
     await expect(milestoneCard).toBeVisible({ timeout: 15000 });
 
     // Dismiss the milestone
-    const closeBtn = page.locator('#milestone-x-btn');
+    const closeBtn = page.locator('#milestone-close-btn');
     await expect(closeBtn).toBeVisible({ timeout: 5000 });
     await closeBtn.click();
 
