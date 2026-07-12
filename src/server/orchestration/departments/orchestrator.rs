@@ -1105,6 +1105,44 @@ pub async fn execute_action(
                                                 {
                                                     tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
                                                 }
+
+                                                if let Some(line_items) = payload.get("line_items").and_then(|v| v.as_array()) {
+                                                    for item in line_items {
+                                                        let id = uuid::Uuid::new_v4().to_string();
+                                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
+                                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                                        let unit_price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(unit_price * qty as f64);
+
+                                                        if let Err(e) = sqlx::query("INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                                                            .bind(&id)
+                                                            .bind(tenant_id)
+                                                            .bind(&sent_invoice.id)
+                                                            .bind(desc)
+                                                            .bind(qty)
+                                                            .bind(unit_price)
+                                                            .bind(amount)
+                                                            .execute(&self.db.pool)
+                                                            .await
+                                                        {
+                                                            tracing::error!("Failed to insert invoice line item for invoice_draft: {}", e);
+                                                        }
+                                                    }
+                                                }
+
+                                                if let Some(generated_message) = payload.get("generated_message").and_then(|v| v.as_str()) {
+                                                    let comm_id = uuid::Uuid::new_v4().to_string();
+                                                    if let Err(e) = sqlx::query("INSERT INTO invoice_communication_events (id, tenant_id, invoice_id, status, channel, drafted_content) VALUES ($1, $2, $3, 'sent', 'email', $4)")
+                                                        .bind(&comm_id)
+                                                        .bind(tenant_id)
+                                                        .bind(&sent_invoice.id)
+                                                        .bind(generated_message)
+                                                        .execute(&self.db.pool)
+                                                        .await
+                                                    {
+                                                        tracing::error!("Failed to insert invoice communication event for invoice_draft: {}", e);
+                                                    }
+                                                }
                                             }
                                             DbStore::Sqlite(_) => {
                                                 if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'sent', ?, 'USD', ?, ?, 'unpaid', 0, 0)")
@@ -1118,6 +1156,44 @@ pub async fn execute_action(
                                                     .await
                                                 {
                                                     tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                                }
+
+                                                if let Some(line_items) = payload.get("line_items").and_then(|v| v.as_array()) {
+                                                    for item in line_items {
+                                                        let id = uuid::Uuid::new_v4().to_string();
+                                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
+                                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                                        let unit_price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(unit_price * qty as f64);
+
+                                                        if let Err(e) = sqlx::query("INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                                                            .bind(&id)
+                                                            .bind(tenant_id)
+                                                            .bind(&sent_invoice.id)
+                                                            .bind(desc)
+                                                            .bind(qty)
+                                                            .bind(unit_price)
+                                                            .bind(amount)
+                                                            .execute(&self.db.pool)
+                                                            .await
+                                                        {
+                                                            tracing::error!("Failed to insert invoice line item for invoice_draft: {}", e);
+                                                        }
+                                                    }
+                                                }
+
+                                                if let Some(generated_message) = payload.get("generated_message").and_then(|v| v.as_str()) {
+                                                    let comm_id = uuid::Uuid::new_v4().to_string();
+                                                    if let Err(e) = sqlx::query("INSERT INTO invoice_communication_events (id, tenant_id, invoice_id, status, channel, drafted_content) VALUES (?, ?, ?, 'sent', 'email', ?)")
+                                                        .bind(&comm_id)
+                                                        .bind(tenant_id)
+                                                        .bind(&sent_invoice.id)
+                                                        .bind(generated_message)
+                                                        .execute(&self.db.pool)
+                                                        .await
+                                                    {
+                                                        tracing::error!("Failed to insert invoice communication event for invoice_draft: {}", e);
+                                                    }
                                                 }
                                             }
                                         }

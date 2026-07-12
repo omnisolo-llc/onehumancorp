@@ -526,7 +526,16 @@ async fn simulate_invoice_draft(
         "milestone_name": "Phase 1 Complete",
         "amount_cents": 250000,
         "customer_id": "cust_simulated_invoice_123",
-        "inbox_message_id": "msg_simulated_invoice_123"
+        "inbox_message_id": "msg_simulated_invoice_123",
+        "line_items": [
+            {
+                "description": "Website Redesign - Phase 1 Complete",
+                "quantity": 1,
+                "unit_price": 2500.0,
+                "amount": 2500.0
+            }
+        ],
+        "generated_message": "Hi there, your invoice for Website Redesign - Phase 1 Complete is attached."
     });
 
     match orchestrator.execute_action(

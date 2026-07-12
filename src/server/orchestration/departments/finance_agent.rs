@@ -68,6 +68,57 @@ impl Department for FinanceAgent {
             let project_name = event.payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Unknown Project");
             let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
             let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let prompt = format!(
+                "You are an AI financial assistant. A project milestone has been completed.
+                Project: {}
+                Milestone: {}
+                Total Amount (cents): {}
+
+                Please draft an invoice for this milestone.
+                Return a JSON object with two keys:
+                1. 'line_items': an array of objects, each with 'description' (string), 'quantity' (integer), 'unit_price' (number in dollars), and 'amount' (number in dollars). Ensure the total amount matches the amount given.
+                2. 'generated_message': a short, polite email to the client attaching the invoice for the completed milestone.
+                Do not include markdown blocks or any other text outside the JSON.",
+                project_name, milestone_name, amount_cents
+            );
+
+            let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("minimax") => {
+                    if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                        crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                    } else {
+                        crate::minimax::LocalLLMClient::new().reason(&prompt).await
+                    }
+                },
+                _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            };
+
+            let mut line_items = serde_json::json!([]);
+            let mut generated_message = format!("Hi there, your invoice for {} - {} is attached.", project_name, milestone_name);
+
+            if let Ok(res) = llm_res {
+                let clean_json = res.trim().trim_start_matches("```json").trim_end_matches("```").trim();
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(clean_json) {
+                    if let Some(items) = parsed.get("line_items") {
+                        line_items = items.clone();
+                    }
+                    if let Some(msg) = parsed.get("generated_message").and_then(|v| v.as_str()) {
+                        generated_message = msg.to_string();
+                    }
+                }
+            }
+
+            // Fallback line items if LLM fails
+            if !line_items.is_array() || line_items.as_array().unwrap().is_empty() {
+                line_items = serde_json::json!([{
+                    "description": format!("{} - {}", project_name, milestone_name),
+                    "quantity": 1,
+                    "unit_price": amount_cents as f64 / 100.0,
+                    "amount": amount_cents as f64 / 100.0
+                }]);
+            }
+
             payload = serde_json::json!({
                 "feature_type": "invoice_draft",
                 "project_name": project_name,
@@ -75,6 +126,8 @@ impl Department for FinanceAgent {
                 "amount_cents": amount_cents,
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "line_items": line_items,
+                "generated_message": generated_message,
             });
         }
 
