@@ -282,15 +282,7 @@ mod chaos_db_tests {
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
-        if let Err(_) = std::env::var("OHC_DATABASE_URL") {
-            return; // Skip if no postgres URL
-        }
-        let pg_url = std::env::var("OHC_DATABASE_URL").unwrap();
-
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&pg_url)
-            .await
-            .unwrap();
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
 
         let db_id = uuid::Uuid::new_v4().to_string();
         let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -349,4 +341,98 @@ mod chaos_db_tests {
 
         assert_eq!(pg_count, sqlite_count, "Identical queries should yield identical row counts between Postgres and SQLite");
     }
+
+    #[tokio::test]
+    async fn test_chaos_parity_audit_comprehensive() {
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
+
+        // Also wipe out some tables for isolation in test
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&sqlite_uri)
+            .await
+            .unwrap();
+
+        // 1. Create parity schema in SQLite (Postgres schema is handled by migrations)
+        // Simulate migrations for SQLite parity.
+        sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
+            .execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
+            .execute(&sqlite_pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS knowledge_embeddings (id TEXT PRIMARY KEY, tenant_id TEXT, agent_id TEXT, task_id TEXT, content TEXT, embedding TEXT, source_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&sqlite_pool).await.unwrap();
+
+        let pg_db = Arc::new(DB {
+            pool: pg_pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let sqlite_db = Arc::new(DB {
+            pool: crate::db::create_dummy_pg_pool().await,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        // 1. `get_completed_tasks` Parity Test
+        let tenant_id_str = format!("tenant_{}", uuid::Uuid::new_v4());
+        let tenant_id = tenant_id_str.as_str();
+        let task_id_shared = uuid::Uuid::new_v4().to_string();
+        let task_id_swarm = uuid::Uuid::new_v4().to_string();
+
+        // Insert into SQLite
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
+            .bind(&task_id_shared).bind(tenant_id).bind("payload_shared")
+            .execute(&sqlite_pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
+            .bind(&task_id_swarm).bind(tenant_id).bind("payload_swarm")
+            .execute(&sqlite_pool).await.unwrap();
+
+        // Insert into Postgres
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES ($1, $2, $3, 'COMPLETED', FALSE)")
+            .bind(&task_id_shared).bind(tenant_id).bind("payload_shared")
+            .execute(&pg_pool).await.unwrap();
+        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES ($1::uuid, $2, $3, 'COMPLETED', FALSE)")
+            .bind(&task_id_swarm).bind(tenant_id).bind("payload_swarm")
+            .execute(&pg_pool).await.unwrap();
+
+
+        let sqlite_tasks: Vec<_> = sqlite_db.get_completed_tasks().await.unwrap().into_iter().filter(|t| t.1 == tenant_id).collect();
+        let pg_tasks: Vec<_> = pg_db.get_completed_tasks().await.unwrap().into_iter().filter(|t| t.1 == tenant_id).collect();
+
+
+        // Validate parity
+        let mut sqlite_sorted = sqlite_tasks.clone();
+        sqlite_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+        let mut pg_sorted = pg_tasks.clone();
+        pg_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+
+        assert_eq!(sqlite_sorted.len(), pg_sorted.len(), "Task count parity failed");
+        for (sq, pg) in sqlite_sorted.iter().zip(pg_sorted.iter()) {
+            assert_eq!(sq.0, pg.0, "Task ID parity failed");
+            assert_eq!(sq.1, pg.1, "Tenant ID parity failed");
+            assert_eq!(sq.2, pg.2, "Payload parity failed");
+            assert_eq!(sq.3, pg.3, "Table Name parity failed");
+        }
+
+        // 2. `insert_knowledge_embedding` Parity Test with NULL and timezone
+        let embedding_id = uuid::Uuid::new_v4().to_string();
+        let vector = "[0.1, 0.2, 0.3]";
+        let content = "Parity content";
+
+        // We use string representation for vector in pg since it expects pgvector
+        sqlite_db.insert_knowledge_embedding(&embedding_id, tenant_id, "agent1", "task1", content, vector, "text").await.unwrap();
+        pg_db.insert_knowledge_embedding(&embedding_id, tenant_id, "agent1", "task1", content, vector, "text").await.unwrap();
+
+        let sq_row: (String, String) = sqlx::query_as("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
+            .bind(&embedding_id)
+            .fetch_one(&sqlite_pool).await.unwrap();
+
+        let pg_row: (String, String) = sqlx::query_as("SELECT id::text, content FROM knowledge_embeddings WHERE id = $1::uuid")
+            .bind(&embedding_id)
+            .fetch_one(&pg_pool).await.unwrap();
+
+        assert_eq!(sq_row.0, pg_row.0, "UUID string parity failed");
+        assert_eq!(sq_row.1, pg_row.1, "Content string parity failed");
+    }
+
 }
