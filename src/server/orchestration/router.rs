@@ -261,7 +261,7 @@ mod omni_tests {
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Instagram".to_string(),
-            sender: "maya".to_string(),
+            sender: "testuser".to_string(),
             content: "Can I schedule a cake delivery?".to_string(),
         };
 
@@ -277,7 +277,7 @@ mod omni_tests {
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Email".to_string(),
-            sender: "carlos".to_string(),
+            sender: "testuser".to_string(),
             content: "Need a quote for fixing a sink.".to_string(),
         };
 
