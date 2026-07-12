@@ -16,8 +16,9 @@ vi.mock('../components/AppShell', () => ({
 }));
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
-  expect(() => render(<InboxPage />)).not.toThrow();
+  const { container } = render(<InboxPage />);
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
   expect(screen.getByText('Select a database-backed message to inspect it.')).toBeInTheDocument();
+  expect(container.textContent).not.toContain('\\n');
 });
