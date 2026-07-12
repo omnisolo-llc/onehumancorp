@@ -1093,13 +1093,12 @@ pub async fn execute_action(
                                         // Record the sent invoice in the database
                                         match &self.db.store {
                                             DbStore::Postgres => {
-                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'sent', $4, 'USD', $5, $6, 'unpaid', 0, 0)")
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount) VALUES ($1, $2, $3, 'sent', $4, 'USD', $5)")
                                                     .bind(&sent_invoice.id)
                                                     .bind(tenant_id)
                                                     .bind(&customer_id_to_use)
                                                     .bind(now + chrono::Duration::days(30))
                                                     .bind(amount_cents as f64 / 100.0)
-                                                    .bind(amount_cents)
                                                     .execute(&self.db.pool)
                                                     .await
                                                 {
@@ -1107,13 +1106,12 @@ pub async fn execute_action(
                                                 }
                                             }
                                             DbStore::Sqlite(_) => {
-                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'sent', ?, 'USD', ?, ?, 'unpaid', 0, 0)")
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount) VALUES (?, ?, ?, 'sent', ?, 'USD', ?)")
                                                     .bind(&sent_invoice.id)
                                                     .bind(tenant_id)
                                                     .bind(&customer_id_to_use)
                                                     .bind(now + chrono::Duration::days(30))
                                                     .bind(amount_cents as f64 / 100.0)
-                                                    .bind(amount_cents)
                                                     .execute(&self.db.pool)
                                                     .await
                                                 {

@@ -70,6 +70,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateInvoiceDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-invoice-draft', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
 
     fetchFeed();
@@ -522,7 +536,7 @@ export default function FeedPage() {
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                           data-testid="feed-approve-btn"
                         >
-                          {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
+                          {isProcessing ? 'Processing...' : (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
                         </button>
                         <button
                           onClick={() => startEditing(item)}
@@ -601,6 +615,13 @@ export default function FeedPage() {
              className="text-xs bg-green-100 text-green-700 border border-green-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Booking
+          </button>
+          <button
+             onClick={simulateInvoiceDraft}
+             data-testid="simulate-invoice-draft-btn"
+             className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Invoice Draft
           </button>
         </div>
       </div>
