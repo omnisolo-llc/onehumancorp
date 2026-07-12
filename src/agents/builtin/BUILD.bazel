@@ -27,6 +27,7 @@ rust_library(
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",
     proc_macro_deps = [
+        "@crates//:dirs",
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],

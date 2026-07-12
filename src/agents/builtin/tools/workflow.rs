@@ -317,6 +317,58 @@ fn truncate_report(report: String) -> String {
     )
 }
 
+
+// SOTA Harness Pattern: AutoGPT Unique Harness Innovations: Visual/low-code orchestration & Save workflow for reuse
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SaveWorkflowArgs {
+    /// The exact name of the workflow to save.
+    pub name: String,
+
+    /// The script body.
+    pub script: String,
+
+    /// Whether to save globally (true) or per-project (false)
+    pub is_global: bool,
+}
+
+struct SaveWorkflowExecutor {}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<SaveWorkflowArgs> for SaveWorkflowExecutor {
+    async fn execute_typed(&self, args: SaveWorkflowArgs) -> Result<String, ToolError> {
+        let manager = ohc_builtin_agent_core::dynamic_workflows::WorkflowManager::new(std::env::current_dir().unwrap_or_default());
+        manager.save_workflow(&args.name, &args.script, args.is_global).await.map_err(|e| ToolError::LlmRecoverable(e))?;
+        Ok(format!("Successfully saved workflow '{}'.", args.name))
+    }
+}
+
+pub fn save_workflow_tool() -> Tool {
+    Tool {
+        name: "SaveWorkflow".to_string(),
+        description: "Save a dynamic workflow script for reuse. Used when you want to save an orchestration script so it can be called directly. (Claude Code Mechanic: Save the workflow for reuse)".to_string(),
+        is_read_only: false,
+        parameters: serde_json::json!({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The exact name of the workflow to save."
+                },
+                "script": {
+                    "type": "string",
+                    "description": "The script body."
+                },
+                "is_global": {
+                    "type": "boolean",
+                    "description": "Whether to save globally (true) or per-project (false)"
+                }
+            },
+            "required": ["name", "script", "is_global"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(SaveWorkflowExecutor {})),
+    }
+}
+
 pub fn workflow_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "RunWorkflow".to_string(),

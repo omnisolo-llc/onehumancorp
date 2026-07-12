@@ -7,6 +7,79 @@
 use std::sync::Arc;
 use tokio::sync::{Semaphore, RwLock, mpsc, watch};
 use std::collections::HashMap;
+use std::path::PathBuf;
+use tokio::fs;
+
+/// Claude Code Mechanic: Save the workflow for reuse & Pass input to a saved workflow.
+/// Handles loading and saving workflow scripts to `.ohc/workflows/` and `~/.ohc/workflows/`.
+pub struct WorkflowManager {
+    project_dir: PathBuf,
+    global_dir: Option<PathBuf>,
+}
+
+impl WorkflowManager {
+    pub fn new(project_dir: impl Into<PathBuf>) -> Self {
+        let global_dir = dirs::home_dir().map(|h| h.join(".ohc").join("workflows"));
+        Self {
+            project_dir: project_dir.into(),
+            global_dir,
+        }
+    }
+
+    /// Sanitizes the workflow name to prevent path traversal
+    fn sanitize_name(name: &str) -> String {
+        name.chars().filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-').collect()
+    }
+
+    /// Saves a workflow script.
+    /// If `is_global` is true, saves to `~/.ohc/workflows/`.
+    /// Otherwise, saves to `<project_dir>/.ohc/workflows/`.
+    pub async fn save_workflow(&self, name: &str, script: &str, is_global: bool) -> Result<(), String> {
+        let safe_name = Self::sanitize_name(name);
+        if safe_name.is_empty() {
+            return Err("Invalid workflow name".to_string());
+        }
+
+        let target_dir = if is_global {
+            self.global_dir.clone().ok_or("Home directory not found")?
+        } else {
+            self.project_dir.join(".ohc").join("workflows")
+        };
+
+        fs::create_dir_all(&target_dir).await.map_err(|e| format!("Failed to create dir: {}", e))?;
+        let path = target_dir.join(format!("{}.js", safe_name));
+        fs::write(&path, script).await.map_err(|e| format!("Failed to write script: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Loads a workflow script by name.
+    /// Checks `<project_dir>/.ohc/workflows/` first, then falls back to `~/.ohc/workflows/`.
+    pub async fn load_workflow(&self, name: &str) -> Result<String, String> {
+        let safe_name = Self::sanitize_name(name);
+        if safe_name.is_empty() {
+            return Err("Invalid workflow name".to_string());
+        }
+        let filename = format!("{}.js", safe_name);
+
+        // Check project dir
+        let project_path = self.project_dir.join(".ohc").join("workflows").join(&filename);
+        if fs::try_exists(&project_path).await.unwrap_or(false) {
+            return fs::read_to_string(&project_path).await.map_err(|e| format!("Failed to read project script: {}", e));
+        }
+
+        // Check global dir
+        if let Some(global_dir) = &self.global_dir {
+            let global_path = global_dir.join(&filename);
+            if fs::try_exists(&global_path).await.unwrap_or(false) {
+                return fs::read_to_string(&global_path).await.map_err(|e| format!("Failed to read global script: {}", e));
+            }
+        }
+
+        Err(format!("Workflow '{}' not found", name))
+    }
+}
+
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
@@ -197,6 +270,48 @@ mod tests {
                 output: format!("Processed: {}", task.instructions),
             })
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_workflow_manager_save_and_load() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let project_dir = temp_dir.path().join("project");
+        let global_dir = temp_dir.path().join("home").join(".ohc").join("workflows");
+
+        // Mocking the manager to use our temp global dir
+        let mut manager = WorkflowManager::new(project_dir.clone());
+        manager.global_dir = Some(global_dir.clone());
+
+        // 1. Save and load project workflow
+        manager.save_workflow("my_project_wf", "project script", false).await.unwrap();
+        let loaded = manager.load_workflow("my_project_wf").await.unwrap();
+        assert_eq!(loaded, "project script");
+
+        // 2. Save and load global workflow
+        manager.save_workflow("my_global_wf", "global script", true).await.unwrap();
+        let loaded = manager.load_workflow("my_global_wf").await.unwrap();
+        assert_eq!(loaded, "global script");
+
+        // 3. Precedence test (project overrides global)
+        manager.save_workflow("override_wf", "global script", true).await.unwrap();
+        manager.save_workflow("override_wf", "project script", false).await.unwrap();
+        let loaded = manager.load_workflow("override_wf").await.unwrap();
+        assert_eq!(loaded, "project script"); // Should prioritize project
+
+        // 4. Not found
+        let res = manager.load_workflow("non_existent").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("not found"));
+
+        // 5. Path traversal protection
+        let res = manager.save_workflow("../../../etc/passwd", "evil", true).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Invalid workflow name"));
+
+        let loaded = manager.load_workflow("../../../etc/passwd").await;
+        assert!(loaded.is_err());
+        assert!(loaded.unwrap_err().contains("Invalid workflow name"));
     }
 
     #[tokio::test]

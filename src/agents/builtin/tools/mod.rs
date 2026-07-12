@@ -153,6 +153,7 @@ pub fn all_tools(
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone(), llm.clone()),
         workflow::workflow_tool(runner.clone()),
+            workflow::save_workflow_tool(),
         hybrid_blob::hybrid_blob_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
