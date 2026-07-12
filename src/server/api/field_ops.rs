@@ -212,7 +212,7 @@ pub async fn update_appointment(
             .unwrap_or((0,));
 
         if exists.0 > 0 {
-            tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", idempotency_key);
+            tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", idempotency_key); // pii-safe
             let _ = tx.rollback().await;
             return Ok(Json(UpdateAppointmentResponse {
                 success: true,

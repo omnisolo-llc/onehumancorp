@@ -163,7 +163,7 @@ pub async fn handle_voice_command(
             let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
             match stripe_client.create_payment_link("Service Deposit", required_deposit_cents).await {
                 Ok(url) => stripe_payment_link = Some(url),
-                Err(e) => tracing::error!("Failed to generate Stripe payment link for voice quote: {}", e),
+                Err(e) => tracing::error!("Failed to generate Stripe payment link for voice quote: {}", e), // pii-safe
             }
         }
 
