@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
-/// AutoGPT Unique Harness Innovations: Agent Marketplace
+/// Master Catalog C.21. AutoGPT Unique Harness Innovations: Agent Marketplace
 /// SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
 /// Pre-built agent distribution.
 

@@ -6,7 +6,7 @@ use crate::provider::{Credentials, Provider, ProviderType, Transport};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// agenticSeek: Fully local agent, no API costs
+/// Master Catalog C.19. agenticSeek: Fully local agent, no API costs
 pub struct AgenticSeekProvider {
     pub local_endpoint: String,
     pub model_name: String,
@@ -89,5 +89,30 @@ mod tests {
         assert!(!(config.enable_visual_verification));
         assert!(!(config.enable_llmcompiler_plan_and_execute));
         assert_eq!(config.max_iterations, 25);
+    }
+
+    #[tokio::test]
+    async fn test_provider_trait() {
+        let provider = AgenticSeekProvider::new("http://localhost:11434", "llama3");
+        assert_eq!(provider.provider_type(), ProviderType::AgenticSeek);
+        assert!(provider.description().contains("agenticSeek"));
+        assert_eq!(provider.supported_roles(), vec!["local_agent".to_string()]);
+        assert!(
+            provider
+                .authenticate(Credentials {
+                    api_key: "".to_string(),
+                    oauth_token: "".to_string(),
+                    extra: HashMap::new()
+                })
+                .is_ok()
+        );
+        assert!(provider.is_authenticated());
+        assert_eq!(provider.get_credentials().api_key, "");
+        assert!(
+            provider
+                .run_in_isolation("echo hello", "/tmp", None)
+                .await
+                .is_ok()
+        );
     }
 }

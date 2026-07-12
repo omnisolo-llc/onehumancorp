@@ -680,10 +680,13 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = if let Some(idx) = msg
-                                .tool_calls
-                                .iter()
-                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                            let sub_idx = if let Some(idx) =
+                                msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                            {
+                                idx
+                            } else {
+                                continue;
+                            };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -709,10 +712,13 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = if let Some(idx) = msg
-                                .tool_calls
-                                .iter()
-                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                            let sub_idx = if let Some(idx) =
+                                msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                            {
+                                idx
+                            } else {
+                                continue;
+                            };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -784,10 +790,13 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = if let Some(idx) = msg
-                                .tool_calls
-                                .iter()
-                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                            let sub_idx = if let Some(idx) =
+                                msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                            {
+                                idx
+                            } else {
+                                continue;
+                            };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -813,10 +822,13 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = if let Some(idx) = msg
-                                .tool_calls
-                                .iter()
-                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                            let sub_idx = if let Some(idx) =
+                                msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                            {
+                                idx
+                            } else {
+                                continue;
+                            };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -1675,7 +1687,7 @@ impl Agent {
         active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
-        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
+        // Master Catalog C.1. Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10 or clear domain separation exists.
         if cfg.enable_single_agent_maximization {
             let mut distinct_domains = std::collections::HashSet::new();
@@ -2197,7 +2209,7 @@ impl Agent {
         }
     }
 
-    /// Architectural Decision 2: Plan-and-Execute (LLMCompiler)
+    /// Master Catalog C.2. ReAct vs Plan-and-Execute: Interleaved (ReAct) vs separate planning
     /// Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
     pub async fn run_gpt_researcher<F>(
         &self,
@@ -3353,7 +3365,7 @@ impl Agent {
 
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
-            // C. 7. Architectural Decisions & Metrics: 7. Harness Thickness
+            // Master Catalog C.7. Harness Thickness: Ensure performance scales up
             // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
             if model_lower.contains("gpt-4o")
                 || model_lower.contains("claude-3-5-sonnet")
@@ -3387,7 +3399,7 @@ impl Agent {
         let active_tools =
             std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
-        // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
+        // Master Catalog C.6. Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
         if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
             let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
             session_tools.truncate(keep_count);
@@ -3409,10 +3421,10 @@ impl Agent {
                 std::sync::Arc::new(available_tools_names),
             ));
             session_tools.push(crate::tools::lazy_load::unload_tool(active_tools_clone));
-            // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
+            // Master Catalog C.6. Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
 
-        // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
+        // Master Catalog C.1. Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10 or clear domain separation exists.
         if cfg.enable_single_agent_maximization {
             let mut distinct_domains = std::collections::HashSet::new();
@@ -4001,7 +4013,11 @@ impl Agent {
                 }
                 // Master Catalog C.4. Architectural Decisions & Metrics: Verification Loops: Sensors (observe after action)
                 if let Err(e) = verification_manager
-                    .run_sensors_after_action(&last_assistant_content, initial_message, Some(&last_assistant_content))
+                    .run_sensors_after_action(
+                        &last_assistant_content,
+                        initial_message,
+                        Some(&last_assistant_content),
+                    )
                     .await
                 {
                     let mut user_msg = Message::user(format!(
@@ -4643,9 +4659,13 @@ impl Agent {
                 if !error.is_empty() {
                     for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                     {
-                        let sub_idx = if let Some(idx) = tool_calls
-                            .iter()
-                            .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                        let sub_idx = if let Some(idx) =
+                            tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                        {
+                            idx
+                        } else {
+                            continue;
+                        };
                         tool_results[sub_idx] = ToolResult {
                             tool_call_id: subsequent_tc.id.clone(),
                             content: String::new(),
@@ -8106,9 +8126,13 @@ mod tests {
             execute: std::sync::Arc::new(MockToolExecutor),
         };
 
-        let prompt =
-            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &[tool], None, None)
-                .build();
+        let prompt = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
+            &cfg,
+            &[tool],
+            None,
+            None,
+        )
+        .build();
 
         let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
@@ -8152,9 +8176,13 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 =
-            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg2, &[], None, None)
-                .build();
+        let prompt2 = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
+            &cfg2,
+            &[],
+            None,
+            None,
+        )
+        .build();
         assert_eq!(
             prompt2,
             "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
@@ -10201,8 +10229,9 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder =
-            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+        let builder = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
+            &cfg, &tools, None, None,
+        );
         let prompt = builder.build();
 
         assert!(
@@ -10220,8 +10249,9 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder =
-            crate::prompt_construction::StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+        let builder = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
+            &cfg, &tools, None, None,
+        );
         let prompt = builder.build();
 
         assert!(
@@ -11636,10 +11666,11 @@ mod multi_agent_split_tests {
 mod additional_tests {
     use super::*;
 
-
     #[test]
     fn test_agent_task_timeout_default() {
-        unsafe { std::env::set_var("OHC_AGENT_TASK_TIMEOUT_SECS", "60"); }
+        unsafe {
+            std::env::set_var("OHC_AGENT_TASK_TIMEOUT_SECS", "60");
+        }
         assert_eq!(agent_task_timeout().as_secs(), 60);
     }
 }

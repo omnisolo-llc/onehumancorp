@@ -6,7 +6,7 @@ use crate::provider::{Credentials, Provider, ProviderType, Transport};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// Pi (pi-agent-core): TypeScript monorepo architecture archetype.
+/// Master Catalog C.18. Pi (pi-agent-core): TypeScript monorepo architecture archetype.
 /// This Rust provider models the Pi harness structure for monorepo and TypeScript agent integration.
 pub struct PiProvider {
     pub local_endpoint: String,
@@ -92,5 +92,33 @@ mod tests {
         assert!(config.enable_visual_verification);
         assert!(!(config.enable_llmcompiler_plan_and_execute));
         assert_eq!(config.max_iterations, 30);
+    }
+
+    #[tokio::test]
+    async fn test_provider_trait() {
+        let provider = PiProvider::new("http://localhost:11434", "pi-model");
+        assert_eq!(provider.provider_type(), ProviderType::Pi);
+        assert!(provider.description().contains("Pi"));
+        assert_eq!(
+            provider.supported_roles(),
+            vec!["pi_agent".to_string(), "monorepo_specialist".to_string()]
+        );
+        assert!(
+            provider
+                .authenticate(Credentials {
+                    api_key: "".to_string(),
+                    oauth_token: "".to_string(),
+                    extra: HashMap::new()
+                })
+                .is_ok()
+        );
+        assert!(provider.is_authenticated());
+        assert_eq!(provider.get_credentials().api_key, "");
+        assert!(
+            provider
+                .run_in_isolation("echo hello", "/tmp", None)
+                .await
+                .is_ok()
+        );
     }
 }
