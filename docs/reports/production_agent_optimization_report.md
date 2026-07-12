@@ -11,7 +11,7 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
-Remediation update: F-01 through F-06 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Telemetry redaction, dependency upgrades, and explicit Postgres CI coverage remain open.
+Remediation update: F-01 through F-07 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Dependency upgrades and explicit Postgres CI coverage remain open.
 
 ## Completed optimization work
 
@@ -28,6 +28,7 @@ Remediation update: F-01 through F-06 have now been addressed in focused follow-
 | Tenant-safe agent memory | Captured the process tenant once at startup and used it for semantic search and completion records, with fail-closed cloud configuration | 517 agent tests and the Bazel agent library test passed |
 | Stream cancellation | Replaced the unbounded query stream with a 64-event buffer and raced query execution, gRPC runs, retry backoff, and completion-memory writes against receiver closure | Two drop-observable LLM regressions, 519 agent tests, and the Bazel agent library test passed |
 | Memory worker boundaries | Added injectable, deadline-bound summarization; explicit system authority for cross-tenant acquisition/filesystem ingestion; and organization-scoped failure/final mutations | 5 Cargo worker tests and the Bazel workers target passed; real Postgres/RLS assertions remained skipped because `OHC_DATABASE_URL` was unset |
+| Telemetry privacy | Removed raw task and error bodies from LangSmith/Langfuse logs while retaining provider, event, run ID, and coarse error class | Emitted-log capture regression, 2 observability tests, and all 520 agent tests passed |
 
 ## Boundary matrix
 
@@ -87,6 +88,8 @@ Smallest regressions: `memory_failure_update_is_tenant_scoped`, `memory_summary_
 
 ### F-07 — High — raw tasks and provider errors enter logs
 
+**Status (2026-07-12): Remediated.** The observability providers no longer interpolate task or error bodies. Run/error events retain structured provider, event, run ID, and a coarse non-sensitive error class. The regression `observability_logs_metadata_without_task_or_error_body` captures actual tracing output and proves sentinel task/error secrets are absent; both observability tests and all 520 built-in-agent tests pass.
+
 Both observability implementations log the complete task at run start and raw error strings (`src/agents/builtin/observability.rs:31`, `:57`, `:77`, `:99`). Tasks can contain prompts, customer data, credentials, and tool material; provider/database error bodies can also contain sensitive values. Other reviewed telemetry methods correctly omit request, response, final output, and tool result bodies.
 
 Smallest regression: `observability_logs_metadata_without_task_or_error_body`.
@@ -117,7 +120,7 @@ Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
 | `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
 | `cargo test -p ohc_builtin_agent_tools --lib` | 157 passed | Tenant-aware tool schemas no longer expose tenant selection; tools regressions remain green |
-| `cargo test -p ohc_builtin_agent --lib` | 519 passed | Process tenant, captured-memory, bounded query, and gRPC receiver-drop regressions pass with the full agent suite |
+| `cargo test -p ohc_builtin_agent --lib` | 520 passed | Process tenant, captured-memory, cancellation, and emitted-log redaction regressions pass with the full agent suite |
 | `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test` | 1 target passed | Bazel build/test graph includes and validates the tenant-capability changes |
 | `cargo test -p ohc-mono --lib agent_memory_pipeline` | 5 passed | Deterministic summary deadline and scoped SQL shape pass; the Postgres-named test skipped its database body because `OHC_DATABASE_URL` was unset |
 | `bazel test //src/server/workers:server_workers_unit_test` | 1 target passed | Worker crate and its full Bazel dependency graph build and test successfully |

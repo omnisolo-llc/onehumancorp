@@ -2,6 +2,21 @@ use std::sync::Arc;
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};
 
+fn error_class(error: &str) -> &'static str {
+    let normalized = error.to_ascii_lowercase();
+    if normalized.contains("timeout") || normalized.contains("timed out") {
+        "timeout"
+    } else if normalized.contains("rate limit") || normalized.contains("too many requests") {
+        "rate_limit"
+    } else if normalized.contains("auth") || normalized.contains("unauthorized") {
+        "authentication"
+    } else if normalized.contains("valid") || normalized.contains("schema") {
+        "validation"
+    } else {
+        "internal"
+    }
+}
+
 /// DeerFlow Unique Harness Innovations: Built-in observability: LangSmith and Langfuse integration
 pub trait ObservabilityProvider: Send + Sync {
     fn log_run_start(&self, task: &str, run_id: &str);
@@ -28,8 +43,8 @@ impl LangSmithProvider {
 }
 
 impl ObservabilityProvider for LangSmithProvider {
-    fn log_run_start(&self, task: &str, run_id: &str) {
-        tracing::info!("[LangSmith] Run start: {} (run_id: {})", task, run_id);
+    fn log_run_start(&self, _task: &str, run_id: &str) {
+        tracing::info!(provider = "langsmith", event = "run_start", run_id);
     }
     fn log_llm_request(&self, run_id: &str, _req: &ChatRequest) {
         tracing::info!("[LangSmith] LLM request for run_id: {}", run_id);
@@ -55,7 +70,12 @@ impl ObservabilityProvider for LangSmithProvider {
         tracing::info!("[LangSmith] Run end (run_id: {})", run_id);
     }
     fn log_error(&self, run_id: &str, error: &str) {
-        tracing::error!("[LangSmith] Error: {} (run_id: {})", error, run_id);
+        tracing::error!(
+            provider = "langsmith",
+            event = "run_error",
+            run_id,
+            error_class = error_class(error)
+        );
     }
 }
 
@@ -74,8 +94,8 @@ impl LangfuseProvider {
 }
 
 impl ObservabilityProvider for LangfuseProvider {
-    fn log_run_start(&self, task: &str, run_id: &str) {
-        tracing::info!("[Langfuse] Trace start: {} (trace_id: {})", task, run_id);
+    fn log_run_start(&self, _task: &str, run_id: &str) {
+        tracing::info!(provider = "langfuse", event = "trace_start", run_id);
     }
     fn log_llm_request(&self, run_id: &str, _req: &ChatRequest) {
         tracing::info!("[Langfuse] LLM generation start for trace_id: {}", run_id);
@@ -97,7 +117,12 @@ impl ObservabilityProvider for LangfuseProvider {
         tracing::info!("[Langfuse] Trace end (trace_id: {})", run_id);
     }
     fn log_error(&self, run_id: &str, error: &str) {
-        tracing::error!("[Langfuse] Error: {} (trace_id: {})", error, run_id);
+        tracing::error!(
+            provider = "langfuse",
+            event = "trace_error",
+            run_id,
+            error_class = error_class(error)
+        );
     }
 }
 
@@ -164,6 +189,29 @@ impl ObservabilityProvider for ObservabilityManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+
+    #[derive(Clone)]
+    struct CaptureWriter(Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl Write for CaptureWriter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+        type Writer = Self;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
 
     struct MockObservabilityProvider {
         log: std::sync::Mutex<Vec<String>>,
@@ -213,5 +261,32 @@ mod tests {
         assert_eq!(log.len(), 2);
         assert_eq!(log[0], "run_start");
         assert_eq!(log[1], "run_end");
+    }
+
+    #[test]
+    fn observability_logs_metadata_without_task_or_error_body() {
+        let bytes = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let subscriber = tracing_subscriber::fmt()
+            .without_time()
+            .with_ansi(false)
+            .with_writer(CaptureWriter(bytes.clone()))
+            .finish();
+        let task_secret = "task-secret-customer-payload";
+        let error_secret = "provider-secret-error-body";
+        let smith = LangSmithProvider::new("key".to_string(), "project".to_string());
+        let fuse = LangfuseProvider::new("public".to_string(), "secret".to_string());
+
+        tracing::subscriber::with_default(subscriber, || {
+            smith.log_run_start(task_secret, "run-1");
+            smith.log_error("run-1", error_secret);
+            fuse.log_run_start(task_secret, "run-2");
+            fuse.log_error("run-2", error_secret);
+        });
+
+        let logs = String::from_utf8(bytes.lock().unwrap().clone()).expect("utf8 logs");
+        assert!(!logs.contains(task_secret), "task body leaked into logs");
+        assert!(!logs.contains(error_secret), "error body leaked into logs");
+        assert!(logs.contains("run-1"));
+        assert!(logs.contains("run-2"));
     }
 }
