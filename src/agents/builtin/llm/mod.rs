@@ -3,16 +3,23 @@ use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Role};
 
 #[async_trait]
 pub trait LlmClient: Send + Sync {
-    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
-    async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn chat(
+        &self,
+        req: ChatRequest,
+    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    async fn generate_embedding(
+        &self,
+        _text: &str,
+    ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![])
     }
 }
 
 pub mod anthropic;
-pub mod openai;
-pub mod ollama;
+pub mod circuit_breaker;
 pub mod gemini;
+pub mod ollama;
+pub mod openai;
 
 use serde_json::Value;
 
@@ -26,7 +33,9 @@ pub fn minify_json_string(input: &str) -> String {
     }
 
     // Quick check to see if it even looks like JSON
-    if !(trimmed.starts_with('{') && trimmed.ends_with('}') || trimmed.starts_with('[') && trimmed.ends_with(']')) {
+    if !(trimmed.starts_with('{') && trimmed.ends_with('}')
+        || trimmed.starts_with('[') && trimmed.ends_with(']'))
+    {
         return input.to_string();
     }
 
@@ -99,7 +108,8 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
             let remaining_budget = max_history_words.saturating_sub(current_words);
             if remaining_budget > 20 {
                 let mut truncated_msg = msg;
-                truncated_msg.content = truncate_by_word_count(&truncated_msg.content, remaining_budget);
+                truncated_msg.content =
+                    truncate_by_word_count(&truncated_msg.content, remaining_budget);
                 truncated_messages.push(truncated_msg);
             }
             break;
@@ -117,7 +127,6 @@ pub fn truncate_chat_request(mut req: ChatRequest, max_history_words: usize) -> 
     req.messages = final_messages;
     req
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -173,27 +182,26 @@ mod tests {
             model: "test".to_string(),
             system: r#"{
                 "system": "instruction"
-            }"#.to_string(),
-            messages: vec![
-                Message {
-                    role: Role::User,
-                    content: r#"{
+            }"#
+            .to_string(),
+            messages: vec![Message {
+                role: Role::User,
+                content: r#"{
                         "user": "input"
-                    }"#.to_string(),
-                    tool_calls: vec![],
-                    tool_results: vec![
-                        ToolResult {
-                            tool_call_id: "1".to_string(),
-                            content: r#"{
+                    }"#
+                .to_string(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "1".to_string(),
+                    content: r#"{
                                 "tool": "result"
-                            }"#.to_string(),
-                            error: "".to_string(),
-                        }
-                    ],
-                    response_id: None,
-                    previous_response_id: None,
-                }
-            ],
+                            }"#
+                    .to_string(),
+                    error: "".to_string(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            }],
             tools: vec![],
             max_tokens: 100,
             temperature: 0.0,
@@ -203,6 +211,9 @@ mod tests {
 
         assert_eq!(minified.system, r#"{"system":"instruction"}"#);
         assert_eq!(minified.messages[0].content, r#"{"user":"input"}"#);
-        assert_eq!(minified.messages[0].tool_results[0].content, r#"{"tool":"result"}"#);
+        assert_eq!(
+            minified.messages[0].tool_results[0].content,
+            r#"{"tool":"result"}"#
+        );
     }
 }
