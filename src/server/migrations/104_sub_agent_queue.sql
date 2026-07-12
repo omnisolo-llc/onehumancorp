@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
     tenant_id VARCHAR NOT NULL,
     parent_task_id VARCHAR,
     payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-    agent_role VARCHAR(255),
     status VARCHAR NOT NULL DEFAULT 'QUEUED',
     worker_id VARCHAR,
     scheduled_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
