@@ -5737,6 +5737,7 @@ dependencies = [
  "server_pricing",
  "sha2",
  "sqlx",
+ "temp-env",
  "tokio",
  "tracing",
  "uuid",

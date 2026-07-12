@@ -5,53 +5,97 @@ use std::env;
 type HmacSha256 = Hmac<Sha256>;
 
 /// Authentication mode.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum AuthMode {
     /// No authentication (dev/test only).
     Disabled,
     /// Pre-shared HMAC-SHA256 token.
-    Token { token_hash: Vec<u8> },
-    /// SPIFFE/mTLS peer certificate.
+    Token {
+        token_hash: Vec<u8>,
+        verification_key: Vec<u8>,
+    },
+    /// SPIFFE/mTLS peer certificate (available after verified peer extraction is wired).
     Spiffe { allowed_id: String },
+}
+
+impl std::fmt::Debug for AuthMode {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Disabled => formatter.write_str("AuthMode::Disabled"),
+            Self::Token { .. } => formatter.write_str("AuthMode::Token { <redacted> }"),
+            Self::Spiffe { allowed_id } => formatter
+                .debug_struct("AuthMode::Spiffe")
+                .field("allowed_id", allowed_id)
+                .finish(),
+        }
+    }
 }
 
 /// Build an AuthMode from environment variables.
 ///
 ///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
 ///   OHC_AGENT_TOKEN                – enables token mode
-///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
-pub fn auth_mode_from_env() -> AuthMode {
-    if let Ok(tok) = env::var("OHC_AGENT_TOKEN")
-        && !tok.is_empty() {
-            let hash = hmac_token(&tok);
-            return AuthMode::Token { token_hash: hash };
+///   OHC_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
+///                                    verified mTLS peer extraction is available
+pub fn auth_mode_from_env() -> Result<AuthMode, String> {
+    let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
+        .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
+    if auth_disabled {
+        let environment = env::var("OHC_ENV").unwrap_or_default();
+        if matches!(
+            environment.trim().to_ascii_lowercase().as_str(),
+            "development" | "test"
+        ) {
+            return Ok(AuthMode::Disabled);
         }
-    AuthMode::Spiffe {
-        allowed_id: env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_default(),
+        return Err(
+            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development or test"
+                .to_string(),
+        );
     }
+
+    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
+        && !token.trim().is_empty()
+    {
+        let key = env::var("OHC_AGENT_AUTH_KEY")
+            .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
+        if key.trim().is_empty() || key.len() < 32 {
+            return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+        }
+        let verification_key = key.into_bytes();
+        let token_hash = hmac_token(&token, &verification_key);
+        return Ok(AuthMode::Token {
+            token_hash,
+            verification_key,
+        });
+    }
+
+    let allowed_id = env::var("OHC_AGENT_SPIFFE_ID")
+        .map_err(|_| "configure OHC_AGENT_TOKEN or OHC_AGENT_SPIFFE_ID".to_string())?;
+    if allowed_id.trim().is_empty() {
+        return Err("OHC_AGENT_SPIFFE_ID must not be empty".to_string());
+    }
+    validate_spiffe_id(&allowed_id)?;
+    Err(
+        "SPIFFE authentication requires verified mTLS peer identity extraction, which is not yet configured for the builtin agent; use token authentication"
+            .to_string(),
+    )
 }
 
 /// Check a bearer token against an expected HMAC hash.
 /// Returns true if the token matches.
-pub fn check_token(provided: &str, expected_hash: &[u8]) -> bool {
-    let provided_hash = hmac_token(provided);
-    // Constant-time comparison
-    if provided_hash.len() != expected_hash.len() {
+pub fn check_token(provided: &str, expected_hash: &[u8], key: &[u8]) -> bool {
+    let Ok(mut mac) = HmacSha256::new_from_slice(key) else {
         return false;
-    }
-    let mut diff = 0u8;
-    for (a, b) in provided_hash.iter().zip(expected_hash.iter()) {
-        diff |= a ^ b;
-    }
-    diff == 0
+    };
+    mac.update(provided.as_bytes());
+    mac.verify_slice(expected_hash).is_ok()
 }
 
 /// Compute HMAC-SHA256 of the token using the application key.
 /// Mirrors Go hmacToken.
-pub fn hmac_token(tok: &str) -> Vec<u8> {
-    let key = std::env::var("OHC_AGENT_AUTH_KEY")
-        .unwrap_or_else(|_| "default_auth_key_change_me".to_string());
-    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC init failed");
+pub fn hmac_token(tok: &str, key: &[u8]) -> Vec<u8> {
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepts keys of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
@@ -105,12 +149,99 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_token_match() {
-        let hash = hmac_token("my-secret");
-        assert!(check_token("my-secret", &hash));
-        assert!(!check_token("wrong-secret", &hash));
+        let key = b"0123456789abcdef0123456789abcdef";
+        let hash = hmac_token("my-secret", key);
+        assert!(check_token("my-secret", &hash, key));
+        assert!(!check_token("wrong-secret", &hash, key));
+    }
+
+    #[test]
+    fn auth_mode_requires_complete_configuration() {
+        let _lock = ENV_LOCK.lock().unwrap();
+        let variables = [
+            "OHC_AGENT_TOKEN",
+            "OHC_AGENT_AUTH_KEY",
+            "OHC_AGENT_SPIFFE_ID",
+            "OHC_AGENT_AUTH_DISABLED",
+            "OHC_ENV",
+        ];
+
+        temp_env::with_vars(variables.map(|name| (name, None::<&str>)), || {
+            assert!(auth_mode_from_env().is_err());
+        });
+        temp_env::with_vars(
+            [
+                ("OHC_AGENT_TOKEN", Some("secret-token")),
+                ("OHC_AGENT_AUTH_KEY", None),
+                ("OHC_AGENT_SPIFFE_ID", None),
+                ("OHC_AGENT_AUTH_DISABLED", None),
+                ("OHC_ENV", None),
+            ],
+            || assert!(auth_mode_from_env().is_err()),
+        );
+        temp_env::with_vars(
+            [
+                ("OHC_AGENT_TOKEN", Some("secret-token")),
+                (
+                    "OHC_AGENT_AUTH_KEY",
+                    Some("0123456789abcdef0123456789abcdef"),
+                ),
+                ("OHC_AGENT_SPIFFE_ID", None),
+                ("OHC_AGENT_AUTH_DISABLED", None),
+                ("OHC_ENV", None),
+            ],
+            || {
+                assert!(matches!(
+                    auth_mode_from_env().unwrap(),
+                    AuthMode::Token { .. }
+                ))
+            },
+        );
+        temp_env::with_vars(
+            [
+                ("OHC_AGENT_TOKEN", None),
+                ("OHC_AGENT_AUTH_KEY", None),
+                (
+                    "OHC_AGENT_SPIFFE_ID",
+                    Some("spiffe://onehumancorp.io/org/org-1/agent/agent-1"),
+                ),
+                ("OHC_AGENT_AUTH_DISABLED", None),
+                ("OHC_ENV", None),
+            ],
+            || {
+                let error = auth_mode_from_env().unwrap_err();
+                assert!(error.contains("mTLS"), "unexpected error: {error}");
+            },
+        );
+
+        for environment in ["development", "test"] {
+            temp_env::with_vars(
+                [
+                    ("OHC_AGENT_TOKEN", None),
+                    ("OHC_AGENT_AUTH_KEY", None),
+                    ("OHC_AGENT_SPIFFE_ID", None),
+                    ("OHC_AGENT_AUTH_DISABLED", Some("true")),
+                    ("OHC_ENV", Some(environment)),
+                ],
+                || assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Disabled)),
+            );
+        }
+        temp_env::with_vars(
+            [
+                ("OHC_AGENT_TOKEN", None),
+                ("OHC_AGENT_AUTH_KEY", None),
+                ("OHC_AGENT_SPIFFE_ID", None),
+                ("OHC_AGENT_AUTH_DISABLED", Some("true")),
+                ("OHC_ENV", Some("production")),
+            ],
+            || assert!(auth_mode_from_env().is_err()),
+        );
     }
 
     #[test]
