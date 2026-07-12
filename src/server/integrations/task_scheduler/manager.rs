@@ -145,3 +145,9 @@ mod tests {
         });
     }
 }
+
+impl Default for MemoryTaskQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
