@@ -323,6 +323,7 @@ pub async fn offline_sync_handler(
                         "payment_method": mutation.payment_method,
                         "payment_intent_id": mutation.payment_intent_id,
                         "currency": mutation.currency,
+                        "inventory_already_deducted": true,
                     }).to_string();
 
                     let job_res = sqlx::query(
@@ -462,6 +463,7 @@ pub async fn offline_sync_handler(
                             "payment_method": mutation.payment_method,
                             "payment_intent_id": mutation.payment_intent_id,
                             "currency": mutation.currency,
+                            "inventory_already_deducted": true,
                         }).to_string();
 
                         let job_res = sqlx::query(
