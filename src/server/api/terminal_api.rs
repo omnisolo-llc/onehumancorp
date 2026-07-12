@@ -424,7 +424,7 @@ pub async fn sync_offline_transactions_handler(
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature) "
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature, terminal_id) "
         );
 
         let tenant_id_clone = tenant_id.clone();
@@ -435,6 +435,7 @@ pub async fn sync_offline_transactions_handler(
             let currency = tx.currency.clone();
             let payload_str = tx.payload.clone();
             let device_signature = tx.device_signature.clone();
+            let terminal_id = tx.terminal_id.clone();
 
             b.push_bind(tx_id)
              .push_bind(tenant_id_clone.clone())
@@ -444,7 +445,8 @@ pub async fn sync_offline_transactions_handler(
              .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
              .push_bind("PENDING")
              .push_bind("pending")
-             .push_bind(device_signature);
+             .push_bind(device_signature)
+             .push_bind(terminal_id);
         });
 
         query_builder.push(" ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload");
