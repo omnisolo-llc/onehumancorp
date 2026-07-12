@@ -26,7 +26,7 @@ struct AgentProtocolExecutor {
 }
 
 fn is_safe_url(url_str: &str) -> bool {
-    let url = match Url::parse(url_str) {
+    let url: Url = match Url::parse(url_str) {
         Ok(u) => u,
         Err(_) => return false,
     };

@@ -143,9 +143,9 @@ struct IntakeData {
 }
 
 #[tauri::command]
-async fn process_intake(input: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+async fn start_zero_click(prompt: String, image_url: Option<String>, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/onboarding/intake", backend_url);
+    let url = format!("{}/api/onboarding/start_zero_click", backend_url);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
@@ -154,7 +154,7 @@ async fn process_intake(input: String, image_url: Option<String>, _app_handle: t
 
     let response = client.post(&url)
         .header("Content-Type", "application/json")
-        .json(&serde_json::json!({ "description": input, "image_url": image_url }))
+        .json(&serde_json::json!({ "prompt": prompt, "image_url": image_url }))
         .send().await
         .map_err(|err| err.to_string())?;
 
@@ -574,7 +574,7 @@ pub fn run() {
             get_onboarding_state,
             save_onboarding_state,
             start_onboarding,
-            process_intake,
+            start_zero_click,
             get_help_articles,
             get_help_article,
             get_help_videos,

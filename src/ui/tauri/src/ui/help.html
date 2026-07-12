@@ -4,7 +4,7 @@
     <style>
       .glassmorphism {
         border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -21,7 +21,7 @@
         }
       }
       .old-glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -56,7 +56,7 @@
         box-sizing: border-box;
       }
       .header-card {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
         border-radius: 16px;
@@ -81,7 +81,7 @@
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         outline: none;
         transition: border-color 0.2s, box-shadow 0.2s;
@@ -124,7 +124,7 @@
         .card { padding: 16px; min-height: auto; }
       }
       .card {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
         border-radius: 16px;
@@ -192,7 +192,7 @@
       .play-btn {
         width: 40px;
         height: 40px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -251,7 +251,7 @@
       .empty-state {
         text-align: center;
         padding: 40px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.4);
       }
@@ -281,7 +281,7 @@
         position: absolute;
         top: 15px;
         right: 15px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 8px 16px;
@@ -294,7 +294,7 @@
         min-height: 44px;
       }
       .modal-close:hover {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.2);
       }
       video {
         width: 100%;
@@ -356,7 +356,7 @@
 
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -928,7 +928,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -1050,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border-radius: 16px;
@@ -1174,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-radius: 20px;
             font-size: 14px;
             outline: none;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.2);
         }
         #ohc-help-chat-input:focus {
             border-color: #0066FF;
@@ -1197,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-bottom: 12px;
             cursor: pointer;
             transition: background 0.2s;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.2);
         }
         .ohc-tour-card:hover {
             background: rgba(248, 250, 252, 0.8);
@@ -1502,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {

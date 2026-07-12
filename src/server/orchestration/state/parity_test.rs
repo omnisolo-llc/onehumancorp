@@ -837,8 +837,12 @@ mod parity_tests {
                 *a += 1;
 
                 // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
-                tokio::time::advance(std::time::Duration::from_secs(65)).await;
-                tokio::task::yield_now().await;
+                // We run it inside a spawn to prevent deadlocking the current task when time advances
+                let handle = tokio::spawn(async {
+                    tokio::time::advance(std::time::Duration::from_secs(65)).await;
+                    tokio::task::yield_now().await;
+                });
+                let _ = handle.await;
 
                 // We'll return an error so retry logic would theoretically kick in if not timed out
                 Err::<(), String>("database is locked".to_string())
@@ -859,8 +863,11 @@ mod parity_tests {
                     let mut a = attempts_clone.lock().unwrap();
                     *a += 1;
 
-                    tokio::time::advance(std::time::Duration::from_secs(65)).await;
-                    tokio::task::yield_now().await;
+                    let handle = tokio::spawn(async {
+                        tokio::time::advance(std::time::Duration::from_secs(65)).await;
+                        tokio::task::yield_now().await;
+                    });
+                    let _ = handle.await;
 
                     Err::<(), String>("serialization failure".to_string())
                 }

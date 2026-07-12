@@ -2465,7 +2465,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, Some(cb)));
+    let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()], Some(cb)));
     let _ = consolidation_worker.spawn_background_task();
 
     let retention_job = crate::workers::subscription_retention_job::SubscriptionRetentionJob::new(db.clone());
@@ -6978,14 +6978,14 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
-        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
+        .route("/api/help", axum::routing::get(crate::api::docs::list_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
-        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
+        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {

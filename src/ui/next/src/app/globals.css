@@ -856,7 +856,7 @@ button,
   min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #f7f9fb !important;
   color: #526070;
   box-shadow: none;
@@ -1206,7 +1206,7 @@ html.dark .glass-panel {
   }
 }
 /* Global border radius to fix UI regression */
-.glassmorphism, .glass-card {
+.app-card, .glassmorphism, .glass-card {
   border-radius: 16px !important;
 }
 .glass-control {

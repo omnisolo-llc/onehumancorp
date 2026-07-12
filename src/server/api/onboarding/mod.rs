@@ -200,7 +200,7 @@ async fn start_zero_click(
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<ZeroClickGenerateRequest>,
-) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let mut combined_prompt = req.prompt.clone();
     if let Some(image_url) = &req.image_url {
         combined_prompt.push_str(&format!("\nImage provided: {}", image_url));
@@ -214,6 +214,11 @@ async fn start_zero_click(
     let first_product = intake_data.initial_products.first();
     let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
     let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
+
+
+    let intake_data_backup = intake_data.clone();
+    let first_product_name_backup = first_product_name.clone();
+    let first_product_price_backup = first_product_price.clone();
 
     let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
         business_type: if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type },
@@ -253,11 +258,19 @@ async fn start_zero_click(
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Json(ZeroClickGenerateResponse {
-        organization_id: start_res.organization_id,
-        user_id: start_res.user_id,
-        message: "Storefront generated successfully".to_string()
-    }))
+    Ok(Json(serde_json::json!({
+        "organization_id": start_res.organization_id,
+        "user_id": start_res.user_id,
+        "message": "Storefront generated successfully".to_string(),
+        "start_req": {
+            "business_type": if intake_data_backup.business_type.is_empty() { "Other".to_string() } else { intake_data_backup.business_type.clone() },
+            "company_name": if intake_data_backup.business_name.is_empty() { "My Store".to_string() } else { intake_data_backup.business_name.clone() },
+            "company_description": req.prompt.clone(),
+            "first_product_name": first_product_name_backup.clone(),
+            "first_product_price": first_product_price_backup.clone(),
+            "deposit_percentage": intake_data_backup.deposit_percentage,
+        }
+    })))
 }
 
 

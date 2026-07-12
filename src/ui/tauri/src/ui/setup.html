@@ -1049,11 +1049,11 @@
           min-height: 44px;
         }
         .persona-row {
-          flex-direction: column;
+          flex-direction: column !important;
         }
-        .work-context-cards {
+        .work-context-cards, #context-group {
           display: flex;
-          flex-direction: column;
+          flex-direction: column !important;
         }
       }
 
@@ -1197,6 +1197,20 @@
         display: block;
         opacity: 1;
         animation: stepFadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .step.exit {
+        opacity: 0;
+        animation: stepFadeOut 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes stepFadeOut {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
       }
       @keyframes fadeIn {
         0% { opacity: 0; transform: translateY(10px); }
@@ -3527,20 +3541,54 @@
         if (stepId === "step-categories") {
           populateCategories();
         }
-        document.querySelectorAll(".step").forEach((el) => {
-          el.classList.remove("active");
-          el.style.display = "none";
-        });
-        if (document.querySelector(".container")) {
-          document.querySelector(".container").scrollTo(0, 0);
-        }
-        document.getElementById(stepId).classList.add("active");
-        document.getElementById(stepId).style.display = "block";
-        updateStepper(stepId);
 
-        if (shouldSave) {
-          saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        const activeSteps = document.querySelectorAll(".step.active");
+        if (activeSteps.length > 0) {
+          activeSteps.forEach((el) => {
+            el.classList.remove("active");
+            el.classList.add("exit");
+          });
+
+          setTimeout(() => {
+            document.querySelectorAll(".step.exit").forEach((el) => {
+              el.style.display = "none";
+              el.classList.remove("exit");
+            });
+            if (document.querySelector(".container")) {
+              document.querySelector(".container").scrollTo(0, 0);
+            }
+            const nextStep = document.getElementById(stepId);
+            if (nextStep) {
+              nextStep.style.display = "block";
+              // trigger reflow
+              void nextStep.offsetWidth;
+              nextStep.classList.add("active");
+              updateStepper(stepId);
+            }
+            if (shouldSave) {
+              saveCurrentState();
+              localStorage.setItem("onboardingState", JSON.stringify(state));
+            }
+          }, 150); // match exit transition timing
+        } else {
+          document.querySelectorAll(".step").forEach((el) => {
+            el.classList.remove("active");
+            el.style.display = "none";
+          });
+          if (document.querySelector(".container")) {
+            document.querySelector(".container").scrollTo(0, 0);
+          }
+          const nextStep = document.getElementById(stepId);
+          if (nextStep) {
+            nextStep.style.display = "block";
+            nextStep.classList.add("active");
+            updateStepper(stepId);
+          }
+
+          if (shouldSave) {
+            saveCurrentState();
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          }
         }
       }
 
@@ -4002,38 +4050,16 @@
             const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-              const data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+              const data = await window.__TAURI__.core.invoke("start_zero_click", { prompt: bioInput });
               if (!data) throw new Error("Empty response");
-
-              startReq = {
-                business_type: data.business_type || "Other",
-                company_name: data.business_name || "My Store",
-                company_description: bioInput,
-                selling_categories: data.categories || ["Other"],
-                payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
-                website_template: "Modern",
-                first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                domain_choice: "subdomain",
-                price_type: "fixed",
-                location: data.location || "Global",
-                target_audience: data.target_audience || "Everyone",
-                initial_products: data.initial_products || [],
-                ai_agents: [],
-                ai_auto_respond: false,
-                deposit_percentage: data.deposit_percentage,
-                lead_time_days: data.lead_time_days
-              };
+              startReq = data.start_req;
 
             } else {
                 // For web mode, hit the /intake endpoint directly
-                const intakeRes = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                const intakeRes = await fetch(`${backendUrl}/api/onboarding/start_zero_click`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ description: bioInput, image_url: imageUrl ? imageUrl : undefined })
+                    body: JSON.stringify({ prompt: bioInput, image_url: imageUrl ? imageUrl : undefined })
                 });
 
                 if (!intakeRes.ok) {
@@ -4041,30 +4067,8 @@
                 }
 
                 const data = await intakeRes.json();
-                if (!data) throw new Error("Empty intake response");
-
-                startReq = {
-                    business_type: data.business_type || "Other",
-                    company_name: data.business_name || "My Store",
-                    company_description: bioInput,
-                    selling_categories: data.categories || ["Other"],
-                    payment_pref: "online",
-                    admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                    admin_name: document.getElementById("admin-name")?.value || "Owner",
-                    admin_password: document.getElementById("admin-password")?.value || "password123",
-                    website_template: "Modern",
-                    first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                    first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                    domain_choice: "subdomain",
-                    price_type: "fixed",
-                    location: data.location || "Global",
-                    target_audience: data.target_audience || "Everyone",
-                    initial_products: data.initial_products || [],
-                    ai_agents: [],
-                    ai_auto_respond: false,
-                    deposit_percentage: data.deposit_percentage,
-                    lead_time_days: data.lead_time_days
-                };
+                if (!data) throw new Error("Empty response");
+                startReq = data.start_req;
             }
 
             window.pendingOnboardingReq = startReq;
@@ -4094,7 +4098,40 @@
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            goToStep('step-approval');
+
+            document.getElementById('step-chat').classList.add('active');
+
+            // Generate interactive mobile-first preview
+            const previewContainer = document.createElement('div');
+            previewContainer.innerHTML = `
+                <div style="margin-top: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px); padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #1D1D1F;">${startReq.company_name} Preview</h3>
+                    <p style="color: #555;">${startReq.company_description}</p>
+                    <div style="background: #0066FF; color: white; padding: 12px; text-align: center; border-radius: 8px; font-weight: bold; margin-bottom: 12px;">
+                        ${startReq.first_product_name} - $${startReq.first_product_price}
+                    </div>
+                    <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 8px; font-weight: bold;">Launch Site</button>
+                </div>
+            `;
+            document.getElementById('step-chat').appendChild(previewContainer);
+            document.getElementById('step-initial').classList.remove('active');
+
+            chatHistory.push({ role: 'assistant', content: `Great! I've provisioned a workspace for ${startReq.company_name}. Is there anything you'd like to tweak about the generated layout, pricing or theme before we go live?`});
+
+            const asstMsgDiv = document.createElement('div');
+            asstMsgDiv.className = 'chat-message assistant';
+            const asstSenderDiv = document.createElement('div');
+            asstSenderDiv.className = 'chat-sender';
+            asstSenderDiv.innerText = 'Assistant';
+            const asstBubbleDiv = document.createElement('div');
+            asstBubbleDiv.className = 'chat-bubble';
+            asstBubbleDiv.innerText = `Great! I've provisioned a workspace for ${startReq.company_name}. Is there anything you'd like to tweak about the generated layout, pricing or theme before we go live?`;
+            asstMsgDiv.appendChild(asstSenderDiv);
+            asstMsgDiv.appendChild(asstBubbleDiv);
+            document.getElementById('chat-messages').appendChild(asstMsgDiv);
+
+            document.getElementById('assistant-intro').innerHTML = `Great! I've provisioned a workspace for ${startReq.company_name}. Is there anything you'd like to tweak about the generated layout, pricing or theme before we go live?`;
+
             return;
 
           } catch (err) {
@@ -4353,13 +4390,11 @@
         if (el) {
           el.addEventListener('input', () => {
             // Remove error styling instantly
-            if (el.value.trim().length > 0) {
-              if (errEl) errEl.style.display = 'none';
-              el.classList.remove('invalid-input');
-            }
+            if (errEl) errEl.style.display = 'none';
+            el.classList.remove('invalid-input');
 
             // Sync to state and localStorage for cross-device resume
-            state[field.stateKey] = el.value.trim();
+            state[field.stateKey] = el.value;
             localStorage.setItem("onboardingState", JSON.stringify(state));
           });
         }

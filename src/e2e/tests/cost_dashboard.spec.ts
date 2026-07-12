@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 test.describe('Cost Transparency Dashboard CUJ', () => {
     test('owner can view their tier limits and storage usage', async ({ page }) => {
         // 1. Navigate to cost dashboard
-        await page.goto('/cost-dashboard');
+        await page.goto("/api/ui/cost-dashboard.html");
 
         // 2. Wait for the billing summary to load
         await expect(page.locator('#cost-dashboard-plan-name')).not.toHaveText('--', { timeout: 10000 });

@@ -94,7 +94,7 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
 
   test('Handles offline mode and sync queue', async ({ page }) => {
     await page.context().setOffline(true);
-    await expect(page.getByText('Offline Mode')).toBeVisible();
+    await expect(page.getByText('Offline - Changes saved locally')).toBeVisible();
     await page.getByRole('button', { name: 'Quick Charge $50' }).click();
     await page.context().setOffline(false);
     await expect(page.getByText('Online')).toBeVisible();
