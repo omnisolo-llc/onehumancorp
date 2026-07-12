@@ -1620,7 +1620,7 @@
               class="glass-control glassmorphism"
               style="
                 width: 44px;
-                height: 44px;
+                min-height: 44px;
                 min-width: 44px;
                 padding: 0;
                 display: flex;
@@ -1674,7 +1674,7 @@
               class="glass-control glassmorphism"
               style="
                 width: 44px;
-                height: 44px;
+                min-height: 44px;
                 min-width: 44px;
                 border-radius: 8px;
                 padding: 0;
@@ -4091,40 +4091,87 @@
               lead_time_days: data.lead_time_days
             };
 
-            window.pendingOnboardingReq = startReq;
+                        window.pendingOnboardingReq = startReq;
             window.pendingImageUrl = imageUrl;
-
-            const approvalDetails = document.getElementById("approval-details");
-            if (approvalDetails) {
-                approvalDetails.innerHTML = `
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-                        <p style="font-size: 14px; text-align: center; color: #1D1D1F;" class="dark:text-[#F5F5F7]"><strong>Suggested Deposit Policy:</strong> Requires a ${startReq.deposit_percentage !== undefined ? startReq.deposit_percentage : 50}% upfront deposit on custom orders.</p>
-                        <div style="width: 375px; max-width: 100%; aspect-ratio: 9/16; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <div style="background: #0066FF; color: white; padding: 12px; text-align: center; font-weight: bold;">
-                                ${startReq.company_name}
-                            </div>
-                            <div style="padding: 16px; color: #333;">
-                                <img src="${imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80'}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />
-                                <h3 style="margin-top: 0; font-size: 18px; font-weight: 600;">${startReq.first_product_name}</h3>
-                                <p style="font-size: 16px; font-weight: 500; color: #0066FF;">$${startReq.first_product_price}</p>
-                                <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 12px;">Buy Now</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
 
             if (window.generateStorefrontLoadingInterval) {
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            goToStep('step-approval');
-            return;
 
-          } catch (err) {
-            console.error(err);
-            goToStep("step-initial");
-            const errorMsg = err.message || "Network Error: Failed to fetch";
+            await goToStep("step-loading");
+
+            const provisioningEl = document.getElementById("step-provisioning");
+            const catalogEl = document.getElementById("step-catalog");
+            const storefrontEl = document.getElementById("step-storefront");
+
+            if (provisioningEl) {
+              provisioningEl.style.opacity = "1";
+              provisioningEl.querySelector(".loading-dot").style.background = "#0066FF";
+            }
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const startData = await window.__TAURI__.core.invoke(
+                "start_onboarding",
+                { req: startReq }
+              );
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+              return;
+            }
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(startReq),
+            });
+
+            if (startRes.ok) {
+              const startData = await startRes.json().catch(() => ({}));
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+            } else {
+              const errData = await startRes.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || "Failed to start onboarding");
+            }
+          } catch (error) {
+            console.error(error);
+            const errorMsg = error && error.message ? error.message : "Failed to generate business.";
             instantErrorEl.innerText = errorMsg;
             instantErrorEl.style.display = "block";
             instantErrorEl.style.color = "#FF3B30";
@@ -4137,6 +4184,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
             generateStorefrontBtn.innerHTML = "Generate My Workspace";
+            goToStep("step-initial");
           }
         });
       }

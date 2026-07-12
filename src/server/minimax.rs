@@ -214,7 +214,7 @@ impl MinimaxClient {
                     "handoff_to": [],
                     "confidence": 0.95
                 }"#.to_string());
-            } else if lower_prompt.contains("you are an ai order and task triage assistant") || lower_prompt.contains("you are an omni-context work triage agent") {
+            } else if lower_prompt.contains("triage") {
                 if lower_prompt.contains("vegan options") {
                     if lower_prompt.contains("omni-context") {
                         return Ok(r#"{
