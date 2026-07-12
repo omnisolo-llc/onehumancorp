@@ -4,61 +4,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::LlmClient;
+use super::circuit_breaker::CircuitBreaker;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
-use std::sync::Mutex;
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
-
-struct CircuitBreaker {
-    failures: Mutex<usize>,
-    last_failure: Mutex<Option<Instant>>,
-    max_failures: usize,
-    reset_timeout: Duration,
-}
-
-impl CircuitBreaker {
-    fn new(max_failures: usize, reset_timeout: Duration) -> Self {
-        CircuitBreaker {
-            failures: Mutex::new(0),
-            last_failure: Mutex::new(None),
-            max_failures,
-            reset_timeout,
-        }
-    }
-
-    fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
-        if *failures >= self.max_failures {
-            let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    return true;
-                }
-                return false;
-            }
-        }
-        true
-    }
-
-    fn record_success(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures = 0;
-    }
-
-    fn record_failure(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures += 1;
-        let mut last_failure = self.last_failure.lock().unwrap();
-        *last_failure = Some(Instant::now());
-    }
-}
-
-static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
-
-fn get_circuit_breaker() -> &'static CircuitBreaker {
-    GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
-}
+use std::time::Duration;
 
 fn request_timeout() -> Duration {
     let secs = std::env::var("OHC_LLM_TIMEOUT_SECS")
@@ -78,6 +27,7 @@ pub struct OpenAIClient {
     organization: Option<String>,
     project: Option<String>,
     client: Client,
+    circuit_breaker: CircuitBreaker,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -161,9 +111,7 @@ impl OpenAIClient {
 
     pub fn with_base_url(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
         Self::from_config(OpenAIClientConfig::openai_compatible(
-            api_key,
-            base_url,
-            None,
+            api_key, base_url, None,
         ))
     }
 
@@ -177,10 +125,8 @@ impl OpenAIClient {
             embedding_format: config.embedding_format,
             organization: config.organization,
             project: config.project,
-            client: Client::builder()
-                .timeout(config.timeout)
-                .build()
-                .unwrap(),
+            client: Client::builder().timeout(config.timeout).build().unwrap(),
+            circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
         }
     }
 
@@ -371,7 +317,7 @@ impl LlmClient for OpenAIClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let cb = get_circuit_breaker();
+        let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
@@ -456,9 +402,16 @@ impl LlmClient for OpenAIClient {
             .collect();
 
         let model = if req.model.trim().is_empty() {
-            self.default_model
-                .clone()
-                .ok_or("missing model: set OHC_LLM_MODEL or provider-specific model env var")?
+            match self.default_model.clone() {
+                Some(model) => model,
+                None => {
+                    cb.record_non_failure();
+                    return Err(
+                        "missing model: set OHC_LLM_MODEL or provider-specific model env var"
+                            .into(),
+                    );
+                }
+            }
         } else {
             req.model.clone()
         };
@@ -475,14 +428,16 @@ impl LlmClient for OpenAIClient {
         // first allows provider-side reuse without caching complete responses here.
 
         let url = self.chat_completions_url();
-        let resp = self
-            .request_with_auth(&url)
-            .json(&payload)
-            .send()
-            .await?;
+        let resp = match self.request_with_auth(&url).json(&payload).send().await {
+            Ok(response) => response,
+            Err(error) => {
+                cb.record_transport_error(&error);
+                return Err(error.into());
+            }
+        };
 
         if !resp.status().is_success() {
-            cb.record_failure();
+            cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("openai api error (status {}): {}", status, body).into());
@@ -490,13 +445,18 @@ impl LlmClient for OpenAIClient {
 
         let result = resp.json::<OpenAIResponse>().await;
         if let Err(e) = result {
-            cb.record_failure();
+            cb.record_non_failure();
             return Err(format!("api error: failed to parse response: {:?}", e).into());
         }
         let result = result.unwrap();
-        cb.record_success();
 
-        let choice = result.choices.into_iter().next().ok_or("no choices")?;
+        let choice = match result.choices.into_iter().next() {
+            Some(choice) => choice,
+            None => {
+                cb.record_non_failure();
+                return Err("no choices".into());
+            }
+        };
         let finish_reason = choice.finish_reason.unwrap_or_default();
 
         let text = choice.message.content.unwrap_or_default();
@@ -531,6 +491,8 @@ impl LlmClient for OpenAIClient {
             })
             .unwrap_or_default();
 
+        cb.record_success();
+
         Ok(ChatResponse {
             message: Message {
                 role: Role::Assistant,
@@ -554,19 +516,19 @@ impl LlmClient for OpenAIClient {
             return Ok(vec![]);
         }
 
-        let cb = get_circuit_breaker();
+        let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
 
         let url = self.embeddings_url();
-        let resp = match self.embedding_format {
+        let resp_result = match self.embedding_format {
             EmbeddingRequestFormat::OpenAI => {
                 let payload = OpenAIEmbeddingRequest {
                     model: &self.embedding_model,
                     input: text,
                 };
-                self.request_with_auth(&url).json(&payload).send().await?
+                self.request_with_auth(&url).json(&payload).send().await
             }
             EmbeddingRequestFormat::Minimax => {
                 let payload = MinimaxEmbeddingRequest {
@@ -574,43 +536,60 @@ impl LlmClient for OpenAIClient {
                     r#type: "db",
                     texts: [text],
                 };
-                self.request_with_auth(&url).json(&payload).send().await?
+                self.request_with_auth(&url).json(&payload).send().await
+            }
+        };
+        let resp = match resp_result {
+            Ok(response) => response,
+            Err(error) => {
+                cb.record_transport_error(&error);
+                return Err(error.into());
             }
         };
 
         if !resp.status().is_success() {
-            cb.record_failure();
+            cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
-            return Err(
-                format!("openai-compatible embeddings error (status {}): {}", status, body)
-                    .into(),
-            );
+            return Err(format!(
+                "openai-compatible embeddings error (status {}): {}",
+                status, body
+            )
+            .into());
         }
 
-        let result: OpenAIEmbeddingResponse = resp.json().await?;
+        let result: OpenAIEmbeddingResponse = match resp.json().await {
+            Ok(result) => result,
+            Err(error) => {
+                cb.record_non_failure();
+                return Err(error.into());
+            }
+        };
 
         // Handle Minimax base_resp wrapper which always returns HTTP 200 OK
         if let Some(base_resp) = result.base_resp
-            && base_resp.status_code != 0 && base_resp.status_code != 1000 {
-                cb.record_failure();
-                return Err(format!(
-                    "minimax embeddings error (status {}): {}",
-                    base_resp.status_code, base_resp.status_msg
-                )
-                .into());
-            }
-
-        cb.record_success();
+            && base_resp.status_code != 0
+            && base_resp.status_code != 1000
+        {
+            cb.record_non_failure();
+            return Err(format!(
+                "minimax embeddings error (status {}): {}",
+                base_resp.status_code, base_resp.status_msg
+            )
+            .into());
+        }
 
         if let Some(item) = result.data.into_iter().next() {
+            cb.record_success();
             return Ok(item.embedding);
         }
 
         if let Some(vector) = result.vectors.into_iter().next() {
+            cb.record_success();
             return Ok(vector);
         }
 
+        cb.record_non_failure();
         Err("openai-compatible embeddings response did not include a vector".into())
     }
 }

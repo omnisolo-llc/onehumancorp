@@ -6,6 +6,7 @@ rust_library(
     name = "llm",
     srcs = [
         "anthropic.rs",
+        "circuit_breaker.rs",
         "gemini.rs",
         "mod.rs",
         "ollama.rs",
