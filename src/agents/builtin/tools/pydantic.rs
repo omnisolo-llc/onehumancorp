@@ -79,6 +79,13 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                         instr.push_str(&hint);
                         instr
                     }));
+                } else if err_str.contains("expected struct") || err_str.contains("expected a map") || (err_str.contains("invalid type: string") && err_str.contains("expected struct")) {
+                    let hint = format!("There is a structural mismatch. Please ensure you are providing a valid JSON object matching the exact schema definition, not a string or primitive. Detailed error: {}", err_str);
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(&hint);
+                        instr
+                    }));
                 } else if err_str.contains("invalid type") {
                     let hint = "There is a type mismatch. Ensure strings are quoted, numbers are not quoted, and arrays/objects are formatted correctly as JSON.";
                     detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
@@ -281,7 +288,22 @@ mod tests {
             .unwrap();
         assert_eq!(result, "arc_test-456");
     }
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_structural_mismatch() {
+        let adapter = PydanticAdapter::new(ComplexExecutor);
+        let result = adapter
+            .execute(serde_json::json!("this is just a string, not an object"))
+            .await;
+
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("There is a structural mismatch."));
+        } else {
+            panic!("Expected LlmRecoverable error about structural mismatch");
+        }
+    }
 }
+
 
 #[cfg(test)]
 mod tests_custom {

@@ -25,8 +25,8 @@ async fn mock_ap_handler(Json(payload): Json<serde_json::Value>) -> impl IntoRes
 
 #[tokio::test]
 async fn test_agent_protocol_tool_executor_success() {
-    std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true");
-    std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true");
+    unsafe { std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true")};
+    unsafe { std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true")};
 
     // Start a mock Axum server
     let app = Router::new().route("/ap", post(mock_ap_handler));
@@ -56,8 +56,8 @@ async fn test_agent_protocol_tool_executor_success() {
 
 #[tokio::test]
 async fn test_agent_protocol_tool_executor_missing_arg() {
-    std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true");
-    std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true");
+    unsafe { std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true")};
+    unsafe { std::env::set_var("MCPANY_DANGEROUS_ALLOW_LOCAL_IPS", "true")};
 
     let tool = agent_protocol_tool();
     let args = json!({

@@ -186,7 +186,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     continue;
                 }
                 let pool = crate::db::get_pool();
-                let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                let redacted_labels = ::server_telemetry::redact_interface_pii(item.labels.clone());
+                let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, redacted_labels).await;
 
                 // Ignore other metrics in cloud
                 tracing::trace!(
