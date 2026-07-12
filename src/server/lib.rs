@@ -191,7 +191,7 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
                     parent_context_json: String::new(),
                     ..Default::default()
                 };
-                match svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                match svc.dispatch_to_sub_agent(svc.trusted_request(req)).await {
                     Ok(resp) => {
                         let inner = resp.into_inner();
                         if !inner.error.is_empty() {
@@ -2443,6 +2443,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         subscriber.init();
     }
 
+    let builtin_agent_auth = if crate::is_standalone_runtime() {
+        Some(
+            ohc_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("invalid builtin agent authentication configuration: {error}"),
+                )
+            })?,
+        )
+    } else {
+        None
+    };
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
@@ -2733,6 +2746,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     if crate::is_standalone_runtime() {
         let builtin_transport = mesh_transport.clone();
         let builtin_mesh = handoff_mesh.clone();
+        let builtin_auth = builtin_agent_auth.expect("standalone auth was initialized");
         tokio::spawn(async move {
             let agent_id = std::env::var("OHC_AGENT_ID")
                 .unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
@@ -2789,10 +2803,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(80),
             };
-            let auth = ohc_builtin_agent::auth::auth_mode_from_env();
             let agent_id_clone = agent_id.clone();
             let mut svc_impl =
-                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, builtin_auth);
             svc_impl.init_memory().await;
             let svc = std::sync::Arc::new(svc_impl);
             let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());

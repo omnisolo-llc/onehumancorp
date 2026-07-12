@@ -82,6 +82,9 @@ pub struct AgentServiceImpl {
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct TrustedInProcessRequest;
+
 async fn load_cascading_agents_md(
     current_dir: &std::path::Path,
     working_dir: Option<&str>,
@@ -247,11 +250,28 @@ impl AgentServiceImpl {
         self
     }
 
+    /// Build a request for a caller already trusted by the current process.
+    ///
+    /// Tonic extensions cannot be supplied over the network, so this capability
+    /// preserves authentication for gRPC clients while allowing the embedded
+    /// server and mesh handlers to invoke the same service implementation.
+    pub fn trusted_request<T>(&self, message: T) -> Request<T> {
+        let mut request = Request::new(message);
+        request.extensions_mut().insert(TrustedInProcessRequest);
+        request
+    }
+
     #[allow(clippy::result_large_err)]
     fn check_auth<T>(&self, req: &Request<T>) -> Result<(), Status> {
+        if req.extensions().get::<TrustedInProcessRequest>().is_some() {
+            return Ok(());
+        }
         match &self.auth {
             AuthMode::Disabled => Ok(()),
-            AuthMode::Token { token_hash } => {
+            AuthMode::Token {
+                token_hash,
+                verification_key,
+            } => {
                 let meta = req.metadata();
                 let auth_val = meta
                     .get("authorization")
@@ -261,16 +281,14 @@ impl AgentServiceImpl {
                 let tok = auth_val
                     .strip_prefix("Bearer ")
                     .ok_or_else(|| Status::unauthenticated("authorization must be Bearer token"))?;
-                if !crate::auth::check_token(tok, token_hash) {
+                if !crate::auth::check_token(tok, token_hash, verification_key) {
                     return Err(Status::unauthenticated("invalid token"));
                 }
                 Ok(())
             }
-            AuthMode::Spiffe { .. } => {
-                // SPIFFE/mTLS check would be done at the transport layer.
-                // For simplicity we allow if TLS is used.
-                Ok(())
-            }
+            AuthMode::Spiffe { .. } => Err(Status::unauthenticated(
+                "verified mTLS peer identity is unavailable",
+            )),
         }
     }
 
@@ -1319,6 +1337,38 @@ mod tests {
     use super::*;
     use std::io::Write;
 
+    #[test]
+    fn spiffe_mode_rejects_requests_without_verified_mtls_identity() {
+        let service = AgentServiceImpl::new(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Spiffe {
+                allowed_id: "spiffe://onehumancorp.io/org/org-1/agent/agent-1".to_string(),
+            },
+        );
+
+        let error = service
+            .check_auth(&tonic::Request::new(PingRequest::default()))
+            .unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Unauthenticated);
+    }
+
+    #[test]
+    fn trusted_in_process_request_bypasses_network_authentication() {
+        let key = b"0123456789abcdef0123456789abcdef";
+        let service = AgentServiceImpl::new(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Token {
+                token_hash: crate::auth::hmac_token("secret-token", key),
+                verification_key: key.to_vec(),
+            },
+        );
+
+        let request = service.trusted_request(PingRequest::default());
+        assert!(service.check_auth(&request).is_ok());
+    }
+
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
         let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
@@ -1434,7 +1484,7 @@ pub async fn start_builtin_agent(
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
+                    match svc.run_task(svc.trusted_request(req)).await {
                         Ok(resp) => {
                             let mut stream = resp.into_inner();
                             use tokio_stream::StreamExt;
@@ -1527,7 +1577,7 @@ pub async fn start_builtin_agent(
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
+                    match svc.run_task(svc.trusted_request(req)).await {
                         Ok(resp) => {
                             let mut stream = resp.into_inner();
                             use tokio_stream::StreamExt;

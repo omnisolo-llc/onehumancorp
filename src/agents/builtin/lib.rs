@@ -267,7 +267,12 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         max_context_messages: get_env_int("OHC_MAX_CONTEXT_MESSAGES", 80),
     };
 
-    let auth = auth::auth_mode_from_env();
+    let auth = auth::auth_mode_from_env().map_err(|error| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("invalid agent authentication configuration: {error}"),
+        )
+    })?;
 
     let mut svc_impl = service::AgentServiceImpl::new(agent_id.clone(), cfg.clone(), auth);
     svc_impl.init_memory().await;
@@ -317,7 +322,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             match svc_impl
-                .dispatch_to_sub_agent(tonic::Request::new(req))
+                .dispatch_to_sub_agent(svc_impl.trusted_request(req))
                 .await
             {
                 Ok(resp) => {
