@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Share & Save Widget', () => {
   test('should navigate to widget from dashboard, click share, and reveal discount code', async ({ page, loginAs, unlimitedAdminUser }) => {

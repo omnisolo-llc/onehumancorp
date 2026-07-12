@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Viral Tier List Generator Loop', () => {
   test('Merchant uses Tier List Generator and sees soft paywall', async ({ page, request, loginAs, adminUser }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Automated Cart Recovery Growth Loop', () => {
   test('Merchant enables auto-recovery via soft paywall trial extension', async ({ page, request }) => {

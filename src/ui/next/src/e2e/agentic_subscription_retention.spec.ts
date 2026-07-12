@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupAuthAndDatabase } from './test_setup';
+import { setupAuthAndDatabase } from '../../../../e2e/test_setup';
 
 test.describe('Agentic Subscription Retention CUJ', () => {
   let tenantId: string;

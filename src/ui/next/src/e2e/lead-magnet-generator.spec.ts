@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Lead Magnet Generator Growth Loop', () => {
   test('Merchant uses Lead Magnet Generator and sees soft paywall', async ({ page, request, loginAs, adminUser }) => {

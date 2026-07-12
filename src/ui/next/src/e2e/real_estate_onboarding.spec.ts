@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { e2eUrl } from './fixtures';
+import { e2eUrl } from '../../../../e2e/fixtures';
 
 test.describe('Real Estate Onboarding CUJ', () => {
     test('Elena can select Real Estate in the wizard and launch her workspace', async ({ page }) => {

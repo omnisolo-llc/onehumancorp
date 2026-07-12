@@ -1,5 +1,5 @@
-import { test, expect } from "../../../e2e/fixtures";
-import { e2eDbQuery } from "../../../e2e/db_utils";
+import { test, expect } from "../../../../e2e/fixtures";
+import { e2eDbQuery } from "../../../../e2e/db_utils";
 
 test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
   test("Carlos can tap 'Heading to Job', 'Start Work', and 'Job Done' to update status without crashing", async ({
@@ -7,12 +7,12 @@ test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
     context,
     loginAs,
     adminUser,
-    seedData,
   }) => {
-    const tenantId = seedData.tenant.id;
-    const customerId = seedData.customer.id;
+    const tenantId = "e2e-tenant";
+    const customerId = "cust-routing-1";
 
     await test.step('Seed job templates and appointments', async () => {
+        await e2eDbQuery(`INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, 'Routing Customer', 'routing@example.com') ON CONFLICT DO NOTHING`, [customerId, tenantId]);
         const jtRes = await e2eDbQuery(
             `INSERT INTO job_templates (id, tenant_id, name, estimated_duration_mins, base_price_cents)
              VALUES ('jt-routing-1', $1, 'Sink Repair', 60, 15000) RETURNING id`,

@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
+import { test, expect } from '../../../../e2e/fixtures';
+import { currentAppSmoke } from '../../../../e2e/current_app_smoke';
 
 test('viral_powered_by_ohc_widget_smoke', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
