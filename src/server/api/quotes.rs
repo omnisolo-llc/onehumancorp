@@ -619,9 +619,48 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let existing_quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch quote for approve: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let mut stripe_payment_link = existing_quote.stripe_payment_link.clone();
+
+    if let Some(deposit_cents) = existing_quote.required_deposit_cents {
+        if deposit_cents > 0 && stripe_payment_link.is_none() {
+            let stripe_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+            let amount_usd = (deposit_cents as f64) / 100.0;
+
+            match stripe_client.create_checkout_session(
+                &format!("Deposit for Quote #{}", existing_quote.id),
+                &existing_quote.customer_id.to_string(),
+                amount_usd,
+                None,
+                None
+            ).await {
+                Ok(url) => {
+                    stripe_payment_link = Some(url);
+                },
+                Err(e) => {
+                    tracing::error!("Failed to create Stripe checkout session for deposit: {}", e);
+                }
+            }
+        }
+    }
+
     let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
+        "UPDATE quotes SET status = 'SENT', stripe_payment_link = $1, updated_at = NOW() WHERE id = $2 RETURNING *"
     )
+    .bind(&stripe_payment_link)
     .bind(quote_id)
     .fetch_optional(&pool)
     .await

@@ -51,11 +51,11 @@ export default function QuoteReviewPage() {
   const handleSend = async () => {
     try {
       setSending(true);
-      const res = await fetch(`/api/quotes?id=${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...quote, status: 'SENT' }) });
+      const res = await fetch(`/api/quotes/${id}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) throw new Error('Failed to send quote');
-      const updated = await res.json();
-      setQuote(updated);
-      if (updated.stripe_payment_link) {
+      const data = await res.json();
+      setQuote(data.quote);
+      if (data.quote.stripe_payment_link) {
         alert('Quote Sent!');
       }
     } catch (err: any) {
