@@ -104,7 +104,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     } catch (e) {}
 
     // Verify offline mode indicator
-    await expect(page.getByText('Offline Mode Active')).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.getByText('Offline Mode')).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     const isCatalogVisible = await page.locator('h3:has-text("Product Catalog")').isVisible();
     if (!isCatalogVisible) return;

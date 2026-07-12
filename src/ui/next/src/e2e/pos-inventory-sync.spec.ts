@@ -5,6 +5,31 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const tenantId = 'e2e-tenant-pos';
     const productId = 'e2e-product-cake-pos';
 
+    // Login to get token
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
+
+    const loginRes = await page.request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    const tokenData = await loginRes.json();
+    const token = tokenData.token;
+
+    // Create product
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            id: productId,
+            title: 'Test Cake POS',
+            inventory_count: 5,
+            price_cents: 1500
+        }
+    });
+
+
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
@@ -65,6 +90,29 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const tenantId = 'e2e-tenant';
     const productId = 'e2e-product-cake';
 
+    // Login and create product
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
+
+    const loginResLock = await page.request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    const tokenDataLock = await loginResLock.json();
+
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${tokenDataLock.token}` },
+        data: {
+            id: productId,
+            title: 'Test Cake Lock',
+            inventory_count: 5,
+            price_cents: 1500
+        }
+    });
+
+
     // 1. Setup tenant info in local storage for checkout page
     await page.goto('/checkout');
     await page.evaluate((tenant) => {
@@ -119,6 +167,29 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('Commit inventory correctly deducts stock', async ({ page }) => {
     const tenantId = 'e2e-tenant-pos-additional';
     const productId = 'e2e-product-cake-pos-additional';
+
+    // Login and create product
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
+
+    const loginResAdd = await page.request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    const tokenDataAdd = await loginResAdd.json();
+
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${tokenDataAdd.token}` },
+        data: {
+            id: productId,
+            title: 'Test Cake POS Additional',
+            inventory_count: 5,
+            price_cents: 1500
+        }
+    });
+
 
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {

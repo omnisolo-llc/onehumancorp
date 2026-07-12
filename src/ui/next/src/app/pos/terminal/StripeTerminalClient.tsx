@@ -108,13 +108,31 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        // Offline Mode Payment Enqueue
        setStatus('Offline Tap-to-Pay. Authorizing locally...');
 
-       cart?.forEach(item => {
+       if (cart && cart.length > 0) {
+           cart.forEach(item => {
+               MutationService.getInstance().executeMutation(
+                   'tap_to_pay',
+                   {
+                       amount_cents: item.product.price_cents * item.quantity,
+                       product_id: item.product.id,
+                       quantity: item.quantity,
+                   },
+                   () => {
+                       if (onOptimisticReserve) onOptimisticReserve();
+                   },
+                   () => {
+                       if (onOptimisticRollback) onOptimisticRollback();
+                       setStatus('Failed to save offline payment.');
+                   }
+               );
+           });
+       } else {
            MutationService.getInstance().executeMutation(
                'tap_to_pay',
                {
-                   amount_cents: item.product.price_cents * item.quantity,
-                   product_id: item.product.id,
-                   quantity: item.quantity,
+                   amount_cents: amount,
+                   product_id: productId || 'custom-charge',
+                   quantity: 1,
                },
                () => {
                    if (onOptimisticReserve) onOptimisticReserve();
@@ -124,7 +142,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    setStatus('Failed to save offline payment.');
                }
            );
-       });
+       }
 
        setTimeout(() => {
          setStatus('Saved Offline - Will sync when connected');
@@ -191,23 +209,41 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   const processCashSale = async () => {
      if (typeof window !== 'undefined' && !navigator.onLine) {
-         cart?.forEach(item => {
-            MutationService.getInstance().executeMutation(
-                'cash_sale',
-                {
-                    amount_cents: item.product.price_cents * item.quantity,
-                    product_id: item.product.id,
-                    quantity: item.quantity
-                },
-                () => {
-                    if (onOptimisticReserve) onOptimisticReserve();
-                },
-                () => {
-                    if (onOptimisticRollback) onOptimisticRollback();
-                    setStatus('Failed to save offline cash sale.');
-                }
-            );
-         });
+         if (cart && cart.length > 0) {
+             cart.forEach(item => {
+                MutationService.getInstance().executeMutation(
+                    'cash_sale',
+                    {
+                        amount_cents: item.product.price_cents * item.quantity,
+                        product_id: item.product.id,
+                        quantity: item.quantity
+                    },
+                    () => {
+                        if (onOptimisticReserve) onOptimisticReserve();
+                    },
+                    () => {
+                        if (onOptimisticRollback) onOptimisticRollback();
+                        setStatus('Failed to save offline cash sale.');
+                    }
+                );
+             });
+         } else {
+             MutationService.getInstance().executeMutation(
+                 'cash_sale',
+                 {
+                     amount_cents: amount,
+                     product_id: productId || 'custom-charge',
+                     quantity: 1
+                 },
+                 () => {
+                     if (onOptimisticReserve) onOptimisticReserve();
+                 },
+                 () => {
+                     if (onOptimisticRollback) onOptimisticRollback();
+                     setStatus('Failed to save offline cash sale.');
+                 }
+             );
+         }
          setTimeout(() => {
            setStatus('Saved Offline - Will sync when connected');
            if (onSuccess) onSuccess();
@@ -257,7 +293,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   return (
     <WalkthroughTarget id="pos-keypad">
-    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[40px] saturate-[200%] border border-white/50">
+    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-[40px] saturate-[200%] border border-white/50 dark:border-white/10">
 
       {!selectedMethod ? (
         <div className="flex flex-col space-y-3 slide-in-from-bottom animate-in duration-300">
@@ -296,7 +332,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {pendingReconciliation.length > 0 && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[20px] saturate-[150%] p-4">
-               <div className="bg-white/85 backdrop-blur-[40px] saturate-[200%] border border-white/60 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+               <div className="bg-white/85 dark:bg-[#16161a]/80 backdrop-blur-[40px] saturate-[200%] border border-white/60 dark:border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
                  <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
                  <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
                  <ul className="space-y-2 mb-6">
@@ -329,7 +365,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               </button>
               <ul className="mt-4 space-y-2">
                 {discoveredReaders.map(reader => (
-                  <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
+                  <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 dark:border-white/10 rounded-2xl bg-white/60 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
                     <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
                     <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                       Connect

@@ -387,7 +387,7 @@ async fn create_quote(
             let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
 
             // Hardcoding dummy from/to zip codes for automated tax calculation via API
-            if let Ok(tax_rate) = provider.calculate_tax(total_pre_tax_usd, 0.0, "US", "90002", "CA", "US", "92093", "CA").await {
+            if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount: total_pre_tax_usd, shipping: 0.0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
                 if tax_rate.amount_to_collect > 0.0 {
                     line_items.push(QuoteLineItemReq {
                         description: "Automated Sales Tax (TaxJar)".to_string(),

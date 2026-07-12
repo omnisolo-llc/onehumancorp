@@ -40,6 +40,9 @@ export default function POSTerminal() {
   const [offlineConversion, setOfflineConversion] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState('0');
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const [posMode, setPosMode] = useState<'catalog' | 'quick_charge'>('catalog');
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
@@ -212,9 +215,23 @@ export default function POSTerminal() {
   const cartTotal = cart.reduce((sum: number, item: any) => sum + (item.product.price_cents * item.quantity), 0);
   const cartItemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
+  const handleKeypadPress = (val: string) => {
+    setChargeAmount(prev => {
+      if (val === 'backspace') {
+        return prev.length > 1 ? prev.slice(0, -1) : '0';
+      }
+      if (prev === '0' && val !== '0') return val;
+      if (prev === '0' && val === '0') return prev;
+      if (prev.length < 8) return prev + val;
+      return prev;
+    });
+  };
+
   const handleCheckoutComplete = () => {
     setCheckoutComplete(true);
     setIsCartOpen(false);
+    setShowPaymentSheet(false);
+    setChargeAmount('0');
   };
 
   const handleSendReceipt = () => {
@@ -302,7 +319,7 @@ export default function POSTerminal() {
              </div>
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
              <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
-             {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
+             {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode')}</p>}
            </div>
 
            <div className="flex justify-center mb-8">
@@ -354,7 +371,7 @@ export default function POSTerminal() {
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border-b border-gray-200 dark:border-white/10 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
             <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
@@ -378,7 +395,7 @@ export default function POSTerminal() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
 
-           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-[32px] saturate-[200%] border border-white/50 dark:border-white/10">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -414,7 +431,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-[32px] saturate-[200%] border border-white/50 dark:border-white/10 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -422,7 +439,7 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-[32px] saturate-[200%] border border-white/50 dark:border-white/10">
                <div className="text-[#FF9500] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -430,33 +447,97 @@ export default function POSTerminal() {
              </button>
            </div>
 
-           {/* Catalog Selection */}
-           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Product Catalog')}</h3>
-           <div className="grid grid-cols-1 gap-3 mb-8">
-              {inventory.length === 0 ? (
-                <p className="text-center text-gray-500 py-4 italic">{t('No products found in catalog')}</p>
-              ) : inventory.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => handleAddToCart(product)} disabled={reserving || isCartOpen}
-                  className={`p-4 rounded-[8px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/50'}`}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-bold text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-500 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
-                    </div>
-                    <div className="text-[#0071E3] font-bold">
-                      ${(product.price_cents / 100).toFixed(2)}
-                    </div>
-                  </div>
-                </button>
-              ))}
+           {/* View Toggle */}
+           <div className="flex bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur-[30px] rounded-xl p-1 mb-6 mx-2 mt-8">
+              <button
+                onClick={() => setPosMode('catalog')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all min-h-[44px] ${posMode === 'catalog' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              >
+                {t('Catalog')}
+              </button>
+              <button
+                onClick={() => setPosMode('quick_charge')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all min-h-[44px] ${posMode === 'quick_charge' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              >
+                {t('Quick Charge')}
+              </button>
            </div>
+
+           {/* Catalog Selection */}
+           {posMode === 'catalog' && (
+             <>
+               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">{t('Product Catalog')}</h3>
+               <div className="grid grid-cols-1 gap-3 mb-8">
+                  {inventory.length === 0 ? (
+                    <p className="text-center text-gray-500 py-4 italic">{t('No products found in catalog')}</p>
+                  ) : inventory.map(product => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleAddToCart(product)} disabled={reserving || isCartOpen}
+                      className={`p-4 rounded-[8px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/50 dark:border-white/10'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-gray-900">{product.name}</div>
+                          <div className="text-xs text-gray-500 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
+                        </div>
+                        <div className="text-[#0071E3] font-bold">
+                          ${(product.price_cents / 100).toFixed(2)}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+               </div>
+             </>
+           )}
+
+           {/* Quick Charge Keypad */}
+           {posMode === 'quick_charge' && (
+             <div className="mb-8 px-2 flex flex-col items-center">
+                <div className="w-full text-center mb-6">
+                  <div className="text-5xl font-outfit font-bold text-gray-900">
+                    ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 w-full max-w-xs mb-8">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleKeypadPress(num)}
+                      className="bg-white/70 backdrop-blur-[30px] border border-white/50 dark:border-white/10 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button className="h-16 min-h-[44px]"></button>
+                  <button
+                    onClick={() => handleKeypadPress('0')}
+                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 dark:border-white/10 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 transition-colors min-h-[44px]"
+                  >
+                    0
+                  </button>
+                  <button
+                    onClick={() => handleKeypadPress('backspace')}
+                    className="bg-white/70 backdrop-blur-[30px] border border-white/50 dark:border-white/10 rounded-2xl h-16 text-2xl font-bold text-gray-900 shadow-sm active:bg-gray-200 flex items-center justify-center transition-colors min-h-[44px]"
+                  >
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowPaymentSheet(true)}
+                  disabled={parseInt(chargeAmount || '0') === 0}
+                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                >
+                  Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
+                </button>
+             </div>
+           )}
 
            {/* Bottom Bar */}
            {cartItemCount > 0 && !checkoutComplete && (
-             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-[#16161a]/70 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
@@ -467,44 +548,55 @@ export default function POSTerminal() {
              </div>
            )}
 
-           {/* Cart Drawer */}
-           {isCartOpen && !checkoutComplete && (
+           {/* Cart Drawer & Payment Bottom Sheet */}
+           {(isCartOpen || showPaymentSheet) && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
-               <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setIsCartOpen(false)}></div>
-               <div className="relative bg-white/85 backdrop-blur-[40px] saturate-[210%] border-t border-white/50 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+               <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }}></div>
+               <div className="relative bg-white/85 dark:bg-[#16161a]/80 backdrop-blur-[40px] saturate-[210%] border-t border-white/50 dark:border-white/10 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
-                   <h2 className="text-xl font-bold font-outfit text-gray-900">Current Order</h2>
-                   <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                   <h2 className="text-xl font-bold font-outfit text-gray-900">{isCartOpen ? 'Current Order' : 'Payment Method'}</h2>
+                   <button onClick={() => { setIsCartOpen(false); setShowPaymentSheet(false); }} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                    </button>
                  </div>
 
-                 <div className="space-y-4 mb-6">
-                   {cart.map((item, idx) => (
-                     <div key={idx} className="flex justify-between items-center p-4 bg-white/50 rounded-xl border border-white/60 shadow-sm">
-                       <div className="flex flex-col">
-                         <span className="font-bold text-gray-900">{item.product.name}</span>
-                         <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
-                       </div>
-                       <span className="font-bold text-gray-900">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</span>
+                 {isCartOpen && (
+                   <>
+                     <div className="space-y-4 mb-6">
+                       {cart.map((item, idx) => (
+                         <div key={idx} className="flex justify-between items-center p-4 bg-white/50 rounded-xl border border-white/60 shadow-sm">
+                           <div className="flex flex-col">
+                             <span className="font-bold text-gray-900">{item.product.name}</span>
+                             <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
+                           </div>
+                           <span className="font-bold text-gray-900">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</span>
+                         </div>
+                       ))}
                      </div>
-                   ))}
-                 </div>
 
-                 <div className="border-t border-gray-200 pt-4 mb-4">
-                   <div className="flex justify-between items-center font-bold text-xl text-gray-900">
-                     <span>Total</span>
-                     <span>${(cartTotal / 100).toFixed(2)}</span>
+                     <div className="border-t border-gray-200 pt-4 mb-4">
+                       <div className="flex justify-between items-center font-bold text-xl text-gray-900">
+                         <span>Total</span>
+                         <span>${(cartTotal / 100).toFixed(2)}</span>
+                       </div>
+                     </div>
+                   </>
+                 )}
+
+                 {showPaymentSheet && posMode === 'quick_charge' && (
+                   <div className="border-b border-gray-200 dark:border-white/10 pb-4 mb-6 text-center">
+                     <div className="text-sm text-gray-500 uppercase tracking-wider font-bold mb-1">Amount Due</div>
+                     <div className="text-4xl font-bold text-gray-900">${(parseInt(chargeAmount || '0') / 100).toFixed(2)}</div>
                    </div>
-                 </div>
+                 )}
 
                  <StripeTerminalClient
-                    amount={cartTotal}
-                    productId={cart[0].product.id}
-                    cart={cart}
+                    amount={posMode === 'quick_charge' ? parseInt(chargeAmount || '0') : cartTotal}
+                    productId={posMode === 'quick_charge' ? 'custom-charge' : (cart[0]?.product?.id || 'custom-charge')}
+                    cart={posMode === 'quick_charge' ? [] : cart}
                     tenantId={activeStaff?.tenant_id || "default_tenant"}
-                    onOptimisticReserve={() => cart.forEach(item => handleOptimisticReserve(item.product.id))}
-                    onOptimisticRollback={() => cart.forEach(item => handleOptimisticRollback(item.product.id))}
+                    onOptimisticReserve={() => { if (posMode !== 'quick_charge') cart.forEach(item => handleOptimisticReserve(item.product.id)) }}
+                    onOptimisticRollback={() => { if (posMode !== 'quick_charge') cart.forEach(item => handleOptimisticRollback(item.product.id)) }}
                     onSuccess={handleCheckoutComplete}
                  />
                </div>
@@ -513,7 +605,7 @@ export default function POSTerminal() {
 
            {/* Post-Sale Screen */}
            {checkoutComplete && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 backdrop-blur-[30px] saturate-[210%]">
+             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%]">
                <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -556,7 +648,7 @@ export default function POSTerminal() {
         </div>
 
         {isOffline && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg text-gray-900 px-6 py-3 rounded-full font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg text-gray-900 px-6 py-3 rounded-full font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="w-5 h-5 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             <span>{t('Offline Mode')}{pendingSyncCount > 0 ? ` - ${pendingSyncCount} Pending` : ''}</span>
           </div>
