@@ -3,9 +3,61 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use uuid::Uuid;
 
+const MEMORY_PROVIDER_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
 #[async_trait]
 pub trait MemoryEmbeddingApi: Send + Sync {
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String>;
+}
+
+#[async_trait]
+pub trait MemorySummaryApi: Send + Sync {
+    async fn summarize(&self, prompt: &str) -> Result<String, String>;
+}
+
+pub struct DefaultMemorySummaryApi;
+
+#[async_trait]
+impl MemorySummaryApi for DefaultMemorySummaryApi {
+    async fn summarize(&self, prompt: &str) -> Result<String, String> {
+        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(prompt).await,
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                if api_key.is_empty() {
+                    crate::minimax::LocalLLMClient::new().reason(prompt).await
+                } else {
+                    crate::minimax::MinimaxClient::new(api_key).reason(prompt).await
+                }
+            }
+            _ => crate::minimax::LocalLLMClient::new().reason(prompt).await,
+        }
+    }
+}
+
+async fn summarize_with_deadline(
+    api: &dyn MemorySummaryApi,
+    prompt: &str,
+    fallback: &str,
+    timeout: std::time::Duration,
+) -> String {
+    match tokio::time::timeout(timeout, api.summarize(prompt)).await {
+        Ok(Ok(summary)) => summary,
+        Ok(Err(_)) => {
+            ::server_telemetry::record_error_signal(
+                "[bug] AgentMemoryPipeline: failed to summarize session context",
+            );
+            tracing::error!("AgentMemoryPipeline: failed to summarize session context");
+            fallback.to_string()
+        }
+        Err(_) => {
+            ::server_telemetry::record_error_signal(
+                "[bug] AgentMemoryPipeline: session summarization timed out",
+            );
+            tracing::error!("AgentMemoryPipeline: session summarization timed out");
+            fallback.to_string()
+        }
+    }
 }
 
 pub struct DefaultMemoryEmbeddingApi {
@@ -30,11 +82,32 @@ impl MemoryEmbeddingApi for DefaultMemoryEmbeddingApi {
 pub struct AgentMemoryPipeline {
     db: Arc<DB>,
     embedding_api: Arc<dyn MemoryEmbeddingApi>,
+    summary_api: Arc<dyn MemorySummaryApi>,
+    provider_timeout: std::time::Duration,
 }
 
 impl AgentMemoryPipeline {
     pub fn new(db: Arc<DB>, embedding_api: Arc<dyn MemoryEmbeddingApi>) -> Self {
-        Self { db, embedding_api }
+        Self::new_with_apis(
+            db,
+            embedding_api,
+            Arc::new(DefaultMemorySummaryApi),
+            MEMORY_PROVIDER_TIMEOUT,
+        )
+    }
+
+    pub fn new_with_apis(
+        db: Arc<DB>,
+        embedding_api: Arc<dyn MemoryEmbeddingApi>,
+        summary_api: Arc<dyn MemorySummaryApi>,
+        provider_timeout: std::time::Duration,
+    ) -> Self {
+        Self {
+            db,
+            embedding_api,
+            summary_api,
+            provider_timeout,
+        }
     }
 
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -89,24 +162,19 @@ impl AgentMemoryPipeline {
 
                     let summary_prompt = format!("Summarize the following session context into a concise memory. Focus on user preferences, important facts, and outcomes. Context: {}", context_data);
                     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&summary_prompt);
-                    let summarized_context = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                        Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
-                        Ok("minimax") => {
-                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                            if api_key.is_empty() {
-                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone())
-                            } else {
-                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or(context_data.clone())
-                            }
-                        }
-                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
-                    };
+                    let summarized_context = summarize_with_deadline(
+                        self.summary_api.as_ref(),
+                        &compressed_prompt,
+                        &context_data,
+                        self.provider_timeout,
+                    )
+                    .await;
 
-                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&summarized_context)).await {
+                    let embedding = match tokio::time::timeout(self.provider_timeout, self.embedding_api.generate_embedding(&summarized_context)).await {
                         Ok(Ok(emb)) => emb,
-                        Ok(Err(e)) => {
+                        Ok(Err(_)) => {
                             ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                            tracing::error!("AgentMemoryPipeline: failed to generate embedding");
 
                             // Revert status on failure
                             sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = ?")
@@ -203,24 +271,19 @@ impl AgentMemoryPipeline {
 
                     let summary_prompt = format!("Summarize the following session context into a concise memory. Focus on user preferences, important facts, and outcomes. Context: {}", context_data);
                     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&summary_prompt);
-                    let summarized_context = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                        Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
-                        Ok("minimax") => {
-                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                            if api_key.is_empty() {
-                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone())
-                            } else {
-                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or(context_data.clone())
-                            }
-                        }
-                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or(context_data.clone()),
-                    };
+                    let summarized_context = summarize_with_deadline(
+                        self.summary_api.as_ref(),
+                        &compressed_prompt,
+                        &context_data,
+                        self.provider_timeout,
+                    )
+                    .await;
 
-                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&summarized_context)).await {
+                    let embedding = match tokio::time::timeout(self.provider_timeout, self.embedding_api.generate_embedding(&summarized_context)).await {
                         Ok(Ok(emb)) => emb,
-                        Ok(Err(e)) => {
+                        Ok(Err(_)) => {
                             ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                            tracing::error!("AgentMemoryPipeline: failed to generate embedding");
 
                             // Revert status on failure
                             sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1")
@@ -286,7 +349,7 @@ impl AgentMemoryPipeline {
             if file_path.is_file() && file_path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&file_path).await?;
 
-                match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&content)).await {
+                match tokio::time::timeout(self.provider_timeout, self.embedding_api.generate_embedding(&content)).await {
                     Ok(Ok(embedding)) => {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = Uuid::new_v4();
@@ -318,9 +381,9 @@ impl AgentMemoryPipeline {
 
                         let _ = tokio::fs::remove_file(&file_path).await;
                     }
-                    Ok(Err(e)) => {
+                    Ok(Err(_)) => {
                         ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding for fs memory");
-                        tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory: {}", e);
+                        tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory");
                     }
                     Err(_) => {
                         ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
@@ -345,7 +408,30 @@ impl AgentMemoryPipeline {
 mod tests {
     // use super::*
     use super::*;
-    use std::sync::Arc;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    struct SummaryDropGuard(Arc<AtomicBool>);
+
+    impl Drop for SummaryDropGuard {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    struct BlockingSummaryApi {
+        dropped: Arc<AtomicBool>,
+    }
+
+    #[async_trait]
+    impl MemorySummaryApi for BlockingSummaryApi {
+        async fn summarize(&self, _prompt: &str) -> Result<String, String> {
+            let _guard = SummaryDropGuard(self.dropped.clone());
+            std::future::pending().await
+        }
+    }
 
     struct MockEmbeddingApi {
         succeeds: bool,
@@ -360,6 +446,25 @@ mod tests {
                 Err("mock error".to_string())
             }
         }
+    }
+
+    #[tokio::test]
+    async fn memory_summary_has_deadline() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let api = BlockingSummaryApi {
+            dropped: dropped.clone(),
+        };
+
+        let result = summarize_with_deadline(
+            &api,
+            "summary prompt",
+            "original context",
+            std::time::Duration::from_millis(20),
+        )
+        .await;
+
+        assert_eq!(result, "original context");
+        assert!(dropped.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
