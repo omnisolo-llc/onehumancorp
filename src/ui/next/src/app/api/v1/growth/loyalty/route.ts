@@ -29,8 +29,7 @@ export async function GET(request: Request) {
     }
   } catch (error) {
     console.error('Error fetching loyalty points:', error);
-    // As a fallback (if table missing or offline), return 0 so it doesn't crash
-    return NextResponse.json({ points_balance: 0 });
+    return NextResponse.json({ error: 'Failed to fetch loyalty data' }, { status: 502 });
   } finally {
     await pool.end();
   }

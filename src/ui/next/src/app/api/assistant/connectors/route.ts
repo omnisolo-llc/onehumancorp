@@ -13,10 +13,10 @@ function backendHeaders(request?: Request) {
   return headers;
 }
 
-async function upstreamJson(response: Response, fallbackMessage: string) {
+async function upstreamJson(response: Response, errorMessage: string) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    return NextResponse.json({ error: data.error || fallbackMessage }, { status: response.status === 404 ? 404 : 502 });
+    return NextResponse.json({ error: data.error || errorMessage }, { status: response.status === 404 ? 404 : 502 });
   }
   return NextResponse.json(data);
 }
