@@ -142,6 +142,7 @@ export class SyncManager {
 
     this.syncInProgress = true;
 
+    let allOk = true;
     try {
       // Separate POS transactions from general offline sync
       const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale').map(m => {
@@ -227,7 +228,7 @@ export class SyncManager {
 
 
 
-      let allOk = true;
+
 
       // Sync CRDT Deltas
       if (crdtDeltas.length > 0) {
