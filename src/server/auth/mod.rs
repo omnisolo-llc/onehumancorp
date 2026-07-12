@@ -4,6 +4,7 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
+pub mod peer_identity;
 pub mod postgres_store;
 pub mod sqlite_store;
 pub mod user_repository;
