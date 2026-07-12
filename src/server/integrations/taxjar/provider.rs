@@ -1,4 +1,4 @@
-use super::client::{TaxJarClient, TaxRate};
+use super::client::{TaxJarClient, TaxJarParams, TaxRate};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -33,8 +33,8 @@ impl TaxJarProvider {
         }
     }
 
-    pub async fn calculate_tax(&self, amount: f64, shipping: f64, to_country: &str, to_zip: &str, to_state: &str, from_country: &str, from_zip: &str, from_state: &str) -> Result<TaxRate, String> {
-        self._client.calculate_tax(amount, shipping, to_country, to_zip, to_state, from_country, from_zip, from_state).await
+    pub async fn calculate_tax(&self, params: TaxJarParams<'_>) -> Result<TaxRate, String> {
+        self._client.calculate_tax(params).await
     }
 }
 
