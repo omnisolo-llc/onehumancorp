@@ -48,7 +48,7 @@ describe('ViralWaitlistGeneratorPage', () => {
   it('navigates back to dashboard when Back to Dashboard is clicked', () => {
     render(<ViralWaitlistGeneratorPage />);
 
-    const backBtn = screen.getByText('Back to Dashboard');
+    const backBtn = screen.getByText('← Back to Dashboard');
     fireEvent.click(backBtn);
 
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
