@@ -1305,7 +1305,7 @@ function OperationsPanel() {
         {departments.map((department) => (
           <button key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between gap-3 mb-2">
-              <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</h3>
+              <span className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</span>
               <StatusPill>{department.status}</StatusPill>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455 mb-2">{department.role}</p>

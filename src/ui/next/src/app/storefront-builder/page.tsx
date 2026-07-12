@@ -441,7 +441,7 @@ export default function StorefrontBuilderPage() {
             {saveMessage && <span className="text-[#34C759] text-sm font-semibold animate-fade-in bg-white/80 dark:bg-black/80 px-2 py-1 rounded">{saveMessage}</span>}
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar builder-block">
           {blocks.map((b, i) => (
             <DraggableBlock
               key={b.type + i}

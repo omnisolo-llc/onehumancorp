@@ -57,7 +57,7 @@ export function DraggableBlock({
   return (
     <div
       draggable
-      className={`builder-block relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-[#0066FF] z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-[#0066FF] z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
       onDragStart={onDragStart as (e: React.DragEvent) => void}
       onDragOver={(e) => {
         e.preventDefault();
@@ -180,7 +180,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Referral") {
     return (
-      <div className="builder-block p-6 glassmorphism font-inter text-center my-4 shadow-sm">
+      <div className="p-6 glassmorphism font-inter text-center my-4 shadow-sm">
         <h2 className="text-xl font-bold font-outfit mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">{props.offerTitle || "Refer a Friend & Earn"}</h2>
         <p className="text-sm text-gray-700 dark:text-[#A1A1A6] mb-5">{props.offerDescription || "Get 20% off your next purchase when a friend buys from us!"}</p>
 
