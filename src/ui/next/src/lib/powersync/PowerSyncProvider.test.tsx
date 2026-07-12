@@ -45,10 +45,15 @@ test('disables PowerSync on insecure IP-hosted pages', () => {
   expect(isPowerSyncSupportedForLocation(false, '172.17.197.51')).toBe(false);
 });
 
-test('handles a rejected connection as an unsupported fallback state', async () => {
-  const connectionError = new Error('connection failed');
-  const database = databaseMock({ connect: vi.fn().mockRejectedValue(connectionError) });
+test('keeps local content when the background connection rejects', async () => {
+  let rejectConnection!: (error: Error) => void;
+  const database = databaseMock({
+    connect: vi.fn().mockReturnValue(new Promise((_, reject) => {
+      rejectConnection = reject;
+    })),
+  });
   getPowerSyncDBMock.mockResolvedValue(database as any);
+  const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
   render(
@@ -58,8 +63,18 @@ test('handles a rejected connection as an unsupported fallback state', async () 
   );
 
   expect(screen.getByText('Stable loading state')).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByText('API fallback')).toBeInTheDocument());
-  expect(consoleError).toHaveBeenCalledWith(connectionError);
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+
+  await act(async () => {
+    rejectConnection(new Error('token=credential-bearing-secret'));
+    await Promise.resolve();
+  });
+
+  expect(screen.getByText('Inbox content')).toBeInTheDocument();
+  expect(screen.queryByText('API fallback')).not.toBeInTheDocument();
+  expect(consoleWarn).toHaveBeenCalledOnce();
+  expect(consoleWarn).toHaveBeenCalledWith('PowerSync background sync connection failed; local data remains available.');
+  expect(consoleError).not.toHaveBeenCalled();
 });
 
 test('does not initialize or dispose a shared database that resolves after unmount', async () => {
@@ -105,14 +120,14 @@ test('keeps the cached database usable after a connection failure and remount', 
     }),
   });
   getPowerSyncDBMock.mockResolvedValue(database as any);
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
 
   const firstRender = render(
     <PowerSyncProvider fallback={<div>Stable loading state</div>} unsupportedFallback={<div>API fallback</div>}>
       <div>Inbox content</div>
     </PowerSyncProvider>,
   );
-  await waitFor(() => expect(screen.getByText('API fallback')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
@@ -126,6 +141,36 @@ test('keeps the cached database usable after a connection failure and remount', 
   );
 
   await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  expect(database.disconnect).not.toHaveBeenCalled();
+  expect(database.close).not.toHaveBeenCalled();
+});
+
+test('suppresses a pending background connection rejection after unmount', async () => {
+  let rejectConnection!: (error: Error) => void;
+  const database = databaseMock({
+    connect: vi.fn().mockReturnValue(new Promise((_, reject) => {
+      rejectConnection = reject;
+    })),
+  });
+  getPowerSyncDBMock.mockResolvedValue(database as any);
+  const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  const { unmount } = render(
+    <PowerSyncProvider fallback={<div>Stable loading state</div>} unsupportedFallback={<div>API fallback</div>}>
+      <div>Inbox content</div>
+    </PowerSyncProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  unmount();
+
+  await act(async () => {
+    rejectConnection(new Error('token=credential-bearing-secret'));
+    await Promise.resolve();
+  });
+
+  expect(consoleWarn).not.toHaveBeenCalled();
+  expect(consoleError).not.toHaveBeenCalled();
   expect(database.disconnect).not.toHaveBeenCalled();
   expect(database.close).not.toHaveBeenCalled();
 });

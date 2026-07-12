@@ -55,10 +55,15 @@ export const PowerSyncProvider = ({
 
     let cancelled = false;
 
-    const handleError = (err: unknown) => {
+    const handleInitializationError = (err: unknown) => {
       if (cancelled) return;
       console.error(err);
       setError(err instanceof Error ? err : new Error('Failed to initialize PowerSync'));
+    };
+
+    const handleConnectionError = () => {
+      if (cancelled) return;
+      console.warn('PowerSync background sync connection failed; local data remains available.');
     };
 
     const init = async () => {
@@ -71,10 +76,10 @@ export const PowerSyncProvider = ({
       const connector = new BackendConnector();
       setPowerSync(powerSyncDatabase);
       setReady(true);
-      void powerSyncDatabase.connect(connector).catch(handleError);
+      void powerSyncDatabase.connect(connector).catch(handleConnectionError);
     };
 
-    void init().catch(handleError);
+    void init().catch(handleInitializationError);
 
     return () => {
       cancelled = true;
