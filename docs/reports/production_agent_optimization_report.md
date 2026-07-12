@@ -11,7 +11,7 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
-Remediation update: F-01, F-02, F-03, and F-05 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Stream cancellation, memory-worker hardening, telemetry redaction, dependency upgrades, and explicit Postgres CI coverage remain open.
+Remediation update: F-01 through F-05 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Memory-worker hardening, telemetry redaction, dependency upgrades, and explicit Postgres CI coverage remain open.
 
 ## Completed optimization work
 
@@ -26,6 +26,7 @@ Remediation update: F-01, F-02, F-03, and F-05 have now been addressed in focuse
 | Resilience | Replaced four provider-global breakers with per-client state and transient-failure classification | 11 Cargo LLM tests and Bazel LLM test passed |
 | Tenant-safe agent tools | Bound each agent process to an immutable tenant capability, removed tenant selection from seven model-facing schemas, reused the lazy database pool, set transaction tenant context, and added explicit reschedule predicates | 157 tools tests and parent-crate Cargo check passed |
 | Tenant-safe agent memory | Captured the process tenant once at startup and used it for semantic search and completion records, with fail-closed cloud configuration | 517 agent tests and the Bazel agent library test passed |
+| Stream cancellation | Replaced the unbounded query stream with a 64-event buffer and raced query execution, gRPC runs, retry backoff, and completion-memory writes against receiver closure | Two drop-observable LLM regressions, 519 agent tests, and the Bazel agent library test passed |
 
 ## Boundary matrix
 
@@ -60,6 +61,8 @@ The default production tool set registers booking and quote mutations (`src/agen
 Smallest regression: `generate_quote_uses_authenticated_tenant_not_tool_arguments`.
 
 ### F-04 — High — stream cancellation does not cancel producer work
+
+**Status (2026-07-12): Remediated.** Commits `ef38d1ae9` and `52bc4710c` replace the unbounded `Agent::query` channel with a 64-event buffer and race both query and gRPC producer futures against receiver closure. The service also cancels retry backoff and completion-memory writes after disconnect. Drop-observable LLM regressions prove that both producer layers cancel the actual in-flight provider future; all 519 built-in-agent tests and the Bazel agent library target pass.
 
 `RunTaskStream` uses a bounded channel of 64, but the producer calls `try_send` and discards full/closed errors (`src/agents/builtin/service.rs:941`, `:1043`). It never tests receiver closure before retries, LLM calls, tools, or memory writes. The lower-level `Agent::query` creates an unbounded channel and similarly ignores send failure (`src/agents/builtin/agent.rs:2888`). A disconnected client can leave costly work running to completion, and the unbounded path can grow without backpressure.
 
@@ -111,7 +114,7 @@ Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
 | `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
 | `cargo test -p ohc_builtin_agent_tools --lib` | 157 passed | Tenant-aware tool schemas no longer expose tenant selection; tools regressions remain green |
-| `cargo test -p ohc_builtin_agent --lib` | 517 passed | Process tenant policy and captured-memory tenant regression pass with the full agent suite |
+| `cargo test -p ohc_builtin_agent --lib` | 519 passed | Process tenant, captured-memory, bounded query, and gRPC receiver-drop regressions pass with the full agent suite |
 | `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test` | 1 target passed | Bazel build/test graph includes and validates the tenant-capability changes |
 
 ## Dependency and secret scanning
