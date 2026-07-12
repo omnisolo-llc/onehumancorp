@@ -2155,6 +2155,49 @@
               `;
             }
 
+            if (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') {
+              let payload = item.proposed_action || item.context_payload || {};
+              if (typeof payload === 'string') {
+                try { payload = JSON.parse(payload); } catch(e){}
+              }
+
+              const projectName = payload.project_name || 'Project';
+              const milestoneName = payload.milestone_name || 'Milestone';
+              const amountCents = payload.amount_cents || 0;
+              const amountUsd = (amountCents / 100).toFixed(2);
+              const customerId = payload.customer_id || 'unknown';
+
+              return \`
+                <div class="triage-item glassmorphism" data-testid="agent-feed-card" id="triage-\${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 200, 83, 0.2); box-shadow: 0 4px 16px rgba(0, 200, 83, 0.1);">
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 200, 83, 0.1); color: #00C853; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px;">Finance Agent</div>
+                    <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #00C853;">Action Needed</div>
+                  </div>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">Draft Invoice ready for \${projectName}</div>
+
+                  <div style="background: rgba(0, 200, 83, 0.05); padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 200, 83, 0.1);">
+                    <div style="font-weight: 600; color: #00C853; margin-bottom: 4px;">Generated Invoice</div>
+                    <div>Review the drafted invoice. Select "Approve & Send" to email the client and generate a secure payment link.</div>
+
+                    <div style="margin-top: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #E5E7EB;">
+                        <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Project</div>
+                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">\${projectName}</div>
+
+                        <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Milestone</div>
+                        <div style="font-size: 13px; font-weight: 500; margin-bottom: 8px;">\${milestoneName}</div>
+
+                        <div style="font-size: 10px; color: #6B7280; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Amount</div>
+                        <div style="font-size: 15px; font-weight: 700; color: #1D1D1F;">$\${amountUsd}</div>
+                    </div>
+                  </div>
+                  <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('\${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('\${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
+                  </div>
+                </div>
+              \`;
+            }
+
             if (item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup' || actionType === 'invoice_followup' || item.action_payload?.feature_type === 'invoice_followup' || item.payload?.feature_type === 'invoice_followup' || (item.payload && typeof item.payload === 'string' && item.payload.includes('invoice_followup'))) {
 
               let payload = item.proposed_action || item.context_payload || item.payload || {};
