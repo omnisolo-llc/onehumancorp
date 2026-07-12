@@ -481,4 +481,38 @@ describe('PricingPage', () => {
     alertMock.mockRestore();
     consoleSpy.mockRestore();
   });
+
+  it('updates the price when annual billing is toggled', async () => {
+    (global.fetch as any).mockImplementation(async (url: string) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    // Verify initial monthly pricing
+    expect(screen.getByText('$29')).toBeDefined();
+
+    let toggle: HTMLElement;
+    await waitFor(() => {
+      toggle = screen.getByRole('checkbox');
+    });
+
+    // Toggle annual billing
+    await act(async () => {
+      fireEvent.click(toggle!);
+    });
+
+    // Verify annual pricing with dollar symbol
+    await waitFor(() => {
+      expect(screen.getByText('$23')).toBeDefined();
+    });
+  });
 });
