@@ -67,7 +67,25 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
     sorted
 }
 
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+use std::collections::HashMap;
+
+static DAILY_COST_CACHE: OnceLock<Mutex<HashMap<String, (Instant, Vec<DailyCost>)>>> = OnceLock::new();
+static AGENT_COST_CACHE: OnceLock<Mutex<HashMap<String, (Instant, Vec<AgentCostRow>)>>> = OnceLock::new();
+
+const CACHE_TTL: Duration = Duration::from_secs(300); // 5 minutes
+
 pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyCost> {
+    let cache = DAILY_COST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(map) = cache.lock() {
+        if let Some((ts, data)) = map.get(tenant_id) {
+            if ts.elapsed() < CACHE_TTL {
+                return data.clone();
+            }
+        }
+    }
+
     // Optimized Query: Cast labels_json to jsonb explicitly if it isn't already,
     // and use the ->> operator for faster execution than json_extract_path_text.
     // Ensure we handle potential errors robustly instead of silently failing.
@@ -112,7 +130,14 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
         }),
     }).collect();
 
-    process_telemetry_rows(rows)
+    let result = process_telemetry_rows(rows);
+
+    let cache = DAILY_COST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(mut map) = cache.lock() {
+        map.insert(tenant_id.to_string(), (Instant::now(), result.clone()));
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -263,6 +288,15 @@ pub fn process_agent_cost_rows(rows: Vec<AgentCostRawRow>) -> Vec<AgentCostRow> 
 }
 
 pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentCostRow> {
+    let cache = AGENT_COST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(map) = cache.lock() {
+        if let Some((ts, data)) = map.get(tenant_id) {
+            if ts.elapsed() < CACHE_TTL {
+                return data.clone();
+            }
+        }
+    }
+
     let raw_rows_result = sqlx::query(
         r#"
         SELECT
@@ -294,5 +328,12 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
         total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
     }).collect();
 
-    process_agent_cost_rows(processed_rows)
+    let result = process_agent_cost_rows(processed_rows);
+
+    let cache = AGENT_COST_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(mut map) = cache.lock() {
+        map.insert(tenant_id.to_string(), (Instant::now(), result.clone()));
+    }
+
+    result
 }

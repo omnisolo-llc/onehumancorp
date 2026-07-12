@@ -331,9 +331,7 @@ pub async fn create_checkout_session_handler(
             },
         }
     } else {
-        // Fallback for tests / missing Stripe config
-        let fallback_tier = req.tier.clone().unwrap_or_else(|| "product".to_string());
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("/checkout?tier={}", fallback_tier) }))
+        Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
     }
 }
 
