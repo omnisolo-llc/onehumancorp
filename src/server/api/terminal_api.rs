@@ -461,7 +461,7 @@ pub async fn sync_offline_transactions_handler(
                                     item.get("quantity").and_then(|v| v.as_i64()),
                                 ) {
                                     let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
-                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2"
+                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
                                     )
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -469,14 +469,36 @@ pub async fn sync_offline_transactions_handler(
                                     .await;
 
                                     if let Ok((stock,)) = current_stock_res {
-                                        if stock < quantity as i32 {
+                                        let qty_i32 = quantity as i32;
+                                        if stock < qty_i32 {
                                             let tx_id = tx.id.clone().unwrap_or_default();
                                             pending_reconciliation_items.push(serde_json::json!({
                                                 "transaction_id": tx_id,
                                                 "product_id": product_id,
-                                                "shortage": (quantity as i32) - stock,
+                                                "shortage": qty_i32 - stock,
                                                 "timestamp": chrono::Utc::now().to_rfc3339()
                                             }));
+                                        }
+
+                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                            .bind(qty_i32)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *db_tx)
+                                            .await;
+
+                                        if let Some(client) = crate::get_redis_client() {
+                                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                                let invalidation_topic = "cache_invalidation_events";
+                                                let invalidation_payload = serde_json::json!({
+                                                    "event": "inventory.updated",
+                                                    "tags": [
+                                                        format!("tenant-id:{}", tenant_id),
+                                                        format!("entity:product:{}", product_id)
+                                                    ]
+                                                }).to_string();
+                                                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                                            }
                                         }
                                     }
                                 }
@@ -517,6 +539,7 @@ pub async fn sync_offline_transactions_handler(
                             "currency": currency,
                             "payload": payload_str,
                             "mutation_type": m_type,
+                            "inventory_already_deducted": true,
                         }).to_string();
 
                         b.push_bind(job_id)
