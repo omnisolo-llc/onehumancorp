@@ -1,10 +1,13 @@
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
+use crate::{booking::SharedBookingStore, tenant::TenantContext};
 use ohc_builtin_agent_core::types::ToolError;
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-use serde::Deserialize;
 use uuid::Uuid;
-use crate::{booking::SharedBookingStore, tenant::TenantContext};
 
 #[derive(Deserialize)]
 pub struct GenerateQuoteArgs {
@@ -42,14 +45,17 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
 
-        let mut tx = pool.begin().await
-            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to begin transaction: {}", e)))?;
+        let mut tx = pool.begin().await.map_err(|e| {
+            ToolError::LlmRecoverable(format!("Failed to begin transaction: {}", e))
+        })?;
 
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(tenant_id)
             .execute(&mut *tx)
             .await
-            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to set tenant context: {}", e)))?;
+            .map_err(|e| {
+                ToolError::LlmRecoverable(format!("Failed to set tenant context: {}", e))
+            })?;
 
         sqlx::query(
             "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
@@ -84,14 +90,16 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
             .map_err(|e| ToolError::LlmRecoverable(format!("DB insert quote_line_item failed: {}", e)))?;
         }
 
-        tx.commit().await
-            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to commit transaction: {}", e)))?;
+        tx.commit().await.map_err(|e| {
+            ToolError::LlmRecoverable(format!("Failed to commit transaction: {}", e))
+        })?;
 
         Ok(json!({
             "status": "success",
             "message": "Quote generated successfully.",
             "quote_id": quote_id.to_string()
-        }).to_string())
+        })
+        .to_string())
     }
 }
 
@@ -123,6 +131,9 @@ pub fn generate_quote_tool(store: SharedBookingStore, tenant: TenantContext) -> 
             },
             "required": ["customer_id", "total_amount_cents", "required_deposit_cents", "line_items"]
         }),
-        execute: Arc::new(PydanticAdapter::new(GenerateQuoteExecutor { store, tenant })),
+        execute: Arc::new(PydanticAdapter::new(GenerateQuoteExecutor {
+            store,
+            tenant,
+        })),
     }
 }

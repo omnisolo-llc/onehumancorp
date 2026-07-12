@@ -335,14 +335,13 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
     let configured_org = std::env::var("OHC_ORGANIZATION_ID").ok();
-    let tenant = resolve_process_tenant(&execution_mode, configured_org.as_deref()).map_err(
-        |error| {
+    let tenant =
+        resolve_process_tenant(&execution_mode, configured_org.as_deref()).map_err(|error| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("invalid agent tenant configuration: {error}"),
             )
-        },
-    )?;
+        })?;
 
     let mut svc_impl =
         service::AgentServiceImpl::new_for_tenant(agent_id.clone(), cfg.clone(), auth, tenant);

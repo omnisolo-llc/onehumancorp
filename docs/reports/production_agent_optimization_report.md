@@ -11,6 +11,8 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
+Remediation update: F-01, F-02, F-03, and F-05 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Stream cancellation, memory-worker hardening, telemetry redaction, dependency upgrades, and explicit Postgres CI coverage remain open.
+
 ## Completed optimization work
 
 | Area | Change | Evidence |
@@ -22,6 +24,8 @@ The end-to-end audit also found unresolved production boundary defects. Most imp
 | File security | Canonical workspace confinement, symlink escape rejection, bounded reads/writes, atomic replacement | 154 tool tests and Bazel tools build passed |
 | Authentication | Explicit dev/test-only disablement, minimum keyed token configuration, constant-time verification, startup failure propagation, unverifiable SPIFFE rejection | Core/agent/root auth suites and three Bazel library targets passed |
 | Resilience | Replaced four provider-global breakers with per-client state and transient-failure classification | 11 Cargo LLM tests and Bazel LLM test passed |
+| Tenant-safe agent tools | Bound each agent process to an immutable tenant capability, removed tenant selection from seven model-facing schemas, reused the lazy database pool, set transaction tenant context, and added explicit reschedule predicates | 157 tools tests and parent-crate Cargo check passed |
+| Tenant-safe agent memory | Captured the process tenant once at startup and used it for semantic search and completion records, with fail-closed cloud configuration | 517 agent tests and the Bazel agent library test passed |
 
 ## Boundary matrix
 
@@ -49,6 +53,8 @@ Smallest regressions: `fire_agent_rejects_other_org_agent`, `delegate_task_rejec
 
 ### F-03 — High — model-controlled tenant IDs in production business tools
 
+**Status (2026-07-12): Remediated.** Commits `7ad1f0fc4` and `f6ccafb41` inject an immutable `TenantContext` into all booking and quote executors. Their model-facing schemas no longer contain `tenant_id`; PostgreSQL transactions use the captured context, quote generation reuses the shared lazy pool, quote line items carry the tenant explicitly, and rescheduling reads/updates include tenant predicates. The regression `tenant_aware_tool_schemas_do_not_expose_tenant_selection` passes as part of all 157 tools-crate tests.
+
 The default production tool set registers booking and quote mutations (`src/agents/builtin/tools/mod.rs:137` and `:167`). `generate_quote` requires `tenant_id` in the model-facing schema and binds that value directly into the insert (`src/agents/builtin/tools/quote.rs:8`, `:48`, `:118`) without setting authenticated database tenant context. Booking tools follow the same caller-controlled pattern. A prompt injection or model error can select another tenant when the database role bypasses RLS; with enforced RLS, these paths can fail unpredictably instead.
 
 Smallest regression: `generate_quote_uses_authenticated_tenant_not_tool_arguments`.
@@ -60,6 +66,8 @@ Smallest regression: `generate_quote_uses_authenticated_tenant_not_tool_argument
 Smallest regressions: `run_task_stops_when_receiver_is_dropped` and `query_applies_bounded_backpressure`.
 
 ### F-05 — High — agent memory tenant attribution is process-global
+
+**Status (2026-07-12): Remediated.** Commits `7ad1f0fc4` and `aaf947781` require a non-system `OHC_ORGANIZATION_ID` for cloud/cluster agent startup, capture it as an immutable process capability, and use it for both semantic search and completion records. Standalone mode may explicitly use the local `system` tenant. The focused memory regression, all 517 built-in-agent tests, and `//src/agents/builtin:ohc_builtin_agent_lib_unit_test` pass.
 
 After a successful task, the built-in service assigns memory to `OHC_ORGANIZATION_ID`, defaulting to `system`, rather than an authenticated request tenant (`src/agents/builtin/service.rs:1095`). The public task request carries no enforced tenant identity. A shared agent process can therefore misattribute or combine memories across callers.
 
@@ -102,6 +110,9 @@ Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 | `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Happy-path tests only; no cross-organization negative cases |
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
 | `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
+| `cargo test -p ohc_builtin_agent_tools --lib` | 157 passed | Tenant-aware tool schemas no longer expose tenant selection; tools regressions remain green |
+| `cargo test -p ohc_builtin_agent --lib` | 517 passed | Process tenant policy and captured-memory tenant regression pass with the full agent suite |
+| `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test` | 1 target passed | Bazel build/test graph includes and validates the tenant-capability changes |
 
 ## Dependency and secret scanning
 

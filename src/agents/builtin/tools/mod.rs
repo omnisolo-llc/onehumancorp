@@ -1,60 +1,63 @@
-#![allow(clippy::too_many_arguments, clippy::collapsible_if, clippy::useless_vec)]
+#![allow(
+    clippy::too_many_arguments,
+    clippy::collapsible_if,
+    clippy::useless_vec
+)]
 /// Master Catalog B.2. Tools
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub mod runner;
-pub mod network_policy;
 pub mod bash;
-pub mod python;
-pub mod read;
-pub mod workspace_path;
-pub mod write;
 pub mod edit;
 pub mod glob;
 pub mod grep;
-pub mod webfetch;
-pub mod websearch;
+pub mod network_policy;
+pub mod python;
+pub mod read;
+pub mod runner;
 pub mod sendmessage;
 pub mod tenant;
+pub mod webfetch;
+pub mod websearch;
+pub mod workspace_path;
+pub mod write;
 
-pub mod toolsearch;
-pub mod task;
-pub mod booking;
 pub mod agent_tool;
-pub mod sleep;
-pub mod marketing;
-pub mod finance;
-pub mod local_fs_sync;
-pub mod ollama;
-pub mod subagent;
-pub mod head;
-pub mod superpowers_tool;
-pub mod tail;
-pub mod find;
-pub mod hybrid_blob;
-pub mod restic;
 pub mod anthropic_memory;
-pub mod repo_map;
-pub mod lazy_load;
-pub mod screenshot;
-pub mod generative_visibility;
-pub mod magentic;
-pub mod recall;
-pub mod mcp_dynamic;
-pub mod skill;
+pub mod booking;
+pub mod checkout;
 pub mod create_skill;
-pub mod pydantic;
+pub mod expert_team_tool;
+pub mod finance;
+pub mod find;
+pub mod generative_visibility;
+pub mod head;
+pub mod hybrid_blob;
+pub mod lazy_load;
 pub mod llm_judge;
+pub mod local_fs_sync;
+pub mod magentic;
+pub mod marketing;
 pub mod marketplace;
 pub mod marketplace_tool;
-pub mod expert_team_tool;
-pub mod workflow;
-pub mod checkout;
+pub mod mcp_dynamic;
+pub mod ollama;
+pub mod pydantic;
 pub mod quote;
-
+pub mod recall;
+pub mod repo_map;
+pub mod restic;
+pub mod screenshot;
+pub mod skill;
+pub mod sleep;
+pub mod subagent;
+pub mod superpowers_tool;
+pub mod tail;
+pub mod task;
+pub mod toolsearch;
+pub mod workflow;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -62,7 +65,6 @@ impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
         self.execute_adapter(args).await
     }
 }
-
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -93,10 +95,7 @@ impl Clone for Tool {
 
 #[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError>;
+    async fn execute(&self, args: Value) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.
@@ -111,7 +110,9 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 pub fn all_tools(
     agent_llm: Option<std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
-    native_env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
+    native_env: Option<
+        Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    >,
 
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
@@ -123,13 +124,15 @@ pub fn all_tools(
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
     let mut tools = vec![
-        repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")))),
+        repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| {
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
+        })),
         bash::bash_tool(working_dir.clone(), runner.clone()),
         python::python_tool(working_dir.clone(), runner.clone()),
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
-            find::find_tool(working_dir.clone()),
+        find::find_tool(working_dir.clone()),
         write::write_tool(working_dir.clone(), runner.clone()),
         edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),
@@ -162,19 +165,24 @@ pub fn all_tools(
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
         recall::recall_observation_tool(observation_store),
-        mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        mcp_dynamic::mcp_discover_tool(
+            std::env::var("MCP_GATEWAY_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        ),
+        mcp_dynamic::mcp_invoke_tool(
+            std::env::var("MCP_GATEWAY_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        ),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(booking_store, tenant),
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
-];
+    ];
 
     if let Some(llm) = agent_llm {
         tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
     }
-
 
     if let Some(env) = native_env {
         tools.push(native_state::native_memory_stash_tool(env));
@@ -183,15 +191,17 @@ pub fn all_tools(
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor.clone()));
-        tools.push(anthropic_memory::cross_session_search_tool(accessor.clone()));
+        tools.push(anthropic_memory::cross_session_search_tool(
+            accessor.clone(),
+        ));
         tools.push(anthropic_memory::topic_write_tool(accessor));
     }
 
     tools
 }
 
-pub mod native_state;
 mod aider_pair_programming;
+pub mod native_state;
 pub use aider_pair_programming::aider_pair_programming_tool;
 
 #[cfg(test)]
@@ -263,8 +273,8 @@ mod tenant_aware_tool_schema_test {
     }
 }
 
-#[cfg(test)]
-mod glob_test;
 pub mod agent_protocol;
 #[cfg(test)]
 mod agent_protocol_test;
+#[cfg(test)]
+mod glob_test;
