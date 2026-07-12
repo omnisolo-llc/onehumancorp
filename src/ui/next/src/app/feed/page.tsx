@@ -42,6 +42,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateInvoiceDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-invoice-draft', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateInvoiceFollowup = async () => {
     try {
       setLoading(true);
@@ -566,6 +580,13 @@ export default function FeedPage() {
              className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Shift Coverage
+          </button>
+          <button
+             onClick={simulateInvoiceDraft}
+             data-testid="simulate-invoice-draft-btn"
+             className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Invoice Draft
           </button>
           <button
              onClick={simulateInvoiceFollowup}
