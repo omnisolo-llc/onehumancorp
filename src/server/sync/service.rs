@@ -1,4 +1,4 @@
-use std::env;
+
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::db::{DB, DbStore};
@@ -32,7 +32,7 @@ impl CloudSyncService {
 impl SyncDeltas for CloudSyncService {
     async fn sync_deltas(&self, deltas: Vec<SyncDelta>) -> Result<(), String> {
         let is_standalone = crate::is_standalone_runtime();
-        let telemetry_enabled = env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        let telemetry_enabled = ::server_config::is_telemetry_enabled();
 
         if is_standalone && !telemetry_enabled {
             tracing::debug!("Standalone mode, telemetry disabled, skipping cloud delta sync entirely to enforce local sovereignty.");

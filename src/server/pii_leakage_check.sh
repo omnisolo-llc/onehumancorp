@@ -21,7 +21,7 @@ def check_file(filepath):
 
     matches = []
     for i, line in enumerate(lines):
-        if re.search(r'tracing::(info|debug|warn|error)!\(', line):
+        if re.search(r'(tracing::(info|debug|warn|error)!|println!|print!|eprintln!|dbg!|log::(info|debug|warn|error)!)\(', line):
             if re.search(r'redacted_', line, re.IGNORECASE):
                 continue
 

@@ -4047,35 +4047,11 @@
 
           try {
             let startReq = null;
+            let data = null;
             const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
 
             if (window.__TAURI__ && window.__TAURI__.core) {
-              const data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
-              if (!data) throw new Error("Empty response");
-
-              startReq = {
-                business_type: data.business_type || "Other",
-                company_name: data.business_name || "My Store",
-                company_description: bioInput,
-                selling_categories: data.categories || ["Other"],
-                payment_pref: "online",
-                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                admin_name: document.getElementById("admin-name")?.value || "Owner",
-                admin_password: document.getElementById("admin-password")?.value || "password123",
-                website_template: "Modern",
-                first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                domain_choice: "subdomain",
-                price_type: "fixed",
-                location: data.location || "Global",
-                target_audience: data.target_audience || "Everyone",
-                initial_products: data.initial_products || [],
-                ai_agents: [],
-                ai_auto_respond: false,
-                deposit_percentage: data.deposit_percentage,
-                lead_time_days: data.lead_time_days
-              };
-
+              data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
             } else {
                 // For web mode, hit the /intake endpoint directly
                 const intakeRes = await fetch(`${backendUrl}/api/onboarding/intake`, {
@@ -4087,68 +4063,115 @@
                 if (!intakeRes.ok) {
                     throw new Error("Failed to process intake data. Please try again.");
                 }
-
-                const data = await intakeRes.json();
-                if (!data) throw new Error("Empty intake response");
-
-                startReq = {
-                    business_type: data.business_type || "Other",
-                    company_name: data.business_name || "My Store",
-                    company_description: bioInput,
-                    selling_categories: data.categories || ["Other"],
-                    payment_pref: "online",
-                    admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
-                    admin_name: document.getElementById("admin-name")?.value || "Owner",
-                    admin_password: document.getElementById("admin-password")?.value || "password123",
-                    website_template: "Modern",
-                    first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
-                    first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
-                    domain_choice: "subdomain",
-                    price_type: "fixed",
-                    location: data.location || "Global",
-                    target_audience: data.target_audience || "Everyone",
-                    initial_products: data.initial_products || [],
-                    ai_agents: [],
-                    ai_auto_respond: false,
-                    deposit_percentage: data.deposit_percentage,
-                    lead_time_days: data.lead_time_days
-                };
+                data = await intakeRes.json();
             }
 
-            window.pendingOnboardingReq = startReq;
+            if (!data) throw new Error("Empty response from AI assistant");
+
+            startReq = {
+              business_type: data.business_type || "Other",
+              company_name: data.business_name || "My Store",
+              company_description: bioInput,
+              selling_categories: data.categories || ["Other"],
+              payment_pref: "online",
+              admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+              admin_name: document.getElementById("admin-name")?.value || "Owner",
+              admin_password: document.getElementById("admin-password")?.value || "password123",
+              website_template: "Modern",
+              first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
+              first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+              domain_choice: "subdomain",
+              price_type: "fixed",
+              location: data.location || "Global",
+              target_audience: data.target_audience || "Everyone",
+              initial_products: data.initial_products || [],
+              ai_agents: [],
+              ai_auto_respond: false,
+              deposit_percentage: data.deposit_percentage,
+              lead_time_days: data.lead_time_days
+            };
+
+                        window.pendingOnboardingReq = startReq;
             window.pendingImageUrl = imageUrl;
-
-            const approvalDetails = document.getElementById("approval-details");
-            if (approvalDetails) {
-                approvalDetails.innerHTML = `
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-                        <p style="font-size: 14px; text-align: center; color: #1D1D1F;" class="dark:text-[#F5F5F7]"><strong>Suggested Deposit Policy:</strong> Requires a ${startReq.deposit_percentage !== undefined ? startReq.deposit_percentage : 50}% upfront deposit on custom orders.</p>
-                        <div style="width: 375px; max-width: 100%; aspect-ratio: 9/16; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <div style="background: #0066FF; color: white; padding: 12px; text-align: center; font-weight: bold;">
-                                ${startReq.company_name}
-                            </div>
-                            <div style="padding: 16px; color: #333;">
-                                <img src="${imageUrl || 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=80'}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;" />
-                                <h3 style="margin-top: 0; font-size: 18px; font-weight: 600;">${startReq.first_product_name}</h3>
-                                <p style="font-size: 16px; font-weight: 500; color: #0066FF;">$${startReq.first_product_price}</p>
-                                <button style="width: 100%; padding: 12px; background: #34C759; color: white; border: none; border-radius: 8px; font-weight: bold; margin-top: 12px;">Buy Now</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
 
             if (window.generateStorefrontLoadingInterval) {
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            goToStep('step-approval');
-            return;
 
-          } catch (err) {
-            console.error(err);
-            goToStep("step-initial");
-            const errorMsg = err.message || "Network Error: Failed to fetch";
+            await goToStep("step-loading");
+
+            const provisioningEl = document.getElementById("step-provisioning");
+            const catalogEl = document.getElementById("step-catalog");
+            const storefrontEl = document.getElementById("step-storefront");
+
+            if (provisioningEl) {
+              provisioningEl.style.opacity = "1";
+              provisioningEl.querySelector(".loading-dot").style.background = "#0066FF";
+            }
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const startData = await window.__TAURI__.core.invoke(
+                "start_onboarding",
+                { req: startReq }
+              );
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+              return;
+            }
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(startReq),
+            });
+
+            if (startRes.ok) {
+              const startData = await startRes.json().catch(() => ({}));
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+            } else {
+              const errData = await startRes.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || "Failed to start onboarding");
+            }
+          } catch (error) {
+            console.error(error);
+            const errorMsg = error && error.message ? error.message : "Failed to generate business.";
             instantErrorEl.innerText = errorMsg;
             instantErrorEl.style.display = "block";
             instantErrorEl.style.color = "#FF3B30";
@@ -4161,6 +4184,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
             generateStorefrontBtn.innerHTML = "Generate My Workspace";
+            goToStep("step-initial");
           }
         });
       }
@@ -4929,12 +4953,12 @@
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 

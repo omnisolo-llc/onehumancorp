@@ -3454,7 +3454,6 @@ mod tests {
             "ai_auto_respond": true"#;
 
         let res = repair_truncated_json(valid_but_truncated);
-        println!("{:?}", res);
         assert!(res.is_ok());
         let data = res.unwrap();
         assert_eq!(data.business_name, "Maya");
