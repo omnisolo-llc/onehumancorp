@@ -214,6 +214,77 @@ impl MinimaxClient {
                     "handoff_to": [],
                     "confidence": 0.95
                 }"#.to_string());
+            } else if lower_prompt.contains("you are an ai order and task triage assistant") || lower_prompt.contains("you are an omni-context work triage agent") {
+                if lower_prompt.contains("vegan options") {
+                    if lower_prompt.contains("omni-context") {
+                        return Ok(r#"{
+                          "operations_context": null,
+                          "sales_context": null,
+                          "customer_context": "Drafted reply to e2e from instagram.",
+                          "final_draft": "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?"
+                        }"#.to_string());
+                    } else {
+                        return Ok(r#"{
+                            "priority": "Medium",
+                            "feature_type": "instagram_dm",
+                            "context_summary": "Customer asking about vegan options",
+                            "action_type": "Draft Reply",
+                            "action_payload": "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?"
+                        }"#.to_string());
+                    }
+                } else if lower_prompt.contains("schedule") || lower_prompt.contains("calendar") {
+                    if lower_prompt.contains("omni-context") {
+                        return Ok(r#"{
+                          "operations_context": "Checked schedule: Available next Tuesday.",
+                          "sales_context": null,
+                          "customer_context": "Drafted reply.",
+                          "final_draft": "Hello! Checked schedule: Available next Tuesday."
+                        }"#.to_string());
+                    } else {
+                        return Ok(r#"{
+                            "priority": "Medium",
+                            "feature_type": "instagram_dm",
+                            "context_summary": "Customer needs to schedule",
+                            "action_type": "Draft Booking",
+                            "action_payload": "{\"service_id\":\"custom_cake\",\"start_time\":\"2024-08-01T14:00:00Z\",\"end_time\":\"2024-08-01T15:00:00Z\"}"
+                        }"#.to_string());
+                    }
+                } else if lower_prompt.contains("quote") || lower_prompt.contains("price") {
+                    if lower_prompt.contains("omni-context") {
+                        return Ok(r#"{
+                          "operations_context": null,
+                          "sales_context": "Generated quote: $150.",
+                          "customer_context": "Drafted reply.",
+                          "final_draft": "Hello! Generated quote: $150."
+                        }"#.to_string());
+                    } else {
+                        return Ok(r#"{
+                            "priority": "Medium",
+                            "feature_type": "instagram_dm",
+                            "context_summary": "Customer needs quote",
+                            "action_type": "Draft Quote",
+                            "action_payload": "{\"total_amount_cents\":15000,\"required_deposit_cents\":5000,\"line_items\":[{\"description\":\"Custom Cake\",\"unit_price_cents\":15000,\"quantity\":1,\"is_optional\":false}]}"
+                        }"#.to_string());
+                    }
+                } else {
+                    if lower_prompt.contains("omni-context") {
+                        return Ok(r#"{
+                          "operations_context": null,
+                          "sales_context": null,
+                          "customer_context": "Drafted reply.",
+                          "final_draft": "Thanks for reaching out! We will review this and get back to you soon."
+                        }"#.to_string());
+                    } else {
+                        return Ok(r#"{
+                            "priority": "Medium",
+                            "feature_type": "general",
+                            "context_summary": "Customer inquiry",
+                            "action_type": "Draft Reply",
+                            "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
+                        }"#.to_string());
+                    }
+                }
+
             } else {
                 return Ok(r#"{
                     "business_name": "Generic Business",

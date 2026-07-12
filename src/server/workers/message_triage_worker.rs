@@ -152,13 +152,7 @@ Output JSON format:
                 customer_context: None,
             });
 
-            let mut extracted = serde_json::json!({
-                "priority": "Medium",
-                "feature_type": "general",
-                "context_summary": "Customer inquiry",
-                "action_type": "Draft Reply",
-                "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
-            });
+            let mut extracted = serde_json::json!({});
 
             let max_retries = 3;
             let mut retry_count = 0;
@@ -240,6 +234,11 @@ Output JSON format:
                         }
                     }
                 }
+            }
+
+            // If LLM failed to extract JSON, skip to prevent mock data injection
+            if extracted.as_object().map(|o| o.is_empty()).unwrap_or(true) {
+                return Ok(true);
             }
 
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");

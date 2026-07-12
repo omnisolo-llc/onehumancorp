@@ -243,37 +243,6 @@ Return strict JSON:
             }
         }
 
-        // If tests are mocking without an LLM, provide basic deterministic output to avoid flaky tests.
-        if std::env::var("CI").is_ok() && !success {
-           let content_lower = msg.content.to_lowercase();
-           let mut ops_context = None;
-           let mut sales_context = None;
-
-           if content_lower.contains("vegan options") {
-                result.final_draft = "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?".to_string();
-                return Ok(result);
-           }
-
-           let customer_context = Some(format!("Drafted reply to {} from {}.", msg.sender, msg.source));
-           if content_lower.contains("schedule") || content_lower.contains("calendar") {
-               ops_context = Some("Checked schedule: Available next Tuesday.".to_string());
-           }
-           if content_lower.contains("quote") || content_lower.contains("price") {
-               sales_context = Some("Generated quote: $150.".to_string());
-           }
-           let mut final_draft = "Hello!".to_string();
-           if let Some(ref ops) = ops_context { final_draft.push_str(&format!(" {}", ops)); }
-           if let Some(ref sales) = sales_context { final_draft.push_str(&format!(" {}", sales)); }
-
-           result = DraftReply {
-               final_draft,
-               operations_context: ops_context,
-               sales_context,
-               customer_context,
-           };
-           success = true;
-        }
-
         if !success {
             return Err("AI Agent Service Unavailable".to_string());
         }
