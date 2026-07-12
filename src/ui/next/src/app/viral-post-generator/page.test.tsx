@@ -38,6 +38,8 @@ describe('ViralPostGeneratorPage', () => {
         value: vi.fn(),
         writable: true
     });
+
+    global.fetch = vi.fn() as any;
   });
 
   it('renders correctly', () => {
@@ -45,7 +47,16 @@ describe('ViralPostGeneratorPage', () => {
     expect(screen.getByText('Promoter Agent Post Generator 🚀')).toBeDefined();
   });
 
-  it('generates a post', () => {
+  it('generates a post', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        variants: [
+          { platform: "twitter", content: "Check out Test Product! Testing benefits." }
+        ]
+      })
+    });
+
     render(<ViralPostGeneratorPage />);
 
     const productNameInput = screen.getByPlaceholderText('e.g. Signature Coffee Blend');
@@ -57,12 +68,23 @@ describe('ViralPostGeneratorPage', () => {
     const generateBtn = screen.getByRole('button', { name: 'Generate Post' });
     fireEvent.click(generateBtn);
 
-    expect(screen.getByText(/Test Product/)).toBeDefined();
-    expect(screen.getByText(/Testing benefits/)).toBeDefined();
+    expect(screen.getByText(/Generating\.\.\./)).toBeDefined();
+
+    await screen.findByText(/Check out Test Product!/);
     expect(screen.getAllByText(/Powered by OHC/).length).toBeGreaterThan(0);
   });
 
-  it('copies to clipboard', () => {
+
+  it('copies to clipboard', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        variants: [
+          { platform: "twitter", content: "Check out Test Product! Testing benefits." }
+        ]
+      })
+    });
+
     render(<ViralPostGeneratorPage />);
 
     const productNameInput = screen.getByPlaceholderText('e.g. Signature Coffee Blend');
@@ -74,12 +96,14 @@ describe('ViralPostGeneratorPage', () => {
     const generateBtn = screen.getByRole('button', { name: 'Generate Post' });
     fireEvent.click(generateBtn);
 
-    const copyBtn = screen.getByRole('button', { name: 'Copy to Clipboard' });
+    await screen.findByText(/Check out Test Product!/);
+
+    const copyBtn = screen.getByRole('button', { name: 'Copy twitter Post' });
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByText('Copied!')).toBeDefined();
   });
+
 
   it('shows paywall when toggling remove branding', () => {
     render(<ViralPostGeneratorPage />);

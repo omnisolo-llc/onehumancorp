@@ -46,6 +46,20 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         // After closing the modal without purchasing, the checkbox should ideally be unchecked
         await expect(checkbox).not.toBeChecked();
 
+
+        // Mock the backend API call
+        await page.route('/api/v1/growth/promoter/generate', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    variants: [
+                        { platform: 'Twitter', content: 'Super Nova provides instant social proof!' }
+                    ]
+                })
+            });
+        });
+
         // Generate the post with branding
         await page.click('button:has-text("Generate Post")');
 
@@ -54,9 +68,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
 
         // Let's explicitly look for text that was generated
         // wait for result to be visible
-        await expect(page.locator('text=Just dropped something special!')).toBeVisible({ timeout: 10000 });
-        await expect(page.locator('text=Super Nova')).toBeVisible();
-        await expect(page.locator('text=instant social proof')).toBeVisible();
+        await expect(page.locator('text=Super Nova provides instant social proof!')).toBeVisible({ timeout: 10000 });
 
         // Ensure "Powered by OHC" is in the text
         await expect(page.locator('text=Powered by OHC')).toBeVisible();

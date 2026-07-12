@@ -7,7 +7,8 @@ export default function ViralPostGeneratorPage() {
   const router = useRouter();
   const [productName, setProductName] = useState('');
   const [keyBenefit, setKeyBenefit] = useState('');
-  const [generatedPost, setGeneratedPost] = useState('');
+  const [generatedVariants, setGeneratedVariants] = useState<Array<{platform: string, content: string}>>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -37,11 +38,36 @@ export default function ViralPostGeneratorPage() {
     }
   };
 
-  const handleGenerate = () => {
+
+  const handleGenerate = async () => {
     if (!productName || !keyBenefit) return;
-    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.ohc.app\n\n${!removeBranding ? '⚡ Powered by OHC' : ''}`;
-    setGeneratedPost(post);
+    setIsGenerating(true);
+    setGeneratedVariants([]);
+    try {
+      const response = await fetch('/api/v1/growth/promoter/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant: tenantId,
+          name: productName,
+          description: keyBenefit
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.variants && Array.isArray(data.variants)) {
+          setGeneratedVariants(data.variants);
+        } else {
+          setGeneratedVariants([]);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
 
   const claimTrialExtension = () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenantId}`;
@@ -120,9 +146,10 @@ export default function ViralPostGeneratorPage() {
 
                     <button
                         onClick={handleGenerate}
-                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
+                        disabled={isGenerating}
+                        className="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2"
                     >
-                        Generate Post
+                        {isGenerating ? 'Generating...' : 'Generate Post'}
                     </button>
                 </div>
             </div>
@@ -133,31 +160,51 @@ export default function ViralPostGeneratorPage() {
              <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Generated Post</h2>
 
              <div className="w-full min-h-[400px] bg-white rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden flex flex-col p-6">
-                 {generatedPost ? (
-                     <div className="flex-1 whitespace-pre-wrap text-gray-800 text-sm leading-relaxed">
-                         {generatedPost}
+                 {generatedVariants.length > 0 ? (
+                     <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-2">
+                         {generatedVariants.map((variant, index) => {
+                             const branding = !removeBranding ? `
+
+Shop now: https://${tenantId}.ohc.app
+
+⚡ Powered by OHC` : `
+
+Shop now: https://${tenantId}.ohc.app`;
+                             const fullContent = variant.content + branding;
+                             return (
+                                 <div key={index} className="border border-gray-100 rounded-xl p-4 bg-gray-50 flex flex-col gap-3">
+                                     <div className="flex justify-between items-center">
+                                         <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{variant.platform}</span>
+                                     </div>
+                                     <div className="whitespace-pre-wrap text-gray-800 text-sm leading-relaxed">
+                                         {fullContent}
+                                     </div>
+                                     <button
+                                         onClick={() => {
+                                             navigator.clipboard.writeText(fullContent);
+                                             setCopied(true);
+                                             setTimeout(() => setCopied(false), 2000);
+                                         }}
+                                         className={`self-end px-4 py-2 rounded-lg text-xs font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                     >
+                                         Copy {variant.platform} Post
+                                     </button>
+                                 </div>
+                             );
+                         })}
+                     </div>
+                 ) : isGenerating ? (
+                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                         <div className="animate-spin w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full mb-4"></div>
+                         <p className="text-sm font-medium animate-pulse text-indigo-600">AI is writing your posts...</p>
                      </div>
                  ) : (
                      <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-2xl mb-4">
                              📝
                          </div>
-                         <p className="text-sm font-medium">Fill out the details to generate a post</p>
+                         <p className="text-sm font-medium">Fill out the details to generate posts</p>
                      </div>
-                 )}
-
-                 {generatedPost && (
-                    <button
-                        id="copy-post-btn"
-                        onClick={() => {
-                            navigator.clipboard.writeText(generatedPost);
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                        }}
-                        className={`mt-4 w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
-                    >
-                        {copied ? 'Copied!' : 'Copy to Clipboard'}
-                    </button>
                  )}
              </div>
         </section>
