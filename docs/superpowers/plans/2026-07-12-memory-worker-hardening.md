@@ -79,15 +79,15 @@ git commit -m "security: scope memory worker database access"
 **Files:**
 - Modify: `docs/reports/production_agent_optimization_report.md`
 
-- [ ] **Step 1: Format and statically check the worker**
+- [x] **Step 1: Format and statically check the worker**
 
 Format only `agent_memory_pipeline.rs`, run `git diff --check`, and run `cargo check -p ohc-mono`.
 
-- [ ] **Step 2: Record remediation and verification limits**
+- [x] **Step 2: Record remediation and verification limits**
 
 Mark F-06 remediated for code paths and deterministic timeout coverage. Explicitly state whether real Postgres/RLS assertions ran or were skipped because `OHC_DATABASE_URL` was absent.
 
-- [ ] **Step 3: Commit report evidence**
+- [x] **Step 3: Commit report evidence**
 
 ```bash
 git add docs/reports/production_agent_optimization_report.md docs/superpowers/plans/2026-07-12-memory-worker-hardening.md
