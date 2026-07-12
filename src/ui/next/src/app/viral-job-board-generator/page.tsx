@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import '../globals.css';
 
+import { PoweredByOHC } from "../components/PoweredByOHC";
+
 export default function ViralJobBoardGeneratorPage() {
   const router = useRouter();
   const [boardTitle, setBoardTitle] = useState('We are hiring!');
@@ -155,7 +157,7 @@ export default function ViralJobBoardGeneratorPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                  <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>⚡ Powered by OHC</span>
+                  <PoweredByOHC tenantId="growth" />
                 </div>
               </div>
             </div>

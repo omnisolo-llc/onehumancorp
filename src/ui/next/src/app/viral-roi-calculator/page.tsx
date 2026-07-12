@@ -1,3 +1,4 @@
+import { PoweredByOHC } from "../components/PoweredByOHC";
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -155,7 +156,7 @@ export default function ViralROICalculatorPage() {
             </div>
             {!removeBranding && (
                <div className="text-center mt-4">
-                  <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
+                  <PoweredByOHC tenantId={tenantId} />
                </div>
             )}
         </section>
