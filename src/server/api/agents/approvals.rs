@@ -526,7 +526,14 @@ async fn simulate_invoice_draft(
         "milestone_name": "Phase 1 Complete",
         "amount_cents": 250000,
         "customer_id": "cust_simulated_invoice_123",
-        "inbox_message_id": "msg_simulated_invoice_123"
+        "inbox_message_id": "msg_simulated_invoice_123",
+        "generated_email_preview": "Hi team, attached is the invoice for the completion of the design phase...",
+        "line_items": [
+            {
+                "description": "Phase 1 Design",
+                "amount_cents": 250000
+            }
+        ]
     });
 
     match orchestrator.execute_action(

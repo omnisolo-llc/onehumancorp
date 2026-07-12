@@ -270,6 +270,21 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       }
                     </p>
                   </div>
+                  {((approval.proposed_action || approval.context_payload)?.line_items || []).length > 0 && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        Line Items
+                      </p>
+                      <ul className="space-y-2">
+                        {((approval.proposed_action || approval.context_payload)?.line_items).map((item: any, idx: number) => (
+                          <li key={idx} className="flex justify-between items-center text-[13px]">
+                            <span className="text-gray-700 dark:text-gray-300">{item.description}</span>
+                            <span className="font-medium text-gray-900 dark:text-white">${(item.amount_cents / 100).toFixed(2)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">
                       Total Amount Due
@@ -283,6 +298,12 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     </span>
                   </div>
                 </div>
+                {((approval.proposed_action || approval.context_payload)?.generated_email_preview) && (
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm relative group mt-2">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Message</span>
+                    <p className="text-[13px] text-gray-800 dark:text-gray-200 mt-1">{(approval.proposed_action || approval.context_payload)?.generated_email_preview}</p>
+                  </div>
+                )}
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
