@@ -18,6 +18,7 @@ impl MyLocationService {
 
 #[tonic::async_trait]
 impl LocationService for MyLocationService {
+    #[tracing::instrument(skip(self, request))]
     async fn get_locations(
         &self,
         request: Request<GetLocationsRequest>,
@@ -44,6 +45,7 @@ impl LocationService for MyLocationService {
         Ok(Response::new(GetLocationsResponse { locations }))
     }
 
+    #[tracing::instrument(skip(self, request))]
     async fn get_role_assignments(
         &self,
         request: Request<GetRoleAssignmentsRequest>,
@@ -72,6 +74,7 @@ impl LocationService for MyLocationService {
         Ok(Response::new(GetRoleAssignmentsResponse { assignments }))
     }
 
+    #[tracing::instrument(skip(self, request))]
     async fn create_escalation(
         &self,
         request: Request<CreateEscalationRequest>,
@@ -114,6 +117,7 @@ impl LocationService for MyLocationService {
         Ok(Response::new(CreateEscalationResponse { escalation: Some(escalation) }))
     }
 
+    #[tracing::instrument(skip(self, request))]
     async fn get_escalations(
         &self,
         request: Request<GetEscalationsRequest>,
@@ -154,6 +158,7 @@ impl LocationService for MyLocationService {
         Ok(Response::new(GetEscalationsResponse { escalations }))
     }
 
+    #[tracing::instrument(skip(self, request))]
     async fn update_escalation_status(
         &self,
         request: Request<UpdateEscalationStatusRequest>,
