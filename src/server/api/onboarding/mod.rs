@@ -216,10 +216,10 @@ async fn start_zero_click(
     let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
 
     let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
-        business_type: if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type },
-        company_name: if intake_data.business_name.is_empty() { "My Store".to_string() } else { intake_data.business_name.clone() },
+        business_type: Some(if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type }),
+        company_name: Some(if intake_data.business_name.is_empty() { "My Store".to_string() } else { intake_data.business_name.clone() }),
         company_description: req.prompt.clone(),
-        selling_categories: if intake_data.categories.is_empty() { vec!["Other".to_string()] } else { intake_data.categories },
+        selling_categories: Some(if intake_data.categories.is_empty() { vec!["Other".to_string()] } else { intake_data.categories }),
         payment_pref: "online".to_string(),
         admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
         admin_name: "Owner".to_string(),

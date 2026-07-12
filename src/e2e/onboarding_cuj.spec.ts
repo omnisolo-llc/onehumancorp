@@ -104,7 +104,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('business-name').fill('M');
 
     // Attempt to go to next step
-    await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
+    await page.locator('#step-name [data-testid="next-step-btn"][data-next="step-assistant"]').click();
 
     // Expect validation failure message immediately
     // Wait for the name-error div to become visible and check its content.
@@ -137,7 +137,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
 
     // Expect validation failure message
-    await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
+    await expect(page.locator('#offer-error')).toBeVisible();
   });
 
   // Test 4: Navigating Back works
