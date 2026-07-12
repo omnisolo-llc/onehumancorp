@@ -289,7 +289,7 @@ export default function FeedPage() {
   };
 
   return (
-    <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
+    <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team." actions={[{ label: "New Sale", href: "/pos/terminal", primary: true }]}>
       <div className="w-full max-w-full overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
 
         {loading && (
