@@ -41,8 +41,6 @@ impl Department for FinanceAgent {
 
         let action_description = if event.event_type == "payment.captured" {
             "Analyze transaction for split tags and record ledger split".to_string()
-        } else if event.event_type == "project_milestone_completed" {
-            "Draft Invoice ready for Nora's Design Project".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {

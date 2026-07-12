@@ -7,6 +7,17 @@ pub struct TaxRate {
     pub rate: f64,
 }
 
+pub struct TaxJarParams<'a> {
+    pub amount: f64,
+    pub shipping: f64,
+    pub to_country: &'a str,
+    pub to_zip: &'a str,
+    pub to_state: &'a str,
+    pub from_country: &'a str,
+    pub from_zip: &'a str,
+    pub from_state: &'a str,
+}
+
 pub struct TaxJarClient {
     pub api_key: String,
     http_client: reqwest::Client,
@@ -39,18 +50,18 @@ impl TaxJarClient {
         Ok(())
     }
 
-    pub async fn calculate_tax(&self, amount: f64, shipping: f64, to_country: &str, to_zip: &str, to_state: &str, from_country: &str, from_zip: &str, from_state: &str) -> Result<TaxRate, String> {
+    pub async fn calculate_tax(&self, params: TaxJarParams<'_>) -> Result<TaxRate, String> {
         self.validate_credentials()?;
 
         let payload = json!({
-            "from_country": from_country,
-            "from_zip": from_zip,
-            "from_state": from_state,
-            "to_country": to_country,
-            "to_zip": to_zip,
-            "to_state": to_state,
-            "amount": amount,
-            "shipping": shipping,
+            "from_country": params.from_country,
+            "from_zip": params.from_zip,
+            "from_state": params.from_state,
+            "to_country": params.to_country,
+            "to_zip": params.to_zip,
+            "to_state": params.to_state,
+            "amount": params.amount,
+            "shipping": params.shipping,
         });
 
         let resp = self.http_client
@@ -95,7 +106,17 @@ mod tests {
     #[tokio::test]
     async fn calculate_tax_requires_real_taxjar_credentials() {
         let client = TaxJarClient::new("dummy_token".to_string());
-        let err = client.calculate_tax(100.0, 10.0, "US", "90002", "CA", "US", "92093", "CA").await.unwrap_err();
+        let params = TaxJarParams {
+            amount: 100.0,
+            shipping: 10.0,
+            to_country: "US",
+            to_zip: "90002",
+            to_state: "CA",
+            from_country: "US",
+            from_zip: "92093",
+            from_state: "CA",
+        };
+        let err = client.calculate_tax(params).await.unwrap_err();
         assert!(err.contains("TaxJar API token is required"));
     }
 }
