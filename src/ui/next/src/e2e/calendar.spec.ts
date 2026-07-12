@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Calendar & Bookings', () => {
   test('should display upcoming appointments and operations agent activity', async ({ page }) => {

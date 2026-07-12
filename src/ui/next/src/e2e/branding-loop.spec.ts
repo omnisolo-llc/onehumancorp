@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Branding Growth Loop', () => {
     test('Powered by OHC footer is present and links correctly', async ({ page }) => {

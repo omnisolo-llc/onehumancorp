@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Knowledge & Documents Sync UX', () => {
   test('should display syncing status and update when complete', async ({ page }) => {

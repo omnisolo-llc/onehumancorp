@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
     test('dashboard shows the embed work intake widget and generates correct HTML', async ({ page }) => {

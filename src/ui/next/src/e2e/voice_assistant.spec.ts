@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Voice Assistant Mobile Command Center', () => {
   test('should process voice command and add Approval Card to Unified Agent Feed', async ({ page }) => {

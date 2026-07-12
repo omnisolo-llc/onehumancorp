@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('AI Usage Limit Widget', () => {
   test('displays usage data, upgrade CTA, and viral Share button', async ({ page }) => {

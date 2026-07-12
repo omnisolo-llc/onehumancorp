@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Link-in-Bio Generator Growth Loop', () => {
     test('generator page renders correctly, saves data, and public page works with footer', async ({ page }) => {

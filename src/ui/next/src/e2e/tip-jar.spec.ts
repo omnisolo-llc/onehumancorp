@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Tip Jar Widget Growth Loop', () => {
     test('renders the builder and viral branding loop correctly', async ({ page }) => {
