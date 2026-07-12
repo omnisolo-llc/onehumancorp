@@ -469,7 +469,8 @@ pub async fn sync_offline_transactions_handler(
                                     .await;
 
                                     if let Ok((stock,)) = current_stock_res {
-                                        if stock < quantity as i32 {
+                                        let is_conflict = stock < quantity as i32;
+                                        if is_conflict {
                                             let tx_id = tx.id.clone().unwrap_or_default();
                                             pending_reconciliation_items.push(serde_json::json!({
                                                 "transaction_id": tx_id,
@@ -478,6 +479,25 @@ pub async fn sync_offline_transactions_handler(
                                                 "timestamp": chrono::Utc::now().to_rfc3339()
                                             }));
                                         }
+
+                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                            .bind(quantity as i32)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *db_tx)
+                                            .await;
+
+                                        let mesh_event_id = uuid::Uuid::new_v4().to_string();
+                                        let evt_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "product_id": product_id,
+                                            "tenant_id": tenant_id,
+                                            "quantity_deducted": quantity,
+                                        }).to_string();
+                                        let _ = sqlx::query(
+                                            "INSERT INTO mesh_events (id, tenant_id, topic, payload) VALUES ($1, $2, 'inventory.updated', $3)"
+                                        ).bind(&mesh_event_id).bind(&tenant_id).bind(evt_payload).execute(&mut *db_tx).await;
+                                    }
                                     }
                                 }
                             }
