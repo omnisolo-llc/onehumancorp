@@ -225,15 +225,23 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 .await;
 
             if let Ok(Some(row)) = current_stock_res {
-                let stock: i32 = sqlx::Row::get(&row, "available_quantity");
+                let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
+
+                let inventory_already_deducted = payload.get("inventory_already_deducted").and_then(|v| v.as_bool()).unwrap_or(false);
+                if inventory_already_deducted {
+                    stock += quantity_deducted as i32;
+                }
+
                 let is_conflict = stock < quantity_deducted as i32;
 
-                let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
-                    .bind(quantity_deducted)
-                    .bind(product_id)
-                    .bind(&job.tenant_id)
-                    .execute(&mut *tx)
-                    .await;
+                if !inventory_already_deducted {
+                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                        .bind(quantity_deducted)
+                        .bind(product_id)
+                        .bind(&job.tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+                }
 
                 // Record order for offline sync
                 let order_id = uuid::Uuid::new_v4().to_string();
@@ -363,19 +371,21 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     if client_id.is_empty() {
                         tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
                     } else {
-                        if let Err(e) = sqlx::query(
-                            "UPDATE pos_terminal_sessions
-                             SET sync_status = 'CONFLICTS_PENDING',
-                                 pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
-                             WHERE tenant_id = $2
-                             AND device_id = $3"
-                        )
-                        .bind(conflict_payload)
-                        .bind(&job.tenant_id)
-                        .bind(client_id)
-                        .execute(&mut *tx)
-                        .await {
-                            tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                        if !inventory_already_deducted {
+                            if let Err(e) = sqlx::query(
+                                "UPDATE pos_terminal_sessions
+                                 SET sync_status = 'CONFLICTS_PENDING',
+                                     pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
+                                 WHERE tenant_id = $2
+                                 AND device_id = $3"
+                            )
+                            .bind(conflict_payload)
+                            .bind(&job.tenant_id)
+                            .bind(client_id)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                            }
                         }
                     }
                 }
@@ -448,15 +458,25 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .await;
 
                         if let Ok(Some(row)) = current_stock_res {
-                            let stock: i32 = sqlx::Row::get(&row, "available_quantity");
+                            let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
+
+                            let inventory_already_deducted = payload.get("inventory_already_deducted").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                            if inventory_already_deducted {
+                                // Add back the deducted amount to check if there was a conflict before it was deducted synchronously
+                                stock += qty as i32;
+                            }
+
                             let is_conflict = stock < qty as i32;
 
-                            let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
-                                .bind(qty)
-                                .bind(product_id)
-                                .bind(&job.tenant_id)
-                                .execute(&mut *tx)
-                                .await;
+                            if !inventory_already_deducted {
+                                let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                    .bind(qty)
+                                    .bind(product_id)
+                                    .bind(&job.tenant_id)
+                                    .execute(&mut *tx)
+                                    .await;
+                            }
 
                             let new_stock = std::cmp::max(0, stock - qty as i32);
 
@@ -597,19 +617,21 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 if client_id.is_empty() {
                                     tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
                                 } else {
-                                    if let Err(e) = sqlx::query(
-                                        "UPDATE pos_terminal_sessions
-                                         SET sync_status = 'CONFLICTS_PENDING',
-                                             pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
-                                         WHERE tenant_id = $2
-                                         AND device_id = $3"
-                                    )
-                                    .bind(conflict_payload)
-                                    .bind(&job.tenant_id)
-                                    .bind(client_id)
-                                    .execute(&mut *tx)
-                                    .await {
-                                        tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                                    if !inventory_already_deducted {
+                                        if let Err(e) = sqlx::query(
+                                            "UPDATE pos_terminal_sessions
+                                             SET sync_status = 'CONFLICTS_PENDING',
+                                                 pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
+                                             WHERE tenant_id = $2
+                                             AND device_id = $3"
+                                        )
+                                        .bind(conflict_payload)
+                                        .bind(&job.tenant_id)
+                                        .bind(client_id)
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to update pos_terminal_sessions: {}", e);
+                                        }
                                     }
                                 }
                             }
