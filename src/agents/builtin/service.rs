@@ -1111,11 +1111,14 @@ impl AgentService for AgentServiceImpl {
 
             while attempt < max_attempts {
                 attempt += 1;
-                let res = tokio::time::timeout(
-                    crate::agent::agent_task_timeout(),
-                    agent_clone.run(&run_cfg, &task, &mut on_event),
-                )
-                .await;
+                let res = tokio::select! {
+                    biased;
+                    _ = tx.closed() => return,
+                    res = tokio::time::timeout(
+                        crate::agent::agent_task_timeout(),
+                        agent_clone.run(&run_cfg, &task, &mut on_event),
+                    ) => res,
+                };
 
                 match res {
                     Ok(Ok(content)) => {
@@ -1130,7 +1133,11 @@ impl AgentService for AgentServiceImpl {
                             && attempt < max_attempts
                         {
                             last_result = Err(e);
-                            tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
+                            tokio::select! {
+                                biased;
+                                _ = tx.closed() => return,
+                                _ = tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)) => {}
+                            }
                             continue;
                         }
                         last_result = Err(e);
@@ -1156,12 +1163,19 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
+                if tx.is_closed() {
+                    return;
+                }
                 let record = build_completed_task_memory_record(
                     &memory_tenant,
                     &memory_agent_id,
                     content.clone(),
                 );
-                let _ = store.upsert(&record).await;
+                tokio::select! {
+                    biased;
+                    _ = tx.closed() => return,
+                    _ = store.upsert(&record) => {}
+                }
             }
         });
 
@@ -1387,6 +1401,33 @@ impl AgentService for SharedAgentService {
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tokio::sync::Notify;
+
+    struct CancellationGuard(Arc<AtomicBool>);
+
+    impl Drop for CancellationGuard {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    struct BlockingServiceLlmClient {
+        started: Arc<Notify>,
+        cancelled: Arc<AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for BlockingServiceLlmClient {
+        async fn chat(
+            &self,
+            _req: crate::types::ChatRequest,
+        ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let _guard = CancellationGuard(self.cancelled.clone());
+            self.started.notify_one();
+            std::future::pending().await
+        }
+    }
 
     #[test]
     fn spiffe_mode_rejects_requests_without_verified_mtls_identity() {
@@ -1418,6 +1459,44 @@ mod tests {
 
         let request = service.trusted_request(PingRequest::default());
         assert!(service.check_auth(&request).is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_task_stops_when_receiver_is_dropped() {
+        let started = Arc::new(Notify::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let mut service = AgentServiceImpl::new(
+            "test",
+            AgentConfig {
+                max_iterations: 1,
+                ..AgentConfig::default()
+            },
+            AuthMode::Disabled,
+        );
+        service.llm_override = Some(Arc::new(BlockingServiceLlmClient {
+            started: started.clone(),
+            cancelled: cancelled.clone(),
+        }));
+
+        let response = service
+            .run_task(Request::new(RunTaskRequest {
+                task: "start".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("run task stream");
+        tokio::time::timeout(std::time::Duration::from_secs(1), started.notified())
+            .await
+            .expect("LLM call did not start");
+        drop(response.into_inner());
+
+        tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while !cancelled.load(Ordering::SeqCst) {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("dropping the gRPC receiver did not cancel the LLM call");
     }
 
     #[tokio::test]

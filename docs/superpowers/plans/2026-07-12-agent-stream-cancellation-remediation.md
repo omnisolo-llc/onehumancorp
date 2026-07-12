@@ -47,27 +47,27 @@ git commit -m "perf: cancel abandoned agent query streams"
 **Files:**
 - Modify: `src/agents/builtin/service.rs`
 
-- [ ] **Step 1: Write the failing gRPC receiver-drop regression**
+- [x] **Step 1: Write the failing gRPC receiver-drop regression**
 
 Inject the same blocking/drop-observable LLM into `AgentServiceImpl`, call `run_task`, wait for the LLM to begin, drop the response stream, and require the in-flight chat future to be dropped within one second.
 
-- [ ] **Step 2: Verify the current service producer keeps running**
+- [x] **Step 2: Verify the current service producer keeps running**
 
 Run: `cargo test -p ohc_builtin_agent run_task_stops_when_receiver_is_dropped --lib`
 
 Expected: FAIL by timeout because `try_send` errors are discarded and retry execution never checks channel closure.
 
-- [ ] **Step 3: Race every paid wait against receiver closure**
+- [x] **Step 3: Race every paid wait against receiver closure**
 
 In the producer task, select `tx.closed()` against each timed `agent.run` attempt and each retry backoff. Return immediately on closure, and check `tx.is_closed()` before constructing or writing completion memory. Keep the existing capacity of 64.
 
-- [ ] **Step 4: Run service and full agent regressions**
+- [x] **Step 4: Run service and full agent regressions**
 
 Run: `cargo test -p ohc_builtin_agent run_task_stops_when_receiver_is_dropped --lib && cargo test -p ohc_builtin_agent --lib`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit service cancellation**
+- [x] **Step 5: Commit service cancellation**
 
 ```bash
 git add src/agents/builtin/service.rs
