@@ -4,7 +4,9 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Route to local file like setup.spec.ts
   const fs = require('fs');
   const path = require('path');
-  const tauriUiDir = path.join(path.join(process.cwd(), "..", ".."), 'src/ui/tauri/src/ui');
+  const tauriUiDir = process.env.RUNFILES_DIR
+        ? path.join(process.env.RUNFILES_DIR, '_main', 'src', 'ui', 'tauri', 'src', 'ui')
+        : path.join(process.cwd(), '..', '..', 'src', 'ui', 'tauri', 'src', 'ui');
   await page.route('**/setup.html', async route => {
       const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: htmlContent   });
@@ -102,6 +104,20 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.selectOption('#template-selection', { label: 'Modern' });
   const finishBtn = page.locator('#finish-btn');
   await expect(finishBtn).toBeVisible();
+
+  // The UI requires a valid mock network layer because we're running it standalone with a mock file.
+  // Wait for the button state to indicate it's processed the click.
+  // We cannot use waitForURL here directly without intercepting as we are serving a static mocked HTML string
+  // via Playwright `route` fulfillment at `http://mock/setup.html` instead of through the Next.js server.
+  // We'll mock the start endpoint since this is an offline pure UI interaction test on the mocked HTML payload.
+
+  await page.route('**/api/onboarding/start', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({ organization_id: "e2e-tenant", user_id: "e2e-admin-user" }) });
+  });
+
+  await page.route('**/dashboard.html*', async route => {
+      await route.fulfill({ status: 200, body: "<html><body>Dashboard Mock</body></html>" });
+  });
 
   await finishBtn.click();
   await page.waitForURL('**/dashboard.html*');
