@@ -534,6 +534,28 @@ impl InventoryService {
             .await
             .unwrap_or(None);
 
+        if update_result.is_some() {
+            let inventory_level_res = sqlx::query("SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
+                .bind(product_id)
+                .bind(tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            if let Some(row) = inventory_level_res {
+                let level_id: String = sqlx::Row::get(&row, "id");
+                let tx_id = uuid::Uuid::new_v4().to_string();
+                sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'SALE', -$4)")
+                    .bind(&tx_id)
+                    .bind(tenant_id)
+                    .bind(level_id)
+                    .bind(quantity)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
         if update_result.is_none() {
             // Enforce row-level locking for final commit on legacy
             let _ = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
