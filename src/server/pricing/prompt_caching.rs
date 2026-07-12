@@ -342,6 +342,28 @@ mod tests {
     }
 
     #[test]
+    fn test_prompt_cache_get_with_cost_cents_different_models() {
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("What is the capital of France?", "Paris", 1_000_000);
+
+        // gpt-4o: cached_cost = 2.50 per 1M
+        let (_, cost_4o) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o");
+        assert_eq!(cost_4o, 250);
+
+        // gpt-4o-mini: cached_cost = 0.075 per 1M -> 0.075 * 100 = 7.5 cents -> rounded 8 cents
+        let (_, cost_mini) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o-mini");
+        assert_eq!(cost_mini, 8);
+
+        // claude-3-opus: cached_cost = 0.0
+        let (_, cost_opus) = cache.get_with_cost_cents("What is the capital of France?", "claude-3-opus");
+        assert_eq!(cost_opus, 0);
+
+        // claude-3.5-sonnet: cached_cost = 0.30 per 1M
+        let (_, cost_sonnet) = cache.get_with_cost_cents("What is the capital of France?", "claude-3.5-sonnet");
+        assert_eq!(cost_sonnet, 30);
+    }
+
+    #[test]
     fn test_prompt_cache_capacity_eviction() {
         let cache = PromptCache::with_capacity(Duration::from_secs(10), 3);
 

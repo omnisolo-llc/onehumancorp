@@ -15,24 +15,23 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
+  "id": null,
   "links": [],
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 999999,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
+        "content": "<div style=\"background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #fff;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
       },
-      "title": "Aesthetic Mandate Injector",
-      "transparent": true,
-      "type": "text"
+      "transparent": true
     },
     {
       "datasource": "Prometheus",
@@ -84,7 +83,83 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 2
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(ohc_chaos_injected_total[5m])) by (EnvMode)",
+          "interval": "",
+          "legendFormat": "{{EnvMode}} Chaos Events",
+          "refId": "A"
+        }
+      ],
+      "title": "Chaos Events Injected",
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stashMixin": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
       },
       "id": 2,
       "options": {
@@ -100,89 +175,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_llm_cost_total_cents{organization_id=\"$tenant\"}[5m])) by (agent_id)",
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_task_recovery_time_ms_bucket[5m])) by (le, EnvMode))",
           "interval": "",
-          "legendFormat": "{{agent_id}}",
+          "legendFormat": "{{EnvMode}} Recovery Time (p95 ms)",
           "refId": "A"
         }
       ],
-      "title": "LLM Cost by Agent (USD/sec)",
-      "type": "timeseries",
-      "transparent": true
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stashMixin": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 3
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_api_call_cost{organization_id=\"$tenant\"}[5m])) by (entity)",
-          "interval": "",
-          "legendFormat": "{{entity}}",
-          "refId": "A"
-        }
-      ],
-      "title": "API Cost by Integration (USD/sec)",
+      "title": "Task Recovery Time",
       "type": "timeseries",
       "transparent": true
     },
@@ -236,9 +235,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 10
       },
-      "id": 4,
+      "id": 3,
       "options": {
         "legend": {
           "calcs": [],
@@ -252,89 +251,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_storage_rw_cost{organization_id=\"$tenant\"}[5m])) by (operation)",
+          "expr": "sum(rate(ohc_agent_sandbox_violations_total[5m])) by (EnvMode)",
           "interval": "",
-          "legendFormat": "{{operation}}",
+          "legendFormat": "{{EnvMode}} Violations",
           "refId": "A"
         }
       ],
-      "title": "Storage Cost (Bytes/sec)",
-      "type": "timeseries",
-      "transparent": true
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stashMixin": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 11
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_email_send_cost{organization_id=\"$tenant\"}[5m]))",
-          "interval": "",
-          "legendFormat": "Emails",
-          "refId": "A"
-        }
-      ],
-      "title": "Email Send Cost (Count/sec)",
+      "title": "Sandbox Violations",
       "type": "timeseries",
       "transparent": true
     }
@@ -344,35 +267,7 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": "Prometheus",
-        "definition": "label_values(ohc_llm_cost_total_cents, organization_id)",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": true,
-        "label": "Tenant ID",
-        "multi": false,
-        "name": "tenant",
-        "options": [],
-        "query": {
-          "query": "label_values(ohc_llm_cost_total_cents, organization_id)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-6h",
@@ -380,7 +275,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Infrastructure Cost Metering",
-  "uid": "infra-cost-metering",
-  "version": 2
+  "title": "Chaos Resilience Dashboard",
+  "uid": "chaos-resilience",
+  "version": 1
 }

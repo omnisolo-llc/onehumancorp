@@ -153,7 +153,7 @@ export class SyncManager {
         return {
           id: m.id,
           client_id: storedDeviceId, // Default fallback
-          amount_cents: Math.round(m.amount),
+          amount_cents: Math.round(m.payload?.amount_cents || m.amount || 0),
           currency: m.currency || 'usd',
           payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
@@ -192,6 +192,7 @@ export class SyncManager {
           }
         });
 
+      let allOkFinal = true;
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
@@ -208,11 +209,11 @@ export class SyncManager {
           this.checkRateLimit(resSyncEvents);
           if (!resSyncEvents.ok) {
             console.error(`POS Sync Events failed with status ${resSyncEvents.status}`);
-            if (resSyncEvents.status >= 500) allOk = false;
+            if (resSyncEvents.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("POS Sync Events error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -226,8 +227,6 @@ export class SyncManager {
       });
 
 
-
-      let allOk = true;
 
       // Sync CRDT Deltas
       if (crdtDeltas.length > 0) {
@@ -243,11 +242,11 @@ export class SyncManager {
           this.checkRateLimit(resCrdt);
           if (!resCrdt.ok) {
             console.error(`CRDT Sync failed with status ${resCrdt.status}`);
-            if (resCrdt.status >= 500) allOk = false;
+            if (resCrdt.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("CRDT Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -263,11 +262,11 @@ export class SyncManager {
           this.checkRateLimit(res);
           if (!res.ok) {
             console.error(`Quote Update Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Quote Update Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -281,11 +280,11 @@ export class SyncManager {
           this.checkRateLimit(res);
           if (!res.ok) {
             console.error(`Quote Approval Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Quote Approval Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -307,7 +306,7 @@ export class SyncManager {
           this.checkRateLimit(resPos);
           if (!resPos.ok) {
             console.error(`POS Terminal Sync failed with status ${resPos.status}`);
-            if (resPos.status >= 500) allOk = false;
+            if (resPos.status >= 500) allOkFinal = false;
           } else {
             try {
               const resPosData = await resPos.json();
@@ -322,7 +321,7 @@ export class SyncManager {
           }
         } catch (err) {
           console.error("POS Terminal Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -350,11 +349,11 @@ export class SyncManager {
           if (!resIntents.ok) {
             try { this.checkRateLimit(resIntents); } catch(e) {}
             console.error(`Operation Intents Sync failed with status ${resIntents.status}`);
-            if (resIntents.status >= 500) allOk = false;
+            if (resIntents.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Operation Intents Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -374,11 +373,11 @@ export class SyncManager {
           this.checkRateLimit(resSync);
           if (!resSync.ok) {
             console.error(`Sync Events Sync failed with status ${resSync.status}`);
-            if (resSync.status >= 500) allOk = false;
+            if (resSync.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Sync Events Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -397,7 +396,7 @@ export class SyncManager {
           this.checkRateLimit(resGen);
           if (!resGen.ok) {
             console.error(`General Sync failed with status ${resGen.status}`);
-            if (resGen.status >= 500) allOk = false;
+            if (resGen.status >= 500) allOkFinal = false;
           } else {
             try {
               const resGenData = await resGen.json();
@@ -412,7 +411,7 @@ export class SyncManager {
           }
         } catch (err) {
           console.error("General Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -432,11 +431,11 @@ export class SyncManager {
           if (!res.ok) {
             try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Triage Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Triage Action Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -456,11 +455,11 @@ export class SyncManager {
           if (!res.ok) {
             try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Advisory Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Advisory Action Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -481,11 +480,11 @@ export class SyncManager {
           if (!res.ok) {
             try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Generate Invoice Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Generate Invoice Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
@@ -505,11 +504,11 @@ export class SyncManager {
           if (!res.ok) {
             try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Field Ops Status Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Field Ops Status Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
       // Sync fulfillment actions
@@ -528,35 +527,40 @@ export class SyncManager {
           if (!res.ok) {
             try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Fulfillment Action Sync failed with status ${res.status}`);
-            if (res.status >= 500) allOk = false;
+            if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
           console.error("Fulfillment Action Sync error:", err);
-          allOk = false;
+          allOkFinal = false;
         }
       }
 
-      if (allOk) {
+      if (allOkFinal) {
         // Clear all successfully synced items
         for (const item of queue) {
            await removeAction(item.id);
         }
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
+      } else {
+        if (retryCount < this.maxRetries) {
+          const delay = this.retryDelayMs * Math.pow(2, retryCount);
+          setTimeout(() => {
+            this.syncInProgress = false;
+            this.sync(retryCount + 1);
+          }, delay);
+          return; // Don't unset syncInProgress yet
+        }
       }
     } catch (e) {
       console.error('Failed to sync offline queue:', e);
-      allOk = false;
-    }
-
-    if (!allOk) {
       if (retryCount < this.maxRetries) {
         const delay = this.retryDelayMs * Math.pow(2, retryCount);
         setTimeout(() => {
           this.syncInProgress = false;
           this.sync(retryCount + 1);
         }, delay);
-        return; // Don't unset syncInProgress yet
+        return;
       }
     }
 
