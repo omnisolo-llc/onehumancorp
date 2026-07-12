@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import '../globals.css';
 
+import { PoweredByOHC } from "../components/PoweredByOHC";
+
 export default function ViralCouponUnlockPage() {
   const router = useRouter();
   const [tenant] = useState('my-business');
@@ -159,7 +161,7 @@ export default function ViralCouponUnlockPage() {
                 </div>
 
                 <div className="mt-8 pt-6 border-t w-full text-center border-gray-100">
-                  <span className="text-xs font-semibold tracking-wide text-gray-400">⚡ Powered by OHC Growth</span>
+                  <PoweredByOHC tenantId="growth" />
                 </div>
               </div>
             </div>
