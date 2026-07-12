@@ -824,3 +824,11 @@ INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, tex
 ('e2e-tenant', 'dashboard', 1, 'dashboard-title', 'Welcome', 'Welcome to your dashboard! This is your control center.'),
 ('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
 ON CONFLICT DO NOTHING;
+
+-- Add explicitly available blocks for the E2E test to find
+INSERT INTO availability_blocks (id, tenant_id, service_id, start_time, end_time, is_available)
+VALUES
+('block-1', 'tenant-1', '748888aa-3333-3333-3333-333333333333', CURRENT_DATE + TIME '09:00:00', CURRENT_DATE + TIME '10:00:00', true),
+('block-2', 'tenant-1', '748888aa-3333-3333-3333-333333333333', CURRENT_DATE + TIME '10:00:00', CURRENT_DATE + TIME '11:00:00', true),
+('block-3', 'tenant-1', '748888aa-3333-3333-3333-333333333333', CURRENT_DATE + TIME '11:00:00', CURRENT_DATE + TIME '12:00:00', true)
+ON CONFLICT DO NOTHING;

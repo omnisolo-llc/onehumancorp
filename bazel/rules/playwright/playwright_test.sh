@@ -537,6 +537,11 @@ if [[ -n "$NEXT_APP_ROOT" ]]; then
   fi
 fi
 
+if [[ -z "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
+  # Fallback to local user cache in case hermetic browser isn't available
+  export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+fi
+
 if [[ -z "$NEXT_APP_ROOT" ]]; then
   echo "[playwright] Error: Next UI app not found in Bazel runfiles."
   exit 1
