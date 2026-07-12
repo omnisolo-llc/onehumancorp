@@ -15,27 +15,27 @@
 **Files:**
 - Modify: `src/server/workers/agent_memory_pipeline.rs`
 
-- [ ] **Step 1: Write a failing blocking-summarizer test**
+- [x] **Step 1: Write a failing blocking-summarizer test**
 
 Add a `MemorySummaryApi` test double that never resolves and a focused helper test using a 20-millisecond deadline. Assert timeout returns the original context fallback and drops the provider future.
 
-- [ ] **Step 2: Verify no injectable bounded summarizer exists**
+- [x] **Step 2: Verify no injectable bounded summarizer exists**
 
 Run: `cargo test -p ohc-mono --lib memory_summary_has_deadline`
 
 Expected: FAIL because `MemorySummaryApi` and the deadline helper do not exist.
 
-- [ ] **Step 3: Implement the summary boundary**
+- [x] **Step 3: Implement the summary boundary**
 
 Add `MemorySummaryApi`, `DefaultMemorySummaryApi`, and a summary API field to `AgentMemoryPipeline`. Keep `new` source-compatible by constructing the default API and add a test constructor accepting both APIs and a timeout. Route both SQLite and Postgres summarization through one timeout helper; fall back to the original context on error or timeout without logging provider response bodies.
 
-- [ ] **Step 4: Run focused worker tests**
+- [x] **Step 4: Run focused worker tests**
 
 Run: `cargo test -p ohc-mono --lib memory_summary_has_deadline && cargo test -p ohc-mono --lib agent_memory_pipeline`
 
 Expected: deterministic timeout test and existing worker tests PASS; Postgres tests may remain skipped when the database variable is absent.
 
-- [ ] **Step 5: Commit bounded summarization**
+- [x] **Step 5: Commit bounded summarization**
 
 ```bash
 git add src/server/workers/agent_memory_pipeline.rs
@@ -63,7 +63,7 @@ Use `set_system_context` for cross-tenant queue acquisition and filesystem-memor
 
 - [ ] **Step 4: Run Cargo and Bazel regressions**
 
-Run: `cargo test -p ohc-mono --lib agent_memory_pipeline && bazel test //src/server/workers:server_workers_test`
+Run: `cargo test -p ohc-mono --lib agent_memory_pipeline && bazel test //src/server/workers:server_workers_unit_test`
 
 Expected: Cargo tests PASS; configured Postgres isolation is reported separately if unavailable; Bazel worker test PASSes.
 
