@@ -571,7 +571,33 @@ body {
 
   .app-page {
     padding: 14px;
-    overflow-x: hidden;
+    overflow-x: clip;
+  }
+
+  /* Guard-owned phone canvases must fit the shell content box at narrow widths. */
+  .app-shell .app-page [class~="w-[300px]"] {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .app-shell .app-page [class~="w-[320px]"] {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .app-shell .app-page [class~="w-[340px]"] {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .app-shell .app-page [class~="w-[375px]"] {
+    width: 100%;
+    max-width: 375px;
+  }
+
+  .app-shell .app-page [class~="min-w-[375px]"] {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .app-grid.metrics,
