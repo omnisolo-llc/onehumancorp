@@ -68,6 +68,7 @@ impl Department for FinanceAgent {
             let project_name = event.payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Unknown Project");
             let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
             let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+            let description = format!("{} - {}", project_name, milestone_name);
             payload = serde_json::json!({
                 "feature_type": "invoice_draft",
                 "project_name": project_name,
@@ -75,6 +76,16 @@ impl Department for FinanceAgent {
                 "amount_cents": amount_cents,
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "line_items": [
+                    {
+                        "description": description,
+                        "amount_cents": amount_cents,
+                    }
+                ],
+                "drafted_email": {
+                    "generated_message": format!("Hi team, attached is the invoice for the completion of the {} phase. Please let me know if you have any questions.", milestone_name),
+                    "suggested_channel": "email"
+                }
             });
         }
 

@@ -270,7 +270,22 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       }
                     </p>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                  {(approval.proposed_action || approval.context_payload)?.line_items && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm mt-2">
+                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        Line Items
+                      </p>
+                      <ul className="space-y-2">
+                        {((approval.proposed_action || approval.context_payload)?.line_items || []).map((item: any, idx: number) => (
+                           <li key={idx} className="flex justify-between items-center text-[12px]">
+                            <span className="text-gray-700 dark:text-gray-300">{item.description}</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">${(item.amount_cents / 100).toFixed(2)}</span>
+                           </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 mt-2">
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">
                       Total Amount Due
                     </span>
@@ -282,6 +297,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       ).toFixed(2)}
                     </span>
                   </div>
+                  {(approval.proposed_action || approval.context_payload)?.drafted_email && (
+                     <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm mt-2">
+                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                          Drafted Email
+                        </p>
+                        <p className="text-[12px] text-gray-700 dark:text-gray-300 italic whitespace-pre-wrap">
+                          "{(approval.proposed_action || approval.context_payload)?.drafted_email?.generated_message}"
+                        </p>
+                     </div>
+                  )}
                 </div>
               </div>
             )}

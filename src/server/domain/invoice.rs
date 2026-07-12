@@ -30,3 +30,27 @@ pub async fn handle_invoice_action(tenant_id: &str, payload: &Value, pool: &PgPo
     }
     Ok(())
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct InvoiceDraft {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub project_name: String,
+    pub milestone_name: String,
+    pub total_amount_cents: i64,
+    pub line_items: Vec<InvoiceDraftLineItem>,
+    pub message_context: InvoiceMessageContext,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct InvoiceDraftLineItem {
+    pub description: String,
+    pub amount_cents: i64,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct InvoiceMessageContext {
+    pub generated_message: String,
+    pub suggested_channel: String,
+}

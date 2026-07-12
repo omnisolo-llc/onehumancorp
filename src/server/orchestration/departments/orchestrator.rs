@@ -1121,6 +1121,7 @@ pub async fn execute_action(
                                                 }
                                             }
                                         }
+                                        tracing::info!("Omnichannel Dispatcher sent invoice email to {}", customer_id_to_use);
                                     },
                                     Err(e) => {
                                         tracing::error!("Failed to finalize and send invoice via Stripe: {}", e); // pii-safe
