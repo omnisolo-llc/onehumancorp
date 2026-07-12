@@ -58,6 +58,38 @@ pub async fn create_checkout_session_handler(
         }
     }
 
+    // Redlock inventory reservation in checkout flow
+    if let Some(cart) = &req_data.cart_payload {
+        if let Some(items) = cart.get("items").and_then(|i| i.as_array()) {
+            let service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            for item in items {
+                if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
+                    let quantity = item.get("quantity").and_then(|q| q.as_i64()).unwrap_or(1) as i32;
+                    // Redlock 5 minutes for online checkout cart
+                    match service.reserve_inventory(&tenant_id, product_id, quantity, 300).await {
+                        Ok(res) if !res.success => {
+                            let _ = db_tx.rollback().await;
+                            return (StatusCode::BAD_REQUEST, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some(res.error_message),
+                            })).into_response()
+                        },
+                        Err(e) => {
+                            let _ = db_tx.rollback().await;
+                            return (StatusCode::INTERNAL_SERVER_ERROR, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some(e),
+                            })).into_response()
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+
     let query = sqlx::query(
         "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
