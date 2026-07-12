@@ -97,3 +97,190 @@ impl ToolExecutionEngine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use serde_json::json;
+
+    struct MockToolExecutor {
+        results: Mutex<Vec<Result<String, ToolError>>>,
+    }
+
+    impl MockToolExecutor {
+        fn new(results: Vec<Result<String, ToolError>>) -> Self {
+            Self {
+                results: Mutex::new(results),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockToolExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            let mut results = self.results.lock().await;
+            if !results.is_empty() {
+                results.remove(0)
+            } else {
+                Err(ToolError::Unexpected("No more mocked results".to_string()))
+            }
+        }
+    }
+
+    fn create_tool(executor: MockToolExecutor) -> Tool {
+        Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            parameters: json!({}),
+            is_read_only: true,
+            execute: Arc::new(executor),
+        }
+    }
+
+    fn create_tool_call() -> ToolCall {
+        ToolCall {
+            id: "call_123".to_string(),
+            name: "test_tool".to_string(),
+            arguments: json!({}),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_success() {
+        let executor = MockToolExecutor::new(vec![Ok("success".to_string())]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "success");
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_transient_retry_success() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Transient("timeout".to_string())),
+            Ok("success after retry".to_string()),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "success after retry");
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_transient_exhausted() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Transient("timeout 1".to_string())),
+            Err(ToolError::Transient("timeout 2".to_string())),
+            Err(ToolError::Transient("timeout 3".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::Unexpected(msg) => assert!(msg.contains("Transient error after retries")),
+            _ => panic!("Expected Unexpected error after retries exhausted"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_llm_recoverable() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::LlmRecoverable("bad schema".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("LLM-Recoverable Tool Error"));
+                assert!(msg.contains("test_tool"));
+                assert!(msg.contains("bad schema"));
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_user_fixable() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::UserFixable("needs human".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::UserFixable(msg) => assert_eq!(msg, "needs human"),
+            _ => panic!("Expected UserFixable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_fatal() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Fatal("system crash".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::Fatal(msg) => assert_eq!(msg, "system crash"),
+            _ => panic!("Expected Fatal error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_unexpected() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Unexpected("unknown issue".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::Unexpected(msg) => assert_eq!(msg, "unknown issue"),
+            _ => panic!("Expected Unexpected error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_handoff() {
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::HandoffRequested("other_agent".to_string())),
+        ]);
+        let tool = create_tool(executor);
+        let tc = create_tool_call();
+        let cfg = AgentRunConfig::default();
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::HandoffRequested(msg) => assert_eq!(msg, "other_agent"),
+            _ => panic!("Expected HandoffRequested error"),
+        }
+    }
+}
