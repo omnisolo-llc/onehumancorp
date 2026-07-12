@@ -373,7 +373,7 @@ export default function Dashboard() {
       <div className="hidden md:block">
       <AIUsageLimitWidget />
 
-      <AiTimeSavingsWidget />
+      <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
       <VoiceAssistantFAB />
