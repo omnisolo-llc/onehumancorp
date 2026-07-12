@@ -553,6 +553,33 @@ export default function POSTerminal() {
            )}
 
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}
+
+           {/* Operations Agent Notification Card */}
+           {checkoutComplete && cart.some(item => {
+             const invItem = inventory.find(i => i.id === item.product.id);
+             return invItem && (invItem.available_quantity - item.quantity <= 0);
+           }) && (
+             <div className="mt-6 bg-white/80 backdrop-blur-[40px] saturate-[210%] border-l-4 border-l-[#FF9500] border border-white/50 rounded-2xl p-4 shadow-xl animate-in slide-in-from-bottom-4">
+               <div className="flex items-start space-x-3">
+                 <div className="w-10 h-10 rounded-full bg-[#FF9500]/10 flex items-center justify-center flex-shrink-0">
+                   <svg className="w-6 h-6 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 </div>
+                 <div>
+                   <h3 className="font-bold text-gray-900 font-outfit">Operations Agent</h3>
+                   <p className="text-sm text-gray-600 mt-1">
+                     {cart.find(item => {
+                       const invItem = inventory.find(i => i.id === item.product.id);
+                       return invItem && (invItem.available_quantity - item.quantity <= 0);
+                     })?.product.name} sold out. Would you like to draft a restock order?
+                   </p>
+                   <div className="mt-3 flex space-x-2">
+                     <button className="px-4 py-2 bg-[#FF9500] text-white text-sm font-bold rounded-xl active:scale-[0.98]">Draft Restock</button>
+                     <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl active:scale-[0.98]">Dismiss</button>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           )}
         </div>
 
         {isOffline && (
