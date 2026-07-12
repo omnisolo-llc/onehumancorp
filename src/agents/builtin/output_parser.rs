@@ -60,6 +60,19 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
             }
         }
 
+        // Fallback mechanic: extract JSON from markdown wrappers
+        if !msg.content.is_empty() {
+            let content = msg.content.trim();
+            if content.starts_with("```json") && content.ends_with("```") {
+                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
+                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if let Ok(data) = self.validate_schema(&parsed_json) {
+                        return Ok(data);
+                    }
+                }
+            }
+        }
+
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
@@ -99,6 +112,19 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
+            }
+        }
+
+        // Fallback mechanic: extract JSON from markdown wrappers
+        if !msg.content.is_empty() {
+            let content = msg.content.trim();
+            if content.starts_with("```json") && content.ends_with("```") {
+                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
+                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    if let Ok(data) = self.validate_schema(&parsed_json) {
+                        return Ok(data);
+                    }
+                }
             }
         }
 
@@ -232,7 +258,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     parse_error_msg.to_string()
                 } else {
                     // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
-                    let args_snippet = Some(tc.arguments.to_string());
+                    let args_str = match serde_json::to_string(&tc.arguments) { Ok(s) => s, Err(_) => "<unprintable>".to_string(), }; let args_snippet = Some(args_str);
                     crate::types::format_pydantic_error_string(
                         parse_error_msg,
                         args_snippet.as_deref(),
@@ -284,7 +310,7 @@ Expected Schema:
                 role: crate::types::Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("".to_string(), "unknown", &error_context)],
+                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("call_1".to_string(), "structured_output", &error_context)],
                 response_id: None,
                 previous_response_id: None,
             };
@@ -1015,11 +1041,11 @@ mod tests_clamped {
                 let last_msg = req.messages.last().unwrap();
                 assert_eq!(last_msg.role, crate::types::Role::Tool);
                 assert!(last_msg.tool_results[0].content.contains("Validation Error") || last_msg.tool_results[0].error.contains("Validation Error"), "content was: {}, error was: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
-                assert!(last_msg.tool_results[0].content.contains("{ invalid json") || last_msg.tool_results[0].error.contains("{ invalid json"));
+                assert!(last_msg.tool_results[0].content.contains("{ invalid json") || last_msg.tool_results[0].error.contains("{ invalid json") || last_msg.tool_results[0].error.contains("Failed completion: Here is the data: { invalid json"), "content: {}, error: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
 
                 // Then return valid json
                 Ok(ChatResponse {
-                    message: crate::types::Message::assistant("{\"result\": \"success\"}"),
+                    message: super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})).message,
                     usage: crate::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("resp_2".to_string()),
