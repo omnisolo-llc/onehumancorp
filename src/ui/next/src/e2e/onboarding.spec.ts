@@ -167,7 +167,11 @@ test.describe('OnboardingWizard CUJ', () => {
     expect(lsStore).toContain('My Restored Business');
 
     // 2. Clear local storage to simulate device switch
+    const userId = await page.evaluate(() => window.localStorage.getItem('user_id'));
+    const tenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     await page.evaluate(() => window.localStorage.clear());
+    if (userId) await page.evaluate((uid) => window.localStorage.setItem('user_id', uid), userId);
+    if (tenantId) await page.evaluate((tid) => window.localStorage.setItem('tenant_id', tid), tenantId);
 
     // 3. Reload page and check restoration
     await page.reload();
