@@ -1,7 +1,7 @@
 use crate::codex_runner::Runner;
 use std::sync::Arc;
 
-/// AutoGPT Unique Harness Innovations: Agent Protocol
+/// Master Catalog C.22. AutoGPT Unique Harness Innovations: Agent Protocol
 /// Standardization via agentprotocol.ai, gaining cross-framework adoption.
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

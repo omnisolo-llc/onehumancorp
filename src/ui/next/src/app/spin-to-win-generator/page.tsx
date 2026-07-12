@@ -7,6 +7,8 @@ import { PoweredByOHC } from '../components/PoweredByOHC';
 export default function SpinToWinGeneratorPage() {
   const router = useRouter();
   const [discounts, setDiscounts] = useState('10%, 20%, Free Shipping, No Luck, 5%, 15%');
+  const [campaignName, setCampaignName] = useState('Summer Spin to Win');
+  const [reward, setReward] = useState('20% Off');
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
@@ -23,35 +25,12 @@ export default function SpinToWinGeneratorPage() {
 
   const handleGenerate = () => {
     const prizes = discounts.split(',').map(d => d.trim()).filter(d => d);
-    const prizeListStr = JSON.stringify(prizes);
+    const prizeListStr = encodeURIComponent(JSON.stringify(prizes));
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+    const iframeSrc = `${origin}/api/v1/growth/spin-to-win/embed?campaign=${encodeURIComponent(campaignName)}&reward=${encodeURIComponent(reward)}&tenant=${encodeURIComponent(tenant)}`;
 
     let code = `<!-- OHC Spin to Win Widget -->
-<div id="ohc-spin-widget"></div>
-<script>
-  (function() {
-    const prizes = ${prizeListStr};
-    const container = document.getElementById('ohc-spin-widget');
-    container.innerHTML = \`
-      <div style="font-family: sans-serif; max-width: 300px; margin: 0 auto; text-align: center; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-        <h3 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: bold;">Spin to Win!</h3>
-        <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Enter your email to spin the wheel.</p>
-        <input type="email" placeholder="Enter email" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;" />
-        <button style="background: #0066ff; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%;">SPIN NOW</button>\`;`;
-
-    if (!hasPro) {
-      code += `
-    container.innerHTML += \`
-        <div style="margin-top: 16px; font-size: 12px;">
-          <a href="${window.location.origin}/onboarding?ref=${tenant}&source=spin_widget" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a>
-        </div>\`;`;
-    }
-
-    code += `
-      container.innerHTML += \`
-      </div>
-    \`;
-  })();
-</script>`;
+<iframe src="${iframeSrc}" style="border: none; width: 100%; max-width: 400px; height: 350px;"></iframe>`;
 
     setEmbedCode(code);
     setShowModal(true);
@@ -80,7 +59,7 @@ export default function SpinToWinGeneratorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className="min-h-screen flex flex-col font-inter container glassmorphism" style={{ backgroundColor: '#F5F5F7', maxWidth: '450px', margin: '0 auto' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Spin to Win Generator 🎡</h1>
          <div className="flex items-center gap-3">
@@ -96,6 +75,28 @@ export default function SpinToWinGeneratorPage() {
                 <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Configure Wheel</h2>
 
                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
+                        <input
+                            id="campaign-name"
+                            type="text"
+                            placeholder="Summer Spin to Win"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-black"
+                            value={campaignName}
+                            onChange={(e) => setCampaignName(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Reward</label>
+                        <input
+                            id="reward"
+                            type="text"
+                            placeholder="20% Off"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-black"
+                            value={reward}
+                            onChange={(e) => setReward(e.target.value)}
+                        />
+                    </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Prizes (comma separated)</label>
                         <input
@@ -168,11 +169,9 @@ export default function SpinToWinGeneratorPage() {
                 <p className="text-gray-600 mb-6">Copy and paste this HTML snippet into your website.</p>
 
                 <div className="relative group">
-                    <textarea
-                        readOnly
-                        value={embedCode}
-                        className="w-full h-40 p-4 bg-gray-50 border border-gray-200 font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
-                    />
+                    <pre className="w-full h-40 p-4 bg-gray-50 border border-gray-200 font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all overflow-auto">
+                        <code style={{ whiteSpace: 'pre-wrap' }}>{embedCode}</code>
+                    </pre>
                 </div>
 
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">

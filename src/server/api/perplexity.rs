@@ -1,7 +1,7 @@
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use ohc_builtin_agent_lib::perplexity::PerplexityAgent;
+use ohc_builtin_agent::perplexity::PerplexityAgent;
 
 // We use the exact mock from tests, to make the agent testable in e2e isolated environments
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
@@ -12,7 +12,7 @@ struct E2EPerplexityLlm {
 }
 
 #[async_trait::async_trait]
-impl ohc_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
+impl ohc_builtin_agent::perplexity::PerplexityLlmClient for E2EPerplexityLlm {
     async fn chat(
         &self,
         _req: ChatRequest,
@@ -28,6 +28,7 @@ impl ohc_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
             message: Message::assistant(&content),
             stop_reason: "stop".to_string(),
             response_id: Some("mock-id".to_string()),
+            usage: ohc_builtin_agent_core::types::Usage { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
         })
     }
 }
@@ -57,6 +58,6 @@ async fn handle_perplexity_query(
     }
 }
 
-pub fn router() -> Router {
+pub fn router<S: Send + Sync + Clone + 'static>() -> Router<S> {
     Router::new().route("/query", post(handle_perplexity_query))
 }

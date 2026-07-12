@@ -316,38 +316,57 @@ impl InventoryService {
                                 error_message: format!("Insufficient inventory. Available: {}", stock)
                             });
                         } else {
-                            let _ = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3")
+                            let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
                                 .bind(quantity)
                                 .bind(product_id)
                                 .bind(tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+                            if let Ok(res) = update_res {
+                                if res.rows_affected() == 0 {
+                                    let _ = tx.rollback().await;
+                                    self.locker.clear(&lock_key).await;
+                                    return Ok(ReserveResult {
+                                        success: false,
+                                        lock_id: "".to_string(),
+                                        error_message: format!("Insufficient inventory.")
+                                    });
+                                }
+                            }
                         }
                     } else {
                         // Fallback to legacy products if not in centralized inventory yet
-                        let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+                        let update_res = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND available_quantity >= $1")
+                            .bind(quantity)
                             .bind(product_id)
                             .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .unwrap_or(None);
+                            .execute(&mut *tx)
+                            .await;
 
-                        if let Some(f_stock) = fallback_stock {
-                            if f_stock < quantity {
-                                let _ = tx.rollback().await;
-                                self.locker.clear(&lock_key).await;
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: format!("Insufficient inventory. Available: {}", f_stock)
-                                });
-                            } else {
-                                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(quantity)
+                        if let Ok(res) = update_res {
+                            if res.rows_affected() == 0 {
+                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                                     .bind(product_id)
                                     .bind(tenant_id)
-                                    .execute(&mut *tx)
-                                    .await;
+                                    .fetch_optional(&mut *tx)
+                                    .await
+                                    .unwrap_or(None);
+
+                                let _ = tx.rollback().await;
+                                self.locker.clear(&lock_key).await;
+                                if let Some(stock) = f_stock {
+                                    return Ok(ReserveResult {
+                                        success: false,
+                                        lock_id: "".to_string(),
+                                        error_message: format!("Insufficient inventory. Available: {}", stock)
+                                    });
+                                } else {
+                                    return Ok(ReserveResult {
+                                        success: false,
+                                        lock_id: "".to_string(),
+                                        error_message: "Product not found".to_string()
+                                    });
+                                }
                             }
                         } else {
                             let _ = tx.rollback().await;

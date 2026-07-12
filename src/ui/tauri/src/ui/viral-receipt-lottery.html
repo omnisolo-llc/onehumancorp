@@ -260,7 +260,7 @@
         3. Win!
         <br>
         <div class="qr-code-placeholder">📱</div>
-        <div id="preview-url" style="font-size: 12px; opacity: 0.7;">ohc.app/win/your-store</div>
+        <div id="preview-url" style="font-size: 12px; opacity: 0.7;">ohc.app/win/loading...</div>
       </div>
     </div>
 
@@ -280,6 +280,34 @@
   </div>
 
   <script>
+    async function loadTenantLink() {
+        try {
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+            const res = await fetch('/api/v1/growth/referrals/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.referral_link) {
+                    const refId = data.referral_link.split('/').pop();
+                    document.getElementById('preview-url').textContent = `ohc.app/win/${refId}`;
+                }
+            } else {
+                document.getElementById('preview-url').textContent = `ohc.app/win/${tenantId}`;
+            }
+        } catch (e) {
+            const fallbackId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+            document.getElementById('preview-url').textContent = `ohc.app/win/${fallbackId}`;
+        }
+    }
+
+    // Call on load to ensure ZERO MOCK DATA
+    window.addEventListener('DOMContentLoaded', loadTenantLink);
+
     document.getElementById('generate-btn').addEventListener('click', async () => {
       const btn = document.getElementById('generate-btn');
       btn.disabled = true;

@@ -230,13 +230,13 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                                 #[cfg(target_os = "macos")]
                                 aux_opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                                if let Ok(aux_file) = aux_opts.open(ext_path) {
-                                    if let Ok(metadata) = aux_file.metadata() {
-                                        let mut p = metadata.permissions();
-                                        if (p.mode() & 0o777) != 0o600 {
-                                            p.set_mode(0o600);
-                                            let _ = aux_file.set_permissions(p);
-                                        }
+                                if let Ok(aux_file) = aux_opts.open(ext_path)
+                                    && let Ok(metadata) = aux_file.metadata()
+                                {
+                                    let mut p = metadata.permissions();
+                                    if (p.mode() & 0o777) != 0o600 {
+                                        p.set_mode(0o600);
+                                        let _ = aux_file.set_permissions(p);
                                     }
                                 }
                             }

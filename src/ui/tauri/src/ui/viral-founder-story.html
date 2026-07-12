@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Founder Story Builder - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #0052cc;
+      --bg: #F5F5F7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border-radius: 16px;
+    }
+
+    header {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .back-btn {
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: "Outfit", sans-serif;
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    @media (min-width: 768px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      font-size: 15px;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .theme-selector {
+      display: flex;
+      gap: 12px;
+    }
+
+    .theme-btn {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .theme-btn.active {
+      border-color: var(--primary);
+      background: rgba(0, 102, 255, 0.05);
+      color: var(--primary);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: 90%;
+      max-width: 600px;
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+      border: none;
+      width: 100%;
+      resize: none;
+      height: 120px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header class="glassmorphism">
+    <a href="dashboard.html" class="back-btn">← Back</a>
+    <h1>Viral Founder Story Builder</h1>
+  </header>
+
+  <div class="container">
+    <div class="card glassmorphism">
+      <h2>Widget Settings</h2>
+
+      <div class="form-group">
+        <label for="founder-name">Founder Name</label>
+        <input type="text" id="founder-name" value="Maya">
+      </div>
+
+      <div class="form-group">
+        <label for="story-text">Your Story</label>
+        <textarea id="story-text">I started this business with a dream to bring the best quality to our community. Share this page and support our journey!</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="reward-name">Reward for Sharing</label>
+        <input type="text" id="reward-name" value="15% Off Your Next Order">
+      </div>
+
+      <div class="form-group">
+        <label>Theme</label>
+        <div class="theme-selector">
+          <button class="theme-btn active" id="theme-light">Light</button>
+          <button class="theme-btn" id="theme-dark">Dark</button>
+        </div>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="remove-branding">
+        <label for="remove-branding" style="margin: 0;">Remove "Powered by OHC" branding (Pro Plan)</label>
+      </div>
+
+      <button class="btn-primary" id="get-code-btn">Generate Embed Code</button>
+    </div>
+
+    <div class="card glassmorphism">
+      <h2>Live Preview</h2>
+      <div style="background: #e5e5ea; padding: 20px; border-radius: 12px; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+        <iframe id="preview-frame" width="100%" height="320" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Founder Story"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal glassmorphism">
+      <div class="modal-header">
+        <h3>Your Embed Code</h3>
+        <button class="close-btn" id="close-embed-btn">×</button>
+      </div>
+      <p>Copy and paste this HTML into your website where you want the Founder Story widget to appear.</p>
+      <textarea class="code-block" id="embed-code" readonly></textarea>
+      <button class="btn-primary" id="copy-code-btn">Copy to Clipboard</button>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      tenant: 'test-tenant',
+      founderName: 'Maya',
+      storyText: 'I started this business with a dream to bring the best quality to our community. Share this page and support our journey!',
+      reward: '15% Off Your Next Order',
+      theme: 'light',
+      removeBranding: false
+    };
+
+    const previewFrame = document.getElementById('preview-frame');
+    const founderNameInput = document.getElementById('founder-name');
+    const storyTextInput = document.getElementById('story-text');
+    const rewardInput = document.getElementById('reward-name');
+    const themeLightBtn = document.getElementById('theme-light');
+    const themeDarkBtn = document.getElementById('theme-dark');
+    const removeBrandingCheckbox = document.getElementById('remove-branding');
+
+    const getCodeBtn = document.getElementById('get-code-btn');
+    const embedModal = document.getElementById('embed-modal');
+    const closeEmbedBtn = document.getElementById('close-embed-btn');
+    const embedCode = document.getElementById('embed-code');
+    const copyCodeBtn = document.getElementById('copy-code-btn');
+
+    // Fetch tenant ID from local storage if logged in (for demo/standalone environments)
+    try {
+        const userStr = localStorage.getItem('ohc_user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user && user.tenant_id) {
+                state.tenant = user.tenant_id;
+            }
+        }
+    } catch (e) {}
+
+    function updatePreview() {
+      const url = new URL(window.location.origin + '/api/v1/growth/founder-story/embed');
+      url.searchParams.set('tenant', state.tenant);
+      url.searchParams.set('founder_name', state.founderName);
+      url.searchParams.set('story_text', state.storyText);
+      url.searchParams.set('reward', state.reward);
+      url.searchParams.set('theme', state.theme);
+      url.searchParams.set('hideBranding', state.removeBranding);
+
+      previewFrame.src = url.toString();
+    }
+
+    founderNameInput.addEventListener('input', (e) => {
+      state.founderName = e.target.value;
+      updatePreview();
+    });
+
+    storyTextInput.addEventListener('input', (e) => {
+      state.storyText = e.target.value;
+      updatePreview();
+    });
+
+    rewardInput.addEventListener('input', (e) => {
+      state.reward = e.target.value;
+      updatePreview();
+    });
+
+    themeLightBtn.addEventListener('click', () => {
+      state.theme = 'light';
+      themeLightBtn.classList.add('active');
+      themeDarkBtn.classList.remove('active');
+      updatePreview();
+    });
+
+    themeDarkBtn.addEventListener('click', () => {
+      state.theme = 'dark';
+      themeDarkBtn.classList.add('active');
+      themeLightBtn.classList.remove('active');
+      updatePreview();
+    });
+
+    removeBrandingCheckbox.addEventListener('change', (e) => {
+      state.removeBranding = e.target.checked;
+      updatePreview();
+    });
+
+    getCodeBtn.addEventListener('click', () => {
+      const origin = window.location.origin;
+      const fNameEncoded = encodeURIComponent(state.founderName);
+      const storyEncoded = encodeURIComponent(state.storyText);
+      const rewardEncoded = encodeURIComponent(state.reward);
+
+      const code = `<iframe src="${origin}/api/v1/growth/founder-story/embed?tenant=${state.tenant}&founder_name=${fNameEncoded}&story_text=${storyEncoded}&reward=${rewardEncoded}&theme=${state.theme}&hideBranding=${state.removeBranding}" width="100%" height="320" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Founder Story"></iframe>`;
+
+      embedCode.value = code;
+      embedModal.classList.add('active');
+    });
+
+    closeEmbedBtn.addEventListener('click', () => {
+      embedModal.classList.remove('active');
+    });
+
+    copyCodeBtn.addEventListener('click', () => {
+      embedCode.select();
+      document.execCommand('copy');
+      copyCodeBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyCodeBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    });
+
+    // Initial load
+    updatePreview();
+  </script>
+</body>
+</html>
