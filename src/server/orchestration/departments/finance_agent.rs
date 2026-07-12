@@ -47,8 +47,7 @@ impl Department for FinanceAgent {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
-        } else if event.event_type == "project_milestone_completed" {
-            "Draft invoice for completed project milestone".to_string()
+
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -122,18 +121,7 @@ impl Department for FinanceAgent {
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
                 "suggested_channel": suggested_channel,
             });
-        } else if event.event_type == "project_milestone_completed" {
-            let project_name = event.payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Unknown Project");
-            let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
-            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-            payload = serde_json::json!({
-                "feature_type": "invoice_draft",
-                "project_name": project_name,
-                "milestone_name": milestone_name,
-                "amount_cents": amount_cents,
-                "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
-                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
-            });
+
         }
 
         self.orchestrator.execute_action(
