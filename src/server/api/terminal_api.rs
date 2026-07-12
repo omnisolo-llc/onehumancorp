@@ -597,6 +597,67 @@ pub async fn sync_offline_transactions_handler(
         }
     }
 
+    // Create an order out of each synced POS offline transaction if the type is cash_sale or tap_to_pay.
+    for tx in &req_data.transactions {
+        if tx.mutation_type.as_deref() == Some("cash_sale") || tx.mutation_type.as_deref() == Some("tap_to_pay") {
+            let pool = crate::db::get_pool();
+            if let Ok(mut db_tx) = pool.begin().await {
+                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
+                    let order_id = uuid::Uuid::new_v4().to_string();
+                    let total_amount = (tx.amount_cents as f64) / 100.0;
+                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                        .bind(&order_id)
+                        .bind(&tenant_id)
+                        .bind(None::<String>)
+                        .bind(total_amount)
+                        .execute(&mut *db_tx).await;
+                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
+                        if let Some(items) = payload_val.as_array() {
+                            for item in items {
+                                if let (Some(product_id), Some(quantity)) = (
+                                    item.get("product_id").and_then(|v| v.as_str()),
+                                    item.get("quantity").and_then(|v| v.as_i64()),
+                                ) {
+                                    let item_id = uuid::Uuid::new_v4().to_string();
+                                    let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                                        .bind(&item_id)
+                                        .bind(&tenant_id)
+                                        .bind(&order_id)
+                                        .bind(product_id)
+                                        .bind(quantity as i32)
+                                        .bind(total_amount)
+                                        .execute(&mut *db_tx).await;
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = db_tx.commit().await;
+            }
+
+            // Send agent action requests for offline transactions
+            if let Ok(mut agent_tx) = crate::db::get_pool().begin().await {
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal_offline', 'sales_and_revenue', 'record_pos_transaction', $3, 'pending')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(serde_json::json!({
+                        "event": "pos_transaction_synced",
+                        "amount_cents": tx.amount_cents,
+                    }))
+                    .execute(&mut *agent_tx).await;
+
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal_offline', 'operations', 'record_pos_transaction', $3, 'pending')")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(serde_json::json!({
+                        "event": "pos_transaction_synced",
+                    }))
+                    .execute(&mut *agent_tx).await;
+                let _ = agent_tx.commit().await;
+            }
+        }
+    }
+
     let mut pending_reconciliation = None;
     if let Some(session_id) = &req_data.session_id {
         if let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
