@@ -231,7 +231,7 @@ impl Hub {
     pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
-            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
+            .filter(|a| a.organization_id == org_id)
             .cloned()
             .collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
