@@ -27,6 +27,19 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
 
+
+  useEffect(() => {
+    const handleReconciliation = (e: any) => {
+      if (e.detail && e.detail.pending_reconciliation) {
+        setPendingReconciliation(e.detail.pending_reconciliation);
+      }
+    };
+    window.addEventListener('ohc_sync_reconciliation', handleReconciliation);
+    return () => {
+      window.removeEventListener('ohc_sync_reconciliation', handleReconciliation);
+    };
+  }, []);
+
   useEffect(() => {
     async function initTerminal() {
       const StripeTerminal = await loadStripeTerminal();
