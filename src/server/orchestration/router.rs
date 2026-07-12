@@ -257,7 +257,7 @@ mod omni_tests {
 
     #[tokio::test]
     async fn test_omni_context_router_scheduling() {
-        unsafe { std::env::set_var("CI", "1"); }
+        unsafe { std::env::set_var("MINIMAX_API_KEY", "fake-key"); std::env::set_var("OHC_LLM_PROVIDER", "minimax"); }
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Instagram".to_string(),
@@ -273,7 +273,7 @@ mod omni_tests {
 
     #[tokio::test]
     async fn test_omni_context_router_quote() {
-        unsafe { std::env::set_var("CI", "1"); }
+        unsafe { std::env::set_var("MINIMAX_API_KEY", "fake-key"); std::env::set_var("OHC_LLM_PROVIDER", "minimax"); }
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Email".to_string(),
