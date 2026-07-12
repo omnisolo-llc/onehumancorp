@@ -19,27 +19,27 @@
 - Modify: `src/agents/builtin/service.rs`
 - Modify: `src/agents/builtin/lib.rs`
 
-- [ ] **Step 1: Write failing tenant validation and startup-policy tests**
+- [x] **Step 1: Write failing tenant validation and startup-policy tests**
 
 Add tests proving `TenantContext::new` trims and rejects empty IDs, and a pure startup resolver proving cloud/cluster rejects missing or `system` organization IDs while standalone accepts `system`.
 
-- [ ] **Step 2: Run tests to verify the capability API is missing**
+- [x] **Step 2: Run tests to verify the capability API is missing**
 
 Run: `cargo test -p ohc_builtin_agent_tools tenant --lib`
 
 Expected: FAIL because `tenant` and `TenantContext` do not exist.
 
-- [ ] **Step 3: Implement the minimal immutable capability and startup resolver**
+- [x] **Step 3: Implement the minimal immutable capability and startup resolver**
 
 Implement a cloneable `TenantContext` with a private `Arc<str>`, `new`, `system`, and `as_str`. Add `resolve_process_tenant(execution_mode, configured_org)` in `lib.rs`; `standalone` may default to `system`, while all other modes require a non-empty, non-system ID. Construct `AgentServiceImpl` with a new `new_for_tenant` constructor and retain `new` only as a local/test system-tenant convenience.
 
-- [ ] **Step 4: Run focused tests and verify they pass**
+- [x] **Step 4: Run focused tests and verify they pass**
 
 Run: `cargo test -p ohc_builtin_agent_tools tenant --lib && cargo test -p ohc_builtin_agent resolve_process_tenant --lib`
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 5: Commit the capability boundary**
+- [x] **Step 5: Commit the capability boundary**
 
 ```bash
 git add src/agents/builtin/tools/tenant.rs src/agents/builtin/tools/mod.rs src/agents/builtin/tools/BUILD.bazel src/agents/builtin/service.rs src/agents/builtin/lib.rs

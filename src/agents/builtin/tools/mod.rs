@@ -18,6 +18,7 @@ pub mod grep;
 pub mod webfetch;
 pub mod websearch;
 pub mod sendmessage;
+pub mod tenant;
 
 pub mod toolsearch;
 pub mod task;
@@ -197,6 +198,23 @@ mod marketing_test;
 
 #[cfg(test)]
 mod finance_test;
+
+#[cfg(test)]
+mod tenant_capability_test {
+    use super::tenant::TenantContext;
+
+    #[test]
+    fn tenant_context_trims_and_preserves_the_assigned_organization() {
+        let tenant = TenantContext::new("  org-a  ").expect("valid organization");
+
+        assert_eq!(tenant.as_str(), "org-a");
+    }
+
+    #[test]
+    fn tenant_context_rejects_an_empty_organization() {
+        assert!(TenantContext::new("   ").is_err());
+    }
+}
 
 #[cfg(test)]
 mod glob_test;

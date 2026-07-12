@@ -53,6 +53,7 @@ rust_library(
         "sleep.rs",
         "subagent.rs",
         "tail.rs",
+        "tenant.rs",
         "find.rs",
         "task.rs",
         "toolsearch.rs",
