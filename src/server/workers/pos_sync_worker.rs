@@ -228,10 +228,29 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                 let is_conflict = stock < quantity_deducted as i32;
 
+                // 1) Update centralized inventory_levels
+                let _ = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE product_id = $2 AND tenant_id = $3")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&job.tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                // 2) Keep fallback products table update for legacy compatibility
                 let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                     .bind(quantity_deducted)
                     .bind(product_id)
                     .bind(&job.tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                // 3) Audit trail in inventory_transactions
+                let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, product_id, location_id, transaction_type, quantity, reference_id) VALUES ($1, $2, $3, 'pos_terminal', 'sale_deduction', $4, $5)")
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&job.tenant_id)
+                    .bind(product_id)
+                    .bind(-(quantity_deducted as i32))
+                    .bind(transaction_id)
                     .execute(&mut *tx)
                     .await;
 
@@ -451,10 +470,26 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                             let is_conflict = stock < qty as i32;
 
+                            let _ = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE product_id = $2 AND tenant_id = $3")
+                                .bind(qty)
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
                             let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                                 .bind(qty)
                                 .bind(product_id)
                                 .bind(&job.tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
+                            let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, product_id, location_id, transaction_type, quantity, reference_id) VALUES ($1, $2, $3, 'pos_terminal', 'sale_deduction', $4, $5)")
+                                .bind(uuid::Uuid::new_v4().to_string())
+                                .bind(&job.tenant_id)
+                                .bind(product_id)
+                                .bind(-(qty as i32))
+                                .bind(transaction_id)
                                 .execute(&mut *tx)
                                 .await;
 
@@ -668,6 +703,7 @@ mod tests {
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location_id, available_count) VALUES ('inv-1', 'tenant-worker-test', 'prod-worker-test-1', 'default', 10) ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-1', 'tenant-worker-test', 'Test Prod', 10) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker', 'tenant-worker-test', 'client-1', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
@@ -732,6 +768,7 @@ mod tests {
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test-conflict', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location_id, available_count) VALUES ('inv-2', 'tenant-worker-test-conflict', 'prod-worker-test-conflict', 'default', 1) ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity) VALUES ('prod-worker-test-conflict', 'tenant-worker-test-conflict', 'Test Prod Conflict', 1, 1) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count) VALUES ('session-conflict', 'tenant-worker-test-conflict', 'client-conflict', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0) ON CONFLICT DO NOTHING")
@@ -807,6 +844,7 @@ mod tests {
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test-low', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location_id, available_count) VALUES ('inv-3', 'tenant-worker-test-low', 'prod-worker-test-2', 'default', 6) ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-2', 'tenant-worker-test-low', 'Test Prod 2', 6) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker-2', 'tenant-worker-test-low', 'client-2', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
