@@ -38,6 +38,45 @@ pub async fn create_checkout_session_handler(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     }
 
+
+    let mut reserved_locks = Vec::new();
+    let mut updated_cart_payload = req_data.cart_payload.clone();
+
+    if let Some(cart) = &mut updated_cart_payload {
+        if let Some(items) = cart.as_array_mut() {
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            let ttl = if req_data.r#type == "IN_PERSON" { 15 } else { 300 };
+
+            for item in items {
+                if let (Some(product_obj), Some(quantity)) = (item.get("product").cloned(), item.get("quantity").and_then(|q| q.as_i64())) {
+                    if let Some(product_id) = product_obj.get("id").and_then(|id| id.as_str()) {
+                        let reserve_result = inventory_service.reserve_inventory(&tenant_id, product_id, quantity as i32, ttl).await;
+                        match reserve_result {
+                            Ok(res) if res.success => {
+                                reserved_locks.push((product_id.to_string(), res.lock_id.clone(), quantity as i32));
+                                if let Some(obj) = item.as_object_mut() {
+                                    obj.insert("lock_id".to_string(), serde_json::Value::String(res.lock_id));
+                                }
+                            }
+                            _ => {
+                                // Rollback reserved locks if we failed midway
+                                for (pid, lid, qty) in reserved_locks {
+                                    let _ = inventory_service.release_inventory(&tenant_id, &pid, qty, &lid).await;
+                                }
+                                let _ = db_tx.rollback().await;
+                                return (StatusCode::CONFLICT, Json(CreateCheckoutSessionResponse {
+                                    session_id: "".to_string(),
+                                    success: false,
+                                    error_message: Some("Item is currently being checked out by another customer.".to_string()),
+                                })).into_response();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let mut final_amount = req_data.amount_cents;
     if let Some(discount_code) = &req_data.discount_code {
         let is_valid: Result<bool, sqlx::Error> = sqlx::query_scalar(
@@ -99,7 +138,7 @@ pub async fn create_checkout_session_handler(
     .bind(&req_data.r#type)
     .bind(final_amount)
     .bind(&req_data.device_id)
-    .bind(&req_data.cart_payload);
+    .bind(&updated_cart_payload);
 
     match query.execute(&mut *db_tx).await {
         Ok(_) => {
