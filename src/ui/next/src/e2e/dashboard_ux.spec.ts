@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 import { currentAppSmoke } from '../../../../e2e/current_app_smoke';
 import { test as base } from '../../../../e2e/fixtures';
 

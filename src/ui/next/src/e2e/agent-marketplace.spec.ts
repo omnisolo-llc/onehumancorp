@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agent Marketplace', () => {
   test('should load the agent marketplace and allow searching, verifying basic data presence', async ({ page }) => {

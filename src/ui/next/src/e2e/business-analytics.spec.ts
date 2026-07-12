@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Business Analytics Flow', () => {
   test('Dashboard contains link to Business Analytics', async ({ page }) => {

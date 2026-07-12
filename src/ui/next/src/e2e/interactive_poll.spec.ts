@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Interactive Poll Generator E2E', () => {
   test('should allow creating a poll and viewing embed modal', async ({ page }) => {

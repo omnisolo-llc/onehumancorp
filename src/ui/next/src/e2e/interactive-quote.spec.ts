@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Interactive Quote Widget Growth Loop', () => {
     test('generator page renders correctly, preview updates, and public widget functions properly with viral loop link', async ({ page }) => {
