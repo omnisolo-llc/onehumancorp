@@ -167,29 +167,25 @@ impl JetBrainsObservationMasker {
                         "metadata",
                         "details", // Important for tracking errors
                     ];
-                    let mut sorted_keys: Vec<String> = obj.keys().cloned().collect();
-                    sorted_keys.sort_by_cached_key(|k| {
+                    let mut priority_to_keep = Vec::new();
+                    let mut regular_to_keep = Vec::new();
+                    for (k, _) in obj.iter() {
                         let k_lower = k.to_lowercase();
-                        let is_priority = priority_keys.contains(&k_lower.as_str());
-                        // False (0) sorts before True (1), so we map priority (true) to 0 and non-priority (false) to 1
-                        (!is_priority, k.clone())
-                    });
-
-                    // We ensure that we do NOT remove priority keys even if we exceed the limit.
-                    // This is a crucial fix for production logs where errors MUST be preserved.
-                    let mut keys_to_remove = Vec::new();
-                    let mut current_kept = 0;
-
-                    for k in sorted_keys {
-                        let k_lower = k.to_lowercase();
-                        let is_priority = priority_keys.contains(&k_lower.as_str());
-
-                        if is_priority {
-                            current_kept += 1; // Priority keys are ALWAYS kept
-                        } else if current_kept < current_limit {
-                            current_kept += 1; // Keep up to the limit
+                        if priority_keys.iter().any(|&p| p == k_lower.as_str()) {
+                            priority_to_keep.push(k.clone());
                         } else {
-                            keys_to_remove.push(k); // Drop the rest
+                            regular_to_keep.push(k.clone());
+                        }
+                    }
+                    regular_to_keep.sort();
+                    let num_priority = priority_to_keep.len();
+                    let mut keys_to_remove = Vec::new();
+                    if num_priority >= current_limit {
+                        keys_to_remove = regular_to_keep;
+                    } else {
+                        let slots_left = current_limit - num_priority;
+                        if regular_to_keep.len() > slots_left {
+                            keys_to_remove = regular_to_keep.split_off(slots_left);
                         }
                     }
 
