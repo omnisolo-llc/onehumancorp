@@ -62,7 +62,7 @@ test('handles a rejected connection as an unsupported fallback state', async () 
   expect(consoleError).toHaveBeenCalledWith(connectionError);
 });
 
-test('closes a database that resolves after the provider unmounts', async () => {
+test('does not initialize or dispose a shared database that resolves after unmount', async () => {
   let resolveDatabase!: (database: any) => void;
   const database = databaseMock();
   getPowerSyncDBMock.mockReturnValue(new Promise((resolve) => {
@@ -82,8 +82,85 @@ test('closes a database that resolves after the provider unmounts', async () => 
     await Promise.resolve();
   });
 
-  expect(database.disconnect).toHaveBeenCalledOnce();
-  expect(database.close).toHaveBeenCalledOnce();
+  expect(database.disconnect).not.toHaveBeenCalled();
+  expect(database.close).not.toHaveBeenCalled();
   expect(database.init).not.toHaveBeenCalled();
   expect(database.connect).not.toHaveBeenCalled();
+});
+
+test('keeps the cached database usable after a connection failure and remount', async () => {
+  let closed = false;
+  const connectionError = new Error('connection failed');
+  const database = databaseMock({
+    init: vi.fn().mockImplementation(async () => {
+      if (closed) throw new Error('database is closed');
+    }),
+    connect: vi.fn()
+      .mockRejectedValueOnce(connectionError)
+      .mockImplementation(async () => {
+        if (closed) throw new Error('database is closed');
+      }),
+    close: vi.fn().mockImplementation(async () => {
+      closed = true;
+    }),
+  });
+  getPowerSyncDBMock.mockResolvedValue(database as any);
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+
+  const firstRender = render(
+    <PowerSyncProvider fallback={<div>Stable loading state</div>} unsupportedFallback={<div>API fallback</div>}>
+      <div>Inbox content</div>
+    </PowerSyncProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('API fallback')).toBeInTheDocument());
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  firstRender.unmount();
+
+  render(
+    <PowerSyncProvider fallback={<div>Stable loading state</div>} unsupportedFallback={<div>API fallback</div>}>
+      <div>Inbox content</div>
+    </PowerSyncProvider>,
+  );
+
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  expect(database.disconnect).not.toHaveBeenCalled();
+  expect(database.close).not.toHaveBeenCalled();
+});
+
+test('does not dispose the cached database between successful provider mounts', async () => {
+  let closed = false;
+  const database = databaseMock({
+    init: vi.fn().mockImplementation(async () => {
+      if (closed) throw new Error('database is closed');
+    }),
+    connect: vi.fn().mockImplementation(async () => {
+      if (closed) throw new Error('database is closed');
+    }),
+    close: vi.fn().mockImplementation(async () => {
+      closed = true;
+    }),
+  });
+  getPowerSyncDBMock.mockResolvedValue(database as any);
+
+  const firstRender = render(
+    <PowerSyncProvider fallback={<div>Stable loading state</div>}>
+      <div>First inbox mount</div>
+    </PowerSyncProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('First inbox mount')).toBeInTheDocument());
+  firstRender.unmount();
+
+  render(
+    <PowerSyncProvider fallback={<div>Stable loading state</div>}>
+      <div>Second inbox mount</div>
+    </PowerSyncProvider>,
+  );
+
+  await waitFor(() => expect(screen.getByText('Second inbox mount')).toBeInTheDocument());
+  expect(database.connect).toHaveBeenCalledTimes(2);
+  expect(database.disconnect).not.toHaveBeenCalled();
+  expect(database.close).not.toHaveBeenCalled();
 });
