@@ -53,10 +53,11 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             let product_id_owned: Option<String> = payload.get("mutation").and_then(|m| m.get("product_id")).and_then(|v| v.as_str()).map(|s| s.to_string())
                 .or_else(|| {
                     if let Some(items) = payload.get("payload").and_then(|v| v.as_str()) {
-                        if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(items) {
-                            if let Some(first) = arr.first() {
-                                return first.get("product_id").and_then(|p| p.as_str()).map(|s| s.to_string());
-                            }
+                        let items_array = serde_json::from_str::<Vec<serde_json::Value>>(items)
+                            .or_else(|_| serde_json::from_str::<serde_json::Value>(items).map(|obj| vec![obj]));
+
+                        if let Ok(arr) = items_array {
+                            return arr.first().and_then(|first| first.get("product_id").and_then(|p| p.as_str()).map(|s| s.to_string()));
                         }
                     }
                     None
@@ -125,7 +126,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 p_id_owned = mutation.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
                 qty = mutation.get("quantity_deducted").and_then(|v| v.as_i64()).map(|v| v as i32);
             } else if let Some(items_str) = payload.get("payload").and_then(|v| v.as_str()) {
-                if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str).or_else(|_| serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj]));
+                if let Ok(items_array) = parsed_items {
                     if let Some(first) = items_array.first() {
                         p_id_owned = first.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
                         qty = first.get("quantity").and_then(|v| v.as_i64()).map(|v| v as i32);
@@ -430,7 +432,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
         // Support payload formatted directly for the transaction items array
         if let Some(items) = payload.get("payload") {
             if let Some(items_str) = items.as_str() {
-                if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str).or_else(|_| serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj]));
+                if let Ok(items_array) = parsed_items {
                     let order_id = uuid::Uuid::new_v4().to_string();
                     let amount_cents = payload_amount_cents;
                     let total_amount = (amount_cents as f64) / 100.0;
