@@ -7094,47 +7094,104 @@ async fn create_ui_bom_item_handler(
         .route("/social-share-widget.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
         }))
-        .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
-            let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "If you use custom tools, you can connect them to our system here. This is for advanced users."),
-            ];
+                .route("/api/chat", axum::routing::post(|
+            axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
+            headers: axum::http::HeaderMap,
+            axum::Json(req): axum::Json<ChatRequest>
+        | async move {
+            let tenant_id = headers
+                .get("x-tenant-id")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("default");
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started-1";
+            let mut link_url = "/help_article.html?id=getting-started-1".to_string();
 
-            if query.contains("getting started") {
-                reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started-1";
-            } else if query.contains("store") || query.contains("product") {
-                reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/add-products";
-            } else if query.contains("payment") {
-                reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/accept-payments";
-            } else if query.contains("ai agent") {
-                reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-support";
-            } else if query.contains("marketing") {
-                reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing-tools";
-            } else if query.contains("billing") {
-                reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/billing-settings";
-            } else if query.contains("api") || query.contains("advanced") {
-                reply = format!("Based on our help center: {}", help_articles[6].1);
-                link_url = "/api-docs";
-            } else if query.contains("operations") {
-                reply = "I have routed your request to the Operations department.".to_string();
-                link_url = "/inbox";
-                link_title = "Check your inbox for updates →";
+            let articles: Vec<crate::api::docs::HelpArticle> = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
+                        .bind(tenant_id.to_string())
+                        .fetch_all(&db.pool)
+                        .await
+                    {
+                        Ok(rows) => {
+                            rows.into_iter().map(|row| {
+                                use sqlx::Row;
+                                crate::api::docs::HelpArticle {
+                                    category: row.get("category"),
+                                    title: row.get("title"),
+                                    desc: row.get("desc_text"),
+                                    link: row.get("link"),
+                                }
+                            }).collect()
+                        }
+                        Err(_) => vec![]
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ?")
+                        .bind(tenant_id.to_string())
+                        .fetch_all(pool)
+                        .await
+                    {
+                        Ok(rows) => {
+                            rows.into_iter().map(|row| {
+                                use sqlx::Row;
+                                crate::api::docs::HelpArticle {
+                                    category: row.get("category"),
+                                    title: row.get("title"),
+                                    desc: row.get("text"),
+                                    link: row.get("link"),
+                                }
+                            }).collect()
+                        }
+                        Err(_) => vec![]
+                    }
+                }
+            };
+
+            let mut matched = false;
+            for article in articles {
+                let lower_title = article.title.to_lowercase();
+                let lower_desc = article.desc.to_lowercase();
+
+                if query.split_whitespace().any(|word| word.len() > 3 && (lower_title.contains(word) || lower_desc.contains(word))) {
+                    reply = format!("Based on our help center: {}", article.desc);
+                    link_url = article.link;
+                    matched = true;
+                    break;
+                }
+            }
+
+            if !matched {
+                if query.contains("getting started") {
+                    reply = "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
+                    link_url = "/help_article.html?id=getting-started-1".to_string();
+                } else if query.contains("store") || query.contains("product") {
+                    reply = "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.".to_string();
+                    link_url = "/help_article.html?id=my-store-1".to_string();
+                } else if query.contains("payment") {
+                    reply = "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.".to_string();
+                    link_url = "/help_article.html?id=payments-1".to_string();
+                } else if query.contains("ai agent") {
+                    reply = "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.".to_string();
+                    link_url = "/help_article.html?id=ai-support".to_string();
+                } else if query.contains("marketing") {
+                    reply = "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.".to_string();
+                    link_url = "/help_article.html?id=marketing-tools".to_string();
+                } else if query.contains("billing") {
+                    reply = "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string();
+                    link_url = "/help_article.html?id=billing-settings".to_string();
+                } else if query.contains("api") || query.contains("advanced") {
+                    reply = "If you use custom tools, you can connect them to our system here. This is for advanced users.".to_string();
+                    link_url = "/api-docs.html".to_string();
+                } else if query.contains("operations") {
+                    reply = "I have routed your request to the Operations department.".to_string();
+                    link_url = "/inbox.html".to_string();
+                    link_title = "Check your inbox for updates →";
+                }
             }
 
             axum::Json(serde_json::json!({
