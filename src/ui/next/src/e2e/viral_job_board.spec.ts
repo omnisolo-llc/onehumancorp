@@ -67,4 +67,39 @@ test.describe('Viral Job Board Generator tests', () => {
     await expect(page.locator('.shadow-\\[0_8px_30px_rgb\\(0\\,0\\,0\\,0\\.1\\)\\] p').first()).toContainText('Join our team.');
   });
 
+  test('should show paywall when attempting to remove branding without pro', async ({ page }) => {
+    // 1. Ensure non-pro for this run
+    await page.evaluate(() => {
+        localStorage.setItem('has_pro', 'false');
+    });
+
+    await page.goto('/viral-job-board-generator');
+
+    const removeBrandingCheckbox = page.locator('#removeBranding');
+    await removeBrandingCheckbox.check();
+
+    // Soft paywall should appear
+    const paywallModal = page.locator('h2', { hasText: 'Upgrade to Remove Branding' });
+    await expect(paywallModal).toBeVisible();
+  });
+
+  test('should hide branding when PRO feature is used', async ({ page }) => {
+    // 1. Ensure pro for this run
+    await page.evaluate(() => {
+        localStorage.setItem('has_pro', 'true');
+    });
+
+    await page.goto('/viral-job-board-generator');
+
+    const removeBrandingCheckbox = page.locator('#removeBranding');
+    await removeBrandingCheckbox.check();
+
+    const paywallModal = page.locator('h2', { hasText: 'Upgrade to Remove Branding' });
+    await expect(paywallModal).not.toBeVisible();
+
+    // Branding should not be visible in preview
+    const branding = page.locator('span', { hasText: '⚡ Powered by OHC' });
+    await expect(branding).not.toBeVisible();
+  });
+
 });
