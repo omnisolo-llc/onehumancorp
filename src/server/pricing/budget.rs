@@ -294,4 +294,14 @@ mod tests {
         assert!(manager.is_spend_rate_too_high(one_day, thirty_days)); // 20% in 1 day is way too high
         assert!(!manager.is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)); // 20% in 10 days is fine
     }
+
+    #[test]
+    fn test_is_spend_rate_too_high_edge_cases() {
+        let zero_manager = BudgetManager::new(0.0);
+        let one_day = std::time::Duration::from_secs(86400);
+        assert!(!zero_manager.is_spend_rate_too_high(one_day, one_day));
+
+        let manager = BudgetManager::new(100.0);
+        assert!(!manager.is_spend_rate_too_high(one_day, std::time::Duration::from_secs(0)));
+    }
 }

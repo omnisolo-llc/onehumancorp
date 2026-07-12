@@ -193,8 +193,8 @@ export default function CostDashboardPage() {
       actions={[{ label: "Back to My Plan", href: "/plan" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
-        <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header glass-panel px-6 py-4">
+        <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Advisory Summary</h2>
             </div>
             <div className="app-panel-body p-6">
@@ -205,8 +205,8 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="app-panel glass-panel">
-          <div className="app-panel-header glass-panel px-6 py-4 flex justify-between items-center">
+        <section id="my-plan-section" className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg">
+          <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40 flex justify-between items-center">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
@@ -333,8 +333,8 @@ export default function CostDashboardPage() {
         )}
 
         {/* Breakdown Section */}
-        <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header glass-panel px-6 py-4">
+        <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40 flex justify-between items-center">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Breakdown</h2>
             </div>
 
