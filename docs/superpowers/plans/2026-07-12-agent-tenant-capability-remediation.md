@@ -53,27 +53,27 @@ git commit -m "security: bind builtin agents to a tenant capability"
 - Modify: `src/agents/builtin/tools/quote.rs`
 - Modify: `src/agents/builtin/tools/mod.rs`
 
-- [ ] **Step 1: Write failing schema tests**
+- [x] **Step 1: Write failing schema tests**
 
 Add unit tests that build all six booking tools and the quote tool with `TenantContext::new("org-a")`, then assert their JSON Schemas contain no `tenant_id` property or required entry. Also assert tenant-aware tools are created with the injected organization.
 
-- [ ] **Step 2: Run tests to verify model-visible tenant fields still exist**
+- [x] **Step 2: Run tests to verify model-visible tenant fields still exist**
 
 Run: `cargo test -p ohc_builtin_agent_tools tenant_aware_tool_schemas --lib`
 
 Expected: FAIL because current booking and quote schemas expose and require `tenant_id`.
 
-- [ ] **Step 3: Inject the capability into tool executors**
+- [x] **Step 3: Inject the capability into tool executors**
 
 Remove `tenant_id` from every booking and quote argument struct. Add `TenantContext` to each executor and constructor, use it for SQL predicates/inserts and `set_config('app.current_tenant', ..., true)`, and ensure reschedule reads and updates include an explicit tenant predicate. Reuse a lazy quote PostgreSQL pool rather than opening a new pool per invocation. Pass the capability through `all_tools` from `AgentServiceImpl::build_tools`.
 
-- [ ] **Step 4: Run schema and tools-crate tests**
+- [x] **Step 4: Run schema and tools-crate tests**
 
 Run: `cargo test -p ohc_builtin_agent_tools tenant_aware_tool_schemas --lib && cargo test -p ohc_builtin_agent_tools --lib`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit tenant-safe tools**
+- [x] **Step 5: Commit tenant-safe tools**
 
 ```bash
 git add src/agents/builtin/tools/booking.rs src/agents/builtin/tools/quote.rs src/agents/builtin/tools/mod.rs

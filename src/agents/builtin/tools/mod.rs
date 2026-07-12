@@ -118,6 +118,7 @@ pub fn all_tools(
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
+    tenant: tenant::TenantContext,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
@@ -135,12 +136,12 @@ pub fn all_tools(
         grep::grep_tool(working_dir.clone()),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
-        booking::booking_get_services_tool(booking_store.clone()),
-        booking::booking_upsert_service_tool(booking_store.clone()),
-        booking::booking_list_appointments_tool(booking_store.clone()),
-        booking::booking_create_appointment_tool(booking_store.clone()),
-        booking::booking_negotiate_time_tool(booking_store.clone()),
-        booking::booking_reschedule_tool(booking_store.clone()),
+        booking::booking_get_services_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_upsert_service_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_list_appointments_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_create_appointment_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_negotiate_time_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_reschedule_tool(booking_store.clone(), tenant.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
@@ -165,7 +166,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
-        quote::generate_quote_tool(),
+        quote::generate_quote_tool(booking_store, tenant),
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
 ];
@@ -213,6 +214,52 @@ mod tenant_capability_test {
     #[test]
     fn tenant_context_rejects_an_empty_organization() {
         assert!(TenantContext::new("   ").is_err());
+    }
+}
+
+#[cfg(test)]
+mod tenant_aware_tool_schema_test {
+    use super::{Tool, booking, quote, tenant::TenantContext};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    fn assert_tenant_is_not_model_selectable(tool: &Tool) {
+        let properties = tool.parameters["properties"]
+            .as_object()
+            .expect("tool properties");
+        assert!(
+            !properties.contains_key("tenant_id"),
+            "{} exposes tenant_id to the model",
+            tool.name
+        );
+        assert!(
+            !tool.parameters["required"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|field| field.as_str() == Some("tenant_id")),
+            "{} requires a model-selected tenant_id",
+            tool.name
+        );
+    }
+
+    #[test]
+    fn tenant_aware_tool_schemas_do_not_expose_tenant_selection() {
+        let store = Arc::new(RwLock::new(booking::BookingStore::default()));
+        let tenant = TenantContext::new("org-a").expect("tenant");
+        let tools = vec![
+            booking::booking_get_services_tool(store.clone(), tenant.clone()),
+            booking::booking_upsert_service_tool(store.clone(), tenant.clone()),
+            booking::booking_list_appointments_tool(store.clone(), tenant.clone()),
+            booking::booking_create_appointment_tool(store.clone(), tenant.clone()),
+            booking::booking_negotiate_time_tool(store.clone(), tenant.clone()),
+            booking::booking_reschedule_tool(store.clone(), tenant.clone()),
+            quote::generate_quote_tool(store, tenant),
+        ];
+
+        for tool in &tools {
+            assert_tenant_is_not_model_selectable(tool);
+        }
     }
 }
 
