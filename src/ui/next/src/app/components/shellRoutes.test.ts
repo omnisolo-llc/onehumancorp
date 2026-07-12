@@ -71,12 +71,20 @@ describe("resolveShellRoute", () => {
   });
 
   test.each([
-    ["/login", "Login"],
-    ["/onboarding", "Setup"],
-  ])("uses explicit metadata for %s", (pathname, title) => {
+    ["/login", "Login", "Access your business workspace."],
+    ["/onboarding", "Setup", "Configure your business workspace."],
+  ])("uses explicit metadata for %s", (pathname, title, subtitle) => {
     expect(resolveShellRoute(pathname)).toEqual({
       owner: "guard",
       title,
+      subtitle,
+    });
+  });
+
+  test("does not assign page ownership to a near-prefix route", () => {
+    expect(resolveShellRoute("/dashboarding")).toEqual({
+      owner: "guard",
+      title: "Dashboarding",
       subtitle: "Use this workspace from the dashboard navigation.",
     });
   });
