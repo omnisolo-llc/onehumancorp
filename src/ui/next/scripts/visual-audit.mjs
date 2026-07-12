@@ -1,10 +1,17 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
 const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/ohc-visual-audit';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const captureBodyText = process.env.VISUAL_AUDIT_CAPTURE_BODY_TEXT === '1';
+const allowNoSandbox = process.env.VISUAL_AUDIT_ALLOW_NO_SANDBOX === '1';
+
+const MAX_CONSOLE_ERRORS = 20;
+const MAX_ERROR_LENGTH = 500;
+const MAX_BODY_SAMPLE_LENGTH = 2_000;
+const MAX_BODY_SUMMARY_LENGTH = 800;
 
 const routes = [
   '/dashboard',
@@ -32,170 +39,270 @@ const viewports = {
   mobile: { width: 390, height: 844 },
 };
 
-const emptyMetrics = (viewport) => ({
-  title: '',
-  bodySummary: '',
-  viewportWidth: viewport.width,
-  documentWidth: null,
-  horizontalOverflow: false,
-  shellCounts: {
-    sidebar: 0,
-    topbar: 0,
-    main: 0,
-  },
-  visibleOverflowingElements: [],
-});
+const auditCases = Object.entries(viewports).flatMap(([viewportName, viewport]) =>
+  routes.map((route) => ({ route, viewportName, viewport })));
 
-await mkdir(outputDir, { recursive: true });
+function redactAndLimit(value, maxLength = MAX_ERROR_LENGTH) {
+  const redacted = String(value ?? '')
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [REDACTED]')
+    .replace(
+      /([?&](?:api[_-]?key|access[_-]?token|auth(?:orization)?|token|password|secret|client[_-]?secret|signature)=)[^&#\s]*/gi,
+      '$1[REDACTED]',
+    )
+    .replace(
+      /(\b(?:api[_-]?key|access[_-]?token|auth(?:orization)?|token|password|secret|client[_-]?secret|signature)\b\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;&]+)/gi,
+      '$1[REDACTED]',
+    )
+    .replace(/\b(?:sk|pk)[_-][A-Za-z0-9_-]{12,}\b/gi, '[REDACTED_KEY]')
+    .replace(/\bAKIA[A-Z0-9]{16}\b/g, '[REDACTED_KEY]')
+    .replace(
+      /\b(?:gh[pousr]|github_pat|xox[baprs])_[A-Za-z0-9_-]{12,}\b/gi,
+      '[REDACTED_KEY]',
+    );
+
+  if (redacted.length <= maxLength) return redacted;
+
+  const truncationMarker = '…[truncated]';
+  return `${redacted.slice(0, maxLength - truncationMarker.length)}${truncationMarker}`;
+}
+
+function emptyMetrics(viewport) {
+  return {
+    title: '',
+    bodySummary: {
+      captureEnabled: captureBodyText,
+      text: null,
+    },
+    viewportWidth: viewport.width,
+    documentWidth: null,
+    horizontalOverflow: false,
+    shellCounts: {
+      sidebar: 0,
+      topbar: 0,
+      main: 0,
+    },
+    visibleOverflowingElements: [],
+  };
+}
+
+function createResult({ route, viewportName, viewport }, attempted = true) {
+  const slug = route.slice(1).replaceAll('/', '__') || 'home';
+  return {
+    route,
+    viewport: viewportName,
+    attempted,
+    completed: false,
+    status: null,
+    ...emptyMetrics(viewport),
+    consoleErrors: [],
+    screenshot: path.join(outputDir, `${viewportName}__${slug}.png`),
+    screenshotWritten: false,
+    navigationError: null,
+    captureError: null,
+    screenshotError: null,
+  };
+}
+
+function failureReasons(result) {
+  const reasons = [];
+  if (result.navigationError) reasons.push('navigation error');
+  if (result.status !== null && result.status >= 400) reasons.push(`HTTP ${result.status}`);
+  for (const [shell, count] of Object.entries(result.shellCounts)) {
+    if (count !== 1) reasons.push(`${shell} count ${count}`);
+  }
+  if (result.horizontalOverflow) {
+    reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);
+  }
+  return reasons;
+}
+
+process.umask(0o077);
+
 const results = [];
 let browser;
+let fatalError = null;
+let outputReady = false;
 
 try {
-  browser = await chromium.launch({
+  await mkdir(outputDir, { recursive: true, mode: 0o700 });
+  await chmod(outputDir, 0o700);
+  outputReady = true;
+
+  const launchOptions = {
     executablePath,
     headless: true,
-    args: ['--no-sandbox'],
-  });
+    ...(allowNoSandbox ? { args: ['--no-sandbox'] } : {}),
+  };
+  browser = await chromium.launch(launchOptions);
 
-  for (const [viewportName, viewport] of Object.entries(viewports)) {
+  for (const auditCase of auditCases) {
+    const result = createResult(auditCase);
     let context;
+    let page;
+
     try {
-      context = await browser.newContext({ viewport });
+      context = await browser.newContext({ viewport: auditCase.viewport });
+      page = await context.newPage();
 
-      for (const route of routes) {
-        let page;
-        const slug = route.slice(1).replaceAll('/', '__') || 'home';
-        const screenshot = path.join(outputDir, `${viewportName}__${slug}.png`);
-        const consoleErrors = [];
-        let status = null;
-        let navigationError = null;
-        let captureError = null;
-        let screenshotError = null;
-        let metrics = emptyMetrics(viewport);
-
-        try {
-          page = await context.newPage();
-          page.on('console', (message) => {
-            if (message.type() === 'error') consoleErrors.push(message.text());
-          });
-          page.on('pageerror', (error) => consoleErrors.push(error.message));
-
-          try {
-            const response = await page.goto(`${baseUrl}${route}`, {
-              waitUntil: 'domcontentloaded',
-              timeout: 30_000,
-            });
-            status = response?.status() ?? null;
-            await page.waitForTimeout(750);
-          } catch (error) {
-            navigationError = error instanceof Error ? error.message : String(error);
-          }
-
-          try {
-            metrics = await page.evaluate(() => {
-              const viewportWidth = window.innerWidth;
-              const documentWidth = document.documentElement.scrollWidth;
-              const visibleOverflowingElements = [...document.body.querySelectorAll('*')]
-                .map((element) => {
-                  const rect = element.getBoundingClientRect();
-                  const style = window.getComputedStyle(element);
-                  const visible = rect.width > 0
-                    && rect.height > 0
-                    && style.display !== 'none'
-                    && style.visibility !== 'hidden';
-
-                  return {
-                    tag: element.tagName.toLowerCase(),
-                    id: element.id,
-                    className: element.getAttribute('class') || '',
-                    left: Math.round(rect.left * 100) / 100,
-                    right: Math.round(rect.right * 100) / 100,
-                    width: Math.round(rect.width * 100) / 100,
-                    visible,
-                  };
-                })
-                .filter((item) => item.visible && (item.left < -1 || item.right > viewportWidth + 1))
-                .map(({ visible: _visible, ...item }) => item);
-
-              return {
-                title: document.title,
-                bodySummary: document.body.innerText.replace(/\s+/g, ' ').trim().slice(0, 400),
-                viewportWidth,
-                documentWidth,
-                horizontalOverflow: documentWidth > viewportWidth + 1,
-                shellCounts: {
-                  sidebar: document.querySelectorAll('.app-sidebar').length,
-                  topbar: document.querySelectorAll('.app-topbar').length,
-                  main: document.querySelectorAll('.app-main').length,
-                },
-                visibleOverflowingElements,
-              };
-            });
-          } catch (error) {
-            captureError = error instanceof Error ? error.message : String(error);
-          }
-
-          try {
-            await page.screenshot({ path: screenshot, fullPage: true });
-          } catch (error) {
-            screenshotError = error instanceof Error ? error.message : String(error);
-          }
-        } finally {
-          if (page) await page.close().catch(() => {});
+      const recordConsoleError = (value) => {
+        if (result.consoleErrors.length < MAX_CONSOLE_ERRORS) {
+          result.consoleErrors.push(redactAndLimit(value));
         }
+      };
+      page.on('console', (message) => {
+        if (message.type() === 'error') recordConsoleError(message.text());
+      });
+      page.on('pageerror', (error) => recordConsoleError(error.message));
 
-        results.push({
-          route,
-          viewport: viewportName,
-          status,
-          title: metrics.title,
-          bodySummary: metrics.bodySummary,
-          shellCounts: metrics.shellCounts,
-          consoleErrors,
-          viewportWidth: metrics.viewportWidth,
-          documentWidth: metrics.documentWidth,
-          horizontalOverflow: metrics.horizontalOverflow,
-          visibleOverflowingElements: metrics.visibleOverflowingElements,
-          screenshot,
-          navigationError,
-          captureError,
-          screenshotError,
+      try {
+        const response = await page.goto(`${baseUrl}${auditCase.route}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30_000,
         });
+        result.status = response?.status() ?? null;
+        await page.waitForTimeout(750);
+      } catch (error) {
+        result.navigationError = redactAndLimit(error instanceof Error ? error.message : error);
       }
+
+      try {
+        const metrics = await page.evaluate(
+          ({ shouldCaptureBodyText, bodySampleLimit }) => {
+            const viewportWidth = window.innerWidth;
+            const documentWidth = document.documentElement.scrollWidth;
+            const visibleOverflowingElements = [...document.body.querySelectorAll('*')]
+              .map((element) => {
+                const rect = element.getBoundingClientRect();
+                const style = window.getComputedStyle(element);
+                const visible = rect.width > 0
+                  && rect.height > 0
+                  && style.display !== 'none'
+                  && style.visibility !== 'hidden';
+
+                return {
+                  tag: element.tagName.toLowerCase(),
+                  id: element.id.slice(0, 200),
+                  className: (element.getAttribute('class') || '').slice(0, 300),
+                  left: Math.round(rect.left * 100) / 100,
+                  right: Math.round(rect.right * 100) / 100,
+                  width: Math.round(rect.width * 100) / 100,
+                  visible,
+                };
+              })
+              .filter((item) => item.visible && (item.left < -1 || item.right > viewportWidth + 1))
+              .slice(0, 50)
+              .map(({ visible: _visible, ...item }) => item);
+
+            return {
+              title: document.title.slice(0, 300),
+              bodyTextSample: shouldCaptureBodyText
+                ? document.body.innerText.replace(/\s+/g, ' ').trim().slice(0, bodySampleLimit)
+                : null,
+              viewportWidth,
+              documentWidth,
+              horizontalOverflow: documentWidth > viewportWidth + 1,
+              shellCounts: {
+                sidebar: document.querySelectorAll('.app-sidebar').length,
+                topbar: document.querySelectorAll('.app-topbar').length,
+                main: document.querySelectorAll('.app-main').length,
+              },
+              visibleOverflowingElements,
+            };
+          },
+          {
+            shouldCaptureBodyText: captureBodyText,
+            bodySampleLimit: MAX_BODY_SAMPLE_LENGTH,
+          },
+        );
+
+        result.title = redactAndLimit(metrics.title, 300);
+        result.bodySummary = {
+          captureEnabled: captureBodyText,
+          text: captureBodyText
+            ? redactAndLimit(metrics.bodyTextSample, MAX_BODY_SUMMARY_LENGTH)
+            : null,
+        };
+        result.viewportWidth = metrics.viewportWidth;
+        result.documentWidth = metrics.documentWidth;
+        result.horizontalOverflow = metrics.horizontalOverflow;
+        result.shellCounts = metrics.shellCounts;
+        result.visibleOverflowingElements = metrics.visibleOverflowingElements;
+        result.completed = true;
+      } catch (error) {
+        result.captureError = redactAndLimit(error instanceof Error ? error.message : error);
+      }
+
+      try {
+        await page.screenshot({ path: result.screenshot, fullPage: true });
+        await chmod(result.screenshot, 0o600);
+        result.screenshotWritten = true;
+      } catch (error) {
+        result.screenshotError = redactAndLimit(error instanceof Error ? error.message : error);
+      }
+    } catch (error) {
+      result.navigationError ||= redactAndLimit(
+        `case lifecycle error: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
+      if (page) await page.close().catch(() => {});
       if (context) await context.close().catch(() => {});
+      results.push(result);
     }
   }
+} catch (error) {
+  fatalError = redactAndLimit(error instanceof Error ? error.message : error);
 } finally {
   if (browser) await browser.close().catch(() => {});
+
+  const completedCases = new Set(results.map((result) => `${result.viewport}:${result.route}`));
+  for (const auditCase of auditCases) {
+    const key = `${auditCase.viewportName}:${auditCase.route}`;
+    if (completedCases.has(key)) continue;
+
+    const result = createResult(auditCase, false);
+    result.navigationError = redactAndLimit(
+      `audit case not run${fatalError ? `: ${fatalError}` : ''}`,
+    );
+    results.push(result);
+  }
+
+  results.sort((left, right) => {
+    const leftIndex = auditCases.findIndex(
+      (item) => item.viewportName === left.viewport && item.route === left.route,
+    );
+    const rightIndex = auditCases.findIndex(
+      (item) => item.viewportName === right.viewport && item.route === right.route,
+    );
+    return leftIndex - rightIndex;
+  });
+
+  if (outputReady) {
+    const reportPath = path.join(outputDir, 'report.json');
+    await writeFile(reportPath, `${JSON.stringify(results, null, 2)}\n`, { mode: 0o600 });
+    await chmod(reportPath, 0o600);
+  }
 }
 
 const reportPath = path.join(outputDir, 'report.json');
-await writeFile(reportPath, `${JSON.stringify(results, null, 2)}\n`);
-
 const failures = results
-  .map((result) => {
-    const reasons = [];
-    if (result.navigationError) reasons.push('navigation error');
-    if (result.status !== null && result.status >= 400) reasons.push(`HTTP ${result.status}`);
-    for (const [shell, count] of Object.entries(result.shellCounts)) {
-      if (count !== 1) reasons.push(`${shell} count ${count}`);
-    }
-    if (result.horizontalOverflow) {
-      reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);
-    }
-    if (result.captureError) reasons.push('capture error');
-    if (result.screenshotError) reasons.push('screenshot error');
-    return { route: result.route, viewport: result.viewport, reasons };
-  })
+  .map((result) => ({
+    route: result.route,
+    viewport: result.viewport,
+    reasons: failureReasons(result),
+  }))
   .filter((result) => result.reasons.length > 0);
+const coverageComplete = results.length === auditCases.length
+  && results.every((result) => result.attempted && result.completed);
 
 process.stdout.write(`${JSON.stringify({
   pages: results.length,
   failures: failures.length,
-  failureCases: failures,
+  failureCases: failures.slice(0, 10),
+  failureCasesTruncated: Math.max(0, failures.length - 10),
+  coverageComplete,
+  fatalError,
   reportPath,
-  screenshots: results.length,
+  screenshots: results.filter((result) => result.screenshotWritten).length,
 }, null, 2)}\n`);
 
-if (failures.length > 0) process.exitCode = 1;
+if (failures.length > 0 || !coverageComplete || fatalError || !outputReady) process.exitCode = 1;
