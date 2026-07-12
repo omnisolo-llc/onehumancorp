@@ -109,6 +109,25 @@ async fn handle_rpc(
         return Json(resp);
     }
 
+
+    if payload.method == "aider_repomap" {
+        let path = payload
+            .params
+            .as_ref()
+            .and_then(|p| p.get("path"))
+            .and_then(|v| v.as_str())
+            .unwrap_or(".");
+
+        let repomap = crate::aider_repomap::RepoMap::new(path);
+        let result = repomap.generate_map().unwrap_or_else(|e| format!("Error: {}", e));
+
+        return Json(JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(serde_json::Value::String(result)),
+            error: None,
+            id: payload.id.clone(),
+        });
+    }
     if payload.method == "execute_visual_workflow" {
         let workflow_req = payload
             .params
