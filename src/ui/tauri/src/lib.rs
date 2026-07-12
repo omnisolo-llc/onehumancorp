@@ -543,6 +543,32 @@ async fn get_changelog() -> Result<serde_json::Value, String> {
     }
 }
 
+
+#[tauri::command]
+async fn setup_health_check(mode: Option<String>) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
+
+    let url = if let Some(m) = mode {
+        format!("{}/api/onboarding/setup-health?mode={}", backend_url, m)
+    } else {
+        format!("{}/api/onboarding/setup-health", backend_url)
+    };
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -579,6 +605,7 @@ pub fn run() {
             get_help_article,
             get_help_videos,
             get_changelog,
+            setup_health_check,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

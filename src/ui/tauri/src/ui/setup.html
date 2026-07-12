@@ -96,9 +96,16 @@
       }
 
       @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         select,
         textarea,
         input {
+
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
@@ -320,6 +327,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -616,6 +624,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -955,6 +964,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -1298,6 +1308,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
         }
@@ -4394,8 +4405,8 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         // Hybrid Setup Health Check
-        fetch("/api/onboarding/setup-health?mode=standalone")
-          .then((res) => res.json())
+        window.__TAURI__.core.invoke("setup_health_check", { mode: "standalone" })
+
           .then((data) => {
             if (data.status === "error") {
               const errorDiv = document.createElement("div");
