@@ -535,5 +535,118 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
+
+    #[tokio::test]
+    async fn test_execute_tool_calls_with_concurrency_mechanics_ordering() {
+        use std::sync::Mutex;
+
+        struct TrackerExecutor {
+            id: usize,
+            is_read_only: bool,
+            execution_log: Arc<Mutex<Vec<String>>>,
+        }
+
+        #[async_trait::async_trait]
+        impl ToolExecutor for TrackerExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                if self.is_read_only {
+                    {
+                        let mut log = self.execution_log.lock().unwrap();
+                        log.push(format!("RO_START_{}", self.id));
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+                    {
+                        let mut log = self.execution_log.lock().unwrap();
+                        log.push(format!("RO_END_{}", self.id));
+                    }
+                } else {
+                    {
+                        let mut log = self.execution_log.lock().unwrap();
+                        log.push(format!("MUT_START_{}", self.id));
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+                    {
+                        let mut log = self.execution_log.lock().unwrap();
+                        log.push(format!("MUT_END_{}", self.id));
+                    }
+                }
+                Ok(format!("success_{}", self.id))
+            }
+        }
+
+        let execution_log = Arc::new(Mutex::new(Vec::new()));
+
+        let mut tools = Vec::new();
+        let mut calls = Vec::new();
+
+        // 0: Mutating
+        tools.push(Tool {
+            name: "tool_mut_0".to_string(),
+            description: "".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TrackerExecutor { id: 0, is_read_only: false, execution_log: execution_log.clone() }),
+        });
+        calls.push(ToolCall { id: "call_0".to_string(), name: "tool_mut_0".to_string(), arguments: json!({}) });
+
+        // 1: Read-Only
+        tools.push(Tool {
+            name: "tool_ro_1".to_string(),
+            description: "".to_string(),
+            parameters: json!({}),
+            is_read_only: true,
+            execute: Arc::new(TrackerExecutor { id: 1, is_read_only: true, execution_log: execution_log.clone() }),
+        });
+        calls.push(ToolCall { id: "call_1".to_string(), name: "tool_ro_1".to_string(), arguments: json!({}) });
+
+        // 2: Read-Only
+        tools.push(Tool {
+            name: "tool_ro_2".to_string(),
+            description: "".to_string(),
+            parameters: json!({}),
+            is_read_only: true,
+            execute: Arc::new(TrackerExecutor { id: 2, is_read_only: true, execution_log: execution_log.clone() }),
+        });
+        calls.push(ToolCall { id: "call_2".to_string(), name: "tool_ro_2".to_string(), arguments: json!({}) });
+
+        // 3: Mutating
+        tools.push(Tool {
+            name: "tool_mut_3".to_string(),
+            description: "".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TrackerExecutor { id: 3, is_read_only: false, execution_log: execution_log.clone() }),
+        });
+        calls.push(ToolCall { id: "call_3".to_string(), name: "tool_mut_3".to_string(), arguments: json!({}) });
+
+        let cfg = AgentRunConfig::default();
+        let results = ToolExecutionEngine::execute_tool_calls_with_concurrency_mechanics(&calls, &tools, 2, &cfg).await;
+
+        assert_eq!(results.len(), 4);
+        assert_eq!(results[0].as_ref().unwrap().content, "success_0");
+        assert_eq!(results[1].as_ref().unwrap().content, "success_1");
+        assert_eq!(results[2].as_ref().unwrap().content, "success_2");
+        assert_eq!(results[3].as_ref().unwrap().content, "success_3");
+
+        let log = execution_log.lock().unwrap().clone();
+
+        let ro1_start = log.iter().position(|r| r == "RO_START_1").unwrap();
+        let ro2_start = log.iter().position(|r| r == "RO_START_2").unwrap();
+        let ro1_end = log.iter().position(|r| r == "RO_END_1").unwrap();
+        let ro2_end = log.iter().position(|r| r == "RO_END_2").unwrap();
+
+        assert!(ro1_start < ro1_end);
+        assert!(ro2_start < ro2_end);
+        assert!(ro2_start < ro1_end, "RO2 should start before RO1 ends");
+        assert!(ro1_start < ro2_end, "RO1 should start before RO2 ends");
+
+        let mut_0_start = log.iter().position(|r| r == "MUT_START_0").unwrap();
+        let mut_0_end = log.iter().position(|r| r == "MUT_END_0").unwrap();
+        let mut_3_start = log.iter().position(|r| r == "MUT_START_3").unwrap();
+        let mut_3_end = log.iter().position(|r| r == "MUT_END_3").unwrap();
+
+        assert_eq!(mut_0_end, mut_0_start + 1, "Mutating tool 0 should not overlap");
+        assert_eq!(mut_3_end, mut_3_start + 1, "Mutating tool 3 should not overlap");
+    }
+
 }
-// Adding a comment to trigger a commit

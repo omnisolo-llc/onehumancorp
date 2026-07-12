@@ -280,4 +280,119 @@ mod tests {
             _ => panic!("Expected HandoffRequested error"),
         }
     }
+
+
+    /// Executes multiple tool calls using the Master Catalog B.2. "Tools: Concurrent read / Serial write mechanics".
+    /// Read-only tool calls are executed concurrently. Mutating (write) tool calls are executed serially.
+    pub async fn execute_tool_calls_with_concurrency_mechanics(
+        tool_calls: &[ToolCall],
+        tools: &[Tool],
+        max_retries: usize,
+        cfg: &AgentRunConfig,
+    ) -> Vec<Result<ohc_builtin_agent_core::types::ToolResult, ToolError>> {
+        let mut read_only_calls = Vec::new();
+        let mut mutating_calls = Vec::new();
+
+        // Preserve original order via indices
+        for (idx, tc) in tool_calls.iter().enumerate() {
+            let is_read_only = tools
+                .iter()
+                .find(|t| t.name == tc.name)
+                .map(|t| t.is_read_only)
+                .unwrap_or(false);
+
+            if is_read_only {
+                read_only_calls.push((idx, tc.clone()));
+            } else {
+                mutating_calls.push((idx, tc.clone()));
+            }
+        }
+
+        let mut final_results = vec![
+            Err(ToolError::Unexpected("Not executed".to_string()));
+            tool_calls.len()
+        ];
+
+        // 1. Concurrent Read Mechanic
+        if !read_only_calls.is_empty() {
+            tracing::debug!(
+                "Master Catalog B.2: Executing {} read-only tool calls concurrently.",
+                read_only_calls.len()
+            );
+            let mut ro_futures = Vec::new();
+            for (idx, tc) in read_only_calls {
+                let tool_opt = tools.iter().find(|t| t.name == tc.name).cloned();
+                let cfg_clone = cfg.clone();
+                let max_retries = max_retries;
+
+                ro_futures.push(async move {
+                    if let Some(tool) = tool_opt {
+                        let res = Self::execute_tool_with_langgraph_mechanics(
+                            &tool,
+                            &tc,
+                            max_retries,
+                            &cfg_clone,
+                        )
+                        .await;
+                        (idx, tc.id, res)
+                    } else {
+                        (
+                            idx,
+                            tc.id,
+                            Err(ToolError::Unexpected(format!(
+                                "Tool {} not found",
+                                tc.name
+                            ))),
+                        )
+                    }
+                });
+            }
+
+            let ro_results = futures::future::join_all(ro_futures).await;
+            for (idx, tool_call_id, res) in ro_results {
+                final_results[idx] = match res {
+                    Ok(content) => Ok(ohc_builtin_agent_core::types::ToolResult {
+                        tool_call_id,
+                        content,
+                        error: String::new(),
+                    }),
+                    Err(e) => Err(e),
+                };
+            }
+        }
+
+        // 2. Serial Write Mechanic
+        if !mutating_calls.is_empty() {
+            tracing::debug!(
+                "Master Catalog B.2: Executing {} mutating tool calls serially.",
+                mutating_calls.len()
+            );
+            for (idx, tc) in mutating_calls {
+                if let Some(tool) = tools.iter().find(|t| t.name == tc.name) {
+                    let res = Self::execute_tool_with_langgraph_mechanics(
+                        tool,
+                        &tc,
+                        max_retries,
+                        cfg,
+                    )
+                    .await;
+                    final_results[idx] = match res {
+                        Ok(content) => Ok(ohc_builtin_agent_core::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error: String::new(),
+                        }),
+                        Err(e) => Err(e),
+                    };
+                } else {
+                    final_results[idx] = Err(ToolError::Unexpected(format!(
+                        "Tool {} not found",
+                        tc.name
+                    )));
+                }
+            }
+        }
+
+        final_results
+    }
 }
