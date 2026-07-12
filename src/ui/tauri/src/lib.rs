@@ -546,7 +546,7 @@ async fn get_changelog() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 async fn setup_health_check(mode: Option<String>) -> Result<serde_json::Value, String> {
-    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:8080".to_string());
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
 
     let url = if let Some(m) = mode {
         format!("{}/api/onboarding/setup-health?mode={}", backend_url, m)
