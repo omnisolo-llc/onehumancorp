@@ -45,10 +45,26 @@ const normalizedSurfaceSelector = [
   '.app-main .glass-card',
 ].join(',');
 
+const hydrationFailurePattern = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced/i;
+
 test.describe('App shell visual consistency', () => {
   for (const [viewportName, viewport] of Object.entries(viewports)) {
     for (const route of productRoutes) {
       test(`${route} at ${viewportName} uses one product shell without overflow and normalized surfaces`, async ({ page }) => {
+        const hydrationFailures: string[] = [];
+        if (route === '/inbox') {
+          page.on('console', (message) => {
+            if (message.type() === 'error' && hydrationFailurePattern.test(message.text())) {
+              hydrationFailures.push(`console: ${message.text()}`);
+            }
+          });
+          page.on('pageerror', (error) => {
+            if (hydrationFailurePattern.test(error.message)) {
+              hydrationFailures.push(`pageerror: ${error.message}`);
+            }
+          });
+        }
+
         await page.setViewportSize(viewport);
         await page.goto(route, { waitUntil: 'domcontentloaded' });
 
@@ -126,6 +142,12 @@ test.describe('App shell visual consistency', () => {
           expect.soft(utilitySample, 'expected a visible padded .rounded-2xl utility sample').toBeDefined();
           expect.soft(utilitySample?.radius).toBeGreaterThan(0);
           expect.soft(utilitySample?.padding.some((value) => value > 0)).toBe(true);
+        }
+
+        if (route === '/inbox') {
+          await page.waitForLoadState('load');
+          await page.waitForTimeout(1_000);
+          expect(hydrationFailures, 'inbox emitted hydration mismatch/replacement errors').toEqual([]);
         }
       });
     }

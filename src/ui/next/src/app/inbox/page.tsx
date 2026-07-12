@@ -470,6 +470,16 @@ function PowerSyncInboxContent() {
   return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
 }
 
+function InboxLoadingState() {
+  return (
+    <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+      <div className="app-panel">
+        <div className="app-empty">Loading inbox messages...</div>
+      </div>
+    </AppShell>
+  );
+}
+
 function ApiInboxFallback() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -504,13 +514,7 @@ function ApiInboxFallback() {
   }
 
   if (loading) {
-    return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel">
-          <div className="app-empty">Loading inbox messages...</div>
-        </div>
-      </AppShell>
-    );
+    return <InboxLoadingState />;
   }
 
   return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
@@ -519,13 +523,7 @@ function ApiInboxFallback() {
 export default function InboxPage() {
   return (
     <PowerSyncProvider
-      fallback={(
-        <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-          <div className="app-panel">
-            <div className="app-empty">Loading local database...</div>
-          </div>
-        </AppShell>
-      )}
+      fallback={<InboxLoadingState />}
       unsupportedFallback={<ApiInboxFallback />}
     >
       <PowerSyncInboxContent />
