@@ -786,6 +786,7 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+#[derive(Clone, Debug)]
 pub struct AuthInfo {
     pub spiffe_id: String,
     pub org_id: String,
