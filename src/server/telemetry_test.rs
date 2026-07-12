@@ -817,3 +817,22 @@ fn test_telemetry_network_disk_usage() {
         }
     );
 }
+
+#[test]
+fn test_telemetry_batch_pii_redaction() {
+    let payload = serde_json::json!({
+        "labels": {
+            "user_email": "test@example.com",
+            "api_key": "sk-1234567890abcdef",
+            "credit_card": "4111-1111-1111-1111",
+            "safe_metric": 42
+        }
+    });
+
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["labels"]["user_email"], "[REDACTED]", "user_email must be redacted");
+    assert_eq!(redacted["labels"]["api_key"], "[REDACTED]", "api_key must be redacted");
+    assert_eq!(redacted["labels"]["credit_card"], "[REDACTED]", "credit_card must be redacted");
+    assert_eq!(redacted["labels"]["safe_metric"], 42, "safe metrics should remain intact");
+}
