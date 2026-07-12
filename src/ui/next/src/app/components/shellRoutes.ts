@@ -6,7 +6,7 @@ export type ShellRoute = {
 
 const standardSubtitle = "Use this workspace from the dashboard navigation.";
 
-const pageOwnedPrefixes = [
+const pageOwnedExactRoutes = new Set([
   "/action-center",
   "/agent-activity",
   "/ai-usage-paywall",
@@ -15,6 +15,7 @@ const pageOwnedPrefixes = [
   "/business-analytics",
   "/cost-dashboard",
   "/dashboard",
+  "/dashboard/campaigns",
   "/diagnostics",
   "/edge-storefront-setup",
   "/embed-builder",
@@ -30,15 +31,26 @@ const pageOwnedPrefixes = [
   "/orders",
   "/pipeline",
   "/products",
-  "/proposals",
-  "/quotes",
   "/scaling",
   "/services",
   "/settings",
   "/staff",
   "/triage",
   "/viral-product-widget",
-] as const;
+]);
+
+const guardOwnedExactRoutes = new Set([
+  "/dashboard/bookings",
+  "/dashboard/daily-work",
+  "/dashboard/ledger",
+  "/dashboard/receipt",
+  "/products/new",
+  "/proposals/customer-view",
+  "/proposals/new",
+  "/services/new",
+]);
+
+const pageOwnedDynamicPrefixes = ["/proposals", "/quotes"] as const;
 
 const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/abandoned-cart": { title: "Abandoned Cart" },
@@ -128,6 +140,20 @@ function matchesPrefix(pathname: string, prefix: string) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+function matchesSingleSegmentRoute(pathname: string, prefix: string) {
+  if (!pathname.startsWith(`${prefix}/`)) return false;
+
+  const remainder = pathname.slice(prefix.length + 1);
+  return remainder.length > 0 && !remainder.includes("/");
+}
+
+function isPageOwned(pathname: string) {
+  if (guardOwnedExactRoutes.has(pathname)) return false;
+  if (pageOwnedExactRoutes.has(pathname)) return true;
+
+  return pageOwnedDynamicPrefixes.some((prefix) => matchesSingleSegmentRoute(pathname, prefix));
+}
+
 function longestMatchingPrefix(pathname: string, prefixes: readonly string[]) {
   return prefixes
     .filter((prefix) => matchesPrefix(pathname, prefix))
@@ -147,12 +173,11 @@ function titleFromPath(pathname: string) {
 
 export function resolveShellRoute(pathname: string | null): ShellRoute {
   const safePathname = pathname || "/";
-  const pagePrefix = longestMatchingPrefix(safePathname, pageOwnedPrefixes);
   const metadataPrefix = longestMatchingPrefix(safePathname, Object.keys(routeMetadata));
   const metadata = metadataPrefix ? routeMetadata[metadataPrefix] : undefined;
 
   return {
-    owner: pagePrefix ? "page" : "guard",
+    owner: isPageOwned(safePathname) ? "page" : "guard",
     title: metadata?.title ?? titleFromPath(safePathname),
     subtitle: metadata?.subtitle ?? standardSubtitle,
   };

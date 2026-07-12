@@ -36,24 +36,40 @@ describe("resolveShellRoute", () => {
     "/orders",
     "/pipeline",
     "/products",
-    "/proposals",
-    "/quotes",
     "/scaling",
     "/services",
     "/settings",
     "/staff",
     "/triage",
     "/viral-product-widget",
-  ])("assigns page-owned route %s to the page", (pathname) => {
+  ])("assigns exact shell-owning route %s to the page", (pathname) => {
     expect(resolveShellRoute(pathname).owner).toBe("page");
   });
 
-  test.each(["/dashboard/campaigns", "/proposals/example"])(
-    "uses page ownership for nested route %s",
+  test.each(["/dashboard/campaigns", "/proposals/example", "/quotes/example"])(
+    "uses page ownership for shell-owning descendant %s",
     (pathname) => {
       expect(resolveShellRoute(pathname).owner).toBe("page");
     },
   );
+
+  test.each([
+    ["/dashboard/bookings", "Dashboard"],
+    ["/dashboard/daily-work", "Dashboard"],
+    ["/dashboard/ledger", "Dashboard"],
+    ["/dashboard/receipt", "Dashboard"],
+    ["/orders/example-id", "Orders"],
+    ["/products/new", "Products"],
+    ["/proposals/new", "Proposals"],
+    ["/proposals/customer-view", "Proposals"],
+    ["/services/new", "Services"],
+  ])("assigns shell-less descendant %s to the guard", (pathname, title) => {
+    expect(resolveShellRoute(pathname)).toEqual({
+      owner: "guard",
+      title,
+      subtitle: "Use this workspace from the dashboard navigation.",
+    });
+  });
 
   test.each(["/agents", "/visual-workflow"])(
     "assigns shell-less workspace route %s to the guard",
