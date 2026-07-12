@@ -15,27 +15,27 @@
 **Files:**
 - Modify: `src/agents/builtin/agent.rs`
 
-- [ ] **Step 1: Write the failing receiver-drop regression**
+- [x] **Step 1: Write the failing receiver-drop regression**
 
 Add a blocking `LlmClient` whose `chat` future sets an atomic flag when dropped. Start `Agent::query`, wait until `chat` begins, drop the returned receiver, and require the flag to become true within one second.
 
-- [ ] **Step 2: Verify the current unbounded producer does not cancel**
+- [x] **Step 2: Verify the current unbounded producer does not cancel**
 
 Run: `cargo test -p ohc_builtin_agent query_stops_when_receiver_is_dropped --lib`
 
 Expected: FAIL by timeout because the unbounded sender never observes receiver closure.
 
-- [ ] **Step 3: Bound the channel and race execution against closure**
+- [x] **Step 3: Bound the channel and race execution against closure**
 
 Change the return type to `tokio::sync::mpsc::Receiver<AgentEvent>`, construct `mpsc::channel(64)`, use `try_send` in the synchronous callback, and wrap `self.run(...)` in `tokio::select!` with `tx.closed()`. Await the terminal `TaskError` send only when the run itself fails.
 
-- [ ] **Step 4: Run focused and stream regressions**
+- [x] **Step 4: Run focused and stream regressions**
 
 Run: `cargo test -p ohc_builtin_agent query_stops_when_receiver_is_dropped --lib && cargo test -p ohc_builtin_agent stream_tests --lib`
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 5: Commit query cancellation**
+- [x] **Step 5: Commit query cancellation**
 
 ```bash
 git add src/agents/builtin/agent.rs
