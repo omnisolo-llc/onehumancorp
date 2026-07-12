@@ -113,6 +113,7 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       });
     expect(hasHorizontalScroll).toBe(false);
     // Verify touch targets height
+    await page.locator('.next-step-btn').first().waitFor({ state: 'visible' });
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
   });
@@ -248,6 +249,7 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     await page.setViewportSize({ width: 375, height: 812   });
     await page.goto('http://mock/setup.html');
     // Verify touch targets height
+    await page.locator('.next-step-btn').first().waitFor({ state: 'visible' });
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
     });
@@ -255,7 +257,8 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     await page.setViewportSize({ width: 375, height: 812   });
     await page.goto('http://mock/setup.html');
     await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
-    const inputbox = await page.locator('label.context-card').first().boundingBox();
+    await page.locator("label.context-card").first().waitFor({ state: "visible" });
+    const inputbox = await page.locator("label.context-card").first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
     });
   });
