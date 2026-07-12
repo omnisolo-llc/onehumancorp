@@ -54,60 +54,30 @@ export const PowerSyncProvider = ({
     if (supported !== true) return;
 
     let cancelled = false;
-    let powerSyncDatabase: PowerSyncDatabase | null = null;
-    let closing = false;
 
-    const closeDatabase = async () => {
-      if (!powerSyncDatabase || closing) return;
-      closing = true;
-
-      try {
-        await powerSyncDatabase.disconnect();
-      } catch (err) {
-        console.error(err);
-      }
-
-      try {
-        await powerSyncDatabase.close();
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    const init = async () => {
-      powerSyncDatabase = await getPowerSyncDB();
-      if (cancelled) {
-        await closeDatabase();
-        return;
-      }
-
-      await powerSyncDatabase.init();
-      if (cancelled) {
-        await closeDatabase();
-        return;
-      }
-
-      const connector = new BackendConnector();
-      await powerSyncDatabase.connect(connector);
-      if (cancelled) {
-        await closeDatabase();
-        return;
-      }
-
-      setPowerSync(powerSyncDatabase);
-      setReady(true);
-    };
-
-    void init().catch((err) => {
+    const handleError = (err: unknown) => {
       if (cancelled) return;
       console.error(err);
       setError(err instanceof Error ? err : new Error('Failed to initialize PowerSync'));
-      void closeDatabase();
-    });
+    };
+
+    const init = async () => {
+      const powerSyncDatabase = await getPowerSyncDB();
+      if (cancelled) return;
+
+      await powerSyncDatabase.init();
+      if (cancelled) return;
+
+      const connector = new BackendConnector();
+      setPowerSync(powerSyncDatabase);
+      setReady(true);
+      void powerSyncDatabase.connect(connector).catch(handleError);
+    };
+
+    void init().catch(handleError);
 
     return () => {
       cancelled = true;
-      void closeDatabase();
     };
   }, [supported]);
 

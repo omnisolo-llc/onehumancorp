@@ -52,6 +52,7 @@ test.describe('App shell visual consistency', () => {
     for (const route of productRoutes) {
       test(`${route} at ${viewportName} uses one product shell without overflow and normalized surfaces`, async ({ page }) => {
         const hydrationFailures: string[] = [];
+        const pageErrors: string[] = [];
         if (route === '/inbox') {
           page.on('console', (message) => {
             if (message.type() === 'error' && hydrationFailurePattern.test(message.text())) {
@@ -59,9 +60,7 @@ test.describe('App shell visual consistency', () => {
             }
           });
           page.on('pageerror', (error) => {
-            if (hydrationFailurePattern.test(error.message)) {
-              hydrationFailures.push(`pageerror: ${error.message}`);
-            }
+            pageErrors.push(error.message);
           });
         }
 
@@ -145,9 +144,12 @@ test.describe('App shell visual consistency', () => {
         }
 
         if (route === '/inbox') {
-          await page.waitForLoadState('load');
-          await page.waitForTimeout(1_000);
+          await expect(page.getByTestId('inbox-settled')).toBeVisible({ timeout: 15_000 });
+          await page.evaluate(() => new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          }));
           expect(hydrationFailures, 'inbox emitted hydration mismatch/replacement errors').toEqual([]);
+          expect(pageErrors, 'inbox emitted uncaught page errors').toEqual([]);
         }
       });
     }
