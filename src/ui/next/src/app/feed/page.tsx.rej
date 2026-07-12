@@ -1,0 +1,17 @@
+--- page.tsx
++++ page.tsx
+@@ -588,6 +588,14 @@
+              data-testid="simulate-shift-coverage-btn"
+              className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+           >
++             Shift Coverage
++          </button>
++          <button
++             onClick={simulateInvoiceDraft}
++             data-testid="simulate-invoice-draft-btn"
++             className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
++          >
++             Draft Invoice
+           </button>
+           <button
+              onClick={simulateInvoiceFollowup}
