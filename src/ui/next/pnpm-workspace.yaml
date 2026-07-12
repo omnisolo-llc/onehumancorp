@@ -3,13 +3,21 @@ packages:
 allowBuilds:
   '@journeyapps/wa-sqlite': true
   '@scarf/scarf': true
+  '@tree-sitter-grammars/tree-sitter-yaml': true
+  core-js-pure: true
   esbuild: true
   sharp: true
+  tree-sitter: true
+  tree-sitter-json: true
 onlyBuiltDependencies:
   - '@journeyapps/wa-sqlite'
   - '@scarf/scarf'
+  - '@tree-sitter-grammars/tree-sitter-yaml'
+  - core-js-pure
   - esbuild
   - sharp
+  - tree-sitter
+  - tree-sitter-json
 overrides:
   dompurify: 3.4.11
   'esbuild@0.28.0': 0.28.1
