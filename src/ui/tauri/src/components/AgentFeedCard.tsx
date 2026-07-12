@@ -39,13 +39,13 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
 
             <div className="flex flex-col gap-2 mt-2">
                 <button
-                    onClick={() => onApprove(draft.draft_id)}
+                    onClick={() => onApprove(draft.draft_id)} data-testid="feed-approve-btn"
                     className="w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 text-white rounded-[8px] font-medium transition-colors"
                 >
                     Approve & Send
                 </button>
                 <button
-                    onClick={() => onEdit(draft.draft_id)}
+                    onClick={() => onEdit(draft.draft_id)} data-testid="feed-dismiss-btn"
                     className="w-full min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] font-medium transition-colors"
                 >
                     Edit Draft
