@@ -187,6 +187,10 @@ impl AgentServiceImpl {
         }
     }
 
+    fn completed_task_memory_record(&self, content: String) -> EmbeddingRecord {
+        build_completed_task_memory_record(&self.tenant, &self.agent_id, content)
+    }
+
     pub async fn init_memory(&mut self) {
         if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR")
@@ -512,7 +516,7 @@ impl AgentServiceImpl {
         let provider = self.effective_provider_owned(&req.llm_provider);
         let model = self.resolve_model_for_request(&provider, &req.model);
 
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+        let org_id = self.tenant.as_str();
 
         let memories = if let Some(store) = &self.memory {
             let embedding = if !req.task.is_empty() {
@@ -521,7 +525,7 @@ impl AgentServiceImpl {
                 vec![]
             };
             store
-                .semantic_search(&org_id, &embedding, 5)
+                .semantic_search(org_id, &embedding, 5)
                 .await
                 .map(|records| {
                     records
@@ -588,7 +592,7 @@ impl AgentServiceImpl {
                 self.memory.as_ref().map(|repo| {
                     Arc::new(crate::memory_store::PersistentMemoryStore {
                         repo: repo.clone(),
-                        tenant_id: org_id.clone(),
+                        tenant_id: org_id.to_string(),
                         agent_id: self.agent_id.clone(),
                         llm: llm.clone(),
                     }) as Arc<dyn crate::memory_store::LongTermMemory>
@@ -885,6 +889,28 @@ impl AgentServiceImpl {
     }
 }
 
+fn build_completed_task_memory_record(
+    tenant: &crate::tools::tenant::TenantContext,
+    agent_id: &str,
+    content: String,
+) -> EmbeddingRecord {
+    let now = chrono::Utc::now();
+    EmbeddingRecord {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant.as_str().to_string(),
+        agent_id: agent_id.to_string(),
+        content,
+        embedding: vec![],
+        source_type: "TASK_SUMMARY".to_string(),
+        created_at: now,
+        last_referenced_at: now,
+        reference_count: 0,
+        reliability_score: 50,
+        owner_override: false,
+        metadata: None,
+    }
+}
+
 impl Drop for AgentServiceImpl {
     fn drop(&mut self) {
         if let Some(handle) = self.worker_handle.take() {
@@ -924,6 +950,8 @@ impl AgentService for AgentServiceImpl {
             .await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
+        let memory_tenant = self.tenant.clone();
+        let memory_agent_id = self.agent_id.clone();
 
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
@@ -1111,22 +1139,11 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let org_id =
-                    std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                let record = EmbeddingRecord {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: org_id,
-                    agent_id: "agent".to_string(),
-                    content: content.clone(),
-                    embedding: vec![],
-                    source_type: "TASK_SUMMARY".to_string(),
-                    created_at: chrono::Utc::now(),
-                    last_referenced_at: chrono::Utc::now(),
-                    reference_count: 0,
-                    reliability_score: 50,
-                    owner_override: false,
-                    metadata: None,
-                };
+                let record = build_completed_task_memory_record(
+                    &memory_tenant,
+                    &memory_agent_id,
+                    content.clone(),
+                );
                 let _ = store.upsert(&record).await;
             }
         });
@@ -1674,6 +1691,21 @@ pub async fn start_builtin_agent(
 #[cfg(test)]
 mod memory_tests {
     use super::*;
+
+    #[test]
+    fn service_uses_captured_tenant_for_memory_records() {
+        let service = AgentServiceImpl::new_for_tenant(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Disabled,
+            crate::tools::tenant::TenantContext::new("org-a").expect("tenant"),
+        );
+
+        let record = service.completed_task_memory_record("completed task".to_string());
+
+        assert_eq!(record.tenant_id, "org-a");
+        assert_eq!(record.content, "completed task");
+    }
 
     #[tokio::test]
     async fn test_redis_memory_initialization() {
