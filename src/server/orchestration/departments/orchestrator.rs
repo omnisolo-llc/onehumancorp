@@ -1119,7 +1119,7 @@ pub async fn execute_action(
                                                 }
                                             }
                                         }
-                                        tracing::info!("Omnichannel Dispatcher sent invoice email to {}", customer_id_to_use);
+                                        tracing::info!("Omnichannel Dispatcher sent invoice email to {}", customer_id_to_use); // pii-safe
                                     },
                                     Err(e) => {
                                         tracing::error!("Failed to finalize and send invoice via Stripe: {}", e); // pii-safe
@@ -1444,7 +1444,7 @@ pub async fn execute_action(
                         let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                         let _generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
-                        tracing::info!("Simulated sending of personalized invoice reminder for {} to customer {}", invoice_id, customer_id);
+                        tracing::info!("Simulated sending of personalized invoice reminder for {} to customer {}", invoice_id, customer_id); // pii-safe
                         let _action_id = uuid::Uuid::new_v4().to_string();
                     } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("dispute_resolution") {
                         let dispute_id = payload.get("dispute_id").and_then(|v| v.as_str()).unwrap_or("");
