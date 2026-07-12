@@ -1122,6 +1122,26 @@ pub async fn capture_payment_intent_handler(
                                         .execute(&mut *agent_tx).await;
                                     let _ = agent_tx.commit().await;
                                 }
+
+                                // Draft success card in agent feed
+                                if let Ok(mut feed_tx) = crate::db::get_pool().begin().await {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'terminal', $3, $4, 'PENDING_APPROVAL', NOW(), NOW())"
+                                    )
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&tenant_id)
+                                    .bind(serde_json::json!({
+                                        "feature_type": "receipt_draft",
+                                        "transaction_successful": true,
+                                        "payment_intent_id": req_data.payment_intent_id,
+                                    }))
+                                    .bind(serde_json::json!({
+                                        "description": "Transaction successful. Send receipt?"
+                                    }))
+                                    .execute(&mut *feed_tx)
+                                    .await;
+                                    let _ = feed_tx.commit().await;
+                                }
                             },
                             Err(e) => {
                                 tracing::error!("Failed to commit inventory after successful capture: {}", e);
