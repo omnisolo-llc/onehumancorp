@@ -98,7 +98,7 @@ pub async fn handle_voice_command(
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
 
-    let (mut dept, description, mut action_payload, final_transcription) = if api_key.is_empty() || api_key == "fake-key" {
+    let (mut dept, description, action_payload, final_transcription) = if api_key.is_empty() || api_key == "fake-key" {
         // Fallback for missing api key (tests)
         if transcription.contains("quote") {
             let total = 35000;
