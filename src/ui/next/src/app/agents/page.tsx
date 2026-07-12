@@ -253,10 +253,10 @@ export default function AgentsPage() {
     }
   }
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full min-w-0 max-w-full bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
       <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
-      <header className="border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <header className="min-w-0 max-w-full border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
+        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <Link href="/dashboard" className="text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline">
@@ -303,7 +303,7 @@ export default function AgentsPage() {
               </div>
             </div>
           </div>
-          <nav className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar" aria-label="Agent feature sections">
+          <nav className="flex w-full min-w-0 max-w-full gap-2 overflow-x-auto pb-1 custom-scrollbar" aria-label="Agent feature sections">
             {[
               ['browse', 'Browse experts'],
               ['teams', 'Expert Teams'],
@@ -368,8 +368,8 @@ export default function AgentsPage() {
           </div>
         </div>
       )}
-      <main className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
-        <section className="space-y-6">
+      <main className="mx-auto grid w-full min-w-0 max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
+        <section className="min-w-0 max-w-full space-y-6">
           {(panel === 'browse' || panel === 'teams') && (
             <CatalogPanel
               panel={panel}
@@ -404,7 +404,7 @@ export default function AgentsPage() {
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
         </section>
-        <aside className="space-y-5">
+        <aside className="min-w-0 max-w-full space-y-5">
           <ComposerPanel
             selected={selected}
             mode={mode}
@@ -497,9 +497,9 @@ function CatalogPanel({
   return (
     <>
       {/* Featured Scenarios Carousel */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-6 shadow-sm">
+      <div className="w-full min-w-0 max-w-full rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-6 shadow-sm">
         <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Featured Scenarios</h3>
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-350 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent snap-x">
+        <div className="flex w-full min-w-0 max-w-full gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-350 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent snap-x">
           {featuredScenarios.map((scenario) => (
             <div
               key={scenario.title}

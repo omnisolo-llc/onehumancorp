@@ -17,6 +17,8 @@ body {
 .app-shell {
   min-height: 100vh;
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 246, 248, 0.92)),
     #f4f6f8;
@@ -144,6 +146,7 @@ body {
 .app-main {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
 }
 
 .app-topbar {
@@ -200,7 +203,14 @@ body {
 }
 
 .app-page {
+  min-width: 0;
+  max-width: 100%;
   padding: 20px 24px 28px;
+}
+
+.app-page > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-grid {
@@ -544,6 +554,7 @@ body {
   }
 
   .app-topbar {
+    height: auto;
     position: sticky;
     align-items: flex-start;
     flex-direction: column;
@@ -553,8 +564,14 @@ body {
 
   .app-topbar-right,
   .app-status-strip {
+    min-width: 0;
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .app-page {
+    padding: 14px;
+    overflow-x: hidden;
   }
 
   .app-grid.metrics,
@@ -718,10 +735,17 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.app-shell .app-card.rounded-full,
+.app-shell .app-panel.rounded-full,
+.app-shell .glassmorphism.rounded-full,
+.app-shell .glass-card.rounded-full {
+  border-radius: 9999px !important;
 }
 
 @media (prefers-color-scheme: dark) {
