@@ -10,6 +10,10 @@ describe('GrowBusinessCard', () => {
   it('contains correct links', () => {
     render(<GrowBusinessCard />);
 
+
+    const streakLink = screen.getByRole('link', { name: /Streak Widget/i });
+    expect(streakLink).toHaveAttribute('href', '/viral-streak-widget');
+
     const promoterLink = screen.getByRole('link', { name: /Promoter Agent/i });
     expect(promoterLink).toHaveAttribute('href', '/viral-post-generator');
 
