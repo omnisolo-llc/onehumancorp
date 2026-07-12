@@ -2,7 +2,7 @@ backend:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
+    minReplicas: 3
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   headless: false
@@ -25,7 +25,7 @@ chatwoot:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
+    minReplicas: 3
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   databaseUrl: ''
@@ -98,7 +98,7 @@ ohcCore:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
+    minReplicas: 3
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   enabled: true
@@ -119,7 +119,7 @@ powersync:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
+    minReplicas: 3
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   enabled: true
