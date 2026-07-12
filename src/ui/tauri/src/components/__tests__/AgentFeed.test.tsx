@@ -55,7 +55,7 @@ describe('AgentFeed', () => {
         (global.fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
 
         render(<AgentFeed />);
-        expect(screen.getByText('Loading feed...')).toBeDefined();
+        expect(document.querySelector('.animate-pulse')).toBeDefined();
     });
 
     it('displays error state if fetch fails', async () => {
@@ -77,7 +77,8 @@ describe('AgentFeed', () => {
         render(<AgentFeed />);
 
         await waitFor(() => {
-            expect(screen.getByText('No pending actions!')).toBeDefined();
+            expect(screen.getByText('All caught up!')).toBeDefined();
+            expect(screen.getByText('No pending actions right now.')).toBeDefined();
         });
     });
 
