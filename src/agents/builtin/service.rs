@@ -74,6 +74,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
+    tenant: crate::tools::tenant::TenantContext,
     memory: Option<Arc<VectorRepository>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     pub redis_memory: Option<Arc<crate::memory_store::RedisMemoryStore>>,
@@ -159,10 +160,25 @@ async fn load_cascading_agents_md(
 
 impl AgentServiceImpl {
     pub fn new(agent_id: impl Into<String>, cfg: AgentConfig, auth: AuthMode) -> Self {
+        Self::new_for_tenant(
+            agent_id,
+            cfg,
+            auth,
+            crate::tools::tenant::TenantContext::system(),
+        )
+    }
+
+    pub fn new_for_tenant(
+        agent_id: impl Into<String>,
+        cfg: AgentConfig,
+        auth: AuthMode,
+        tenant: crate::tools::tenant::TenantContext,
+    ) -> Self {
         Self {
             agent_id: agent_id.into(),
             cfg,
             auth,
+            tenant,
             memory: None,
             llm_override: None,
             anthropic_memory: None,

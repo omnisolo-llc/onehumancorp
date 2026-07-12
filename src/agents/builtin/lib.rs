@@ -97,6 +97,56 @@ fn get_env_int(key: &str, default: i32) -> i32 {
         .unwrap_or(default)
 }
 
+fn resolve_process_tenant(
+    execution_mode: &str,
+    configured_org: Option<&str>,
+) -> Result<tools::tenant::TenantContext, String> {
+    let execution_mode = execution_mode.trim().to_ascii_lowercase();
+    if execution_mode == "standalone" {
+        return match configured_org {
+            Some(organization_id) if !organization_id.trim().is_empty() => {
+                tools::tenant::TenantContext::new(organization_id).map_err(str::to_string)
+            }
+            _ => Ok(tools::tenant::TenantContext::system()),
+        };
+    }
+
+    let organization_id = configured_org
+        .map(str::trim)
+        .filter(|organization_id| !organization_id.is_empty())
+        .ok_or_else(|| {
+            "OHC_ORGANIZATION_ID is required when OHC_AGENT_EXECUTION_MODE is not standalone"
+                .to_string()
+        })?;
+    if organization_id.eq_ignore_ascii_case("system") {
+        return Err("the system tenant is not allowed outside standalone mode".to_string());
+    }
+
+    tools::tenant::TenantContext::new(organization_id).map_err(str::to_string)
+}
+
+#[cfg(test)]
+mod process_tenant_tests {
+    use super::resolve_process_tenant;
+
+    #[test]
+    fn standalone_defaults_to_the_local_system_tenant() {
+        let tenant = resolve_process_tenant("standalone", None).expect("standalone tenant");
+
+        assert_eq!(tenant.as_str(), "system");
+    }
+
+    #[test]
+    fn cloud_requires_a_real_organization() {
+        assert!(resolve_process_tenant("cloud", None).is_err());
+        assert!(resolve_process_tenant("cloud", Some(" ")).is_err());
+        assert!(resolve_process_tenant("cloud", Some("system")).is_err());
+
+        let tenant = resolve_process_tenant("cloud", Some("org-a")).expect("cloud tenant");
+        assert_eq!(tenant.as_str(), "org-a");
+    }
+}
+
 async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, String>> {
     if !task.contains("Use the built-in RunWorkflow tool.") {
         return None;
@@ -274,7 +324,28 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         )
     })?;
 
-    let mut svc_impl = service::AgentServiceImpl::new(agent_id.clone(), cfg.clone(), auth);
+    let execution_mode = std::env::var("OHC_AGENT_EXECUTION_MODE").unwrap_or_else(|_| {
+        if std::env::var("OHC_STANDALONE_MODE")
+            .map(|value| value == "true")
+            .unwrap_or(true)
+        {
+            "standalone".to_string()
+        } else {
+            "cloud".to_string()
+        }
+    });
+    let configured_org = std::env::var("OHC_ORGANIZATION_ID").ok();
+    let tenant = resolve_process_tenant(&execution_mode, configured_org.as_deref()).map_err(
+        |error| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("invalid agent tenant configuration: {error}"),
+            )
+        },
+    )?;
+
+    let mut svc_impl =
+        service::AgentServiceImpl::new_for_tenant(agent_id.clone(), cfg.clone(), auth, tenant);
     svc_impl.init_memory().await;
 
     if let Some(t) = task {
