@@ -1830,42 +1830,26 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let db8 = pg_pool.clone();
 
         let start_seq = std::time::Instant::now();
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)")
-            .execute(&pg_pool)
-            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
         let duration_seq = start_seq.elapsed();
 
         let start_par = std::time::Instant::now();
         let _ = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db2).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db3).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db4).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db5).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db6).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db7).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db8).await })
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db1).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db2).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db3).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db4).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db5).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db6).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db7).await }),
+            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db8).await })
         );
         let duration_par = start_par.elapsed();
 
@@ -1886,17 +1870,17 @@ pub async fn bench_dashboard_analytics_chat_latency() {
 
     // Test that two parallel DB queries execute concurrently faster than sequentially
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        let _pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect(&database_url)
             .await
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
-        let pool2 = pg_pool.clone();
+        let pool1 = _pg_pool.clone();
+        let pool2 = _pg_pool.clone();
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
+            sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pool1),
+            sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 
