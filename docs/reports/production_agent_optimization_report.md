@@ -31,6 +31,27 @@ Remediation update: F-01 through F-08 have now been addressed in focused follow-
 | Telemetry privacy | Removed raw task and error bodies from LangSmith/Langfuse logs while retaining provider, event, run ID, and coarse error class | Emitted-log capture regression, 2 observability tests, and all 520 agent tests passed |
 | JavaScript supply chain | Constrained vulnerable transitive releases in root/UI pnpm and npm graphs and added four production audit gates to CI | Root/UI pnpm and npm production audits report zero vulnerabilities; 817 UI tests, 58 CLI tests, MCP smoke test, and Bazel UI target pass |
 
+### UI-01 — Universal UI shell and rendered consistency
+
+**Status (2026-07-12): Verified in production mode.** The styling outage came from a Tailwind 4 PostCSS pipeline being applied to an application whose configuration and utilities target Tailwind 3. The standalone UI now uses `tailwindcss` 3.4.19 through the standard `tailwindcss` and `autoprefixer` PostCSS plugins; `npm run test:tailwind-config` reports `Tailwind/PostCSS pipeline is coherent.`
+
+Shell ownership is explicit rather than inferred from page markup. `ProductShellGuard` resolves every route to either universal `AppShell` ownership or intentional page ownership, and `AppShell` owns the sole sidebar, compact navigation, topbar, main canvas, status/actions, and Help Center entry. The responsive repair constrains sticky/phone canvases to the shell content box, keeps document overflow at zero, preserves horizontal scrolling only inside compact navigation/tab lists, and normalizes shared card/panel/list surfaces to the common 8 px design ceiling while preserving working Tailwind utility generation. Mobile root-layout controls no longer compete with shell actions: the two redundant help triggers hide below `sm`, and the unique Voice Assistant occupies a tested top-right brand-row position. A 320/390 px collision matrix verifies it remains inside the viewport and intersects neither the brand mark, compact nav, topbar, nor visible product actions.
+
+Inbox hydration and offline behavior are stable. PowerSync opens its local database after client mount, holds the settled local empty/data state through connector or backend sync failure, and does not replace server HTML during hydration. The empty inbox regression also rejects literal `\\n` text artifacts. Production browser coverage waits for `inbox-settled` and recorded zero uncaught page errors or hydration mismatch/replacement messages on desktop and mobile.
+
+Fresh verification at the final UI head produced the following exact evidence:
+
+- `pnpm exec vitest run`: 222 files and 883 tests passed, zero failures.
+- `pnpm exec tsc --noEmit`: exit 0 with no diagnostics. This required loading `vitest/globals` in the TypeScript environment and aligning test route contexts/browser mocks/fixtures with their production contracts; checks were not suppressed.
+- `pnpm run build`: Next.js 14.2.35 compiled and type-checked successfully, generated 427/427 static pages, and exited 0. A pre-existing duplicate `simulateInvoiceDraft` handler and control in `/feed` was removed with a source regression that requires one owner.
+- Production Playwright, using the config `webServer`, line reporter, one worker, and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium`: 55/55 passed in 1.2 minutes. This comprises the original 36 app-shell cases, 12 mobile collision cases at 320/390 px, and 7 styled-page checks. Every shell case found exactly one `.app-sidebar`, `.app-topbar`, and `.app-main`, no horizontal document overflow, and no shared surface radius above the normalized threshold.
+- The secured `scripts/visual-audit.mjs` run against `next start`: 36 pages, 0 failures, `coverageComplete: true`, no fatal error, and 36/36 screenshots. The matrix is 18 routes by 2 viewports: dashboard, assistant, orders, inventory, inbox, agents, settings, business analytics, integrations, calendar, diagnostics, agent marketplace, visual workflow, website builder, booking widget, storefront widget, onboarding, and login at 1440x1000 and 390x844.
+- Original-resolution inspection confirmed one navigation shell, readable hierarchy, unobscured actions, consistent shared surfaces, and no clipping on desktop/mobile dashboard, agents, integrations, website builder, and login, plus mobile agent marketplace and inbox. The agents/integrations tab rows are valid local horizontal scrollers rather than document overflow. The mobile voice control clears the centered brand/navigation; website-builder and login calls to action, marketplace search/error state, integration Connect actions, and inbox panels remain unobscured.
+- `bazel test //src/ui/next:next_vitest --test_output=errors`: 1/1 target passed.
+- Root/UI `pnpm audit --prod`: both report `No known vulnerabilities found`. Root/UI `npm audit --omit=dev`: both report `found 0 vulnerabilities`.
+
+The production server still logs expected missing-service errors in this isolated environment: proxy/fetch connection refusals for local backends on ports 8080 and 18789, Postgres on 5432, and the backend-served Swagger CSS/bundle. Next also identifies request-header/request-URL API routes as dynamic during static generation. These messages did not cause navigation, hydration, shell, screenshot, test, or build failures.
+
 ## Boundary matrix
 
 | Path | Trust boundary and authorization source | Tenant handling | Deadline/cancellation | Telemetry | Conclusion |
