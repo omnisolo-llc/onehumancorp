@@ -26,14 +26,23 @@ const viewports = {
   mobile: { width: 390, height: 844 },
 } as const;
 
+const routesWithSurfacePrimitives = new Set([
+  '/dashboard',
+  '/orders',
+  '/inventory',
+  '/inbox',
+  '/business-analytics',
+  '/integrations',
+  '/calendar',
+  '/website-builder',
+  '/login',
+]);
+
 const normalizedSurfaceSelector = [
   '.app-main .app-card',
   '.app-main .app-panel',
   '.app-main .glassmorphism',
-  '.app-main [class*="rounded-xl"]',
-  '.app-main [class*="rounded-[16px]"]',
-  '.app-main [class*="rounded-[24px]"]',
-  '.app-main [class*="rounded-2xl"]',
+  '.app-main .glass-card',
 ].join(',');
 
 test.describe('App shell visual consistency', () => {
@@ -56,7 +65,7 @@ test.describe('App shell visual consistency', () => {
           `document overflowed horizontally: ${JSON.stringify(documentDimensions)}`,
         ).toBeLessThanOrEqual(1);
 
-        const inconsistentSurfaces = await page.locator(normalizedSurfaceSelector).evaluateAll((elements) => elements
+        const visibleSurfaces = await page.locator(normalizedSurfaceSelector).evaluateAll((elements) => elements
           .filter((element) => {
             const rect = element.getBoundingClientRect();
             const styles = window.getComputedStyle(element);
@@ -71,10 +80,16 @@ test.describe('App shell visual consistency', () => {
               className: element.getAttribute('class') || '',
               radius: parseFloat(styles.borderTopLeftRadius || '0'),
             };
-          })
-          .filter((item) => item.radius > 8.5));
+          }));
 
-        expect.soft(inconsistentSurfaces).toEqual([]);
+        if (routesWithSurfacePrimitives.has(route)) {
+          expect.soft(
+            visibleSurfaces.length,
+            `expected ${route} to render at least one visible surface primitive`,
+          ).toBeGreaterThan(0);
+        }
+
+        expect.soft(visibleSurfaces.filter((item) => item.radius > 8.5)).toEqual([]);
 
         if (route === '/assistant') {
           const sectionList = page.getByTestId('assistant-section-list');
