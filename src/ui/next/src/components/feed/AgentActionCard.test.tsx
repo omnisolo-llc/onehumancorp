@@ -54,4 +54,51 @@ describe('AgentActionCard', () => {
     expect(screen.getByTestId('save-proposal')).toBeInTheDocument();
     expect(screen.getByTestId('cancel-edit-proposal')).toBeInTheDocument();
   });
+
+
+  it('renders invoice_draft properly', () => {
+    const approval = {
+      id: 'inv-1',
+      tenant_id: 'default',
+      lifecycle_state: 'PENDING_APPROVAL',
+      event_source: 'finance_agent',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      context_payload: {
+        feature_type: 'invoice_draft',
+        project_name: 'Q3 Website Redesign',
+        milestone_name: 'Design Phase',
+        amount_cents: 150000,
+        customer_name: 'Acme Corp'
+      }
+    };
+    const { getByText, getByTestId } = render(<AgentActionCard approval={approval as any} handleDecision={vi.fn()} loadingAction={null} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" wrapDecision={vi.fn()} isActionLoading={() => false} />);
+    expect(getByText('Generated Invoice')).toBeInTheDocument();
+    expect(getByText('Q3 Website Redesign')).toBeInTheDocument();
+    expect(getByText('Design Phase')).toBeInTheDocument();
+    expect(getByText('$1500.00')).toBeInTheDocument();
+    expect(getByTestId('feed-approve-btn')).toBeInTheDocument();
+  });
+
+  it('renders invoice_followup properly', () => {
+    const approval = {
+      id: 'inv-2',
+      tenant_id: 'default',
+      lifecycle_state: 'PENDING_APPROVAL',
+      event_source: 'customer_success_agent',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      context_payload: {
+        feature_type: 'invoice_followup',
+        original_message: 'Acme Corp invoice is 3 days overdue.',
+        generated_response: 'Hi Acme Corp, just a polite reminder...',
+        suggested_channel: 'email'
+      }
+    };
+    const wrapDecision = vi.fn();
+    const { getByText, getByTestId } = render(<AgentActionCard approval={approval as any} handleDecision={vi.fn()} loadingAction={null} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" wrapDecision={wrapDecision} isActionLoading={() => false} />);
+    expect(getByText('Acme Corp invoice is 3 days overdue.')).toBeInTheDocument();
+    expect(getByText('Hi Acme Corp, just a polite reminder...')).toBeInTheDocument();
+    expect(getByTestId('feed-approve-btn')).toBeInTheDocument();
+  });
 });

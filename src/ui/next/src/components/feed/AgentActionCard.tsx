@@ -2128,7 +2128,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "invoice_draft" ? (
+            ?.feature_type === "invoice_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
               onClick={() =>
@@ -2178,6 +2178,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "task" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "proactive_ops" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_followup" ||
           (approval.proposed_action || approval.context_payload)
