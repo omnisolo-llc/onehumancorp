@@ -235,6 +235,27 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .execute(&mut *tx)
                     .await;
 
+                let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&job.tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if let Some(row) = inventory_level_res {
+                    let level_id: String = sqlx::Row::get(&row, "id");
+                    let tx_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'OFFLINE_POS_SYNC', -$4)")
+                        .bind(&tx_id)
+                        .bind(&job.tenant_id)
+                        .bind(level_id)
+                        .bind(quantity_deducted)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+
                 // Record order for offline sync
                 let order_id = uuid::Uuid::new_v4().to_string();
                 let total_amount = (amount_cents as f64) / 100.0;
@@ -457,6 +478,27 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .bind(&job.tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                                .bind(qty)
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                                .map_err(|e| e.to_string())?;
+
+                            if let Some(row) = inventory_level_res {
+                                let level_id: String = sqlx::Row::get(&row, "id");
+                                let tx_id = uuid::Uuid::new_v4().to_string();
+                                sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'OFFLINE_POS_SYNC', -$4)")
+                                    .bind(&tx_id)
+                                    .bind(&job.tenant_id)
+                                    .bind(level_id)
+                                    .bind(qty)
+                                    .execute(&mut *tx)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                            }
 
                             let new_stock = std::cmp::max(0, stock - qty as i32);
 
