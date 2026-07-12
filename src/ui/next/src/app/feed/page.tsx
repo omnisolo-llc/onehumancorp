@@ -70,8 +70,6 @@ export default function FeedPage() {
     }
   };
 
-
-
   useEffect(() => {
 
     fetchFeed();
@@ -597,13 +595,6 @@ export default function FeedPage() {
              className="text-xs bg-green-100 text-green-700 border border-green-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Booking
-          </button>
-          <button
-             onClick={simulateInvoiceDraft}
-             data-testid="simulate-invoice-draft-btn"
-             className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Invoice Draft
           </button>
         </div>
       </div>
