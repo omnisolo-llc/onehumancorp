@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test('Staff Manager handles data format correctly without crashing', async ({ page }) => {
   // Mock the /api/staff endpoint to return the format the backend uses

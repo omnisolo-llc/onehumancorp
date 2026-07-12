@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('AI Review Campaign Builder', () => {
   test('should generate an AI review request campaign draft', async ({ page }) => {

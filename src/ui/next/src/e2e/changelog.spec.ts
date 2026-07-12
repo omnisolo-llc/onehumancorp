@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Release Notes & Changelog', () => {
     test('renders Changelog page with screenshots and can be accessed from AppShell', async ({ page }) => {

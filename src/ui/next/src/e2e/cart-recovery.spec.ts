@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Cart Recovery E2E', () => {
   test('should display Powered by OHC component when generating draft', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Pre-Order Waitlist Engine', () => {
   test('should load the dashboard and click the waitlist link', async ({ page }) => {

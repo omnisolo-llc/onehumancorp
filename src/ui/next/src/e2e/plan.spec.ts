@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 // NOTE: This test requires a docker-sandbox fix to run properly in CI
 // due to pgvector pull permissions in the Bazel test sandbox environment.

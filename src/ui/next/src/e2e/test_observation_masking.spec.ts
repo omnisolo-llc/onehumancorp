@@ -1,5 +1,5 @@
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Observation Masking UI Settings', () => {
   test('Owner can toggle observation masking', async ({ page }) => {

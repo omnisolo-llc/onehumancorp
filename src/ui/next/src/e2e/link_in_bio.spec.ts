@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Link-in-Bio Generator E2E', () => {
   test('User can create and publish link in bio, then view it publicly', async ({ page }) => {

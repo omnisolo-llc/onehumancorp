@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Cart Recovery Auth and Metrics', () => {
   test('Dashboard loads abandoned carts without mock data', async ({ page }) => {

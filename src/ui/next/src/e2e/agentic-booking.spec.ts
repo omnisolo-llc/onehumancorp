@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agentic Service Booking & Quoting CUJ', () => {
   test('Customer requests a service and Owner approves AI quote draft', async ({ page }) => {

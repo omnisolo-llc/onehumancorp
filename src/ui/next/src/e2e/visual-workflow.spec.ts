@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Visual Workflow Builder E2E', () => {
   test('should allow creating and running a visual workflow', async ({ page }) => {

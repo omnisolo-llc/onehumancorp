@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', () => {
   test('Dashboard Unified Feed receives real-time approval_request event', async ({ page }) => {

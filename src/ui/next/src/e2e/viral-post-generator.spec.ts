@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Viral Post Generator Soft Paywall', () => {
     test('should show soft paywall modal when attempting to remove branding', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Milestones Page UI', () => {
   // We navigate naturally through the frontend to reach the page.

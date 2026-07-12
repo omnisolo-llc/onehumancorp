@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('AI Usage Paywall Growth Loop', () => {
   test('displays usage data, upgrade CTA, and Powered by OHC viral branding', async ({ page }) => {

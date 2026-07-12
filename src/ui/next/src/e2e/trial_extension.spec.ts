@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Interactive Trial Extension', () => {
   test('should allow user to claim 7 extra days of pro by sharing on X', async ({ page, context }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Store Wrapped Growth Loop', () => {
     test('dashboard shows the Store Wrapped section and navigates to the wrapped page', async ({ page }) => {

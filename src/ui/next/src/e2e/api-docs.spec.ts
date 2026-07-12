@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('API Documentation', () => {
   test('should load the Swagger UI on the api-docs page', async ({ page }) => {

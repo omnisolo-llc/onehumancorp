@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Growth & Referral Features', () => {
   test('GrowthReferralWidget renders successfully and can generate an invite link', async ({ page }) => {

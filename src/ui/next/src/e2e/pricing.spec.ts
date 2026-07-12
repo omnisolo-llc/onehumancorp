@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Pricing Page Loop', () => {
   test('Pricing page loads and displays tiers correctly', async ({ page }) => {

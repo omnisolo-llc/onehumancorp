@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Translucent Glass UI Aesthetics Verification', () => {
   test.beforeEach(async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Viral Agent Paywall Growth Loop', () => {
     test('intercepts advanced skill toggle and displays trial extension offer', async ({ page }) => {

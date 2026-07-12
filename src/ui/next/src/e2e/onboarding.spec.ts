@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('OnboardingWizard CUJ', () => {
   test.beforeEach(async ({ page }) => {

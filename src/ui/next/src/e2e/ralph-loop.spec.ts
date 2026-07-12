@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('The Ralph Loop UI E2E', () => {
   test('Owner can navigate to Ralph Loop, enter task, and see execution', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Autonomous Influencer and Affiliate Marketing Engine', () => {
     test('customer signs up as an affiliate via checkout success, and commission is tracked in owner dashboard', async ({ page, browser }) => {

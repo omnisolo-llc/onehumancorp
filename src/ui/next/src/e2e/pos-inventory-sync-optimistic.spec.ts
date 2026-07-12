@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {

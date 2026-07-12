@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
   test('creates quote from intake and allows approval', async ({ request, page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {

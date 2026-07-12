@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 import { e2eUrl } from './fixtures';
 
 test.describe('Real Estate Onboarding CUJ', () => {

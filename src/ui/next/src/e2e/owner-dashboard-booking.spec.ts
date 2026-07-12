@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Owner Dashboard Bookings', () => {
   test('Owner can navigate to bookings management view and see AI suggestions context', async ({ page }) => {

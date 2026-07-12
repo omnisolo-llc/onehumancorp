@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 import { Pool } from 'pg';
 
 test.describe('Shift Reassignment Work Triage CUJ', () => {

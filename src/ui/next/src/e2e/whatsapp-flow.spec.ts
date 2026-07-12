@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('WhatsApp Flow CUJ', () => {
   test('Owner connects WhatsApp via Meta Embedded Signup', async ({ page, request }) => {
