@@ -455,11 +455,11 @@
       const editRequiredDeposit = document.getElementById('edit-required-deposit');
 
       let quoteData = {
-        totalCents: 15000, // $150.00
+        totalCents: 0,
         depositPercent: 25,
-        requiredDepositCents: 3750,
+        requiredDepositCents: 0,
         currency: 'USD',
-        tenantId: urlParams.get('tenant') || 'demo-tenant',
+        tenantId: urlParams.get('tenant') || '',
         lineItems: []
       };
 
@@ -472,11 +472,11 @@
       };
 
       const loadQuote = async () => {
-        businessNameEl.innerText = "Carlos' Handyman Services"; // Temporarily keep until business profile API exists
-        quoteIdDisplay.innerText = quoteId || '1029';
+
+        quoteIdDisplay.innerText = quoteId || '';
 
         try {
-          const res = await fetch(`/api/v1/quotes/${quoteId || '1029'}`);
+          const res = await fetch(`/api/v1/quotes/${quoteId}`);
           if (res.ok) {
             const data = await res.json();
             let html = '';
