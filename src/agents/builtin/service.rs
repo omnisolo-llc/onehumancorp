@@ -802,6 +802,7 @@ impl AgentServiceImpl {
             working_dir,
             memory_accessor.clone(),
             observation_store,
+            self.tenant.clone(),
         );
 
         // Add create_skill tool
