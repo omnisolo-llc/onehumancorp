@@ -85,27 +85,27 @@ git commit -m "security: remove tenant selection from agent tools"
 **Files:**
 - Modify: `src/agents/builtin/service.rs`
 
-- [ ] **Step 1: Write failing service tenant tests**
+- [x] **Step 1: Write failing service tenant tests**
 
 Add tests constructing `AgentServiceImpl::new_for_tenant(..., "org-a")` and asserting both run configuration memory queries and completion records source their tenant from the service capability rather than `OHC_ORGANIZATION_ID`. Extract the record construction into a pure helper so the write-side assertion does not require PostgreSQL.
 
-- [ ] **Step 2: Run tests to verify service memory still reads the environment**
+- [x] **Step 2: Run tests to verify service memory still reads the environment**
 
 Run: `cargo test -p ohc_builtin_agent service_uses_captured_tenant --lib`
 
 Expected: FAIL because the service currently reads `OHC_ORGANIZATION_ID` during each task.
 
-- [ ] **Step 3: Replace task-time environment reads**
+- [x] **Step 3: Replace task-time environment reads**
 
 Use `self.tenant.as_str()` for semantic search. Clone the immutable context before spawning the task and build `EmbeddingRecord.tenant_id` from it. Do not read `OHC_ORGANIZATION_ID` anywhere in `service.rs`.
 
-- [ ] **Step 4: Run focused and regression verification**
+- [x] **Step 4: Run focused and regression verification**
 
 Run: `cargo test -p ohc_builtin_agent service_uses_captured_tenant --lib && cargo test -p ohc_builtin_agent --lib && bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test`
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit memory isolation**
+- [x] **Step 5: Commit memory isolation**
 
 ```bash
 git add src/agents/builtin/service.rs
