@@ -27,6 +27,7 @@ test.describe('Agentic Automated Invoicing & Cash Flow Management', () => {
 
     // Approve the invoice
     const approveBtn = invoiceCard.getByTestId('feed-approve-btn');
+    await expect(approveBtn).toHaveText(/Approve & Send/i);
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
