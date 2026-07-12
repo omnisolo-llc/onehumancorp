@@ -155,3 +155,94 @@ test.describe('App shell visual consistency', () => {
     }
   }
 });
+
+test.describe('Mobile global controls', () => {
+  const collisionRoutes = [
+    '/website-builder',
+    '/login',
+    '/agent-marketplace',
+    '/integrations',
+    '/agents',
+    '/inbox',
+  ] as const;
+
+  for (const width of [320, 390]) {
+    for (const route of collisionRoutes) {
+      test(`${route} at ${width}px keeps mobile global controls clear of product actions`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await page.goto(route, { waitUntil: 'domcontentloaded' });
+
+        const controlSelector = [
+          '#ohc-floating-help-btn',
+          '#ai-chat-trigger-btn',
+          '[aria-label="Voice Assistant"]',
+        ].join(',');
+
+        const visibleControlLabels = await page.locator(controlSelector).evaluateAll((controls) => controls
+          .filter((control) => {
+            const rect = control.getBoundingClientRect();
+            const style = window.getComputedStyle(control);
+            return rect.width > 0
+              && rect.height > 0
+              && style.display !== 'none'
+              && style.visibility !== 'hidden';
+          })
+          .map((control) => control.getAttribute('aria-label') || control.id));
+
+        expect(visibleControlLabels).toEqual(['Voice Assistant']);
+
+        const collisions = await page.evaluate(({ controls }) => {
+          const isVisible = (element: Element) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0
+              && rect.height > 0
+              && style.display !== 'none'
+              && style.visibility !== 'hidden';
+          };
+          const intersects = (left: DOMRect, right: DOMRect) => (
+            Math.min(left.right, right.right) - Math.max(left.left, right.left) > 1
+            && Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top) > 1
+          );
+          const targetSelector = [
+            '.app-brand-mark',
+            '.app-nav-link',
+            '.app-topbar',
+            '.app-main button',
+            '.app-main a',
+            '.app-main input',
+            '.app-main textarea',
+            '.app-main select',
+            '.app-main [role="button"]',
+          ].join(',');
+          const targets = [...new Set(document.querySelectorAll(targetSelector))].filter(isVisible);
+
+          return [...document.querySelectorAll(controls)]
+            .filter(isVisible)
+            .flatMap((control) => {
+              const controlRect = control.getBoundingClientRect();
+              const outsideViewport = controlRect.left < -1
+                || controlRect.top < -1
+                || controlRect.right > window.innerWidth + 1
+                || controlRect.bottom > window.innerHeight + 1;
+              const label = control.getAttribute('aria-label') || control.id;
+              const overlaps = targets
+                .filter((target) => target !== control
+                  && !target.contains(control)
+                  && !control.contains(target)
+                  && intersects(controlRect, target.getBoundingClientRect()))
+                .map((target) => target.getAttribute('aria-label')
+                  || target.textContent?.replace(/\s+/g, ' ').trim().slice(0, 80)
+                  || `${target.tagName.toLowerCase()}.${target.className}`);
+
+              return outsideViewport || overlaps.length > 0
+                ? [{ control: label, outsideViewport, overlaps }]
+                : [];
+            });
+        }, { controls: controlSelector });
+
+        expect(collisions).toEqual([]);
+      });
+    }
+  }
+});
