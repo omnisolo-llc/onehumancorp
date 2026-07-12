@@ -1,0 +1,127 @@
+# Production agent optimization and security review
+
+Date: 2026-07-12  
+Reviewed branch: `main`  
+Audit head: `64332c4aa`  
+Priority: correctness and security first, then performance and token efficiency
+
+## Executive summary
+
+The production agent path now avoids duplicate tool schemas, no longer caches responses by truncated prompt prefixes, confines outbound HTTP and file access, fails closed on built-in-agent authentication, and isolates circuit breakers per provider client. Focused Cargo and Bazel tests pass for those changes.
+
+The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
+
+## Completed optimization work
+
+| Area | Change | Evidence |
+|---|---|---|
+| Quality baseline | Added deterministic production-path and parser regressions | Focused Cargo and Bazel tests passed before optimization |
+| Token efficiency | Removed serialized native tool definitions from the system prompt; native schemas remain in the provider `tools` field | Request-profile regression verifies one schema representation |
+| Response correctness | Removed the application cache keyed by truncated prompt prefixes | Distinct long prompts with common prefixes produce distinct provider calls |
+| Outbound security | Added scheme, credential, DNS/IP, redirect, proxy, and response-size policy | 144 tool tests and Bazel tools build passed |
+| File security | Canonical workspace confinement, symlink escape rejection, bounded reads/writes, atomic replacement | 154 tool tests and Bazel tools build passed |
+| Authentication | Explicit dev/test-only disablement, minimum keyed token configuration, constant-time verification, startup failure propagation, unverifiable SPIFFE rejection | Core/agent/root auth suites and three Bazel library targets passed |
+| Resilience | Replaced four provider-global breakers with per-client state and transient-failure classification | 11 Cargo LLM tests and Bazel LLM test passed |
+
+## Boundary matrix
+
+| Path | Trust boundary and authorization source | Tenant handling | Deadline/cancellation | Telemetry | Conclusion |
+|---|---|---|---|---|---|
+| HTTP agent chat (`src/server/api/agents/chat.rs`) | Axum `Claims` extension | Rejects missing `organization_id`; passes the claim-derived tenant to routing and orchestration | No explicit route-level deadline found | Prompt is placed in action payload; not directly logged here | Tenant source is sound; deadline remains unverified |
+| Built-in agent gRPC (`src/agents/builtin/service.rs`) | Token auth or a non-serializable trusted in-process extension | No request tenant; successful memory writes use process-global `OHC_ORGANIZATION_ID`, defaulting to `system` | Provider clients and each run attempt have deadlines; output channel is bounded, but producer ignores receiver closure | Instrumentation skips request values | Authentication improved; tenant attribution and cancellation fail requirements |
+| Agent manager gRPC (`src/server/services/agent/service.rs`) | Server-wide `spiffe_interceptor` | Header-derived org is used for snapshots, but not all mutations/reads are scoped to it | Spawned tasks have no local timeout | No prompt logging in reviewed methods | Authentication and multiple ownership checks fail |
+| Session-memory pipeline (`src/server/workers/agent_memory_pipeline.rs`) | Background system worker | Cross-tenant fetch intentionally clears tenant context; final Postgres insert sets row tenant context, while failure updates use the pool without tenant context | Embedding is limited to 60 seconds; summarization calls have no deadline | Provider errors are logged verbatim | Mixed controls; several high-risk gaps |
+| Native business tools (`src/agents/builtin/tools`) | Model-generated tool arguments | Quote and booking schemas expose `tenant_id`; executors trust it | Database connect/query paths have no explicit deadline | Database errors are returned to the model | Confirmed tenant-confusion boundary |
+
+## Confirmed findings
+
+### F-01 — Critical — client-spoofable SPIFFE authentication
+
+`src/server/lib.rs:418` reads `x-spiffe-id` directly from request metadata and treats successful string parsing as authentication. The Tonic server is not configured with client-certificate verification on this path. `src/server/auth/mod.rs:768` only checks slash positions; it accepts untrusted domains and empty organization/agent components. A remote client can therefore manufacture the identity used by intercepted gRPC services.
+
+Smallest regression: `spiffe_interceptor_rejects_identity_without_verified_peer_certificate`.
+
+### F-02 — High — cross-tenant agent-manager reads and mutations
+
+`fire_agent` derives an organization but calls `Hub::fire_agent` by caller-supplied agent ID without verifying ownership (`src/server/services/agent/service.rs:153`). `delegate_task` likewise accepts globally registered sender and recipient IDs without checking either organization (`:171`). `get_identities` reads all agents (`:215`), while skills and snapshots are stored in global vectors and returned without organization filtering (`:232`, `:267`).
+
+Smallest regressions: `fire_agent_rejects_other_org_agent`, `delegate_task_rejects_cross_org_agents`, and `snapshots_are_scoped_to_authenticated_org`.
+
+### F-03 — High — model-controlled tenant IDs in production business tools
+
+The default production tool set registers booking and quote mutations (`src/agents/builtin/tools/mod.rs:137` and `:167`). `generate_quote` requires `tenant_id` in the model-facing schema and binds that value directly into the insert (`src/agents/builtin/tools/quote.rs:8`, `:48`, `:118`) without setting authenticated database tenant context. Booking tools follow the same caller-controlled pattern. A prompt injection or model error can select another tenant when the database role bypasses RLS; with enforced RLS, these paths can fail unpredictably instead.
+
+Smallest regression: `generate_quote_uses_authenticated_tenant_not_tool_arguments`.
+
+### F-04 — High — stream cancellation does not cancel producer work
+
+`RunTaskStream` uses a bounded channel of 64, but the producer calls `try_send` and discards full/closed errors (`src/agents/builtin/service.rs:941`, `:1043`). It never tests receiver closure before retries, LLM calls, tools, or memory writes. The lower-level `Agent::query` creates an unbounded channel and similarly ignores send failure (`src/agents/builtin/agent.rs:2888`). A disconnected client can leave costly work running to completion, and the unbounded path can grow without backpressure.
+
+Smallest regressions: `run_task_stops_when_receiver_is_dropped` and `query_applies_bounded_backpressure`.
+
+### F-05 — High — agent memory tenant attribution is process-global
+
+After a successful task, the built-in service assigns memory to `OHC_ORGANIZATION_ID`, defaulting to `system`, rather than an authenticated request tenant (`src/agents/builtin/service.rs:1095`). The public task request carries no enforced tenant identity. A shared agent process can therefore misattribute or combine memories across callers.
+
+Smallest regression: `run_task_memory_uses_authenticated_request_tenant`.
+
+### F-06 — High — memory worker has incomplete tenant and timeout controls
+
+The Postgres worker explicitly clears tenant context to fetch work across tenants (`src/server/workers/agent_memory_pipeline.rs:154`). Final inserts set tenant context, but failure-status updates execute directly on the pool with only `session_id` (`:226`, `:237`). Summarization provider calls at `:204` are not wrapped in a deadline, although embedding calls are. The filesystem-memory Postgres insert also lacks an explicit tenant transaction. These paths are safe only under undocumented role and globally-unique-ID assumptions.
+
+Smallest regressions: `memory_failure_update_is_tenant_scoped`, `memory_summary_has_deadline`, and `fs_memory_insert_sets_system_tenant_context`.
+
+### F-07 — High — raw tasks and provider errors enter logs
+
+Both observability implementations log the complete task at run start and raw error strings (`src/agents/builtin/observability.rs:31`, `:57`, `:77`, `:99`). Tasks can contain prompts, customer data, credentials, and tool material; provider/database error bodies can also contain sensitive values. Other reviewed telemetry methods correctly omit request, response, final output, and tool result bodies.
+
+Smallest regression: `observability_logs_metadata_without_task_or_error_body`.
+
+### F-08 — High — production JavaScript dependency advisories
+
+`pnpm audit --prod` reports 14 advisories: 7 high, 4 moderate, and 3 low. High-severity paths include `@modelcontextprotocol/sdk` ReDoS and DNS-rebinding issues, `form-data` CRLF injection, three `undici` proxy/TLS/routing issues, and legacy `ws` memory-exhaustion DoS. Patched versions were identified by the audit and should be applied with targeted compatibility tests.
+
+Smallest regression: lockfile audit in CI with an explicit, expiring advisory allowlist.
+
+### F-09 — Medium — tracked opaque JWT-secret candidate
+
+`src/server/auth/.ohc_jwt_secret` is a tracked 32-byte opaque file. Runtime code writes the active secret under the safe user directory rather than reading this source-tree path, so production use is not proven. Nevertheless, a secret-shaped artifact is present in Git history and should be removed and any potentially related signing material rotated. Its contents were not printed or copied during this review.
+
+### F-10 — Medium — tenant tests silently skip while reporting success
+
+All six `server_auth` multitenancy tests return immediately when `OHC_DATABASE_URL` is unset. In this environment Cargo reported 6 passed in 0.00 seconds even though no Postgres assertions ran. Several Postgres queue and memory tests use similar environment-sensitive setup. CI needs an explicit Postgres lane, and skip conditions must be surfaced as skips or failures in the security lane.
+
+Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
+
+## Passing and unverified test evidence
+
+| Command | Result | Interpretation |
+|---|---|---|
+| `cargo test -p server_auth multitenancy_isolation -- --nocapture` | 6 reported passed in 0.00s | **Unverified:** `OHC_DATABASE_URL` was unset and tests returned early |
+| `cargo test -p ohc-mono --lib agent_memory_pipeline -- --nocapture` | 3 passed | SQLite and timeout behavior covered; real Postgres isolation remains environment-dependent |
+| `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Happy-path tests only; no cross-organization negative cases |
+| `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
+| `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
+
+## Dependency and secret scanning
+
+- `cargo audit` is not installed, so Rust advisory status is unverified. `cargo tree -d` completed and showed substantial duplicate dependency families, including Axum 0.7/0.8 and Tower 0.4/0.5; this is maintenance and binary-size debt, not itself a vulnerability.
+- `pnpm audit --prod` completed with 14 advisories (7 high, 4 moderate, 3 low).
+- No private-key PEM blocks or the removed `default_auth_key_change_me` fallback were found.
+- The credentialed-Postgres-URL pattern matched 66 files in the scan scope (the `docs/` tree was excluded). Most inspected paths are tests, local defaults, or deployment templates; they need environment-by-environment validation before being classified as real credentials. No values are reproduced here.
+
+## Remediation order
+
+1. Replace header-trusting SPIFFE interception with verified mTLS peer identity and reject empty/untrusted identities.
+2. Scope all agent-manager operations, skills, identities, and snapshots to the authenticated organization.
+3. Remove tenant IDs from model-facing tool schemas and inject an authenticated tenant capability into executors.
+4. Propagate stream cancellation into producer tasks and replace unbounded event channels.
+5. Carry authenticated tenant context through built-in task execution and memory writes.
+6. Add deadlines and tenant-scoped transactions to every memory-worker provider/database path.
+7. Redact task/error bodies from logs and add telemetry field tests.
+8. Upgrade vulnerable JavaScript dependency paths and add enforced advisory scanning.
+9. Remove the tracked secret candidate and make Postgres security tests explicit in CI.
+
+## Benchmark and final verification
+
+Reproducible before/after benchmark data and the complete final formatting/lint/test matrix will be added in the next phase. UI visual consistency is also a newly requested review track and will be documented separately after rendered desktop/mobile inspection.
