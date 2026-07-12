@@ -39,7 +39,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">{tierName}</h3>
         <p className="text-xl font-semibold mb-4 text-gray-900">
           {basePrice !== undefined && basePrice > 0 ? (
-            isAnnual ? `${Math.floor(basePrice * 0.8)}` : `${basePrice}`
+            isAnnual ? `$${Math.floor(basePrice * 0.8)}` : `$${basePrice}`
           ) : (
             price
           )} <span className="text-sm font-normal text-gray-500">{isAnnual ? '/month, billed annually' : priceSuffix}</span>

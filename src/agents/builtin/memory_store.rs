@@ -533,28 +533,17 @@ impl VectorRepository {
                         }
                     }
 
-                    let mut heap = std::collections::BinaryHeap::with_capacity(limit as usize + 1);
-                    for record in all_records {
+                    // Fallback to simple sort since memory list is bounded by 1000
+                    let mut entries: Vec<HeapEntry> = all_records.into_iter().map(|record| {
                         let dist = cosine_distance(&record.embedding, &query_emb);
-                        // We want a max-heap of the smallest distances (so we keep the closest `limit` items).
-                        // Since BinaryHeap is a max-heap, storing positive distances means the max distance is at the top.
-                        // Wait, we want smallest distances. So we should pop the largest distance.
-                        heap.push(HeapEntry {
-                            record,
-                            distance: dist,
-                        });
-                        if heap.len() > limit as usize {
-                            heap.pop();
-                        }
-                    }
+                        HeapEntry { record, distance: dist }
+                    }).collect();
 
-                    // The heap now contains the `limit` items with the smallest distances.
-                    // We need to extract them and reverse them so the absolute closest is first.
-                    let sorted_entries = heap.into_sorted_vec();
-                    // into_sorted_vec returns ascending order, so the smallest distances are at the beginning.
-                    // Since it's a max-heap, the elements were ordered by distance, smallest to largest.
+                    // Sort by distance ascending
+                    entries.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(std::cmp::Ordering::Equal));
+                    entries.truncate(limit as usize);
 
-                    results = sorted_entries.into_iter().map(|e| e.record).collect();
+                    results = entries.into_iter().map(|e| e.record).collect();
 
                     if !results.is_empty() {
                         let ids_to_update: Vec<String> =
@@ -582,7 +571,7 @@ impl VectorRepository {
     }
 
     /// Prunes stale context to prevent unbounded memory growth.
-    /// It deletes records older than `older_than` where `owner_override = FALSE`.
+    /// It deletes records older than `older_than` where `owner_override = 0`.
     pub async fn prune_stale(
         &self,
         older_than: DateTime<Utc>,
@@ -595,7 +584,7 @@ impl VectorRepository {
         }
         let placeholders_sqlite: Vec<String> = source_types.iter().map(|_| "?".to_string()).collect();
         let in_clause_sqlite = placeholders_sqlite.join(", ");
-        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = FALSE AND last_referenced_at < ?)", in_clause_sqlite);
+        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = 0 AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = 0 AND last_referenced_at < ?)", in_clause_sqlite);
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -1027,8 +1016,8 @@ impl VectorRepository {
                         .collect();
 
                     'outer: for current_tenant_id in tenant_ids {
-                        // Limit to the latest 2000 records to prevent memory exhaustion and CPU bottlenecks while allowing more coverage
-                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 2000";
+                        // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks while allowing more coverage
+                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
                         let rows = sqlx::query(query)
                             .bind(&current_tenant_id)
                             .fetch_all(pool)
@@ -3836,7 +3825,7 @@ mod e2e_consolidation_tests {
         v1[0] = 1.0;
 
         // A stale record with very high reliability, but no owner_override -> should NOT be pruned by first rule, but... wait, let's check the pruning logic.
-        // The rule is: (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)
+        // The rule is: (last_referenced_at < $1 AND owner_override = 0 AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = 0)
 
         let stale_but_high_rel = EmbeddingRecord {
             id: "stale_high_rel".to_string(),
@@ -3884,8 +3873,8 @@ mod e2e_consolidation_tests {
         let remaining_ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
         // The logic is:
-        // (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY')
-        // OR (reliability_score < 20 AND owner_override = FALSE)
+        // (last_referenced_at < $1 AND owner_override = 0 AND reference_count < 5 AND source_type = 'TASK_SUMMARY')
+        // OR (reliability_score < 20 AND owner_override = 0)
 
         // stale_high_rel should be PRUNED because it meets the first condition (stale, no override, < 5 refs, TASK_SUMMARY), even though its reliability is high.
         // stale_low_rel_override should be KEPT because it has owner_override = TRUE, which bypasses both conditions.
