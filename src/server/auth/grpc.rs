@@ -66,8 +66,8 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     // Expected format: spiffe://<domain>/org/<org_id>/agent/<agent_id>
     // Parts: ["<domain>", "org", "<org_id>", "agent", "<agent_id>"]
     let parts: Vec<&str> = trimmed.split('/').collect();
-    if parts.len() < 5 {
-        return Err(Status::permission_denied(format!("SPIFFE ID too short, must match pattern spiffe://<domain>/org/<org_id>/agent/<agent_id>: {}", id)));
+    if parts.len() != 5 {
+        return Err(Status::permission_denied(format!("SPIFFE ID must exactly match spiffe://<domain>/org/<org_id>/agent/<agent_id>: {}", id)));
     }
     if parts[1] != "org" || parts[3] != "agent" {
         return Err(Status::permission_denied(format!("SPIFFE ID must contain /org/<org_id>/agent/<agent_id> structure: {}", id)));
@@ -116,6 +116,19 @@ mod tests {
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org//agent/agent-1").is_err()); // Empty org_id
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
+    }
+
+    #[test]
+    fn parse_spiffe_id_rejects_empty_and_untrusted_identities() {
+        for id in [
+            "spiffe://evil.example/org/acme/agent/a1",
+            "spiffe://onehumancorp.io/org//agent/a1",
+            "spiffe://onehumancorp.io/org/acme/agent/",
+            "spiffe://onehumancorp.io/org/acme/agent/a1/extra",
+            "spiffe://onehumancorp.io/org/acme%2Fother/agent/a1",
+        ] {
+            assert!(crate::parse_spiffe_id(id).is_err(), "accepted {id}");
+        }
     }
 
 }
