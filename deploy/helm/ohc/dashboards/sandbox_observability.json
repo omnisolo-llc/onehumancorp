@@ -75,7 +75,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -102,7 +103,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "gridPos": {
@@ -145,7 +147,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -172,7 +175,8 @@
           "displayMode": "list",
           "placement": "bottom"
         }
-      }
+      },
+      "transparent": true
     }
   ]
 }

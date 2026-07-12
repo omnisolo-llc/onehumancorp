@@ -593,24 +593,22 @@ impl VectorRepository {
         if source_types.is_empty() {
             return Ok(());
         }
-        let placeholders: Vec<String> = (1..=source_types.len()).map(|i| format!("${}", i + 3)).collect();
-        let in_clause = placeholders.join(", ");
-        let query_pg = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type IN ({})) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)", in_clause);
-
         let placeholders_sqlite: Vec<String> = source_types.iter().map(|_| "?".to_string()).collect();
         let in_clause_sqlite = placeholders_sqlite.join(", ");
         let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = FALSE AND last_referenced_at < ?)", in_clause_sqlite);
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let mut query = sqlx::query(&query_pg)
+                let query_pg = "DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = ANY($4)) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)";
+
+                let source_types_vec: Vec<String> = source_types.iter().map(|s| s.to_string()).collect();
+
+                sqlx::query(query_pg)
                     .bind(older_than)
                     .bind(max_reference_count)
-                    .bind(min_reliability);
-                for st in source_types {
-                    query = query.bind(st);
-                }
-                query.execute(pool).await.map_err(|e| e.to_string())?;
+                    .bind(min_reliability)
+                    .bind(&source_types_vec)
+                    .execute(pool).await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let mut query = sqlx::query(&query_sqlite)
@@ -899,9 +897,10 @@ impl VectorRepository {
                         FROM consolidated_memory b_inner
                         WHERE b_inner.tenant_id = a.tenant_id
                           AND b_inner.id > a.id
+                          AND b_inner.embedding <=> a.embedding < 0.05
                         ORDER BY b_inner.embedding <=> a.embedding
                         LIMIT 1
-                    ) b ON a.embedding <=> b.embedding < 0.05
+                    ) b ON true
                     LIMIT 100
                 ";
                 let rows = sqlx::query(query)

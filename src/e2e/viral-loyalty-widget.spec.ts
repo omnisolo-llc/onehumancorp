@@ -11,6 +11,12 @@ test.describe('Viral Loyalty Widget', () => {
 
       // Wait for main elements
       await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
+
+      const cardPreview = page.locator('.card-preview');
+      await expect(cardPreview).toBeVisible();
+      // Assert the specific styling of card-preview matches constraints
+      await expect(cardPreview).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
+
       const generateBtn = page.locator('#generate-btn');
       await expect(generateBtn).toBeVisible();
 
@@ -32,6 +38,11 @@ test.describe('Viral Loyalty Widget', () => {
       // Verify filled stamps
       const filledStamps = page.locator('.stamp.filled');
       await expect(filledStamps).toHaveCount(4);
+
+      // Verify filled stamps contain the '☕' character from animation
+      for (let i = 0; i < 4; i++) {
+         await expect(filledStamps.nth(i)).toHaveText('☕');
+      }
 
       // Check share link generated correctly
       const shareLink = page.locator('#share-link');
