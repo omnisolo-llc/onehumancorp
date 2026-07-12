@@ -89,7 +89,9 @@ describe('HelpWidget', () => {
   });
 
   it('renders the help widget', async () => {
-    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    await act(async () => {
+      render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    });
     expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
   });
 
@@ -260,7 +262,9 @@ describe('HelpWidget', () => {
 
   it('switches to the What is New tab and renders content', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    await act(async () => {
+      render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    });
 
     const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
@@ -276,7 +280,9 @@ describe('HelpWidget', () => {
 
   it('renders articles and handles search', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    await act(async () => {
+      render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    });
 
     const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
@@ -309,7 +315,9 @@ describe('HelpWidget', () => {
   });
 
   it('opens chat on open-help-chat event', async () => {
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    await act(async () => {
+      render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    });
 
     act(() => {
         window.dispatchEvent(new CustomEvent('open-help-chat'));
