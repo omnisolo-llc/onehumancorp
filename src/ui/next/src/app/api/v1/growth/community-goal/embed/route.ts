@@ -17,8 +17,6 @@ export async function GET(request: Request) {
     const reward = searchParams.get('reward') || '50% off for everyone!';
 
     // In actual production this would connect to the database.
-    // For this example API endpoint we are showing the mock representation format.
-    // But per instructions, "ZERO mock data in UI", we must fetch from the backend API if we had one.
     // Since there's no pre-existing backend for `community_goal`, we will use 0 for now as an empty state representation, or maybe pull the total referrals.
     // Since we don't have a direct hook right here in Next.js without setting up full db conn, let's use the actual referral system API.
 
