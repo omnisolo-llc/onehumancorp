@@ -316,6 +316,12 @@ Output JSON format:
             let mut event_source = source.to_string();
             if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
                 event_source = "instagram_dm".to_string();
+            } else if source.to_lowercase() == "whatsapp" {
+                event_source = "whatsapp".to_string();
+            } else if source.to_lowercase() == "email" {
+                event_source = "email".to_string();
+            } else {
+                event_source = "omni_inbox".to_string();
             }
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
