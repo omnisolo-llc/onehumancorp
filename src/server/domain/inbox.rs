@@ -37,7 +37,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
         if let Some((source, sender_id)) = row {
             if source == "whatsapp" {
                 let creds_row: Option<(String, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
-                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'whatsapp_cloud_api') AND tenant_id = $1 ORDER BY integration_id ASC LIMIT 1"
+                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'whatsapp_cloud_api') AND tenant_id = $1 ORDER BY created_at DESC LIMIT 1"
                 )
                 .bind(tenant_id)
                 .fetch_optional(pool)

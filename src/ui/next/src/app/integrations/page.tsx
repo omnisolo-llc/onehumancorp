@@ -267,7 +267,7 @@ export default function Integrations() {
                     type="text"
                     value={whatsappTwilioCreds.accountSid}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, accountSid: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
+                    className="glass-control w-full px-3 py-2 rounded-lg outline-none"
                     placeholder="AC..."
                   />
                 </div>
@@ -277,7 +277,7 @@ export default function Integrations() {
                     type="password"
                     value={whatsappTwilioCreds.authToken}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, authToken: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
+                    className="glass-control w-full px-3 py-2 rounded-lg outline-none"
                     placeholder="Hidden for security"
                   />
                 </div>
@@ -287,7 +287,7 @@ export default function Integrations() {
                     type="text"
                     value={whatsappTwilioCreds.phoneNumber}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
+                    className="glass-control w-full px-3 py-2 rounded-lg outline-none"
                     placeholder="+1234567890"
                   />
                 </div>
