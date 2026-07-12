@@ -21,6 +21,13 @@ export function GrowBusinessCard() {
           <div className="flex flex-wrap gap-2">
 
             <Link
+              id="streak-widget-btn"
+              href="/viral-streak-widget"
+              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Streak Widget
+            </Link>
+            <Link
               id="goal-tracker-btn"
               href="/viral-goal-tracker"
               className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
