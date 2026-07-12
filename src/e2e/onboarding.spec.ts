@@ -357,6 +357,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const startMyBusinessButton = page.locator('[data-next="step-context"]');
     await startMyBusinessButton.click();
 
+    await expect(page.locator('.context-card').first()).toBeVisible({ timeout: 5000 });
     // Check .context-card
     const contextCard = page.locator(".context-card").first();
     const cardBox = await contextCard.boundingBox();
@@ -379,6 +380,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     // Instant Build is now the initial screen
 
+    await expect(page.locator('#instant-bio')).toBeVisible({ timeout: 5000 });
     const bioInput = page.locator('#instant-bio');
     const box = await bioInput.boundingBox();
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
