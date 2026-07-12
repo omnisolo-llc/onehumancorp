@@ -153,7 +153,7 @@ export class SyncManager {
         return {
           id: m.id,
           client_id: storedDeviceId, // Default fallback
-          amount_cents: Math.round(m.amount),
+          amount_cents: Math.round(m.payload?.amount_cents || m.amount || 0),
           currency: m.currency || 'usd',
           payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
