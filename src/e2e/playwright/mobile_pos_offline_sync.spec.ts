@@ -3,6 +3,86 @@ import { test, expect } from '@playwright/test';
 test.describe('Mobile POS - Offline Outbox Sync', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
+  test('Persona: Field Service Owner uses Quick Charge offline Tap-to-Pay', async ({ page, context }) => {
+    const tenantId = `tenant-quick-charge-${Date.now()}`;
+
+    await page.goto('http://127.0.0.1:3000/').catch(() => {});
+    await page.evaluate((tenant) => {
+        localStorage.setItem('tenant_id', tenant);
+        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Owner', pin_hash: '1234', tenant_id: tenant }]));
+        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+        localStorage.setItem('ohc_pos_device_id', 'test_device_123');
+        localStorage.setItem('ohc_catalog_default', JSON.stringify([]));
+    }, tenantId);
+
+    // 1. Navigate to Feed and click New Sale
+    await page.goto('/feed');
+    const newSaleBtn = page.getByRole('link', { name: 'New Sale' });
+    await expect(newSaleBtn).toBeVisible({ timeout: 15000 });
+    await newSaleBtn.click();
+
+    // 2. Unlock Terminal
+    await expect(page.getByText('Terminal Locked')).toBeVisible({ timeout: 15000 });
+    const pins = ['1', '2', '3', '4'];
+    for (const p of pins) {
+      await page.getByRole('button', { name: p, exact: true }).click();
+    }
+    await page.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+
+    // 3. Switch to Quick Charge mode
+    const quickChargeTab = page.getByRole('button', { name: 'Quick Charge' });
+    await expect(quickChargeTab).toBeVisible({ timeout: 15000 });
+    await quickChargeTab.click();
+
+    // 4. Enter $15.00
+    await page.getByRole('button', { name: '1', exact: true }).click();
+    await page.getByRole('button', { name: '5', exact: true }).click();
+    await page.getByRole('button', { name: '0', exact: true }).first().click();
+    await page.getByRole('button', { name: '0', exact: true }).first().click();
+    await expect(page.getByText('$15.00')).toBeVisible();
+
+    // 5. Hit Charge
+    const chargeBtn = page.getByRole('button', { name: 'Charge $15.00' });
+    await expect(chargeBtn).toBeVisible();
+    await chargeBtn.click();
+
+    // 6. Go offline
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await expect(page.locator('text=Offline - Changes saved locally')).toBeVisible({ timeout: 10000 });
+
+    // 7. Select Tap to Pay
+    const tapToPayBtn = page.getByRole('button', { name: 'Tap to Pay' });
+    await expect(tapToPayBtn).toBeVisible();
+    await tapToPayBtn.click();
+
+    // Wait for the Offline Tap-to-Pay confirmation
+    await expect(page.getByText('Saved Offline - Will sync when connected')).toBeVisible({ timeout: 10000 });
+
+    // Check Success Screen
+    await expect(page.getByText('Payment Successful!')).toBeVisible({ timeout: 10000 });
+
+    // Verify it's in the IndexedDB offline queue
+    const queueData = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
+    expect(queueData).toContain('tap_to_pay');
+
+    // Restore Network
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  });
+
   test('Persona: Boutique Operator records offline cash sale and syncs it', async ({ page, context }) => {
     const tenantId = `tenant-offline-sync-${Date.now()}`;
 

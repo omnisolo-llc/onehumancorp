@@ -545,6 +545,23 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             .execute(&mut *tx)
                             .await;
 
+                            // Draft success card in agent feed
+                            let _ = sqlx::query(
+                                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'terminal', $3, $4, 'PENDING_APPROVAL', NOW(), NOW())"
+                            )
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(&job.tenant_id)
+                            .bind(serde_json::json!({
+                                "feature_type": "receipt_draft",
+                                "transaction_successful": true,
+                                "transaction_id": transaction_id,
+                            }))
+                            .bind(serde_json::json!({
+                                "description": "Transaction successful. Send receipt?"
+                            }))
+                            .execute(&mut *tx)
+                            .await;
+
                             if new_stock <= 5 && !is_conflict {
                                 let action_request_id = uuid::Uuid::new_v4().to_string();
                                 let payload = serde_json::json!({
