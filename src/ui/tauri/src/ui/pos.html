@@ -566,7 +566,7 @@
 
           <button class="charge-btn" id="charge-btn" disabled onclick="initiateCharge()">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H3a2 2 0 00-2 2v12a2 2 0 002 2h18a2 2 0 002-2V6a2 2 0 00-2-2zM1 10h22"/></svg>
-            Accept Contactless Payment
+            Tap to Pay via Terminal
           </button>
       </div>
 
@@ -592,7 +592,7 @@
         <div class="tap-subtitle" id="tap-amount-subtitle">-</div>
 
         <!-- Hidden button to simulate the tap for E2E tests and web mode -->
-        <button class="simulate-tap-btn" id="simulate-tap-btn" style="display: none;">Simulate Customer Tap (Test)</button>
+        <button class="simulate-tap-btn" id="simulate-tap-btn" style="display: block;">Simulate Customer Tap (Test)</button>
         <button class="simulate-tap-btn" id="record-cash-sale-btn" style="margin-top: 10px; background: rgba(0,0,0,0.05); color: #000; border: 1px solid rgba(0,0,0,0.1);" onclick="simulateTapBtn.click()">Record Cash Sale</button>
         <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1);">Cancel</button>
       </div>

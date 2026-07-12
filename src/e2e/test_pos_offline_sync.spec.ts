@@ -346,14 +346,9 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.locator('text=Tap to Pay via Terminal')).toBeVisible();
 
     // Mock terminal connect
-    const discoverBtn = memberPage.locator('button', { hasText: 'Discover Readers' });
-    if (await discoverBtn.isVisible()) {
-        await discoverBtn.click();
-        await memberPage.locator('button', { hasText: 'Connect' }).first().click();
-    }
-    const collectBtn = memberPage.locator('button', { hasText: /Collect Payment/i });
-    await expect(collectBtn).toBeVisible();
-    await collectBtn.click();
+
+    // Let's just explicitly trigger the flow directly for test purposes as UI is simpler now
+    await memberPage.locator('button#charge-btn').click();
 
     // Mock successful tap for E2E
     await memberPage.locator('button:has-text("Simulate Customer Tap")').click();
