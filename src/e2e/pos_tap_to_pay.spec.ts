@@ -1,81 +1,120 @@
 import { test, expect } from '@playwright/test';
+import { v4 as uuidv4 } from 'uuid';
+import { loginAs } from './utils/auth';
 
-test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', () => {
-  test.use({ viewport: { width: 375, height: 812 } });
+test.describe('POS Tap-to-Pay Offline Resilience (Issue #33945)', () => {
+  const adminUser = {
+    email: 'admin@example.com',
+    password: 'password',
+    tenant_id: 'default',
+    role: 'owner'
+  };
 
-  test('Completes a Tap-to-Pay transaction and triggers low stock alert on dashboard', async ({ page }) => {
+  test('offline transaction queueing and tap-to-pay workflow', async ({ page, context }) => {
+    test.setTimeout(60000);
 
-    // Mock network request to return the dashboard data including AI alert
-    await page.route('**/api/dashboard', async (route) => {
-      const response = await route.fetch();
-      let body: any = {};
-      try {
-        body = await response.json();
-      } catch (e) {
-        // use default mock
-      }
-      // Add fake pending review for low stock alert
-      body.pendingReviews = [
-        {
-          id: 'mock-reorder-alert',
-          tenant_id: 'default',
-          action_type: 'Reorder',
-          status: 'Pending',
-          payload: {
-              product_id: 'prod_test_item',
-              remaining_stock: 5,
-              suggested_action: 'Restock Item'
-          }
-        }
-      ];
-      await route.fulfill({ json: body });
-    });
-
-    // 1. Mock login as Priya and land on dashboard
+    // Setup local storage state before navigating to POS terminal
     await page.goto('/api/staff');
     await page.evaluate(() => {
-        localStorage.setItem('token', 'test_token');
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Owner', pin_hash: '1234' }]));
-        localStorage.setItem('ohc_offline_rules', JSON.stringify([]));
-        localStorage.setItem('ohc_offline_inventory', JSON.stringify([
-            { id: 'prod_test_item', name: 'Test Boutique Item', inventory_count: 6, price_cents: 2500 }
-        ]));
+      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+        id: 'staff_1',
+        name: 'Fatima',
+        role: 'Manager',
+        pin_hash: '1234'
+      }]));
+      localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+      // Start with an empty queue
+      localStorage.setItem('ohc_offline_queue', JSON.stringify([]));
     });
 
-    await page.goto('/dashboard');
+    await page.setViewportSize({ width: 375, height: 812 });
 
-    // 2. Find and click "Sell In Person"
-    await expect(page.locator('text=Sell In Person')).toBeVisible();
-    await page.locator('text=Sell In Person').click();
+    await loginAs(page, adminUser);
 
-    // 3. POS Terminal Flow
-    await expect(page.locator('text=Terminal Locked')).toBeVisible({ timeout: 15000 });
+    // Navigate to the terminal page
+    await page.goto('/pos/terminal');
 
-    // Enter PIN: 1234
-    await page.waitForSelector('button:has-text("1")');
-    await page.getByRole('button', { name: '1', exact: true }).click();
-    await page.getByRole('button', { name: '2', exact: true }).click();
-    await page.getByRole('button', { name: '3', exact: true }).click();
-    await page.getByRole('button', { name: '4', exact: true }).click();
+    // Wait for the UI to load
+    await page.waitForTimeout(2000);
 
-    // Verify unlocked and shows staff name
-    await expect(page.locator('text=Priya')).toBeVisible();
+    // Handle pin entry lock screen if it exists
+    const isLocked = await page.locator('h1', { hasText: 'Terminal Locked' }).isVisible();
+    if (isLocked) {
+      await page.mouse.click(10, 10);
+      await page.waitForTimeout(500);
 
-    // Add item to cart and trigger charge (Quick Charge button is dynamic based on items)
-    // The POS page has a custom input for quick charge, let's enter 2500 for $25.00
-    await page.getByRole('button', { name: '2', exact: true }).click();
-    await page.getByRole('button', { name: '5', exact: true }).click();
-    await page.getByRole('button', { name: '0', exact: true }).click();
-    await page.getByRole('button', { name: '0', exact: true }).click();
-    await page.getByRole('button', { name: 'Quick Charge $25.00' }).click();
+      await page.waitForSelector('button:has-text("1")');
+      await page.getByRole('button', { name: '1', exact: true }).click();
+      await page.getByRole('button', { name: '2', exact: true }).click();
+      await page.getByRole('button', { name: '3', exact: true }).click();
+      await page.getByRole('button', { name: '4', exact: true }).click();
+      await expect(page.locator('h1', { hasText: 'Fatima' })).toBeVisible({ timeout: 10000 });
+    }
 
-    // Verify Payment success message - in mock mode it shows mock UI
-    await expect(page.locator('text=Payment Successful!').or(page.locator('text=Offline Quick Charge Saved.'))).toBeVisible({ timeout: 15000 });
+    // Go offline
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
-    // 4. Return to Dashboard and check for AI Alert
-    await page.goto('/dashboard');
-    await expect(page.locator('text=Sell In Person')).toBeVisible();
-    await expect(page.locator('text=Review and approve restock order').or(page.locator('text=Restock Item'))).toBeVisible();
+    // Verify offline banner shows up
+    await expect(page.locator('text=Offline Mode')).toBeVisible({ timeout: 5000 });
 
+    // Verify products exist or add quick charge
+    await expect(page.getByRole('button', { name: 'Quick Charge $50' })).toBeVisible();
+    await page.getByRole('button', { name: 'Quick Charge $50' }).click();
+
+    // Select Tap to Pay
+    await expect(page.getByRole('button', { name: 'Tap to Pay' })).toBeVisible();
+    await page.getByRole('button', { name: 'Tap to Pay' }).click();
+
+    // Wait for the Confirm & Tap button and click it to process offline
+    await expect(page.getByRole('button', { name: /Confirm & Tap/ })).toBeVisible();
+    await page.getByRole('button', { name: /Confirm & Tap/ }).click();
+
+    // Verify it was queued locally (Success screen appears)
+    await expect(page.locator('h2', { hasText: 'Payment Successful!' })).toBeVisible({ timeout: 15000 });
+
+    // We can also verify that the transaction is in localStorage actions queue
+    // Note: IndexedDB is used by offlineQueue.ts. But the E2E flow above checks if we can use our indexedDB offlineQueue logic.
+    // Wait for DB to be updated
+    await page.waitForTimeout(1000);
+
+    const queueLength = await page.evaluate(async () => {
+       const db = await new Promise((resolve, reject) => {
+         const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+         req.onsuccess = () => resolve(req.result);
+         req.onerror = () => reject(req.error);
+       });
+       return new Promise((resolve, reject) => {
+         const tx = (db as IDBDatabase).transaction("actions", "readonly");
+         const store = tx.objectStore("actions");
+         const req = store.count();
+         req.onsuccess = () => resolve(req.result);
+         req.onerror = () => reject(req.error);
+       });
+    });
+    expect(queueLength).toBeGreaterThan(0);
+
+    // Restore network
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    // Wait for the sync to complete and verify the queue is empty
+    await expect(async () => {
+      const qLen = await page.evaluate(async () => {
+         const db = await new Promise((resolve, reject) => {
+           const req = window.indexedDB.open("OHC_Offline_Queue", 1);
+           req.onsuccess = () => resolve(req.result);
+           req.onerror = () => reject(req.error);
+         });
+         return new Promise((resolve, reject) => {
+           const tx = (db as IDBDatabase).transaction("actions", "readonly");
+           const store = tx.objectStore("actions");
+           const req = store.count();
+           req.onsuccess = () => resolve(req.result);
+           req.onerror = () => reject(req.error);
+         });
+      });
+      expect(qLen).toBe(0);
+    }).toPass({ timeout: 15000 });
   });
 });
