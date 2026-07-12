@@ -1212,3 +1212,26 @@ html.dark .glass-panel {
 .glass-control {
   border-radius: 8px !important;
 }
+
+/* Apple / Ubiquiti UniFi Network Application design standards */
+/* Light Mode Translucent Glass */
+@layer utilities {
+  .translucent-glass-light {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(30px) saturate(210%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    font-family: 'Outfit', 'Inter', sans-serif !important;
+    border-radius: 12px !important;
+  }
+
+  /* Dark Mode Translucent Glass */
+  .translucent-glass-dark {
+    background: rgba(22, 22, 26, 0.7) !important;
+    backdrop-filter: blur(30px) saturate(210%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    font-family: 'Outfit', 'Inter', sans-serif !important;
+    border-radius: 12px !important;
+  }
+}
