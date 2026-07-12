@@ -79,21 +79,21 @@ git commit -m "perf: stop agent tasks when clients disconnect"
 **Files:**
 - Modify: `docs/reports/production_agent_optimization_report.md`
 
-- [ ] **Step 1: Run targeted formatting and static checks**
+- [x] **Step 1: Run targeted formatting and static checks**
 
 Format `agent.rs` and `service.rs` with child-module traversal disabled, then run `cargo check -p ohc_builtin_agent`.
 
-- [ ] **Step 2: Run Bazel verification**
+- [x] **Step 2: Run Bazel verification**
 
 Run: `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test`
 
 Expected: the target PASSes.
 
-- [ ] **Step 3: Record remediation evidence**
+- [x] **Step 3: Record remediation evidence**
 
 Mark F-04 remediated without removing its original audit text. Record the bounded capacity, cancellation races, focused regressions, full Cargo count, and Bazel result.
 
-- [ ] **Step 4: Commit report evidence**
+- [x] **Step 4: Commit report evidence**
 
 ```bash
 git add docs/reports/production_agent_optimization_report.md docs/superpowers/plans/2026-07-12-agent-stream-cancellation-remediation.md
