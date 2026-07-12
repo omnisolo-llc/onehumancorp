@@ -34,7 +34,6 @@ test.describe('Master Catalog B.10 / C.4: Verification Loops UI integration', ()
     // Wait for the result
     await expect(page.locator('.verification-result').first()).toBeVisible({ timeout: 15000 });
   });
-});
 
   test('CUJ: Verification Loops Dashboard displays Computational Guide option', async ({ page, unlimitedAdminUser, loginAs }) => {
     await loginAs(page, unlimitedAdminUser);
@@ -51,18 +50,19 @@ test.describe('Master Catalog B.10 / C.4: Verification Loops UI integration', ()
   test('CUJ: Verification Loops Dashboard displays Inferential Sensor option', async ({ page, unlimitedAdminUser, loginAs }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/verification-loops');
-    await expect(page.getByRole('button', { name: /Run Inferential Sensor/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Run LLM Judge/i }).first()).toBeVisible();
   });
 
   test('CUJ: Verification Loops inputs capture text correctly', async ({ page, unlimitedAdminUser, loginAs }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/verification-loops');
 
-    const taskContextInput = page.getByPlaceholder(/e.g. Write a bash script/i).first();
+    const taskContextInput = page.getByPlaceholder(/Task definition for LLM Judge/i).first();
     await taskContextInput.fill('Check spelling');
     await expect(taskContextInput).toHaveValue('Check spelling');
 
-    const outputInput = page.getByPlaceholder(/echo 'ok'/i).first();
+    const outputInput = page.getByPlaceholder(/Output to evaluate/i).first();
     await outputInput.fill('ok');
     await expect(outputInput).toHaveValue('ok');
   });
+});

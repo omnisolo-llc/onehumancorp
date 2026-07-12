@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import VerificationLoopsPage from "./page";
 import { vi, describe, it, expect } from "vitest";
@@ -33,7 +34,7 @@ describe("VerificationLoopsPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Verification passed successfully\./i)).toBeInTheDocument();
+      expect(screen.queryAllByText(/Verification passed successfully\./i).length).toBeGreaterThan(0);
     });
   });
 
@@ -60,8 +61,8 @@ describe("VerificationLoopsPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Verification Failed/i)).toBeInTheDocument();
-      expect(screen.getByText(/Verification Loop Failed/i)).toBeInTheDocument();
+      expect(screen.queryAllByText(/Verification Failed/i).length).toBeGreaterThan(0);
+      expect(screen.queryAllByText(/Verification Loop Failed/i).length).toBeGreaterThan(0);
     });
   });
 });

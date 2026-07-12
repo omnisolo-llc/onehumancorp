@@ -46,10 +46,35 @@ export default function VerificationLoopsPage() {
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="glassmorphism bg-blue-50/60 backdrop-blur-[40px] saturate-[200%] border border-blue-100 p-6 shadow-sm rounded-3xl">
+          <h2 className="text-xl font-semibold text-blue-900 mb-3 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            Guides (Feedforward)
+          </h2>
+          <p className="text-sm text-blue-800 mb-4">Run these *before* execution to steer the model towards correct behavior or syntax.</p>
+          <ul className="space-y-2 text-sm text-blue-700">
+            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>Computational Guide (Linters, Type Checkers)</li>
+          </ul>
+        </div>
+
+        <div className="glassmorphism bg-purple-50/60 backdrop-blur-[40px] saturate-[200%] border border-purple-100 p-6 shadow-sm rounded-3xl">
+          <h2 className="text-xl font-semibold text-purple-900 mb-3 flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Sensors (Feedback)
+          </h2>
+          <p className="text-sm text-purple-800 mb-4">Run these *after* execution to observe the result and decide if re-planning is needed.</p>
+          <ul className="space-y-2 text-sm text-purple-700">
+             <li className="flex items-center"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>Visual Verifier (Playwright UI checks)</li>
+             <li className="flex items-center"><span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>LLM Judge (Heuristic/Qualitative evaluation)</li>
+          </ul>
+        </div>
+      </div>
+
       <div className="glassmorphism bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/50 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-3xl space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Task Context
+            Task Context (Task definition for LLM Judge)
           </label>
           <textarea
             className="w-full p-4 border border-white/40 rounded-xl shadow-inner focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all bg-white/50 backdrop-blur-[20px] saturate-[150%]"
@@ -62,7 +87,7 @@ export default function VerificationLoopsPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Agent Output / Command / Path
+            Agent Output / Command / Path (Output to evaluate)
           </label>
           <textarea
             className="w-full p-4 border border-white/40 rounded-xl shadow-inner focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all bg-white/50 backdrop-blur-[20px] saturate-[150%] font-mono text-sm"
@@ -95,13 +120,13 @@ export default function VerificationLoopsPage() {
             disabled={loading || !outputText}
             className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium transition-colors shadow-sm"
           >
-            {loading ? 'Verifying...' : 'Run Inferential Sensor'}
+            {loading ? 'Verifying...' : 'Run LLM Judge'}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-xl border border-red-200 shadow-sm">
+        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-xl border border-red-200 shadow-sm verification-result">
           <h3 className="font-bold mb-2 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Verification Failed
@@ -111,7 +136,7 @@ export default function VerificationLoopsPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-[30px] saturate-[210%] text-green-800 border border-green-200 rounded-xl shadow-sm">
+        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-[30px] saturate-[210%] text-green-800 border border-green-200 rounded-xl shadow-sm verification-result">
           <h3 className="font-bold mb-2 flex items-center text-green-900">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             Verification Passed
