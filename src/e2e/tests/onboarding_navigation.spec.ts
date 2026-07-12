@@ -20,7 +20,7 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('next-step-btn').nth(4).click(); // to step-admin
     await page.locator('#admin-name').fill('Test User');
     await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('pass123');
+    await page.locator('#admin-password').fill('password123');
     await page.getByTestId('next-step-btn').nth(5).click(); // to step-offer
     await page.locator('#first-offer').fill('Awesome stuff');
     await page.getByTestId('next-step-btn').nth(6).click(); // to step-location
@@ -58,7 +58,7 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('next-step-btn').nth(4).click();
     await page.locator('#admin-name').fill('Test User');
     await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('pass123');
+    await page.locator('#admin-password').fill('password123');
     await page.getByTestId('next-step-btn').nth(5).click();
 
     const offerInput = page.locator('#first-offer');
@@ -91,7 +91,7 @@ test.describe('Onboarding Navigation and Aesthetics', () => {
     await page.getByTestId('next-step-btn').nth(4).click();
     await page.locator('#admin-name').fill('Test User');
     await page.locator('#admin-email').fill('test@test.com');
-    await page.locator('#admin-password').fill('pass123');
+    await page.locator('#admin-password').fill('password123');
     await page.getByTestId('next-step-btn').nth(5).click();
     await page.locator('#first-offer').fill('Awesome stuff');
     await page.getByTestId('next-step-btn').nth(6).click();
