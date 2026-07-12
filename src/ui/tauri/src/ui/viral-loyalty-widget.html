@@ -66,6 +66,11 @@
     }
 
     button:hover { background-color: #0052cc; transform: translateY(-1px); }
+
+    #generate-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+    }
     button:active { transform: scale(0.98); }
 
     .back-link {
@@ -129,7 +134,7 @@
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 25px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       border: 1px solid rgba(0,0,0,0.05);
     }
 
@@ -152,6 +157,12 @@
       color: #999;
       font-size: 18px;
       transition: all 0.3s;
+    }
+
+    .stamp:not(.free):hover {
+      transform: scale(1.05);
+      border-color: #0066FF;
+      color: #0066FF;
     }
 
     @keyframes pop {
