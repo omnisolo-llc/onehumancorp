@@ -17,13 +17,17 @@ export default function PerplexityHarness() {
     setResponse("");
 
     try {
-      // Simulate API call to the rust backend
-      setTimeout(() => {
-        setResponse("According to source [1], the sky is blue. [1] https://example.com");
-        setLoading(false);
-      }, 1000);
+      const res = await fetch("/api/v1/perplexity/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+      if (!res.ok) throw new Error("API failed");
+      const data = await res.json();
+      setResponse(data.answer);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
+    } finally {
       setLoading(false);
     }
   };
