@@ -133,3 +133,4 @@ dummy_*
 .next/
 /*.patch
 *.pid
+test-results/

@@ -1,9 +1,7 @@
-import { PoweredByOHC } from "../components/PoweredByOHC";
 "use client";
-
+import { PoweredByOHC } from "../components/PoweredByOHC";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
 export default function ShareToUnlockGeneratorPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('my-store');
