@@ -84,7 +84,10 @@ export function VoiceAssistant() {
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-4 w-full max-w-[375px] px-4 pointer-events-none">
+    <div
+      className="fixed top-0 right-4 bottom-auto left-auto translate-x-0 z-[100] flex flex-col-reverse items-center gap-4 w-auto max-w-none px-0 pointer-events-none sm:top-auto sm:right-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:flex-col sm:w-full sm:max-w-[375px] sm:px-4"
+      data-global-floating-control="voice-assistant"
+    >
       {status !== "idle" && (
         <div className="w-full p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto">
           <div className="flex items-center gap-3">
