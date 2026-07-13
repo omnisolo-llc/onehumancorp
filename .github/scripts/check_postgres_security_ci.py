@@ -70,6 +70,7 @@ EXPECTED_HYGIENE_LINES = (
 
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
 
 
 @dataclass(frozen=True)
@@ -150,6 +151,8 @@ def named_step(job: tuple[str, ...], name: str) -> Step:
 def require_non_ignorable_job(job: tuple[str, ...], context: str) -> None:
     if any(line.startswith("    continue-on-error:") for line in active_config_lines(job)):
         raise ContractError(f"{context}: job-level continue-on-error is forbidden")
+    if "    defaults:" in active_config_lines(job):
+        raise ContractError(f"{context}: job-level run defaults are forbidden")
 
 
 def require_unconditional_step(step: Step, context: str) -> None:
@@ -158,6 +161,8 @@ def require_unconditional_step(step: Step, context: str) -> None:
             raise ContractError(f"{context}: step-level if condition is forbidden")
         if line.startswith("        continue-on-error:"):
             raise ContractError(f"{context}: continue-on-error is forbidden")
+        if line.startswith("        shell:"):
+            raise ContractError(f"{context}: shell override is forbidden")
 
 
 def require_active(lines: tuple[str, ...], exact: str, context: str) -> None:
@@ -216,6 +221,9 @@ def exact_psql_heredocs(lines: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[
 
 def check_workflow(path: Path) -> None:
     workflow = tuple(path.read_text(encoding="utf-8").splitlines())
+    workflow_defaults = mapping_block(workflow, "defaults", 0)
+    if active_config_lines(workflow_defaults) != EXPECTED_WORKFLOW_DEFAULTS:
+        raise ContractError("workflow defaults must be exactly defaults.run.shell: bash")
     jobs = mapping_block(workflow, "jobs", 0)
     security = mapping_block(jobs, "postgres-security", 2)
     required = mapping_block(jobs, "ci-required", 2)

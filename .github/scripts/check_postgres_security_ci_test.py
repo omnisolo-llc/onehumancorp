@@ -186,9 +186,24 @@ def main() -> None:
             "ignored suite failure",
         ),
         (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        shell: bash {0} || true\n        run:",
+            "suite swallowing shell override",
+        ),
+        (
+            "      - name: Provision and verify non-superuser application role\n        run:",
+            "      - name: Provision and verify non-superuser application role\n        shell: bash {0} || true\n        run:",
+            "role-proof swallowing shell override",
+        ),
+        (
             "      - name: Check required CI results\n        env:",
             "      - name: Check required CI results\n        if: ${{ false }}\n        env:",
             "disabled required-result step",
+        ),
+        (
+            "      - name: Check required CI results\n        env:",
+            "      - name: Check required CI results\n        shell: bash {0} || true\n        env:",
+            "required-result swallowing shell override",
         ),
         (
             "      - name: Provision and verify non-superuser application role\n        run:",
@@ -201,14 +216,29 @@ def main() -> None:
             "disabled always-run contract step",
         ),
         (
+            "      - name: Check tracked artifacts\n        run:",
+            "      - name: Check tracked artifacts\n        shell: bash {0} || true\n        run:",
+            "contract swallowing shell override",
+        ),
+        (
             "  postgres-security:\n    name: PostgreSQL tenant isolation",
             "  postgres-security:\n    name: PostgreSQL tenant isolation\n    continue-on-error: true",
             "ignored postgres-security job failure",
         ),
         (
+            "  postgres-security:\n    name: PostgreSQL tenant isolation",
+            "  postgres-security:\n    name: PostgreSQL tenant isolation\n    defaults:\n      run:\n        shell: bash {0} || true",
+            "postgres-security swallowing shell default",
+        ),
+        (
             "  ci-required:\n    name: CI Required",
             "  ci-required:\n    name: CI Required\n    continue-on-error: true",
             "ignored ci-required job failure",
+        ),
+        (
+            "  ci-required:\n    name: CI Required",
+            "  ci-required:\n    name: CI Required\n    defaults:\n      run:\n        shell: bash {0} || true",
+            "ci-required swallowing shell default",
         ),
         (
             "    if: ${{ always() }}",
@@ -224,6 +254,21 @@ def main() -> None:
             "  check-changes:\n    name: Check what files changed",
             "  check-changes:\n    name: Check what files changed\n    continue-on-error: true",
             "ignored check-changes job failure",
+        ),
+        (
+            "  check-changes:\n    name: Check what files changed",
+            "  check-changes:\n    name: Check what files changed\n    defaults:\n      run:\n        shell: bash {0} || true",
+            "check-changes swallowing shell default",
+        ),
+        (
+            "defaults:\n  run:\n    shell: bash",
+            "defaults:\n  run:\n    shell: bash {0} || true",
+            "workflow swallowing shell default",
+        ),
+        (
+            "defaults:\n  run:\n    shell: bash\n\n",
+            "",
+            "workflow missing shell default",
         ),
     )
     for old, new, label in mutations:
