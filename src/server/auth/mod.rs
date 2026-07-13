@@ -78,6 +78,8 @@ pub const ROLE_ADMIN: &str = "ADMIN";
 pub const ROLE_OPERATOR: &str = "OPERATOR";
 pub const ROLE_VIEWER: &str = "VIEWER";
 pub const DEFAULT_COST: u32 = 10;
+const DUMMY_PASSWORD_HASH: &str =
+    "$2b$10$dVqpE7hfDSB6wqVCcDvUGuLwuaGMsiC.FznSYrakLDs.8jQXm2wMC";
 
 fn hash(password: String, cost: u32) -> Result<String, String> {
     bcrypt::hash(password, cost).map_err(|e| e.to_string())
@@ -85,6 +87,68 @@ fn hash(password: String, cost: u32) -> Result<String, String> {
 
 fn verify(password: &str, hash: &str) -> Result<bool, String> {
     bcrypt::verify(password, hash).map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthenticationError {
+    InvalidCredentials,
+    Unavailable(String),
+}
+
+impl std::fmt::Display for AuthenticationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidCredentials => formatter.write_str("invalid credentials"),
+            Self::Unavailable(_) => formatter.write_str("authentication unavailable"),
+        }
+    }
+}
+
+impl std::error::Error for AuthenticationError {}
+
+enum RedisUrlSetting {
+    Absent,
+    Value(String),
+    InvalidUnicode,
+}
+
+fn configure_redis_client(setting: RedisUrlSetting) -> Result<Option<redis::Client>, String> {
+    match setting {
+        RedisUrlSetting::Absent => Ok(None),
+        RedisUrlSetting::Value(url) => redis::Client::open(url)
+            .map(Some)
+            .map_err(|_| "invalid revocation cache configuration".to_string()),
+        RedisUrlSetting::InvalidUnicode => {
+            Err("invalid revocation cache configuration".to_string())
+        }
+    }
+}
+
+fn decide_credentials_with<F>(
+    candidate: Option<User>,
+    password: &str,
+    org_id: &str,
+    mut verifier: F,
+) -> Result<User, AuthenticationError>
+where
+    F: FnMut(&str, &str) -> Result<bool, String>,
+{
+    let candidate = candidate.filter(|user| {
+        user.active
+            && match user.organization_id.as_deref() {
+                Some(user_org) => user_org == org_id,
+                None => org_id.is_empty(),
+            }
+    });
+    let password_hash = candidate
+        .as_ref()
+        .map(|user| user.password_hash.as_str())
+        .unwrap_or(DUMMY_PASSWORD_HASH);
+    let verified = verifier(password, password_hash).map_err(AuthenticationError::Unavailable)?;
+    match (candidate, verified) {
+        (Some(user), true) => Ok(user),
+        _ => Err(AuthenticationError::InvalidCredentials),
+    }
 }
 
 use serde::{Deserialize, Serialize};
@@ -139,6 +203,7 @@ pub struct Store {
     by_oidc: RwLock<HashMap<TenantKey, String>>,
     revoked: RwLock<HashMap<String, DateTime<Utc>>>,
     redis_client: Option<redis::Client>,
+    redis_configuration_error: Option<String>,
     secret: Vec<u8>,
     oidc_cfg: RwLock<OIDCConfig>,
     repo: Option<std::sync::Arc<dyn crate::user_repository::UserRepository>>,
@@ -296,12 +361,19 @@ impl Store {
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let enabled = !issuer_url.is_empty();
 
-        let redis_client = if ::server_config::get().multitenant {
-            std::env::var("OHC_REDIS_URL")
-                .ok()
-                .and_then(|url| redis::Client::open(url).ok())
+        let redis_configuration = if ::server_config::get().multitenant {
+            let setting = match std::env::var("OHC_REDIS_URL") {
+                Ok(url) => RedisUrlSetting::Value(url),
+                Err(std::env::VarError::NotPresent) => RedisUrlSetting::Absent,
+                Err(std::env::VarError::NotUnicode(_)) => RedisUrlSetting::InvalidUnicode,
+            };
+            configure_redis_client(setting)
         } else {
-            None
+            Ok(None)
+        };
+        let (redis_client, redis_configuration_error) = match redis_configuration {
+            Ok(client) => (client, None),
+            Err(error) => (None, Some(error)),
         };
 
         let store = Store {
@@ -312,6 +384,7 @@ impl Store {
             by_oidc: RwLock::new(HashMap::new()),
             revoked: RwLock::new(HashMap::new()),
             redis_client,
+            redis_configuration_error,
             secret,
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
@@ -408,42 +481,74 @@ impl Store {
         Ok(user)
     }
 
-    pub async fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
-        self.validate_org_id(org_id)?;
-        let user = if let Some(repo) = &self.repo {
-            repo.get_by_username(username, org_id).await?
+    pub async fn authenticate(
+        &self,
+        identifier: &str,
+        password: &str,
+        org_id: &str,
+    ) -> Result<User, AuthenticationError> {
+        if self.validate_org_id(org_id).is_err() {
+            let password = password.to_string();
+            let org_id = org_id.to_string();
+            return tokio::task::spawn_blocking(move || {
+                decide_credentials_with(None, &password, &org_id, verify)
+            })
+            .await
+            .map_err(|_| {
+                AuthenticationError::Unavailable("credential verifier unavailable".into())
+            })?;
+        }
+
+        let lookup_result = if let Some(repo) = &self.repo {
+            repo.get_by_login_identifier(identifier, org_id).await
         } else {
-            let by_name = self.by_name.read().expect("Failed to acquire lock");
-            let users = self.users.read().expect("Failed to acquire lock");
-
-            let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
-            let mut user_id_opt = by_name.get(&name_key).cloned();
-
-            if user_id_opt.is_none() && org_id.is_empty() {
-                user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
-            }
-
-            let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
-            users.get(&user_id).ok_or_else(|| "invalid credentials".to_string())?.clone()
+            Ok(self.find_memory_user_with(identifier, org_id, || {}))
         };
 
-        if !user.active {
-            return Err("account disabled".to_string());
-        }
+        let (candidate, lookup_error) = match lookup_result {
+            Ok(candidate) => (candidate, None),
+            Err(error) => (None, Some(error)),
+        };
+        let password = password.to_string();
+        let org_id = org_id.to_string();
+        let decision = tokio::task::spawn_blocking(move || {
+            decide_credentials_with(candidate, &password, &org_id, verify)
+        })
+        .await
+        .map_err(|_| AuthenticationError::Unavailable("credential verifier unavailable".into()))?;
 
-        if let Some(ref user_org) = user.organization_id {
-            if user_org != org_id {
-                return Err("invalid credentials".to_string());
+        if let Some(error) = lookup_error {
+            return Err(AuthenticationError::Unavailable(error));
+        }
+        decision
+    }
+
+    fn find_memory_user_with<F>(
+        &self,
+        identifier: &str,
+        org_id: &str,
+        after_index_lookup: F,
+    ) -> Option<User>
+    where
+        F: FnOnce(),
+    {
+        let user_id = {
+            let by_name = self.by_name.read().expect("Failed to acquire lock");
+            let by_email = self.by_email.read().expect("Failed to acquire lock");
+            let key = TenantKey {
+                org_id: org_id.to_string(),
+                key: identifier.to_string(),
+            };
+            match (by_name.get(&key), by_email.get(&key)) {
+                (Some(name_id), Some(email_id)) if name_id != email_id => None,
+                (Some(id), _) | (_, Some(id)) => Some(id.clone()),
+                (None, None) => None,
             }
-        } else if !org_id.is_empty() {
-            return Err("invalid credentials".to_string());
-        }
+        };
 
-        if verify(password, &user.password_hash).unwrap_or(false) {
-            Ok(user.clone())
-        } else {
-            Err("invalid credentials".to_string())
-        }
+        after_index_lookup();
+        let users = self.users.read().expect("Failed to acquire lock");
+        user_id.and_then(|id| users.get(&id).cloned())
     }
 
     fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
@@ -588,13 +693,19 @@ impl Store {
         Ok(())
     }
 
-        pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
-        if self.validate_org_id(org_id).is_err() {
-            return;
+    pub async fn revoke_token(
+        &self,
+        jti: String,
+        exp: DateTime<Utc>,
+        org_id: &str,
+    ) -> Result<(), String> {
+        self.validate_org_id(org_id)?;
+        if let Some(error) = &self.redis_configuration_error {
+            return Err(error.clone());
         }
 
         if let Some(repo) = &self.repo {
-            let _ = repo.revoke_token(jti.clone(), exp, org_id).await;
+            repo.revoke_token(jti.clone(), exp, org_id).await?;
         }
 
         {
@@ -605,43 +716,53 @@ impl Store {
             revoked.retain(|_, v| *v > now);
         }
         if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
-                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
-                let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
-            }
+            let mut conn = client
+                .get_multiplexed_tokio_connection()
+                .await
+                .map_err(|_| "revocation cache unavailable".to_string())?;
+            let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
+            let redis_key = format!("revoked_token:{}:{}", org_id, jti);
+            let result: redis::RedisResult<()> =
+                redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
+            result.map_err(|_| "revocation cache unavailable".to_string())?;
         }
+        Ok(())
     }
 
-        pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
-        if self.validate_org_id(org_id).is_err() {
-            return false;
+    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
+        self.validate_org_id(org_id)?;
+        if let Some(error) = &self.redis_configuration_error {
+            return Err(error.clone());
         }
 
         if let Some(repo) = &self.repo {
-            if let Ok(true) = repo.is_revoked(jti, org_id).await {
-                return true;
+            if repo.is_revoked(jti, org_id).await? {
+                return Ok(true);
             }
         }
 
         {
             let revoked = self.revoked.read().expect("Failed to acquire lock");
             if let Some(exp) = revoked.get(&format!("{}:{}", org_id, jti)) {
-                 if *exp > Utc::now() {
-                     return true;
-                 }
-            }
-        }
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
-                let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
-                if let Ok(true) = exists {
-                    return true;
+                if *exp > Utc::now() {
+                    return Ok(true);
                 }
             }
         }
-        false
+        if let Some(client) = &self.redis_client {
+            let mut conn = client
+                .get_multiplexed_tokio_connection()
+                .await
+                .map_err(|_| "revocation cache unavailable".to_string())?;
+            let redis_key = format!("revoked_token:{}:{}", org_id, jti);
+            let exists: bool = redis::AsyncCommands::exists(&mut conn, &redis_key)
+                .await
+                .map_err(|_| "revocation cache unavailable".to_string())?;
+            if exists {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
@@ -666,9 +787,21 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
+        self.validate_token_claims(_token, true).await
+    }
+
+    async fn validate_token_claims(
+        &self,
+        _token: &str,
+        check_revocation: bool,
+    ) -> Result<Claims, String> {
         if let Ok(header) = jsonwebtoken::decode_header(_token) {
             if header.alg == jsonwebtoken::Algorithm::RS256 {
-                let oidc_cfg_internal = self.oidc_cfg.read().expect("Failed to acquire lock").clone();
+                let oidc_cfg_internal = self
+                    .oidc_cfg
+                    .read()
+                    .expect("Failed to acquire lock")
+                    .clone();
                 let oidc_cfg = crate::oidc::OIDCConfig {
                     issuer_url: oidc_cfg_internal.issuer_url,
                     client_id: oidc_cfg_internal.client_id,
@@ -676,13 +809,36 @@ impl Store {
                 };
                 if oidc_cfg.enabled {
                     let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
-                    if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                    if ::server_config::get().multitenant
+                        && claims
+                            .organization_id
+                            .clone()
+                            .unwrap_or_default()
+                            .trim()
+                            .is_empty()
+                    {
+                        return Err(
+                            "Invalid token: organization_id is required in cloud mode".to_string()
+                        );
                     }
-                    if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
+                    if ::server_config::get().multitenant
+                        && claims
+                            .organization_id
+                            .as_deref()
+                            .map(|s| s.eq_ignore_ascii_case("system"))
+                            .unwrap_or(false)
+                    {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
-                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
+                    if check_revocation
+                        && self
+                            .is_revoked(
+                                &claims.jti,
+                                &claims.organization_id.clone().unwrap_or_default(),
+                            )
+                            .await
+                            .map_err(|_| "token validation unavailable".to_string())?
+                    {
                         return Err("token revoked".to_string());
                     }
                     return Ok(claims);
@@ -691,54 +847,105 @@ impl Store {
         }
 
         let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
-            let token_data = jsonwebtoken::decode::<Claims>(
-                _token,
-                &jsonwebtoken::DecodingKey::from_secret(&self.secret),
-                &validation
-            );
+        let token_data = jsonwebtoken::decode::<Claims>(
+            _token,
+            &jsonwebtoken::DecodingKey::from_secret(&self.secret),
+            &validation,
+        );
 
-            match token_data {
-                Ok(data) => {
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token: empty claims".to_string());
+        match token_data {
+            Ok(data) => {
+                if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                    return Err("Invalid token: empty claims".to_string());
+                }
+                if ::server_config::get().multitenant
+                    && data
+                        .claims
+                        .organization_id
+                        .clone()
+                        .unwrap_or_default()
+                        .trim()
+                        .is_empty()
+                {
+                    return Err(
+                        "Invalid token: organization_id is required in cloud mode".to_string()
+                    );
+                }
+                if ::server_config::get().multitenant
+                    && data
+                        .claims
+                        .organization_id
+                        .as_deref()
+                        .map(|s| s.eq_ignore_ascii_case("system"))
+                        .unwrap_or(false)
+                {
+                    return Err(
+                        "Invalid token: 'system' organization cannot be used in multitenant mode"
+                            .to_string(),
+                    );
+                }
+                if check_revocation
+                    && self
+                        .is_revoked(
+                            &data.claims.jti,
+                            &data.claims.organization_id.clone().unwrap_or_default(),
+                        )
+                        .await
+                        .map_err(|_| "token validation unavailable".to_string())?
+                {
+                    return Err("token revoked".to_string());
+                }
+                if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
+                    return Err("Invalid token claims".to_string());
+                }
+                Ok(data.claims)
+            }
+            Err(_) => {
+                let oidc_cfg = {
+                    let c = self.oidc_cfg.read().expect("Failed to acquire lock");
+                    crate::oidc::OIDCConfig {
+                        issuer_url: c.issuer_url.clone(),
+                        client_id: c.client_id.clone(),
+                        enabled: c.enabled,
                     }
-                    if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                };
+                if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                    if ::server_config::get().multitenant
+                        && claims
+                            .organization_id
+                            .clone()
+                            .unwrap_or_default()
+                            .trim()
+                            .is_empty()
+                    {
+                        return Err(
+                            "Invalid token: organization_id is required in cloud mode".to_string()
+                        );
                     }
-                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
+                    if ::server_config::get().multitenant
+                        && claims
+                            .organization_id
+                            .as_deref()
+                            .map(|s| s.eq_ignore_ascii_case("system"))
+                            .unwrap_or(false)
+                    {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
-                    if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
+                    if check_revocation
+                        && self
+                            .is_revoked(
+                                &claims.jti,
+                                &claims.organization_id.clone().unwrap_or_default(),
+                            )
+                            .await
+                            .map_err(|_| "token validation unavailable".to_string())?
+                    {
                         return Err("token revoked".to_string());
                     }
-                    if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                        return Err("Invalid token claims".to_string());
-                    }
-                    Ok(data.claims)
+                    return Ok(claims);
                 }
-                Err(_) => {
-                    let oidc_cfg = {
-                        let c = self.oidc_cfg.read().expect("Failed to acquire lock");
-                        crate::oidc::OIDCConfig {
-                            issuer_url: c.issuer_url.clone(),
-                            client_id: c.client_id.clone(),
-                            enabled: c.enabled,
-                        }
-                    };
-                    if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                        if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
-                            return Err("Invalid token: organization_id is required in cloud mode".to_string());
-                        }
-                        if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
-                            return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                        }
-                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
-                            return Err("token revoked".to_string());
-                        }
-                        return Ok(claims);
-                    }
-                    Err("Invalid token".to_string())
-                }
+                Err("Invalid token".to_string())
+            }
         }
     }
 }
@@ -798,11 +1005,11 @@ impl AuthService for AuthServiceServerImpl {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
 
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
-            return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
-        }
-
-        match self.store.authenticate(&req.username, &req.password, &req.organization_id).await {
+        match self
+            .store
+            .authenticate(&req.username, &req.password, &req.organization_id)
+            .await
+        {
             Ok(user) => {
                 match self.store.issue_token(&user) {
                     Ok(token) => {
@@ -815,7 +1022,13 @@ impl AuthService for AuthServiceServerImpl {
                     Err(e) => Err(Status::internal(e)),
                 }
             }
-            Err(e) => Err(Status::unauthenticated(e)),
+            Err(AuthenticationError::InvalidCredentials) => {
+                Err(Status::unauthenticated("invalid credentials"))
+            }
+            Err(AuthenticationError::Unavailable(error)) => {
+                tracing::error!(error = %error, "authentication backend unavailable");
+                Err(Status::unavailable("authentication unavailable"))
+            }
         }
     }
 
@@ -854,24 +1067,46 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
-        if let Some(auth_info) = request.extensions().get::<AuthInfo>() {
-            if let Some(auth_header) = request.metadata().get("authorization") {
-                if let Ok(auth_str) = auth_header.to_str() {
-                    let token = if auth_str.to_lowercase().starts_with("bearer ") {
-                        &auth_str[7..]
-                    } else {
-                        auth_str
-                    };
-
-                    if let Ok(claims) = self.store.validate_token(token).await {
-                        // Securely revoke the session
-                        let exp = chrono::DateTime::from_timestamp(claims.exp, 0).unwrap_or_else(chrono::Utc::now);
-                        self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
-                    }
+    async fn logout(
+        &self,
+        request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        request
+            .extensions()
+            .get::<AuthInfo>()
+            .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        let auth_header = request
+            .metadata()
+            .get("authorization")
+            .ok_or_else(|| Status::unauthenticated("missing authorization"))?;
+        let auth_str = auth_header
+            .to_str()
+            .map_err(|_| Status::unauthenticated("invalid authorization"))?;
+        let token = auth_str
+            .strip_prefix("Bearer ")
+            .or_else(|| auth_str.strip_prefix("bearer "))
+            .unwrap_or(auth_str);
+        let claims = self
+            .store
+            .validate_token_claims(token, false)
+            .await
+            .map_err(|error| {
+                if error == "token validation unavailable" {
+                    Status::unavailable(error)
+                } else {
+                    Status::unauthenticated("invalid token")
                 }
-            }
-        }
+            })?;
+        let exp = chrono::DateTime::from_timestamp(claims.exp, 0)
+            .ok_or_else(|| Status::unauthenticated("invalid token"))?;
+        let org_id = claims.organization_id.clone().unwrap_or_default();
+        self.store
+            .revoke_token(claims.jti, exp, &org_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, "token revocation unavailable");
+                Status::unavailable("token revocation unavailable")
+            })?;
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -1057,6 +1292,299 @@ impl AuthService for AuthServiceServerImpl {
 #[cfg(test)]
 mod store_tests {
     use super::*;
+
+    struct FailingRepository;
+
+    #[async_trait::async_trait]
+    impl crate::user_repository::UserRepository for FailingRepository {
+        async fn create_user(&self, _: User, _: &str) -> Result<(), String> {
+            Err("repository unavailable".into())
+        }
+        async fn get_by_id(&self, _: &str, _: &str) -> Result<User, String> {
+            Err("repository unavailable".into())
+        }
+        async fn get_by_username(&self, _: &str, _: &str) -> Result<User, String> {
+            Err("repository unavailable".into())
+        }
+        async fn get_by_email(&self, _: &str, _: &str) -> Result<User, String> {
+            Err("repository unavailable".into())
+        }
+        async fn get_by_login_identifier(&self, _: &str, _: &str) -> Result<Option<User>, String> {
+            Err("repository unavailable".into())
+        }
+        async fn get_by_oidc_subject(&self, _: &str, _: &str) -> Result<User, String> {
+            Err("repository unavailable".into())
+        }
+        async fn list_users(&self, _: &str) -> Result<Vec<User>, String> {
+            Err("repository unavailable".into())
+        }
+        async fn update_user(&self, _: User, _: &str) -> Result<(), String> {
+            Err("repository unavailable".into())
+        }
+        async fn delete_user(&self, _: &str, _: &str) -> Result<(), String> {
+            Err("repository unavailable".into())
+        }
+        async fn revoke_token(&self, _: String, _: DateTime<Utc>, _: &str) -> Result<(), String> {
+            Err("repository unavailable".into())
+        }
+        async fn is_revoked(&self, _: &str, _: &str) -> Result<bool, String> {
+            Err("repository unavailable".into())
+        }
+    }
+
+    fn credential_test_user(active: bool, organization_id: Option<&str>) -> User {
+        let now = Utc::now();
+        User {
+            id: "user-id".to_string(),
+            username: "alice".to_string(),
+            email: "alice@example.com".to_string(),
+            password_hash: "real-hash".to_string(),
+            roles: vec![ROLE_VIEWER.to_string()],
+            active,
+            organization_id: organization_id.map(str::to_string),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        }
+    }
+
+    fn test_store_with_repo(repo: Arc<dyn crate::user_repository::UserRepository>) -> Store {
+        Store {
+            users: RwLock::new(HashMap::new()),
+            by_name: RwLock::new(HashMap::new()),
+            by_email: RwLock::new(HashMap::new()),
+            by_oidc: RwLock::new(HashMap::new()),
+            revoked: RwLock::new(HashMap::new()),
+            redis_client: None,
+            redis_configuration_error: None,
+            secret: b"test-secret-with-at-least-32-bytes".to_vec(),
+            oidc_cfg: RwLock::new(OIDCConfig {
+                issuer_url: String::new(),
+                client_id: String::new(),
+                enabled: false,
+            }),
+            repo: Some(repo),
+        }
+    }
+
+    fn test_store_with_memory_user(active: bool) -> Store {
+        let mut store = test_store_with_repo(Arc::new(FailingRepository));
+        store.repo = None;
+        let mut user = credential_test_user(active, None);
+        user.password_hash = hash("secret".to_string(), 4).unwrap();
+        store
+            .users
+            .write()
+            .unwrap()
+            .insert(user.id.clone(), user.clone());
+        store.by_name.write().unwrap().insert(
+            TenantKey {
+                org_id: String::new(),
+                key: user.username.clone(),
+            },
+            user.id.clone(),
+        );
+        store.by_email.write().unwrap().insert(
+            TenantKey {
+                org_id: String::new(),
+                key: user.email.clone(),
+            },
+            user.id.clone(),
+        );
+        store
+    }
+
+    #[test]
+    fn credential_decision_verifies_exactly_once_for_every_outcome() {
+        let cases = [
+            (Some(credential_test_user(true, None)), "", true, true),
+            (Some(credential_test_user(true, None)), "", false, false),
+            (None, "", false, false),
+            (Some(credential_test_user(false, None)), "", false, false),
+            (
+                Some(credential_test_user(true, Some("other-tenant"))),
+                "",
+                false,
+                false,
+            ),
+        ];
+        for (candidate, org_id, verifier_result, should_succeed) in cases {
+            let mut calls = 0;
+            let result = decide_credentials_with(candidate, "password", org_id, |_, _| {
+                calls += 1;
+                Ok(verifier_result)
+            });
+            assert_eq!(calls, 1);
+            assert_eq!(result.is_ok(), should_succeed);
+            if !should_succeed {
+                assert!(matches!(
+                    result,
+                    Err(AuthenticationError::InvalidCredentials)
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn credential_verifier_failures_are_availability_errors() {
+        let result = decide_credentials_with(None, "password", "", |_, _| {
+            Err("bcrypt unavailable".to_string())
+        });
+        assert!(matches!(result, Err(AuthenticationError::Unavailable(_))));
+    }
+
+    #[test]
+    fn redis_configuration_distinguishes_absent_and_invalid_values() {
+        assert!(
+            configure_redis_client(RedisUrlSetting::Absent)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            configure_redis_client(RedisUrlSetting::Value("not a redis url".to_string())).is_err()
+        );
+        assert!(configure_redis_client(RedisUrlSetting::InvalidUnicode).is_err());
+    }
+
+    #[tokio::test]
+    async fn memory_authentication_supports_username_and_email_with_generic_denials() {
+        let store = test_store_with_memory_user(true);
+        assert!(store.authenticate("alice", "secret", "").await.is_ok());
+        assert!(
+            store
+                .authenticate("alice@example.com", "secret", "")
+                .await
+                .is_ok()
+        );
+        assert!(matches!(
+            store.authenticate("alice", "wrong", "").await,
+            Err(AuthenticationError::InvalidCredentials)
+        ));
+        assert!(matches!(
+            store.authenticate("missing", "wrong", "").await,
+            Err(AuthenticationError::InvalidCredentials)
+        ));
+
+        let inactive_store = test_store_with_memory_user(false);
+        assert!(matches!(
+            inactive_store.authenticate("alice", "secret", "").await,
+            Err(AuthenticationError::InvalidCredentials)
+        ));
+    }
+
+    #[tokio::test]
+    async fn authentication_repository_failures_are_unavailable() {
+        let store = test_store_with_repo(Arc::new(FailingRepository));
+        assert!(matches!(
+            store.authenticate("alice", "secret", "").await,
+            Err(AuthenticationError::Unavailable(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn revocation_repository_failures_are_propagated() {
+        let store = test_store_with_repo(Arc::new(FailingRepository));
+        let expiry = Utc::now() + chrono::Duration::hours(1);
+        assert_eq!(
+            store
+                .revoke_token("jti".to_string(), expiry, "")
+                .await
+                .unwrap_err(),
+            "repository unavailable"
+        );
+        assert_eq!(
+            store.is_revoked("jti", "").await.unwrap_err(),
+            "repository unavailable"
+        );
+    }
+
+    #[tokio::test]
+    async fn invalid_redis_configuration_fails_revocation_closed() {
+        let mut store = test_store_with_memory_user(true);
+        store.redis_configuration_error =
+            Some("invalid revocation cache configuration".to_string());
+        let expiry = Utc::now() + chrono::Duration::hours(1);
+        assert_eq!(
+            store
+                .revoke_token("jti".to_string(), expiry, "")
+                .await
+                .unwrap_err(),
+            "invalid revocation cache configuration"
+        );
+        assert_eq!(
+            store.is_revoked("jti", "").await.unwrap_err(),
+            "invalid revocation cache configuration"
+        );
+    }
+
+    #[tokio::test]
+    async fn token_validation_fails_closed_when_revocation_is_unavailable() {
+        let store = test_store_with_repo(Arc::new(FailingRepository));
+        let token = store
+            .issue_token(&credential_test_user(true, None))
+            .unwrap();
+        assert_eq!(
+            store.validate_token(&token).await.unwrap_err(),
+            "token validation unavailable"
+        );
+    }
+
+    fn logout_request(token: &str) -> Request<EmptyRequest> {
+        let mut request = Request::new(EmptyRequest {});
+        request.extensions_mut().insert(AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/org/local/agent/user-id".to_string(),
+            org_id: String::new(),
+            agent_id: "user-id".to_string(),
+        });
+        request
+            .metadata_mut()
+            .insert("authorization", format!("Bearer {token}").parse().unwrap());
+        request
+    }
+
+    #[tokio::test]
+    async fn logout_is_idempotent_after_token_revocation() {
+        let store = Arc::new(test_store_with_memory_user(true));
+        let token = store
+            .issue_token(&credential_test_user(true, None))
+            .unwrap();
+        let service = AuthServiceServerImpl::new(store);
+
+        assert!(
+            AuthService::logout(&service, logout_request(&token))
+                .await
+                .is_ok()
+        );
+        assert!(
+            AuthService::logout(&service, logout_request(&token))
+                .await
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn memory_lookup_releases_index_locks_before_reading_users() {
+        let store = Arc::new(test_store_with_memory_user(true));
+        let worker_store = Arc::clone(&store);
+        let users_guard = store.users.write().unwrap();
+        let (indices_released_tx, indices_released_rx) = std::sync::mpsc::channel();
+
+        let worker = std::thread::spawn(move || {
+            worker_store.find_memory_user_with("alice", "", || {
+                indices_released_tx.send(()).unwrap();
+            })
+        });
+
+        indices_released_rx
+            .recv_timeout(std::time::Duration::from_secs(1))
+            .expect("lookup did not finish its index phase");
+        assert!(
+            store.by_name.try_write().is_ok(),
+            "username index remained locked while waiting for users"
+        );
+        drop(users_guard);
+        assert_eq!(worker.join().unwrap().unwrap().username, "alice");
+    }
 
     #[test]
     fn test_secret_paths_are_safe() {

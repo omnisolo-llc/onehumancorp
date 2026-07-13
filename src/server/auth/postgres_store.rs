@@ -52,7 +52,9 @@ impl UserRepository for PgUserRepository {
         let _should_bypass = !is_multitenant;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
@@ -180,6 +182,50 @@ impl UserRepository for PgUserRepository {
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
         })
+    }
+
+    async fn get_by_login_identifier(
+        &self,
+        identifier: &str,
+        org_id: &str,
+    ) -> Result<Option<User>, String> {
+        validate_org_id!(org_id);
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        let rows = sqlx::query(
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at
+             FROM users
+             WHERE (username = $1 OR email = $1)
+               AND tenant_id = current_setting('app.current_tenant')::text
+               AND active = TRUE
+             LIMIT 2",
+        )
+        .bind(identifier)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+        if rows.len() != 1 {
+            return Ok(None);
+        }
+        let row = &rows[0];
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or(serde_json::Value::Null);
+        let roles = serde_json::from_value(roles_json).unwrap_or_default();
+        Ok(Some(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("tenant_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        }))
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
