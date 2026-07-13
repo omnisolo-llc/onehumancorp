@@ -435,8 +435,7 @@ impl DB {
                                 if let Ok(metadata) = file.metadata() {
                                     let perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
-                                        std::process::exit(1);
+                                        return Err("CRITICAL SECURITY ERROR: Insecure permissions on .ohc_sqlite_key. The secret might be compromised.".into());
                                     }
                                 }
                                 use std::io::Read;

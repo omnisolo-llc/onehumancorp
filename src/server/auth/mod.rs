@@ -170,8 +170,7 @@ impl Store {
                             if let Ok(metadata) = file.metadata() {
                                 let perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
-                                    tracing::warn!("Insecure permissions on .ohc_jwt_secret. Ignoring it to prevent TOCTOU attacks.");
-                                    std::process::exit(1);
+                                    panic!("CRITICAL SECURITY ERROR: Insecure permissions on .ohc_jwt_secret. The secret might be compromised. System terminating.");
                                 }
                             }
                             use std::io::Read;
@@ -209,8 +208,7 @@ impl Store {
                                 if let Ok(metadata) = file.metadata() {
                                     let perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
-                                        std::process::exit(1);
+                                        panic!("CRITICAL SECURITY ERROR: Insecure permissions on .ohc_sqlite_key. The secret might be compromised. System terminating.");
                                     }
                                 }
                                 use std::io::Read;
