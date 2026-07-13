@@ -1272,19 +1272,19 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
-        let tenant_id_clone_2 = tenant_id.clone();
+        let tenant_id_for_auditor = tenant_id.clone();
         let auditor_clone = auditor.clone();
 
         let auditor_future = tokio::task::spawn_blocking(move || {
             (
-                auditor_clone.get_tenant_cost_cents(&tenant_id_clone_2),
-                auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
-                auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
-                auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
-                auditor_clone.get_tenant_network_cost(&tenant_id_clone_2),
-                auditor_clone.get_tenant_bandwidth_savings(&tenant_id_clone_2),
-                auditor_clone.get_tenant_tokens(&tenant_id_clone_2),
-                auditor_clone.get_tenant_cached_tokens(&tenant_id_clone_2)
+                auditor_clone.get_tenant_cost_cents(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_revenue(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_payment_fees(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_compute_cost(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_network_cost(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_bandwidth_savings(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_tokens(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_cached_tokens(&tenant_id_for_auditor)
             )
         });
 
