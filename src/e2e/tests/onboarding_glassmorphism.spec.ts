@@ -16,7 +16,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
 
 
   test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://127.0.0.1:18789/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();
 
@@ -38,7 +38,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://127.0.0.1:18789/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();
 
@@ -58,7 +58,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding inputs and buttons use 8px border radius', async ({ page }) => {
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://127.0.0.1:18789/setup.html');
 
     // Start wizard to reach an input
     await page.getByText('Step-by-Step Setup').click();

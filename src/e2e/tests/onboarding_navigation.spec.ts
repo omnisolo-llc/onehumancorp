@@ -3,8 +3,15 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Navigation and Aesthetics', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Navigate using the real stack URL
-    await page.goto('/setup.html');
+    const fs = require('fs');
+    const path = require('path');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+    // Navigate using the mock URL
+    await page.goto('http://mock/setup.html');
   });
 
   test('Back button in domain step navigates to target audience step', async ({ page }) => {
