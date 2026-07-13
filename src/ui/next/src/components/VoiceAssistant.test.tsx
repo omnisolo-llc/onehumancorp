@@ -121,6 +121,58 @@ describe('VoiceAssistant', () => {
     expect(voiceCommandFetches()).toHaveLength(1);
   });
 
+  it('does not let a stale recorder completion clear a newer recorder', async () => {
+    const first = createStream(2);
+    const second = createStream(2);
+    getUserMedia
+      .mockResolvedValueOnce(first.stream)
+      .mockResolvedValueOnce(second.stream);
+    renderVoiceAssistant();
+    const button = screen.getByRole('button');
+
+    fireEvent.mouseDown(button);
+    await waitFor(() => expect(recorderInstances).toHaveLength(1));
+    const firstRecorder = recorderInstances[0];
+    const staleOnStop = firstRecorder.onstop;
+    fireEvent.mouseUp(button);
+    expect(firstRecorder.stop).toHaveBeenCalledTimes(1);
+    first.tracks.forEach((track) => expect(track.stop).toHaveBeenCalledTimes(1));
+
+    fireEvent.mouseDown(button);
+    await waitFor(() => expect(recorderInstances).toHaveLength(2));
+    const secondRecorder = recorderInstances[1];
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    await act(async () => staleOnStop?.());
+
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(secondRecorder.stop).not.toHaveBeenCalled();
+    second.tracks.forEach((track) => expect(track.stop).not.toHaveBeenCalled());
+    expect(voiceCommandFetches()).toHaveLength(0);
+
+    fireEvent.mouseUp(button);
+    expect(secondRecorder.stop).toHaveBeenCalledTimes(1);
+    second.tracks.forEach((track) => expect(track.stop).toHaveBeenCalledTimes(1));
+    first.tracks.forEach((track) => expect(track.stop).toHaveBeenCalledTimes(1));
+  });
+
+  it('stops and releases recording on touch cancellation', async () => {
+    const { stream, tracks } = createStream(2);
+    getUserMedia.mockResolvedValue(stream);
+    renderVoiceAssistant();
+    const button = screen.getByRole('button');
+
+    fireEvent.touchStart(button);
+    await waitFor(() => expect(recorderInstances).toHaveLength(1));
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.touchCancel(button);
+
+    expect(recorderInstances[0].stop).toHaveBeenCalledTimes(1);
+    tracks.forEach((track) => expect(track.stop).toHaveBeenCalledTimes(1));
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('stops recording and suppresses callbacks when unmounted while recording', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { stream, tracks } = createStream(2);
