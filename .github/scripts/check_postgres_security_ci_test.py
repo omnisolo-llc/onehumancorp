@@ -76,6 +76,26 @@ def main() -> None:
             "required-result guarded early success",
         ),
         (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          true; exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result compound early success",
+        ),
+        (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          if :; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result colon-guarded early success",
+        ),
+        (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          if [[ 1 -eq 1 ]]; then\n            exit 0\n          fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result multiline early success",
+        ),
+        (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          exit 00\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result alternate-zero early success",
+        ),
+        (
             "          .github/scripts/check_repo_hygiene_test.sh",
             "          exit 0\n          .github/scripts/check_repo_hygiene_test.sh",
             "check-changes direct early success",
@@ -84,6 +104,31 @@ def main() -> None:
             "          .github/scripts/check_repo_hygiene_test.sh",
             "          if true; then return 0; fi\n          .github/scripts/check_repo_hygiene_test.sh",
             "check-changes guarded early return",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          true; exit 0\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes compound early success",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          if :; then exit 0; fi\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes colon-guarded early success",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          if [[ 1 -eq 1 ]]; then\n            return 0\n          fi\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes multiline early return",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          exit 00\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes alternate-zero early success",
+        ),
+        (
+            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exit 00\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "application-role proof early success",
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
@@ -119,6 +164,16 @@ def main() -> None:
             "  ci-required:\n    name: CI Required",
             "  ci-required:\n    name: CI Required\n    continue-on-error: true",
             "ignored ci-required job failure",
+        ),
+        (
+            "    if: ${{ always() }}",
+            "    if: ${{ success() }}",
+            "conditional ci-required job",
+        ),
+        (
+            "    if: ${{ always() }}\n",
+            "",
+            "ci-required job missing always condition",
         ),
         (
             "  check-changes:\n    name: Check what files changed",

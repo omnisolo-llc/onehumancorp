@@ -124,48 +124,19 @@ def require_script_line(lines: tuple[str, ...], exact: str, context: str) -> Non
         raise ContractError(f"{context}: missing active executable line {exact!r}")
 
 
-def successful_termination(lines: tuple[str, ...]) -> tuple[int, str] | None:
-    condition_stack: list[bool | None] = []
-    direct = re.compile(r"^(?:exit|return)(?:\s+0)?\s*;?$")
-    chained = re.compile(r"^true\s*&&\s*(?:exit|return)(?:\s+0)?\s*;?$")
-    guarded = re.compile(
-        r"^if\s+(?:true|\[\[?\s*true\s*\]?\])\s*;\s*then\s+(?:exit|return)(?:\s+0)?\s*;\s*fi\s*;?$"
-    )
-
-    for index, original in enumerate(lines):
-        line = original.split(" #", 1)[0].strip()
-        if guarded.fullmatch(line):
-            return index, original
-        if re.fullmatch(r"if\s+(?:true|\[\[?\s*true\s*\]?\])\s*;\s*then", line):
-            condition_stack.append(True)
-            continue
-        if line.startswith("if ") and line.endswith("; then"):
-            condition_stack.append(None)
-            continue
-        if line == "else" and condition_stack:
-            condition_stack[-1] = False if condition_stack[-1] is True else None
-            continue
-        if line == "fi" and condition_stack:
-            condition_stack.pop()
-            continue
-        definitely_reached = not condition_stack or all(state is True for state in condition_stack)
-        if definitely_reached and (direct.fullmatch(line) or chained.fullmatch(line)):
-            return index, original
-    return None
-
-
-def require_reachable_before_success(
+def require_no_termination_before(
     lines: tuple[str, ...], protected: tuple[str, ...], context: str
 ) -> None:
     indexes: list[int] = []
     for exact in protected:
         require_script_line(lines, exact, context)
         indexes.append(lines.index(exact))
-    termination = successful_termination(lines)
-    if termination is not None and termination[0] < max(indexes):
-        raise ContractError(
-            f"{context}: successful termination {termination[1]!r} precedes required enforcement"
-        )
+    for line in lines[: max(indexes)]:
+        active = line.split(" #", 1)[0]
+        if re.search(r"\b(?:exit|return)\b", active):
+            raise ContractError(
+                f"{context}: active exit/return token {line!r} precedes required enforcement"
+            )
 
 
 def check_workflow(path: Path) -> None:
@@ -197,6 +168,14 @@ def check_workflow(path: Path) -> None:
     if role_style != "block":
         raise ContractError("application-role proof must be an active block run step")
     role_lines = active_script(role_run, "application-role proof")
+    role_assertions = (
+        "AND current_user = 'ohc_security_test'",
+        "AND NOT rolsuper",
+        "AND NOT rolinherit",
+        "AND NOT rolbypassrls",
+        "AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')",
+        "IF NOT (current_setting('row_security') = 'on') THEN",
+    )
     for exact, context in (
         ("AND current_user = 'ohc_security_test'", "application-role identity assertion"),
         ("AND NOT rolsuper", "non-superuser assertion"),
@@ -206,6 +185,7 @@ def check_workflow(path: Path) -> None:
         ("IF NOT (current_setting('row_security') = 'on') THEN", "row_security assertion"),
     ):
         require_script_line(role_lines, exact, context)
+    require_no_termination_before(role_lines, role_assertions, "application-role proof")
 
     suite_step = named_step(security, "Run PostgreSQL tenant-isolation suite")
     require_unconditional_step(suite_step, "exact multitenancy suite")
@@ -215,6 +195,7 @@ def check_workflow(path: Path) -> None:
         raise ContractError(f"exact multitenancy suite must be active scalar `run: {exact_suite}`")
 
     require_active(required, "      - postgres-security", "ci-required dependency")
+    require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")
     require_active(
         required,
         "          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}",
@@ -227,7 +208,7 @@ def check_workflow(path: Path) -> None:
         raise ContractError("required-result enforcement must be an active block run step")
     required_lines = active_script(required_run, "required-result enforcement")
     enforcement = 'require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"'
-    require_reachable_before_success(
+    require_no_termination_before(
         required_lines, (enforcement,), "non-markdown required result"
     )
     try:
@@ -246,7 +227,7 @@ def check_workflow(path: Path) -> None:
     if hygiene_style != "block":
         raise ContractError("check-changes hygiene must be an active block run step")
     hygiene_lines = active_script(hygiene_run, "check-changes hygiene")
-    require_reachable_before_success(
+    require_no_termination_before(
         hygiene_lines,
         (
             "python3 .github/scripts/check_postgres_security_ci_test.py",
