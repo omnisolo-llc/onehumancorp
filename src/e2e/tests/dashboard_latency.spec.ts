@@ -25,7 +25,7 @@ test.describe('Dashboard Performance Optimization UI Verification', () => {
         await page.waitForURL('/dashboard');
 
         // Ensure that the UI renders the main dashboard skeleton
-        await expect(page.locator('text=Unified Feed').first()).toBeVisible();
+        await expect(page.locator('text=Action Required').first()).toBeVisible();
 
         // Check components that rely on parallel payload fetches
         await expect(page.locator('text=Recent Messages').first()).toBeVisible();
