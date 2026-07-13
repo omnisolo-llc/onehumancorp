@@ -916,6 +916,26 @@
 
 
 
+      <div class="ohc-growth-card app-card" id="business-analytics-section" style="margin-bottom: 20px;">
+        <h2>Business Analytics</h2>
+        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+          <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 12px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
+            <p style="margin: 0; font-size: 18px; font-weight: 700;">$14,230</p>
+          </div>
+          <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 12px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">Low Stock</p>
+            <p style="margin: 0; font-size: 18px; font-weight: 700;">3 items</p>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid rgba(0,0,0,0.1); margin-top: 16px; padding-top: 16px;">
+          <h3 style="margin-top: 0; font-size: 16px;">Advanced AI Insights <span style="font-size: 12px; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; color: #666; margin-left: 8px;">PRO</span></h3>
+          <p style="font-size: 14px; color: #666; margin-bottom: 12px;">Unlock predictive analytics, automated cross-selling recommendations, and daily strategy briefings.</p>
+          <button id="upgrade-analytics-btn" class="btn-primary" style="width: 100%;">Upgrade to Pro</button>
+        </div>
+      </div>
+
       <div class="ohc-growth-card app-card" id="subscription-replenishment-section" style="margin-bottom: 20px;">
         <h2>Subscription Replenishment</h2>
         <p>You have <strong>12</strong> one-time buyers of consumable products. Convert them to recurring revenue.</p>
@@ -1438,6 +1458,15 @@
         const softPaywallShareBtn = document.getElementById('soft-paywall-share-btn');
         const softPaywallStatus = document.getElementById('soft-paywall-status');
         const advancedAutomationsStatus = document.getElementById('advanced-automations-status');
+
+        const upgradeAnalyticsBtn = document.getElementById('upgrade-analytics-btn');
+        if (upgradeAnalyticsBtn) {
+          upgradeAnalyticsBtn.addEventListener('click', () => {
+            if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+              window.location.href = 'pricing.html';
+            }
+          });
+        }
 
         if (enableAutomationsBtn) {
           enableAutomationsBtn.addEventListener('click', async () => {
