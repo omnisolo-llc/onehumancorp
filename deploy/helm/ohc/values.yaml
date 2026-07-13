@@ -20,30 +20,6 @@ backend:
       memory: 64Mi
   service:
     port: 8080
-chatwoot:
-  adminEmail: admin@ohc.local
-  autoscaling:
-    enabled: true
-    maxReplicas: 10
-    minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
-  databaseUrl: ''
-  enabled: true
-  image: chatwoot/chatwoot:v3.15.1
-  networkPolicy:
-    enabled: true
-  redisUrl: ''
-  replicas: 2
-  resources:
-    limits:
-      cpu: 100m
-      memory: 256Mi
-    requests:
-      cpu: 10m
-      memory: 64Mi
-  service:
-    port: 3000
 cnpg:
   clusterName: ohc-pg
   database: ohc
