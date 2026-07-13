@@ -2886,29 +2886,42 @@
           }
         }
 
-        // Merge from localStorage as fallback
+        // Compare updated_at from backend and localStorage to prioritize the most recent
         const stored = localStorage.getItem("onboardingState");
+        let parsedStored = null;
         if (stored) {
-          const parsed = JSON.parse(stored);
-          state = { ...state, ...parsed };
-          if (parsed.businessName && !parsed.business_name) {
-            state.business_name = parsed.businessName;
-          }
-          if (parsed.business_name && !parsed.businessName) {
-            state.businessName = parsed.business_name;
-          }
+          parsedStored = JSON.parse(stored);
         }
 
-        // Merge backend state, taking priority if it has advanced further or exists
+        // Default to merging backend state if it exists
         if (loadedState && Object.keys(loadedState).length > 0) {
-          if (!state.step || (loadedState.step && loadedState.step >= state.step)) {
-              state = { ...state, ...loadedState };
+          // Compare updated_at timestamps
+          const backendUpdatedAt = loadedState.updated_at || 0;
+          const localUpdatedAt = parsedStored ? (parsedStored.updated_at || 0) : 0;
+
+          if (localUpdatedAt > backendUpdatedAt) {
+             // Local is newer, so start with backend and override with local
+             state = { ...state, ...loadedState, ...parsedStored };
+          } else {
+             // Backend is newer or equal, so start with local and override with backend
+             if (parsedStored) {
+                 state = { ...state, ...parsedStored };
+             }
+             state = { ...state, ...loadedState };
           }
-          if (loadedState.businessName && !loadedState.business_name) {
-             state.business_name = loadedState.businessName;
-          }
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        } else if (parsedStored) {
+          // No backend state, just use local
+          state = { ...state, ...parsedStored };
         }
+
+        // Ensure business name consistency
+        if (state.businessName && !state.business_name) {
+            state.business_name = state.businessName;
+        }
+        if (state.business_name && !state.businessName) {
+            state.businessName = state.business_name;
+        }
+        localStorage.setItem("onboardingState", JSON.stringify(state));
 
         populateForm();
 
@@ -3111,6 +3124,7 @@
 
       var saveStateTimer = null;
       function saveCurrentState() {
+        state.updated_at = Date.now();
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
         state.businessName = inputs.name.value; // Sync for E2E
