@@ -63,7 +63,9 @@ jobs:
           fi
 
       - name: Check tracked artifacts
-        run: .github/scripts/check_repo_hygiene.sh
+        run: |
+          .github/scripts/check_repo_hygiene_test.sh
+          .github/scripts/check_repo_hygiene.sh
 
   dependency-audit:
     name: Production dependency audit

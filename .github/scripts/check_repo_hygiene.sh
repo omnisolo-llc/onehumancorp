@@ -12,17 +12,25 @@ report() {
   fail=1
 }
 
+report_path() {
+  local message=$1
+  local path=$2
+  local rendered
+  printf -v rendered '%q' "$path"
+  report "$message: $rendered"
+}
+
 while IFS= read -r -d '' path; do
   case "$path" in
     .ohc_jwt_secret|*/.ohc_jwt_secret)
-      report "forbidden runtime secret artifact is tracked: $path"
+      report_path 'forbidden runtime secret artifact is tracked' "$path"
       ;;
     .empty_commit_trigger*|*/.empty_commit_trigger*|get_business_context_code|get_business_context_code.rs|*/get_business_context_code|*/get_business_context_code.rs|bazelisk-linux-amd64|*/bazelisk-linux-amd64)
-      report "forbidden generated artifact is tracked: $path"
+      report_path 'forbidden generated artifact is tracked' "$path"
       ;;
     cleanup_padding.json|replies.json|*.png)
       if [[ "$path" != */* ]]; then
-        report "root-level scratch artifact is tracked: $path"
+        report_path 'root-level scratch artifact is tracked' "$path"
       fi
       ;;
   esac
@@ -30,7 +38,7 @@ while IFS= read -r -d '' path; do
   case "$path" in
     *.rs|*.py|*.sh)
       if [[ "$path" != */* ]]; then
-        report "root-level source/scratch file is tracked without an owner: $path"
+        report_path 'root-level source/scratch file is tracked without an owner' "$path"
       fi
       ;;
   esac
@@ -42,7 +50,7 @@ while IFS= read -r -d '' path; do
           # Allowed binary files
           ;;
         *)
-          report "forbidden binary file is tracked: $path"
+          report_path 'forbidden binary file is tracked' "$path"
           ;;
       esac
     fi
