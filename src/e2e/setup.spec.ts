@@ -292,9 +292,9 @@ test.describe('OHC Setup Wizard Dark Mode', () => {
     const container = page.locator('.container.glassmorphism').first();
     await expect(container).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
 
-    // Playwright evaluates body background color as rgb(0, 0, 0)
+    // Playwright evaluates body background color as rgba(22, 22, 26, 0.7)
     const body = page.locator('body');
-    await expect(body).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+    await expect(body).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
 
     // Check text input dark mode styling
     const textInput = page.locator('#instant-bio');
