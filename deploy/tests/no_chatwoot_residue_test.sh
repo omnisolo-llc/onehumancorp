@@ -2,7 +2,9 @@
 set -euo pipefail
 
 scanner_error() {
-  printf 'chat platform residue scanner failed' >&2
+  local reason="$1"
+  shift
+  printf 'chat platform residue scanner failed: %s' "$reason" >&2
   for detail in "$@"; do
     printf ' %q' "$detail" >&2
   done
@@ -52,6 +54,7 @@ fi
 tracked=()
 scan_pathspecs=()
 symlinks=()
+all_tracked_paths=()
 declare -A tracked_seen=()
 append_tracked() {
   local candidate="$1"
@@ -67,6 +70,7 @@ for record in "${tracked_records[@]}"; do
   metadata="${record%%$'\t'*}"
   path="${record#*$'\t'}"
   [[ -z "$path" ]] && scanner_error "empty tracked inventory path"
+  all_tracked_paths+=("$path")
   mode="${metadata%% *}"
   case "$mode" in
     100644|100755)
@@ -100,6 +104,15 @@ if ! physical_repo_root="$(realpath -e -- "$repo_root" 2>/dev/null)"; then
   scanner_error "repository root resolution failed" "$repo_root"
 fi
 symlink_match_paths=()
+semantic_alias_paths=()
+semantic_alias_targets=()
+declare -A symlink_match_seen=()
+append_symlink_match() {
+  local candidate="$1"
+  [[ -n "${symlink_match_seen["$candidate"]+present}" ]] && return 0
+  symlink_match_seen["$candidate"]=1
+  symlink_match_paths+=("$candidate")
+}
 for path in "${symlinks[@]}"; do
   if mapfile -d '' -t link_targets < <(readlink -z -- "$path" 2>/dev/null); then
     readlink_pid=$!
@@ -111,7 +124,7 @@ for path in "${symlinks[@]}"; do
   fi
   target="${link_targets[0]}"
   if [[ "${target,,}" == *chatwoot* ]]; then
-    symlink_match_paths+=("$path")
+    append_symlink_match "$path"
   fi
   if mapfile -d '' -t resolved_targets < <(realpath -m -z -- "$path" 2>/dev/null); then
     realpath_pid=$!
@@ -123,6 +136,9 @@ for path in "${symlinks[@]}"; do
   fi
   resolved_target="${resolved_targets[0]}"
   case "$resolved_target" in
+    "$physical_repo_root")
+      scanner_error "tracked directory symlink target unsupported" "$path"
+      ;;
     "$physical_repo_root"/*)
       resolved_relative="${resolved_target#"$physical_repo_root"/}"
       ;;
@@ -130,6 +146,11 @@ for path in "${symlinks[@]}"; do
       scanner_error "tracked symlink target escapes repository" "$path"
       ;;
   esac
+  for indexed_path in "${all_tracked_paths[@]}"; do
+    if [[ "$indexed_path" == "$resolved_relative/"* ]]; then
+      scanner_error "tracked directory symlink target unsupported" "$path"
+    fi
+  done
   if mapfile -d '' -t target_records < <(git ls-files -s -z -- ":(top,literal)$resolved_relative" 2>/dev/null); then
     target_inventory_pid=$!
   else
@@ -155,6 +176,8 @@ for path in "${symlinks[@]}"; do
       if [[ -L "$target_path" || ! -f "$target_path" || ! -r "$target_path" ]]; then
         scanner_error "tracked symlink target regular input invalid" "$path" "$target_path"
       fi
+      semantic_alias_paths+=("$path")
+      semantic_alias_targets+=("$target_path")
       append_tracked "$target_path"
       ;;
     120000)
@@ -179,6 +202,17 @@ fi
 if [[ "$grep_status" -ne 0 && "$grep_status" -ne 1 ]]; then
   scanner_error "tracked residue command failed"
 fi
+
+declare -A matching_path_seen=()
+for path in "${matching_paths[@]}"; do
+  matching_path_seen["$path"]=1
+done
+for ((i = 0; i < ${#semantic_alias_paths[@]}; i++)); do
+  target_path="${semantic_alias_targets[i]}"
+  if [[ -n "${matching_path_seen["$target_path"]+present}" ]]; then
+    append_symlink_match "${semantic_alias_paths[i]}"
+  fi
+done
 
 if ((${#matching_paths[@]} != 0 || ${#symlink_match_paths[@]} != 0)); then
   echo "active Chatwoot residue remains:" >&2
