@@ -1106,3 +1106,5 @@ mod store_tests {
 
 #[cfg(test)]
 mod multitenancy_isolation;
+#[cfg(test)]
+mod postgres_test_support;
