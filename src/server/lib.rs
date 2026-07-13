@@ -191,7 +191,7 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
                     parent_context_json: String::new(),
                     ..Default::default()
                 };
-                match svc.dispatch_to_sub_agent(tonic::Request::new(req)).await {
+                match svc.dispatch_to_sub_agent(svc.trusted_request(req)).await {
                     Ok(resp) => {
                         let inner = resp.into_inner();
                         if !inner.error.is_empty() {
@@ -415,21 +415,122 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
-fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
-    let spiffe_id = req.metadata().get("x-spiffe-id")
-        .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
-
-    let spiffe_id_str = spiffe_id.to_str()
-        .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))?;
-
-    match ::server_auth::parse_spiffe_id(spiffe_id_str) {
-        Ok((_org_id, _agent_id)) => {
-            tracing::info!("Authenticated SPIFFE ID successfully."); // pii-safe
-        }
-        Err(e) => return Err(e),
+fn authenticated_spiffe_id(
+    standalone: bool,
+    claimed_identity: Option<&str>,
+    peer_certificate_der: Option<&[u8]>,
+) -> Result<String, tonic::Status> {
+    if standalone {
+        let identity = claimed_identity
+            .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
+        ::server_auth::parse_spiffe_id(identity)?;
+        return Ok(identity.to_string());
     }
 
+    let certificate = peer_certificate_der
+        .ok_or_else(|| tonic::Status::unauthenticated("verified client certificate is required"))?;
+    ::server_auth::peer_identity::spiffe_id_from_certificate_der(certificate)
+}
+
+fn spiffe_interceptor(
+    mut req: tonic::Request<()>,
+) -> Result<tonic::Request<()>, tonic::Status> {
+    let claimed_identity = req
+        .metadata()
+        .get("x-spiffe-id")
+        .map(|value| {
+            value
+                .to_str()
+                .map(str::to_string)
+                .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))
+        })
+        .transpose()?;
+    let peer_certificates = req.peer_certs();
+    let peer_certificate = peer_certificates
+        .as_deref()
+        .and_then(|certificates| certificates.first())
+        .map(AsRef::as_ref);
+    let identity = authenticated_spiffe_id(
+        crate::is_standalone_runtime(),
+        claimed_identity.as_deref(),
+        peer_certificate,
+    )?;
+    let (org_id, agent_id) = ::server_auth::parse_spiffe_id(&identity)?;
+    let metadata_identity = identity
+        .parse()
+        .map_err(|_| tonic::Status::internal("verified SPIFFE identity is not valid metadata"))?;
+    req.metadata_mut().insert("x-spiffe-id", metadata_identity);
+    req.extensions_mut().insert(::server_auth::AuthInfo {
+        spiffe_id: identity,
+        org_id,
+        agent_id,
+    });
+    tracing::info!("Authenticated verified SPIFFE identity.");
     Ok(req)
+}
+
+fn grpc_bind_host(standalone: bool) -> &'static str {
+    if standalone { "127.0.0.1" } else { "0.0.0.0" }
+}
+
+fn grpc_tls_config_from_pem(
+    standalone: bool,
+    cert: Option<Vec<u8>>,
+    key: Option<Vec<u8>>,
+    client_ca: Option<Vec<u8>>,
+) -> Result<Option<tonic::transport::ServerTlsConfig>, String> {
+    if standalone {
+        return Ok(None);
+    }
+
+    let require = |name: &str, value: Option<Vec<u8>>| {
+        value
+            .filter(|bytes| !bytes.is_empty())
+            .ok_or_else(|| format!("{name} is required and must not be empty in cloud mode"))
+    };
+    let cert = require("OHC_GRPC_TLS_CERT_PATH", cert)?;
+    let key = require("OHC_GRPC_TLS_KEY_PATH", key)?;
+    let client_ca = require("OHC_GRPC_CLIENT_CA_PATH", client_ca)?;
+
+    Ok(Some(
+        tonic::transport::ServerTlsConfig::new()
+            .identity(tonic::transport::Identity::from_pem(cert, key))
+            .client_ca_root(tonic::transport::Certificate::from_pem(client_ca)),
+    ))
+}
+
+fn grpc_tls_config_from_env(
+    standalone: bool,
+) -> Result<Option<tonic::transport::ServerTlsConfig>, std::io::Error> {
+    if standalone {
+        return Ok(None);
+    }
+
+    let read = |name: &str| -> Result<Vec<u8>, std::io::Error> {
+        let path = std::env::var(name).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("{name} is required in cloud mode"),
+            )
+        })?;
+        if path.trim().is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("{name} must not be empty in cloud mode"),
+            ));
+        }
+        std::fs::read(&path).map_err(|error| {
+            std::io::Error::new(error.kind(), format!("failed to read {name}: {error}"))
+        })
+    };
+
+    grpc_tls_config_from_pem(
+        false,
+        Some(read("OHC_GRPC_TLS_CERT_PATH")?),
+        Some(read("OHC_GRPC_TLS_KEY_PATH")?),
+        Some(read("OHC_GRPC_CLIENT_CA_PATH")?),
+    )
+    .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))
 }
 
 pub mod proto {
@@ -1272,19 +1373,19 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
-        let tenant_id_clone_2 = tenant_id.clone();
+        let tenant_id_for_auditor = tenant_id.clone();
         let auditor_clone = auditor.clone();
 
         let auditor_future = tokio::task::spawn_blocking(move || {
             (
-                auditor_clone.get_tenant_cost_cents(&tenant_id_clone_2),
-                auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
-                auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
-                auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
-                auditor_clone.get_tenant_network_cost(&tenant_id_clone_2),
-                auditor_clone.get_tenant_bandwidth_savings(&tenant_id_clone_2),
-                auditor_clone.get_tenant_tokens(&tenant_id_clone_2),
-                auditor_clone.get_tenant_cached_tokens(&tenant_id_clone_2)
+                auditor_clone.get_tenant_cost_cents(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_revenue(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_payment_fees(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_compute_cost(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_network_cost(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_bandwidth_savings(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_tokens(&tenant_id_for_auditor),
+                auditor_clone.get_tenant_cached_tokens(&tenant_id_for_auditor)
             )
         });
 
@@ -2443,6 +2544,21 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         subscriber.init();
     }
 
+    let standalone = crate::is_standalone_runtime();
+    let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
+    let builtin_agent_auth = if standalone {
+        Some(
+            ohc_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("invalid builtin agent authentication configuration: {error}"),
+                )
+            })?,
+        )
+    } else {
+        None
+    };
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
@@ -2451,7 +2567,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(8081);
-    let addr = format!("0.0.0.0:{}", grpc_port).parse()?;
+    let addr = format!("{}:{}", grpc_bind_host(standalone), grpc_port).parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     hub.set_db(db.clone());
@@ -2733,6 +2849,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     if crate::is_standalone_runtime() {
         let builtin_transport = mesh_transport.clone();
         let builtin_mesh = handoff_mesh.clone();
+        let builtin_auth = builtin_agent_auth.expect("standalone auth was initialized");
         tokio::spawn(async move {
             let agent_id = std::env::var("OHC_AGENT_ID")
                 .unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
@@ -2789,10 +2906,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(80),
             };
-            let auth = ohc_builtin_agent::auth::auth_mode_from_env();
             let agent_id_clone = agent_id.clone();
             let mut svc_impl =
-                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, auth);
+                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, builtin_auth);
             svc_impl.init_memory().await;
             let svc = std::sync::Arc::new(svc_impl);
             let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());
@@ -6554,6 +6670,36 @@ async fn create_ui_bom_item_handler(
                                     .await
                                     .map_err(|e| e.to_string())?;
 
+                                    let articles = crate::api::docs::get_articles();
+                                    for article in articles {
+                                        sqlx::query(
+                                            "INSERT OR IGNORE INTO help_articles (tenant_id, category, title, desc_text, link) VALUES (?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(&article.category)
+                                        .bind(&article.title)
+                                        .bind(&article.desc)
+                                        .bind(&article.link)
+                                        .execute(pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
+                                    let videos = crate::api::docs::get_videos();
+                                    for video in videos {
+                                        sqlx::query(
+                                            "INSERT OR IGNORE INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES (?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(video.id)
+                                        .bind(&video.title)
+                                        .bind(&video.duration)
+                                        .bind(&video.video_url)
+                                        .execute(pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
                                     sqlx::query(
                                         "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                                     )
@@ -6643,6 +6789,36 @@ async fn create_ui_bom_item_handler(
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
+
+                                    let articles = crate::api::docs::get_articles();
+                                    for article in articles {
+                                        sqlx::query(
+                                            "INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(&article.category)
+                                        .bind(&article.title)
+                                        .bind(&article.desc)
+                                        .bind(&article.link)
+                                        .execute(&db.pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
+                                    let videos = crate::api::docs::get_videos();
+                                    for video in videos {
+                                        sqlx::query(
+                                            "INSERT INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(video.id)
+                                        .bind(&video.title)
+                                        .bind(&video.duration)
+                                        .bind(&video.video_url)
+                                        .execute(&db.pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
 
                                     sqlx::query(
                                         "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
@@ -7323,7 +7499,12 @@ async fn create_ui_bom_item_handler(
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
     let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client.clone());
 
-    Server::builder()
+    let mut grpc_server = Server::builder();
+    if let Some(tls_config) = grpc_tls_config {
+        grpc_server = grpc_server.tls_config(tls_config)?;
+    }
+
+    grpc_server
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
         .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
@@ -7363,6 +7544,35 @@ pub mod crypto;
 mod tests {
     use super::*;
     use crate::settings::Store;
+
+    #[test]
+    fn grpc_tls_config_requires_all_cloud_credentials() {
+        assert_eq!(grpc_bind_host(true), "127.0.0.1");
+        assert_eq!(grpc_bind_host(false), "0.0.0.0");
+        assert!(grpc_tls_config_from_pem(true, None, None, None).unwrap().is_none());
+
+        let pem = Some(b"non-empty test PEM".to_vec());
+        assert!(grpc_tls_config_from_pem(false, None, pem.clone(), pem.clone()).is_err());
+        assert!(grpc_tls_config_from_pem(false, pem.clone(), None, pem.clone()).is_err());
+        assert!(grpc_tls_config_from_pem(false, pem.clone(), pem.clone(), None).is_err());
+        assert!(grpc_tls_config_from_pem(false, pem.clone(), pem.clone(), pem).is_ok());
+    }
+
+    #[test]
+    fn cloud_spiffe_identity_ignores_unverified_metadata() {
+        let claimed = "spiffe://onehumancorp.io/org/acme/agent/worker-1";
+        assert!(authenticated_spiffe_id(false, Some(claimed), None).is_err());
+        assert_eq!(
+            authenticated_spiffe_id(true, Some(claimed), None).unwrap(),
+            claimed,
+        );
+        assert!(authenticated_spiffe_id(
+            true,
+            Some("spiffe://evil.example/org/acme/agent/worker-1"),
+            None,
+        )
+        .is_err());
+    }
 
     #[tokio::test]
     async fn test_voice_settings_logic() {

@@ -213,7 +213,7 @@ export function HelpWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-[90]" data-ui-overlay="true">
+      <div className="fixed bottom-6 right-6 z-[90] hidden sm:block" data-ui-overlay="true">
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             id="ohc-floating-help-btn"
