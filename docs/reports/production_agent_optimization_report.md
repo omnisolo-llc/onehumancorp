@@ -56,21 +56,93 @@ The production server still logs expected missing-service errors in this isolate
 
 ### CHAT-00 — Chatwoot removal
 
-**Status (2026-07-13): Removed from the active application and deployment graph.** No production or customer Chatwoot data existed, so no data migration was required or performed. The native OHC omnichannel inbox remains in place; expanding its channel and inbox capabilities belongs to later native-chat projects rather than this removal.
+**Status (2026-07-13): Removed from the active application and deployment graph.** The repository owner confirmed in this thread on 2026-07-13 that there was no real-customer or production Chatwoot deployment or data. That owner statement was not independently verified against an external production system. On that owner-confirmed basis, no Chatwoot data migration was performed. The native OHC omnichannel inbox remains in place; expanding its channel and inbox capabilities belongs to later native-chat projects rather than this removal.
 
 The removal deleted the unused Rust integration crate and its Cargo workspace/dependency, integration re-export, Tauri Bazel-manifest, lockfile, and Bazel graph edges. Deployment removal covered the three Compose services (migration, web, and worker), related backend environment/database initialization, both Prometheus scrape jobs, the dedicated Helm workload and service templates, Helm values and backend environment, HPA, ServiceMonitor, NetworkPolicy and ingress peers, deploy Bazel filegroups, and the Kind override. Active product surfaces now advertise the native inbox and direct Instagram DM, WhatsApp, SMS, and email connectors. Active README, developer, business, customer-success, and C++ evaluation claims were updated; exactly three research reports are retained with explicit superseded-architecture markers. A fail-closed tracked-file residue guard and its CI step enforce the active-source boundary.
 
-Fresh local evidence at `36d36f4337526841344b98103230fcaa1ac1e9d8`:
+Removal-matrix evidence captured at `36d36f4337526841344b98103230fcaa1ac1e9d8`:
 
 - `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0 with no output.
-- `cargo metadata --locked --format-version=1 --no-deps >/tmp/ohc-cargo-metadata-final.json` exited 0, and `cargo check -p ohc-mono --locked` exited 0. Cargo emitted four existing unused-variable warnings for `db` in `src/server/api/staff_mesh.rs`; no warning was suppressed for this work.
+- `cargo check -p ohc-mono --locked` exited 0. Cargo emitted four existing unused-variable warnings for `db` in `src/server/api/staff_mesh.rs`; no warning was suppressed for this work.
 - `bazel test --config=local --remote_cache= --remote_executor= --bes_backend= //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exited 0 with 3/3 Bazel test targets passing. The integration log reports 6 passed and 0 failed; the Vitest log reports 235 test files and 943 tests passed; the deployment artifact target reports its checks passed. Bazel also warned that some declared test sizes exceed its size guidance.
-- `docker compose -f deploy/docker-compose.yml config >/tmp/ohc-compose-final.yaml` and `docker compose -f deploy/docker-compose.e2e.yml config >/tmp/ohc-compose-e2e-final.yaml` each exited 0. Supplemental default/all-profile service inventories covered 5/11 primary services and 2/2 e2e services using `config --services` and `--profile '*' config`; their rendered all-profile configurations also exited 0.
-- In a temporary copy of `deploy/helm/ohc`, `helm dependency build "$tmp_chart_root/ohc"`, `helm lint "$tmp_chart_root/ohc"`, and `helm template ohc "$tmp_chart_root/ohc" >/tmp/ohc-helm-final.yaml` exited 0. Lint reported 1 chart linted, 0 failed, with only the recommendation to add a chart icon. The downloaded dependencies and temporary chart copy were removed and no chart artifacts were added to the repository.
-- `! rg -n -i 'chatwoot' /tmp/ohc-cargo-metadata-final.json /tmp/ohc-compose-final.yaml /tmp/ohc-compose-e2e-final.yaml /tmp/ohc-helm-final.yaml` exited 0 with no matches. A supplemental negative scan of both all-profile Compose renders and service inventories also exited 0 with no matches.
-- `bazel query //... > /tmp/ohc-bazel-query.txt 2>/tmp/ohc-bazel-query.err` exited 0 and produced 7,283 labels; only afterward, `! rg -i 'chatwoot' /tmp/ohc-bazel-query.txt` exited 0 with no match.
-- `git grep -I -l -i 'chatwoot' -- . | sort` returned exactly eight allowed tracked paths after this evidence section was added: `.github/workflows/ci.yml`, the residue guard, this evidence report, the native removal plan and omnichannel design, and exactly three marked historical research reports. Unlike the earlier default `rg` invocation, this tracked-file classification includes hidden paths such as `.github`; no other tracked reference was present.
-- After adding this section, `git diff --check` and the residue guard again exited 0 with no output. The only worktree entry before the report edit was the unrelated untracked `docs/superpowers/plans/2026-07-13-authentication-hardening.md`.
+- The separately produced Bazel graph contained 7,283 labels; its producer exited 0 before the negative scan found zero Chatwoot labels.
+
+The deployment renders and locked Cargo metadata were rerun from the corrected report tree in one private, copy-pasteable block. The main default inventory intentionally activates 5 services, while `--profile '*'` expands it to all 11 declared services. The e2e default and all-profile inventories each contain the same 2 services. The exact block was:
+
+```bash
+set -euo pipefail
+umask 077
+evidence_dir=$(mktemp -d /tmp/ohc-chatwoot-verify.XXXXXX)
+printf 'evidence_dir=%s\n' "$evidence_dir"
+(
+  trap 'rm -rf "$evidence_dir"' EXIT HUP INT TERM
+  test "$(stat -c '%a' "$evidence_dir")" = 700
+
+  cargo metadata --locked --format-version=1 --no-deps >"$evidence_dir/cargo-metadata.json"
+
+  docker compose -f deploy/docker-compose.yml config >"$evidence_dir/compose-main-default.yaml"
+  docker compose -f deploy/docker-compose.yml config --services >"$evidence_dir/compose-main-default-services.txt"
+  docker compose -f deploy/docker-compose.yml --profile '*' config >"$evidence_dir/compose-main-all-profiles.yaml"
+  docker compose -f deploy/docker-compose.yml --profile '*' config --services >"$evidence_dir/compose-main-all-profile-services.txt"
+  docker compose -f deploy/docker-compose.e2e.yml config >"$evidence_dir/compose-e2e-default.yaml"
+  docker compose -f deploy/docker-compose.e2e.yml config --services >"$evidence_dir/compose-e2e-default-services.txt"
+  docker compose -f deploy/docker-compose.e2e.yml --profile '*' config >"$evidence_dir/compose-e2e-all-profiles.yaml"
+  docker compose -f deploy/docker-compose.e2e.yml --profile '*' config --services >"$evidence_dir/compose-e2e-all-profile-services.txt"
+
+  main_default_count=$(wc -l <"$evidence_dir/compose-main-default-services.txt")
+  main_all_count=$(wc -l <"$evidence_dir/compose-main-all-profile-services.txt")
+  e2e_default_count=$(wc -l <"$evidence_dir/compose-e2e-default-services.txt")
+  e2e_all_count=$(wc -l <"$evidence_dir/compose-e2e-all-profile-services.txt")
+  test "$main_default_count" -eq 5
+  test "$main_all_count" -eq 11
+  test "$e2e_default_count" -eq 2
+  test "$e2e_all_count" -eq 2
+
+  mkdir -p "$evidence_dir/chart/ohc"
+  cp -a deploy/helm/ohc/. "$evidence_dir/chart/ohc/"
+  helm dependency build "$evidence_dir/chart/ohc"
+  helm lint "$evidence_dir/chart/ohc"
+  helm template ohc "$evidence_dir/chart/ohc" >"$evidence_dir/helm-render.yaml"
+
+  rendered_outputs=(
+    "$evidence_dir/cargo-metadata.json"
+    "$evidence_dir/compose-main-default.yaml"
+    "$evidence_dir/compose-main-default-services.txt"
+    "$evidence_dir/compose-main-all-profiles.yaml"
+    "$evidence_dir/compose-main-all-profile-services.txt"
+    "$evidence_dir/compose-e2e-default.yaml"
+    "$evidence_dir/compose-e2e-default-services.txt"
+    "$evidence_dir/compose-e2e-all-profiles.yaml"
+    "$evidence_dir/compose-e2e-all-profile-services.txt"
+    "$evidence_dir/helm-render.yaml"
+  )
+  if rg -q -i 'chatwoot' -- "${rendered_outputs[@]}"; then
+    printf 'rendered Chatwoot residue found\n' >&2
+    exit 1
+  else
+    rg_status=$?
+    test "$rg_status" -eq 1
+  fi
+
+  chmod -R go-rwx "$evidence_dir"
+  test "$(stat -c '%a' "$evidence_dir")" = 700
+  if find "$evidence_dir" -mindepth 1 -perm /077 -print -quit | grep -q .; then
+    printf 'non-private evidence entry found\n' >&2
+    exit 1
+  fi
+  printf 'service_counts main_default=%s main_all_profiles=%s e2e_default=%s e2e_all_profiles=%s\n' \
+    "$main_default_count" "$main_all_count" "$e2e_default_count" "$e2e_all_count"
+  printf 'rendered_residue_matches=0\nprivate_directory_mode=%s\n' "$(stat -c '%a' "$evidence_dir")"
+)
+test ! -e "$evidence_dir"
+printf 'secure_evidence_dir_absent=1\n'
+```
+
+The block exited 0. Locked metadata, all eight explicit Compose outputs/inventories, isolated Helm dependency build, lint, template, negative scans, permission checks, and cleanup therefore completed in sequence. Helm reported 1 chart linted and 0 failed, with only the recommendation to add a chart icon. It reported `main_default=5`, `main_all_profiles=11`, `e2e_default=2`, `e2e_all_profiles=2`, zero rendered residue matches, directory mode 0700, no group/world-accessible descendant, and `secure_evidence_dir_absent=1`. No chart dependency or generated evidence artifact was added to the repository.
+
+Before the secure rerun, the twelve earlier predictable artifacts—`ohc-cargo-metadata-final.json`, both default Compose renders, both all-profile Compose renders, four Compose service inventories, `ohc-helm-final.yaml`, and both Bazel-query output files—were inventoried at mode 0664, removed by their exact paths, and confirmed absent. They were not retained.
+
+Post-report checks at the final report HEAD are distinct from the removal matrix at `36d36f4`: `git grep -l -i 'chatwoot' -- . | sort` returned exactly eight allowed tracked paths in the corrected report tree: `.github/workflows/ci.yml`, the residue guard, this evidence report, the native removal plan and omnichannel design, and exactly three marked historical research reports. `git diff --check` and the residue guard exited 0 with no output. The only remaining worktree entry outside the report was the unrelated untracked `docs/superpowers/plans/2026-07-13-authentication-hardening.md`.
 
 All required local tools were available. This evidence does not claim a remote CI run, live-cluster rollout, or external production-system check; those checks were not run. Earlier default Bazel remote-cache/BES attempts in this environment were unauthorized, so the explicit local Bazel matrix above is the authoritative final evidence.
 
