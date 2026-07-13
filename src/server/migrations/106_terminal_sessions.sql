@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS pos_terminal_sessions (
     started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_synced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     offline_changes_count INT DEFAULT 0,
+    pending_reconciliation JSONB DEFAULT '[]'::jsonb,
+    last_conflict_resolved_at TIMESTAMPTZ,
+    sync_status TEXT DEFAULT 'SYNCED',
     UNIQUE(tenant_id, device_id)
 );
 
