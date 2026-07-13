@@ -3,6 +3,7 @@ status: completed
 details:
   - Cleaned backlog without hallucinating features since no task was given.
   - Phase 1: Signal Hygiene applied to QueueManager's polling mechanism in `src/server/orchestration/queue/worker_pool.rs`, downgrading noise level from tracing::error to tracing::trace.
+  - Phase 2: Removed unused unused code from `src/server/api/terminal_api.rs` to fix compiler warnings.
 debt_report: |
   <div markdown="1" style="backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
   <h1>🧹 Maintainer: Triage & Debt Report</h1>
@@ -15,6 +16,7 @@ debt_report: |
   <h2>Phase 2 & 3: Backlog Management / Health Guardianship</h2>
   <ul>
     <li>Architectural audit showed backlog pruning and stuck missions handling logic are correctly implemented in <code>sip.rs</code> and <code>db.rs</code> via <code>cleanup_stagnant_missions</code> and explicit <code>STUCK</code> status transitions.</li>
+    <li>Removed dead code and unused imports from <code>terminal_api.rs</code></li>
     <li>No commits violated Zero Trust or SPIRE principles.</li>
   </ul>
   <h2>Phase 4: Verification</h2>
