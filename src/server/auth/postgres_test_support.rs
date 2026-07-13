@@ -97,7 +97,7 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         match decide_postgres_test(database_url.as_deref(), require_postgres.as_deref()) {
             Ok(PostgresTestDecision::Run(url)) => url,
             Ok(PostgresTestDecision::Skip(reason)) => {
-                eprintln!("SKIPPED postgres security test: {reason}");
+                tracing::error!("SKIPPED postgres security test: {reason}");
                 return None;
             }
             Err(error) => panic!("{error}"),

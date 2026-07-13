@@ -1661,7 +1661,7 @@ mod stress_verification_tests {
         let p95 = latencies[(concurrency as f32 * 0.95) as usize];
         let p99 = latencies[(concurrency as f32 * 0.99) as usize];
 
-        println!("Cloud Mode 100 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+        tracing::info!("Cloud Mode 100 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
 
         // Assert that p99 latency under stress does not exceed an unreasonable threshold (e.g., 200ms for this simple simulation)
         assert!(p99 < 200, "p99 latency should remain reasonable under stress");
@@ -1694,7 +1694,7 @@ mod stress_verification_tests {
         let p95 = latencies[(concurrency as f32 * 0.95) as usize];
         let p99 = latencies[(concurrency as f32 * 0.99) as usize];
 
-        println!("Standalone Mode 10 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+        tracing::info!("Standalone Mode 10 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
 
         assert!(p99 < 200, "p99 latency should remain reasonable under stress");
     }

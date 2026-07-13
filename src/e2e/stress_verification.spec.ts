@@ -25,7 +25,7 @@ test.describe('Stress Verification', () => {
     const p95Index = Math.floor(latencies.length * 0.95);
     const p95Latency = latencies[p95Index];
 
-    console.log(`p95 Latency: ${p95Latency}ms`);
+    console.info(`p95 Latency: ${p95Latency}ms`);
 
     expect(p95Latency).toBeLessThan(500);
   });

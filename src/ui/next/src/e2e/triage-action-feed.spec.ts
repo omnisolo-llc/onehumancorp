@@ -77,7 +77,7 @@ test.describe('Triage Action Feed UI', () => {
       // We will wait for the API response after clicking
       const responsePromise = page.waitForResponse(response =>
         response.url().includes('/api/triage/action') && response.status() === 200
-      ).catch(() => console.log('Response not found or timed out in E2E'));
+      ).catch(() => console.info('Response not found or timed out in E2E'));
 
       try {
         await approveBtn.waitFor({ state: 'visible', timeout: 2000 });
@@ -94,7 +94,7 @@ test.describe('Triage Action Feed UI', () => {
             await dismissBtn.waitFor({ state: 'visible', timeout: 2000 });
             await dismissBtn.click();
           } catch (e2) {
-            console.log(`No approve, review, or dismiss button visible for ${testId?.replace("triage-card-", "")}!`);
+            console.info(`No approve, review, or dismiss button visible for ${testId?.replace("triage-card-", "")}!`);
             break;
           }
         }
@@ -119,7 +119,7 @@ test.describe('Triage Action Feed UI', () => {
     try {
       await expect(emptyState).toBeVisible({ timeout: 10000 });
     } catch (e) {
-      console.log('Empty state not visible, likely due to backend connection refusion in E2E. Skipping strict assert.');
+      console.info('Empty state not visible, likely due to backend connection refusion in E2E. Skipping strict assert.');
     }
   });
 });
