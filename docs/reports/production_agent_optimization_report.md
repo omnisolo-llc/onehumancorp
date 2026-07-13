@@ -126,7 +126,9 @@ Smallest regression: lockfile audit in CI with an explicit, expiring advisory al
 
 ### F-09 — Medium — tracked opaque JWT-secret candidate
 
-`src/server/auth/.ohc_jwt_secret` is a tracked 32-byte opaque file. Runtime code writes the active secret under the safe user directory rather than reading this source-tree path, so production use is not proven. Nevertheless, a secret-shaped artifact is present in Git history and should be removed and any potentially related signing material rotated. Its contents were not printed or copied during this review.
+**Status (2026-07-13): Remediated in the current tree; operational rotation and history remediation remain.** The tracked `src/server/auth/.ohc_jwt_secret` artifact was removed, `.gitignore` now excludes that runtime-secret basename at any directory depth, and `.github/scripts/check_repo_hygiene.sh` rejects any tracked path with that basename. The regression command `.github/scripts/check_repo_hygiene.sh` failed before deletion by naming only the forbidden path and passes after deletion; `git check-ignore -v src/server/auth/.ohc_jwt_secret` confirms the path is ignored, and `git ls-files -z | while IFS= read -r -d '' path; do case "$path" in .ohc_jwt_secret|*/.ohc_jwt_secret) printf '%s\n' "$path";; esac; done` produces no paths.
+
+Runtime code constructs the active fallback-secret path with `server_config::get_safe_user_dir().join(".ohc_jwt_secret")`; no source-tree linkage was found, so production use of the removed artifact was not proven. Git history may still contain the removed material. Operators must rotate any potentially related JWT signing keys and tokens and separately decide whether history rewriting is required; neither history purge nor operational rotation was performed as part of this remediation.
 
 ### F-10 — Medium — tenant tests silently skip while reporting success
 

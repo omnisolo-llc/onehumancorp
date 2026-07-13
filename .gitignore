@@ -34,6 +34,9 @@
 *.key
 *.certSigningRequest
 
+# Runtime JWT signing material belongs only in the safe user-data directory.
+.ohc_jwt_secret
+
 # Test binary, built with `go test -c`
 *.test
 
