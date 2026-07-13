@@ -6912,6 +6912,11 @@ mod tests {
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_acon_context_strategy = true; // THIS IS THE KEY MECHANIC
+        // We set min_size_to_omit to 0 so the small MockToolExecutor output is stripped as expected by this test.
+        cfg.acon_config = Some(crate::acon_context::AconConfig {
+            min_size_to_omit: 0,
+            ..Default::default()
+        });
         // Disable other mechanics to isolate the test
         cfg.enable_observation_masking = false;
         cfg.enable_context_compaction = false;

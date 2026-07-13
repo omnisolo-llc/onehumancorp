@@ -6,12 +6,15 @@ use crate::types::{Message, Role};
 pub struct AconConfig {
     /// Number of recent messages to preserve completely.
     pub preserve_recent_messages_count: usize,
+    /// Minimum size of tool output (in bytes) to trigger omission.
+    pub min_size_to_omit: usize,
 }
 
 impl Default for AconConfig {
     fn default() -> Self {
         Self {
             preserve_recent_messages_count: 2,
+            min_size_to_omit: 200,
         }
     }
 }
@@ -39,6 +42,7 @@ impl AconStrategy {
                         if tr.error.is_empty()
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()
+                            && tr.content.len() > self.config.min_size_to_omit
                         {
                             tr.content =
                                 "[ACON: Tool output omitted to prioritize reasoning traces.]"
@@ -70,7 +74,7 @@ mod tests {
                 tool_calls: vec![],
                 tool_results: vec![ToolResult {
                     tool_call_id: "call_1".to_string(),
-                    content: "Massive log output".to_string(),
+                    content: "a".repeat(300), // Massive log output (> 200 chars)
                     error: String::new(),
                 }],
                 response_id: None,
@@ -108,10 +112,11 @@ mod tests {
 
         let config = AconConfig {
             preserve_recent_messages_count: 2,
+            min_size_to_omit: 200,
         };
         apply_acon_strategy(&mut messages, &config);
 
-        // First tool message should be masked (it is outside the preserved count)
+        // First tool message should be masked (it is outside the preserved count and > min_size_to_omit)
         assert_eq!(
             messages[0].tool_results[0].content,
             "[ACON: Tool output omitted to prioritize reasoning traces.]"
@@ -125,5 +130,72 @@ mod tests {
 
         // Second tool message is within the recent preserved count
         assert_eq!(messages[2].tool_results[0].content, "Another tool result");
+    }
+
+    #[test]
+    fn test_apply_acon_strategy_preserves_small_outputs() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Small text output".to_string(), // < 200 chars
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "I'm thinking...".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "Another small output".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Final reasoning".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let config = AconConfig {
+            preserve_recent_messages_count: 2,
+            min_size_to_omit: 200,
+        };
+        apply_acon_strategy(&mut messages, &config);
+
+        // First tool message is outside the preserved count, but because it's < min_size_to_omit, it should be preserved!
+        assert_eq!(
+            messages[0].tool_results[0].content,
+            "Small text output"
+        );
+
+        // Assistant message reasoning is preserved
+        assert_eq!(
+            messages[1].content,
+            "I'm thinking..."
+        );
+
+        // Second tool message is within the recent preserved count
+        assert_eq!(messages[2].tool_results[0].content, "Another small output");
     }
 }
