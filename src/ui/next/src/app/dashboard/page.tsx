@@ -244,12 +244,21 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : { remainingActions: 9 })
           .catch(() => ({ remainingActions: 9 }));
 
-        const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
+        const reviewsPromise = fetch("/api/local_seo/reviews/pending", { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+          .then(res => res.ok ? res.json() : [])
+          .catch(() => []);
+
+        const [unifiedData, onboardingData, ledgerData, usageData, pendingReviewsData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
           ledgerPromise,
           usagePromise,
+          reviewsPromise,
         ]);
+
+        if (unifiedData && pendingReviewsData && Array.isArray(pendingReviewsData)) {
+            unifiedData.pendingReviews = pendingReviewsData;
+        }
 
         if (usageData && usageData.remainingActions !== undefined) {
            setRemainingActions(usageData.remainingActions);

@@ -265,7 +265,7 @@ pub async fn get_discovery_report(
     Json(reports)
 }
 
-pub fn router() -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/connect", post(connect_google_business))
         .route("/status", get(get_connection_status))
