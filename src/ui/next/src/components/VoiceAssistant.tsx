@@ -85,11 +85,15 @@ export function VoiceAssistant() {
 
   return (
     <div
-      className="fixed top-0 right-4 bottom-auto left-auto translate-x-0 z-[100] flex flex-col-reverse items-center gap-4 w-auto max-w-none px-0 pointer-events-none sm:top-auto sm:right-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:flex-col sm:w-full sm:max-w-[375px] sm:px-4"
-      data-global-floating-control="voice-assistant"
+      className="relative z-[100] flex w-full min-w-0 flex-col items-end gap-2 pointer-events-none sm:fixed sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-[375px] sm:-translate-x-1/2 sm:items-center sm:gap-4 sm:px-4"
+      data-voice-assistant-root
     >
       {status !== "idle" && (
-        <div className="w-full p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto">
+        <div
+          className="w-full min-w-0 p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto"
+          data-voice-assistant-state={status}
+          data-voice-assistant-surface="status"
+        >
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -106,7 +110,7 @@ export function VoiceAssistant() {
         <button
           className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
             isRecording
-              ? "bg-red-500 scale-110 ring-8 ring-red-500/20"
+              ? "bg-red-500 ring-8 ring-red-500/20 sm:scale-110"
               : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"
           }`}
           onMouseDown={startRecording}
@@ -115,6 +119,7 @@ export function VoiceAssistant() {
           onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
           onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
           aria-label="Voice Assistant"
+          data-voice-assistant-surface="trigger"
         >
           <svg
             className={`w-8 h-8 ${isRecording ? "text-white" : "text-[#0066FF]"}`}

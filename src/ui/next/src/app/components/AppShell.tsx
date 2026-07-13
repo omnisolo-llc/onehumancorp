@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { VoiceAssistant } from "../../components/VoiceAssistant";
 import { Omnibox } from "./Omnibox";
 
 type StatusItem = {
@@ -214,6 +215,7 @@ export function AppShell({
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>
+            <VoiceAssistant />
           </div>
         </header>
         <main className="app-page">{children}

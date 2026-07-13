@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const productRoutes = [
   '/dashboard',
@@ -41,11 +41,92 @@ const routesWithSurfacePrimitives = new Set([
 const normalizedSurfaceSelector = [
   '.app-main .app-card',
   '.app-main .app-panel',
-  '.app-main .glassmorphism',
+  '.app-main .glassmorphism:not([data-voice-assistant-surface])',
   '.app-main .glass-card',
 ].join(',');
 
 const hydrationFailurePattern = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced/i;
+
+async function expectMobileVoiceSurfacesClear(page: Page) {
+  const root = page.locator('[data-voice-assistant-root]');
+  const topbar = page.locator('.app-topbar');
+  await expect(root).toHaveCount(1);
+  await expect(topbar.locator('[data-voice-assistant-root]')).toHaveCount(1);
+
+  const violations = await page.evaluate(() => {
+    const rootElement = document.querySelector('[data-voice-assistant-root]');
+    const topbarElement = document.querySelector('.app-topbar');
+    if (!rootElement || !topbarElement) return [{ reason: 'missing shell-owned voice root' }];
+
+    const visible = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const intersects = (left: DOMRect, right: DOMRect) => (
+      Math.min(left.right, right.right) - Math.max(left.left, right.left) > 1
+      && Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top) > 1
+    );
+    const topbarRect = topbarElement.getBoundingClientRect();
+    const shellTargets = [...document.querySelectorAll([
+      '.app-brand-mark',
+      '.app-nav-link',
+    ].join(','))].filter(visible);
+    const productTargets = [...document.querySelectorAll([
+      '.app-page button',
+      '.app-page a',
+      '.app-page input',
+      '.app-page textarea',
+      '.app-page select',
+      '.app-page [role="button"]',
+    ].join(','))].filter(visible);
+    const siblingActions = [...topbarElement.querySelectorAll('.app-topbar-right button, .app-topbar-right a')]
+      .filter((element) => !rootElement.contains(element) && visible(element));
+    const hasExposedIntersection = (surfaceRect: DOMRect, target: Element) => {
+      const targetRect = target.getBoundingClientRect();
+      if (!intersects(surfaceRect, targetRect)) return false;
+      const x = (Math.max(surfaceRect.left, targetRect.left) + Math.min(surfaceRect.right, targetRect.right)) / 2;
+      const y = (Math.max(surfaceRect.top, targetRect.top) + Math.min(surfaceRect.bottom, targetRect.bottom)) / 2;
+      const stack = document.elementsFromPoint(x, y);
+      const topbarIndex = stack.indexOf(topbarElement);
+      const targetIndex = stack.findIndex((element) => element === target || target.contains(element));
+      return targetIndex >= 0 && (topbarIndex < 0 || targetIndex < topbarIndex);
+    };
+
+    return [...rootElement.querySelectorAll('[data-voice-assistant-surface]')]
+      .filter(visible)
+      .flatMap((surface) => {
+        const rect = surface.getBoundingClientRect();
+        const reasons: string[] = [];
+        if (rect.left < -1 || rect.top < -1 || rect.right > window.innerWidth + 1 || rect.bottom > window.innerHeight + 1) {
+          reasons.push('outside viewport');
+        }
+        if (rect.left < topbarRect.left - 1 || rect.top < topbarRect.top - 1 || rect.right > topbarRect.right + 1 || rect.bottom > topbarRect.bottom + 1) {
+          reasons.push('outside topbar');
+        }
+        if (shellTargets.some((target) => intersects(rect, target.getBoundingClientRect()))) {
+          reasons.push('intersects shell navigation');
+        }
+        const intersectingProduct = productTargets.find((target) => hasExposedIntersection(rect, target));
+        if (intersectingProduct) {
+          reasons.push('intersects product content');
+        }
+        if (siblingActions.some((target) => intersects(rect, target.getBoundingClientRect()))) {
+          reasons.push('intersects sibling topbar action');
+        }
+        return reasons.map((reason) => ({
+          surface: surface.getAttribute('data-voice-assistant-surface'),
+          state: surface.getAttribute('data-voice-assistant-state'),
+          reason,
+          ...(reason === 'intersects product content' && intersectingProduct ? {
+            target: intersectingProduct.getAttribute('aria-label') || intersectingProduct.textContent?.replace(/\s+/g, ' ').trim().slice(0, 80),
+          } : {}),
+        }));
+      });
+  });
+
+  expect(violations).toEqual([]);
+}
 
 test.describe('App shell visual consistency', () => {
   for (const [viewportName, viewport] of Object.entries(viewports)) {
@@ -157,6 +238,18 @@ test.describe('App shell visual consistency', () => {
 });
 
 test.describe('Mobile global controls', () => {
+  test('desktop voice assistant remains fixed at the viewport bottom center', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto('/integrations', { waitUntil: 'domcontentloaded' });
+
+    const trigger = page.locator('[data-voice-assistant-surface="trigger"]');
+    await expect(trigger).toBeVisible();
+    const rect = await trigger.boundingBox();
+    expect(rect).not.toBeNull();
+    expect((rect?.x ?? 0) + (rect?.width ?? 0) / 2).toBeCloseTo(720, 0);
+    expect(1000 - (rect?.y ?? 0) - (rect?.height ?? 0)).toBeCloseTo(24, 0);
+  });
+
   const collisionRoutes = [
     '/website-builder',
     '/login',
@@ -242,7 +335,86 @@ test.describe('Mobile global controls', () => {
         }, { controls: controlSelector });
 
         expect(collisions).toEqual([]);
+
+        const canScroll = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 100);
+        if (canScroll) {
+          await page.evaluate(() => window.scrollTo(0, 500));
+          await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+        }
+        await expectMobileVoiceSurfacesClear(page);
       });
     }
+  }
+
+  for (const width of [320, 390]) {
+    test(`/integrations at ${width}px keeps every active voice state in sticky topbar flow`, async ({ page }) => {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'mediaDevices', {
+          configurable: true,
+          value: {
+            getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }),
+          },
+        });
+        class BrowserMediaRecorder {
+          ondataavailable: ((event: { data: Blob }) => void) | null = null;
+          onstop: (() => void) | null = null;
+          start() {}
+          stop() {
+            this.ondataavailable?.({ data: new Blob(['voice']) });
+            this.onstop?.();
+          }
+        }
+        Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: BrowserMediaRecorder });
+      });
+
+      let mode: 'success' | 'error' = 'success';
+      let releaseSuccess: (() => void) | undefined;
+      await page.route('**/api/v1/voice/command', async (route) => {
+        if (mode === 'error') {
+          await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+          return;
+        }
+        await new Promise<void>((resolve) => { releaseSuccess = resolve; });
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ transcription: 'safe browser test' }),
+        });
+      });
+
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/integrations', { waitUntil: 'domcontentloaded' });
+      await page.evaluate(() => window.scrollTo(0, 500));
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+      const trigger = page.locator('[data-voice-assistant-surface="trigger"]');
+      await expect(trigger).toBeVisible();
+      const idleX = (await trigger.boundingBox())?.x;
+      await expectMobileVoiceSurfacesClear(page);
+
+      await trigger.dispatchEvent('mousedown');
+      await expect(page.locator('[data-voice-assistant-state="listening"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      await trigger.dispatchEvent('mouseup');
+      await expect(page.locator('[data-voice-assistant-state="processing"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      await expect.poll(() => Boolean(releaseSuccess)).toBe(true);
+      releaseSuccess?.();
+      await expect(page.locator('[data-voice-assistant-state="success"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      mode = 'error';
+      await trigger.dispatchEvent('mousedown');
+      await expect(page.locator('[data-voice-assistant-state="listening"]')).toBeVisible();
+      await trigger.dispatchEvent('mouseup');
+      await expect(page.locator('[data-voice-assistant-state="error"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+    });
   }
 });

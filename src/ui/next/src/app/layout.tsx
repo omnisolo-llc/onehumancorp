@@ -5,7 +5,6 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
-import { VoiceAssistant } from "../components/VoiceAssistant";
 import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { NotificationManager } from "../components/NotificationManager";
@@ -41,7 +40,6 @@ export default function RootLayout({
               <ProductShellGuard>{children}</ProductShellGuard>
               <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
-              <VoiceAssistant />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
               <NotificationManager />
