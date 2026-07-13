@@ -276,6 +276,33 @@
         }
       </style>
 
+
+      <!-- My Plan Section -->
+      <div id="my-plan-section" style="display: none; margin-bottom: 32px; padding: 24px; border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+            <div>
+                <h2 style="font-size: 24px; font-weight: 700; color: #1d1d1f; margin: 0;">My Plan: <span id="current-plan-name">Free</span></h2>
+                <p style="font-size: 14px; color: #86868b; margin: 4px 0 0 0;">Cost transparency and usage tracking</p>
+            </div>
+            <button id="manage-plan-btn" class="btn btn-primary" style="width: auto;">Manage Plan & Billing</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div style="padding: 16px; background: rgba(255, 255, 255, 0.9); border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                <p style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">AI Actions Used</p>
+                <div style="font-size: 24px; font-weight: 700; color: #1d1d1f;" id="my-plan-ai-used">0 <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ ∞</span></div>
+            </div>
+            <div style="padding: 16px; background: rgba(255, 255, 255, 0.9); border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                <p style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">Storage Used</p>
+                <div style="font-size: 24px; font-weight: 700; color: #1d1d1f;" id="my-plan-storage-used">0 MB <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ ∞</span></div>
+            </div>
+            <div style="padding: 16px; background: rgba(255, 255, 255, 0.9); border-radius: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                <p style="font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 4px 0;">Estimated Next Bill</p>
+                <div style="font-size: 24px; font-weight: 700; color: #1d1d1f;" id="my-plan-next-bill">$0.00</div>
+            </div>
+        </div>
+      </div>
+
       <div class="pricing-grid">
         <!-- Free Plan -->
         <div class="ohc-growth-card glassmorphism app-card">
@@ -357,6 +384,96 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
+
+      function formatBytes(bytes) {
+        if (bytes == null || bytes <= 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function formatCents(cents) {
+        return '$' + (cents / 100).toFixed(2);
+      }
+
+      async function fetchMyPlan() {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const token = localStorage.getItem('token');
+        const headers = {};
+        if (tenant) headers['x-tenant-id'] = tenant;
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        try {
+            const res = await fetch('/api/billing/my-plan', { headers });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('my-plan-section').style.display = 'block';
+                document.getElementById('current-plan-name').innerText = data.current_plan || 'Free';
+
+                const actionsLimitText = (data.ai_actions_limit != null && data.ai_actions_limit >= 0) ? data.ai_actions_limit : '∞';
+                document.getElementById('my-plan-ai-used').innerHTML = `${data.ai_actions_used || 0} <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ ${actionsLimitText}</span>`;
+
+                const storageUsed = formatBytes(data.storage_used_bytes || 0);
+                const storageLimitText = (data.storage_limit_bytes != null && data.storage_limit_bytes > 0) ? formatBytes(data.storage_limit_bytes) : '∞';
+                document.getElementById('my-plan-storage-used').innerHTML = `${storageUsed} <span style="font-size: 14px; font-weight: 400; color: #86868b;">/ ${storageLimitText}</span>`;
+
+                document.getElementById('my-plan-next-bill').innerText = formatCents(data.next_bill_estimated || 0);
+
+                // Update UI based on current plan
+                const plans = ['Free', 'Starter', 'Pro', 'Business'];
+                plans.forEach(plan => {
+                    const btn = document.getElementById(`btn-${plan}`);
+                    if (btn) {
+                        if (plan === data.current_plan) {
+                            btn.className = 'btn btn-secondary';
+                            btn.innerText = 'Current Plan';
+                            btn.disabled = true;
+                            btn.style.pointerEvents = 'none';
+                            btn.style.opacity = '0.7';
+                        } else {
+                            btn.className = 'btn btn-primary';
+                            btn.innerText = `Upgrade to ${plan}`;
+                            btn.disabled = false;
+                            btn.style.pointerEvents = 'auto';
+                            btn.style.opacity = '1';
+                        }
+                    }
+                });
+            }
+        } catch(e) {
+            console.error('Failed to fetch plan', e);
+        }
+      }
+
+        const managePlanBtn = document.getElementById('manage-plan-btn');
+        if (managePlanBtn) {
+            managePlanBtn.addEventListener('click', async () => {
+                const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+                const token = localStorage.getItem('token');
+                const headers = {};
+                if (tenant) headers['x-tenant-id'] = tenant;
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                try {
+                    const res = await fetch('/api/billing/create-billing-portal-session', { method: 'POST', headers });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.url) {
+                            window.location.href = data.url;
+                        } else {
+                            document.getElementById('error-message').innerText = "Failed to launch billing portal.";
+                        }
+                    } else {
+                        document.getElementById('error-message').innerText = "Failed to launch billing portal.";
+                    }
+                } catch(e) {
+                    document.getElementById('error-message').innerText = "Failed to launch billing portal.";
+                }
+            });
+        }
+
+        fetchMyPlan();
+
         const toggle = document.getElementById('billing-toggle');
         const priceElements = document.querySelectorAll('.plan-price[data-monthly]');
 
