@@ -15,6 +15,63 @@ class ContractError(AssertionError):
     pass
 
 
+EXPECTED_REQUIRED_RESULT_LINES = (
+    "set -euo pipefail",
+    'echo "check-changes: ${CHECK_CHANGES_RESULT}"',
+    'echo "bazel-build: ${BAZEL_BUILD_RESULT}"',
+    'echo "bazel-test: ${BAZEL_TEST_RESULT}"',
+    'echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"',
+    'echo "kind-e2e: ${KIND_E2E_RESULT}"',
+    'echo "docker-e2e: ${DOCKER_E2E_RESULT}"',
+    'echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"',
+    "require_success() {",
+    'local name="$1"',
+    'local result="$2"',
+    'if [[ "$result" != "success" ]]; then',
+    'echo "::error::${name} finished with result \'${result}\', expected \'success\'."',
+    "false",
+    "fi",
+    "}",
+    "allow_success_or_skipped() {",
+    'local name="$1"',
+    'local result="$2"',
+    'if [[ "$result" != "success" && "$result" != "skipped" ]]; then',
+    'echo "::error::${name} finished with result \'${result}\', expected \'success\' or \'skipped\'."',
+    "false",
+    "fi",
+    "}",
+    'require_success "check-changes" "$CHECK_CHANGES_RESULT"',
+    'if [[ "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then',
+    'require_success "bazel-build" "$BAZEL_BUILD_RESULT"',
+    "else",
+    'allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"',
+    "fi",
+    'if [[ "$MARKDOWN_ONLY" == "true" ]]; then',
+    'allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"',
+    'allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
+    'allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"',
+    'allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"',
+    'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"',
+    "else",
+    'require_success "bazel-test" "$BAZEL_TEST_RESULT"',
+    'require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
+    'require_success "kind-e2e" "$KIND_E2E_RESULT"',
+    'require_success "docker-e2e" "$DOCKER_E2E_RESULT"',
+    'require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"',
+    "fi",
+)
+
+EXPECTED_HYGIENE_LINES = (
+    ".github/scripts/check_repo_hygiene_test.sh",
+    ".github/scripts/check_repo_hygiene.sh",
+    "python3 .github/scripts/check_postgres_security_ci_test.py",
+    "python3 .github/scripts/check_postgres_security_ci.py",
+)
+
+ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+
+
 @dataclass(frozen=True)
 class Step:
     name: str
@@ -124,7 +181,7 @@ def require_script_line(lines: tuple[str, ...], exact: str, context: str) -> Non
         raise ContractError(f"{context}: missing active executable line {exact!r}")
 
 
-def require_no_termination_before(
+def require_no_control_transfer_before(
     lines: tuple[str, ...], protected: tuple[str, ...], context: str
 ) -> None:
     indexes: list[int] = []
@@ -133,10 +190,28 @@ def require_no_termination_before(
         indexes.append(lines.index(exact))
     for line in lines[: max(indexes)]:
         active = line.split(" #", 1)[0]
-        if re.search(r"\b(?:exit|return)\b", active):
+        if re.search(r"\b(?:exec|exit|return)\b", active):
             raise ContractError(
-                f"{context}: active exit/return token {line!r} precedes required enforcement"
+                f"{context}: active exec/exit/return token {line!r} precedes required enforcement"
             )
+
+
+def exact_psql_heredocs(lines: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if not lines or lines[0] != ADMIN_PSQL_HEREDOC:
+        raise ContractError(f"application-role proof must start with exact owner {ADMIN_PSQL_HEREDOC!r}")
+    try:
+        admin_end = lines.index("SQL", 1)
+    except ValueError as error:
+        raise ContractError("admin psql heredoc has no active SQL terminator") from error
+    if admin_end + 1 >= len(lines) or lines[admin_end + 1] != APP_PSQL_HEREDOC:
+        raise ContractError(f"application-role proof requires exact owner {APP_PSQL_HEREDOC!r}")
+    try:
+        app_end = lines.index("SQL", admin_end + 2)
+    except ValueError as error:
+        raise ContractError("application-role psql heredoc has no active SQL terminator") from error
+    if app_end != len(lines) - 1:
+        raise ContractError("application-role proof contains active commands outside its two psql heredocs")
+    return lines[1:admin_end], lines[admin_end + 2 : app_end]
 
 
 def check_workflow(path: Path) -> None:
@@ -168,6 +243,7 @@ def check_workflow(path: Path) -> None:
     if role_style != "block":
         raise ContractError("application-role proof must be an active block run step")
     role_lines = active_script(role_run, "application-role proof")
+    _admin_sql, app_sql = exact_psql_heredocs(role_lines)
     role_assertions = (
         "AND current_user = 'ohc_security_test'",
         "AND NOT rolsuper",
@@ -184,8 +260,8 @@ def check_workflow(path: Path) -> None:
         ("AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')", "explicit SET ROLE membership assertion"),
         ("IF NOT (current_setting('row_security') = 'on') THEN", "row_security assertion"),
     ):
-        require_script_line(role_lines, exact, context)
-    require_no_termination_before(role_lines, role_assertions, "application-role proof")
+        require_script_line(app_sql, exact, context)
+    require_no_control_transfer_before(role_lines, role_assertions, "application-role proof")
 
     suite_step = named_step(security, "Run PostgreSQL tenant-isolation suite")
     require_unconditional_step(suite_step, "exact multitenancy suite")
@@ -207,8 +283,10 @@ def check_workflow(path: Path) -> None:
     if required_style != "block":
         raise ContractError("required-result enforcement must be an active block run step")
     required_lines = active_script(required_run, "required-result enforcement")
+    if required_lines != EXPECTED_REQUIRED_RESULT_LINES:
+        raise ContractError("required-result step does not match the exact fail-closed script shape")
     enforcement = 'require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"'
-    require_no_termination_before(
+    require_no_control_transfer_before(
         required_lines, (enforcement,), "non-markdown required result"
     )
     try:
@@ -227,7 +305,9 @@ def check_workflow(path: Path) -> None:
     if hygiene_style != "block":
         raise ContractError("check-changes hygiene must be an active block run step")
     hygiene_lines = active_script(hygiene_run, "check-changes hygiene")
-    require_no_termination_before(
+    if hygiene_lines != EXPECTED_HYGIENE_LINES:
+        raise ContractError("check-changes hygiene does not match the exact contract script shape")
+    require_no_control_transfer_before(
         hygiene_lines,
         (
             "python3 .github/scripts/check_postgres_security_ci_test.py",
