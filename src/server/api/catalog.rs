@@ -77,7 +77,13 @@ pub struct Product {
     pub variants: Option<Vec<ProductVariantRequest>>,
 }
 
+#[derive(Deserialize)]
+pub struct GetProductsQuery {
+    pub target_currency: Option<String>,
+}
+
 async fn handle_get_products(
+    axum::extract::Query(query): axum::extract::Query<GetProductsQuery>,
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -104,6 +110,15 @@ async fn handle_get_products(
     .fetch_all(&mut *conn)
     .await;
 
+    let mut rate_multiplier = 1.0;
+    if let Some(target_curr) = query.target_currency {
+        let base_currency = "USD";
+        let fx_service = crate::services::localization::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
+        if let Ok(rate) = fx_service.get_rate(base_currency, &target_curr).await {
+            rate_multiplier = rate;
+        }
+    }
+
     match rows {
         Ok(rows) => {
             let mut products = Vec::new();
@@ -119,6 +134,7 @@ async fn handle_get_products(
                 let mut variants = Vec::new();
                 for vr in v_rows {
                     let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
+                    let modifier = (modifier as f64 * rate_multiplier).round() as i64;
                     let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
                     variants.push(ProductVariantRequest {
                         name: vr.try_get("name").unwrap_or_default(),
@@ -126,12 +142,17 @@ async fn handle_get_products(
                     });
                 }
 
+                let mut price_cents: Option<i64> = row.try_get("price_cents").ok();
+                if let Some(cents) = price_cents {
+                    price_cents = Some((cents as f64 * rate_multiplier).round() as i64);
+                }
+
                 products.push(Product {
                     id: p_id,
                     title: row.try_get("title").unwrap_or_default(),
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
-                    price_cents: row.try_get("price_cents").ok(),
+                    price_cents,
                     inventory_count: row.try_get("inventory_count").ok(),
                     variants: if variants.is_empty() { None } else { Some(variants) },
                 });

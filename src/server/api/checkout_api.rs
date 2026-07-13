@@ -12,6 +12,7 @@ pub struct CreateCheckoutSessionRequest {
     pub device_id: Option<String>,
     pub cart_payload: Option<serde_json::Value>,
     pub discount_code: Option<String>,
+    pub target_currency: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -129,14 +130,31 @@ pub async fn create_checkout_session_handler(
         }
     }
 
+    let mut rate_multiplier = 1.0;
+    let mut applied_currency = "USD".to_string();
+
+    if let Some(target_curr) = &req_data.target_currency {
+        let base_currency = "USD";
+        let fx_service = crate::services::localization::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
+        if let Ok(rate) = fx_service.get_rate(base_currency, target_curr).await {
+            rate_multiplier = rate;
+            applied_currency = target_curr.clone();
+        }
+    }
+
+    let final_settlement_amount = (final_amount as f64 * rate_multiplier).round() as i64;
+
     let query = sqlx::query(
-        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
+        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, settlement_amount_cents, settlement_currency, exchange_rate, device_id, cart_payload, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')"
     )
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&req_data.r#type)
     .bind(final_amount)
+    .bind(final_settlement_amount)
+    .bind(&applied_currency)
+    .bind(rate_multiplier)
     .bind(&req_data.device_id)
     .bind(&updated_cart_payload);
 
