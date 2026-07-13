@@ -74,6 +74,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
+    tenant: crate::tools::tenant::TenantContext,
     memory: Option<Arc<VectorRepository>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
     pub redis_memory: Option<Arc<crate::memory_store::RedisMemoryStore>>,
@@ -81,6 +82,9 @@ pub struct AgentServiceImpl {
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
 }
+
+#[derive(Clone, Copy, Debug)]
+struct TrustedInProcessRequest;
 
 async fn load_cascading_agents_md(
     current_dir: &std::path::Path,
@@ -156,16 +160,36 @@ async fn load_cascading_agents_md(
 
 impl AgentServiceImpl {
     pub fn new(agent_id: impl Into<String>, cfg: AgentConfig, auth: AuthMode) -> Self {
+        Self::new_for_tenant(
+            agent_id,
+            cfg,
+            auth,
+            crate::tools::tenant::TenantContext::system(),
+        )
+    }
+
+    pub fn new_for_tenant(
+        agent_id: impl Into<String>,
+        cfg: AgentConfig,
+        auth: AuthMode,
+        tenant: crate::tools::tenant::TenantContext,
+    ) -> Self {
         Self {
             agent_id: agent_id.into(),
             cfg,
             auth,
+            tenant,
             memory: None,
             llm_override: None,
             anthropic_memory: None,
             redis_memory: None,
             worker_handle: None,
         }
+    }
+
+    #[cfg(test)]
+    fn completed_task_memory_record(&self, content: String) -> EmbeddingRecord {
+        build_completed_task_memory_record(&self.tenant, &self.agent_id, content)
     }
 
     pub async fn init_memory(&mut self) {
@@ -204,7 +228,15 @@ impl AgentServiceImpl {
                                 180,
                                 20,
                                 2,
-                                vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()],
+                                vec![
+                                    "TASK_SUMMARY".to_string(),
+                                    "NOTES".to_string(),
+                                    "SESSION_DATA".to_string(),
+                                    "NOTE".to_string(),
+                                    "SUMMARY".to_string(),
+                                    "CS_NOTE".to_string(),
+                                    "AGENT_ACTION".to_string(),
+                                ],
                                 None,
                             ))
                             .spawn_background_task(),
@@ -226,7 +258,15 @@ impl AgentServiceImpl {
                                 180,
                                 20,
                                 2,
-                                vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()],
+                                vec![
+                                    "TASK_SUMMARY".to_string(),
+                                    "NOTES".to_string(),
+                                    "SESSION_DATA".to_string(),
+                                    "NOTE".to_string(),
+                                    "SUMMARY".to_string(),
+                                    "CS_NOTE".to_string(),
+                                    "AGENT_ACTION".to_string(),
+                                ],
                                 None,
                             ))
                             .spawn_background_task(),
@@ -247,11 +287,28 @@ impl AgentServiceImpl {
         self
     }
 
+    /// Build a request for a caller already trusted by the current process.
+    ///
+    /// Tonic extensions cannot be supplied over the network, so this capability
+    /// preserves authentication for gRPC clients while allowing the embedded
+    /// server and mesh handlers to invoke the same service implementation.
+    pub fn trusted_request<T>(&self, message: T) -> Request<T> {
+        let mut request = Request::new(message);
+        request.extensions_mut().insert(TrustedInProcessRequest);
+        request
+    }
+
     #[allow(clippy::result_large_err)]
     fn check_auth<T>(&self, req: &Request<T>) -> Result<(), Status> {
+        if req.extensions().get::<TrustedInProcessRequest>().is_some() {
+            return Ok(());
+        }
         match &self.auth {
             AuthMode::Disabled => Ok(()),
-            AuthMode::Token { token_hash } => {
+            AuthMode::Token {
+                token_hash,
+                verification_key,
+            } => {
                 let meta = req.metadata();
                 let auth_val = meta
                     .get("authorization")
@@ -261,16 +318,14 @@ impl AgentServiceImpl {
                 let tok = auth_val
                     .strip_prefix("Bearer ")
                     .ok_or_else(|| Status::unauthenticated("authorization must be Bearer token"))?;
-                if !crate::auth::check_token(tok, token_hash) {
+                if !crate::auth::check_token(tok, token_hash, verification_key) {
                     return Err(Status::unauthenticated("invalid token"));
                 }
                 Ok(())
             }
-            AuthMode::Spiffe { .. } => {
-                // SPIFFE/mTLS check would be done at the transport layer.
-                // For simplicity we allow if TLS is used.
-                Ok(())
-            }
+            AuthMode::Spiffe { .. } => Err(Status::unauthenticated(
+                "verified mTLS peer identity is unavailable",
+            )),
         }
     }
 
@@ -478,7 +533,7 @@ impl AgentServiceImpl {
         let provider = self.effective_provider_owned(&req.llm_provider);
         let model = self.resolve_model_for_request(&provider, &req.model);
 
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+        let org_id = self.tenant.as_str();
 
         let memories = if let Some(store) = &self.memory {
             let embedding = if !req.task.is_empty() {
@@ -487,7 +542,7 @@ impl AgentServiceImpl {
                 vec![]
             };
             store
-                .semantic_search(&org_id, &embedding, 5)
+                .semantic_search(org_id, &embedding, 5)
                 .await
                 .map(|records| {
                     records
@@ -554,7 +609,7 @@ impl AgentServiceImpl {
                 self.memory.as_ref().map(|repo| {
                     Arc::new(crate::memory_store::PersistentMemoryStore {
                         repo: repo.clone(),
-                        tenant_id: org_id.clone(),
+                        tenant_id: org_id.to_string(),
                         agent_id: self.agent_id.clone(),
                         llm: llm.clone(),
                     }) as Arc<dyn crate::memory_store::LongTermMemory>
@@ -768,6 +823,7 @@ impl AgentServiceImpl {
             working_dir,
             memory_accessor.clone(),
             observation_store,
+            self.tenant.clone(),
         );
 
         // Add create_skill tool
@@ -850,6 +906,28 @@ impl AgentServiceImpl {
     }
 }
 
+fn build_completed_task_memory_record(
+    tenant: &crate::tools::tenant::TenantContext,
+    agent_id: &str,
+    content: String,
+) -> EmbeddingRecord {
+    let now = chrono::Utc::now();
+    EmbeddingRecord {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant.as_str().to_string(),
+        agent_id: agent_id.to_string(),
+        content,
+        embedding: vec![],
+        source_type: "TASK_SUMMARY".to_string(),
+        created_at: now,
+        last_referenced_at: now,
+        reference_count: 0,
+        reliability_score: 50,
+        owner_override: false,
+        metadata: None,
+    }
+}
+
 impl Drop for AgentServiceImpl {
     fn drop(&mut self) {
         if let Some(handle) = self.worker_handle.take() {
@@ -889,6 +967,8 @@ impl AgentService for AgentServiceImpl {
             .await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
+        let memory_tenant = self.tenant.clone();
+        let memory_agent_id = self.agent_id.clone();
 
         // Inject memory accessor if using Anthropic3TierMemoryStore
         let anthropic_memory = self.anthropic_memory.clone();
@@ -1031,11 +1111,14 @@ impl AgentService for AgentServiceImpl {
 
             while attempt < max_attempts {
                 attempt += 1;
-                let res = tokio::time::timeout(
-                    crate::agent::agent_task_timeout(),
-                    agent_clone.run(&run_cfg, &task, &mut on_event),
-                )
-                .await;
+                let res = tokio::select! {
+                    biased;
+                    _ = tx.closed() => return,
+                    res = tokio::time::timeout(
+                        crate::agent::agent_task_timeout(),
+                        agent_clone.run(&run_cfg, &task, &mut on_event),
+                    ) => res,
+                };
 
                 match res {
                     Ok(Ok(content)) => {
@@ -1050,7 +1133,11 @@ impl AgentService for AgentServiceImpl {
                             && attempt < max_attempts
                         {
                             last_result = Err(e);
-                            tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
+                            tokio::select! {
+                                biased;
+                                _ = tx.closed() => return,
+                                _ = tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)) => {}
+                            }
                             continue;
                         }
                         last_result = Err(e);
@@ -1076,23 +1163,19 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let org_id =
-                    std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-                let record = EmbeddingRecord {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: org_id,
-                    agent_id: "agent".to_string(),
-                    content: content.clone(),
-                    embedding: vec![],
-                    source_type: "TASK_SUMMARY".to_string(),
-                    created_at: chrono::Utc::now(),
-                    last_referenced_at: chrono::Utc::now(),
-                    reference_count: 0,
-                    reliability_score: 50,
-                    owner_override: false,
-                    metadata: None,
-                };
-                let _ = store.upsert(&record).await;
+                if tx.is_closed() {
+                    return;
+                }
+                let record = build_completed_task_memory_record(
+                    &memory_tenant,
+                    &memory_agent_id,
+                    content.clone(),
+                );
+                tokio::select! {
+                    biased;
+                    _ = tx.closed() => return,
+                    _ = store.upsert(&record) => {}
+                }
             }
         });
 
@@ -1318,6 +1401,103 @@ impl AgentService for SharedAgentService {
 mod tests {
     use super::*;
     use std::io::Write;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tokio::sync::Notify;
+
+    struct CancellationGuard(Arc<AtomicBool>);
+
+    impl Drop for CancellationGuard {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    struct BlockingServiceLlmClient {
+        started: Arc<Notify>,
+        cancelled: Arc<AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for BlockingServiceLlmClient {
+        async fn chat(
+            &self,
+            _req: crate::types::ChatRequest,
+        ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let _guard = CancellationGuard(self.cancelled.clone());
+            self.started.notify_one();
+            std::future::pending().await
+        }
+    }
+
+    #[test]
+    fn spiffe_mode_rejects_requests_without_verified_mtls_identity() {
+        let service = AgentServiceImpl::new(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Spiffe {
+                allowed_id: "spiffe://onehumancorp.io/org/org-1/agent/agent-1".to_string(),
+            },
+        );
+
+        let error = service
+            .check_auth(&tonic::Request::new(PingRequest::default()))
+            .unwrap_err();
+        assert_eq!(error.code(), tonic::Code::Unauthenticated);
+    }
+
+    #[test]
+    fn trusted_in_process_request_bypasses_network_authentication() {
+        let key = b"0123456789abcdef0123456789abcdef";
+        let service = AgentServiceImpl::new(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Token {
+                token_hash: crate::auth::hmac_token("secret-token", key),
+                verification_key: key.to_vec(),
+            },
+        );
+
+        let request = service.trusted_request(PingRequest::default());
+        assert!(service.check_auth(&request).is_ok());
+    }
+
+    #[tokio::test]
+    async fn run_task_stops_when_receiver_is_dropped() {
+        let started = Arc::new(Notify::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let mut service = AgentServiceImpl::new(
+            "test",
+            AgentConfig {
+                max_iterations: 1,
+                ..AgentConfig::default()
+            },
+            AuthMode::Disabled,
+        );
+        service.llm_override = Some(Arc::new(BlockingServiceLlmClient {
+            started: started.clone(),
+            cancelled: cancelled.clone(),
+        }));
+
+        let response = service
+            .run_task(Request::new(RunTaskRequest {
+                task: "start".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("run task stream");
+        tokio::time::timeout(std::time::Duration::from_secs(1), started.notified())
+            .await
+            .expect("LLM call did not start");
+        drop(response.into_inner());
+
+        tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while !cancelled.load(Ordering::SeqCst) {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("dropping the gRPC receiver did not cancel the LLM call");
+    }
 
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
@@ -1434,7 +1614,7 @@ pub async fn start_builtin_agent(
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
+                    match svc.run_task(svc.trusted_request(req)).await {
                         Ok(resp) => {
                             let mut stream = resp.into_inner();
                             use tokio_stream::StreamExt;
@@ -1527,7 +1707,7 @@ pub async fn start_builtin_agent(
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
-                    match svc.run_task(tonic::Request::new(req)).await {
+                    match svc.run_task(svc.trusted_request(req)).await {
                         Ok(resp) => {
                             let mut stream = resp.into_inner();
                             use tokio_stream::StreamExt;
@@ -1607,6 +1787,21 @@ pub async fn start_builtin_agent(
 #[cfg(test)]
 mod memory_tests {
     use super::*;
+
+    #[test]
+    fn service_uses_captured_tenant_for_memory_records() {
+        let service = AgentServiceImpl::new_for_tenant(
+            "test",
+            AgentConfig::default(),
+            AuthMode::Disabled,
+            crate::tools::tenant::TenantContext::new("org-a").expect("tenant"),
+        );
+
+        let record = service.completed_task_memory_record("completed task".to_string());
+
+        assert_eq!(record.tenant_id, "org-a");
+        assert_eq!(record.content, "completed task");
+    }
 
     #[tokio::test]
     async fn test_redis_memory_initialization() {

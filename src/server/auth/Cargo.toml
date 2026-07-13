@@ -25,6 +25,10 @@ sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustl
 tokio = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }
 tracing = "0.1"
+x509-parser = "0.18"
+
+[dev-dependencies]
+rcgen = "0.14"
 
 [lib]
 path = "mod.rs"

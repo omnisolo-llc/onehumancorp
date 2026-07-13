@@ -21,6 +21,7 @@ rust_library(
         "output_parser.rs",
         "human_in_loop.rs",
         "pubsub.rs",
+        "request_profile.rs",
         "retry.rs",
         "types.rs",
     ],
@@ -228,6 +229,23 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "agent_path_baseline",
+    srcs = ["examples/agent_path_baseline.rs"],
+    crate_name = "agent_path_baseline",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        ":core",
+        ":ohc_builtin_agent_lib",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
 AGENT_UNIT_TEST_FILTERS = [
     "agent",
     "prompt_construction",
@@ -362,6 +380,27 @@ rust_test(
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "production_agent_path_test",
+    size = "small",
+    srcs = ["tests/production_agent_path.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "//src/agents/builtin/llm",
+        "@crates//:serde_json",
+        "@crates//:tokio",
     ],
 )
 
