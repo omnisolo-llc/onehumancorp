@@ -22,7 +22,7 @@ impl HybridSyncDaemon {
     pub async fn run(&self) {
         loop {
             if let Err(e) = self.sync_step().await {
-                error!("Hybrid sync daemon error: {}", e);
+                error!("[bug] Hybrid sync daemon error: {}", e);
                 let _ = ::server_telemetry::record_sync_daemon_error_total(
                     &self.pg_pool,
                     1.0,
@@ -32,7 +32,7 @@ impl HybridSyncDaemon {
                 .await;
             }
             if let Err(e) = self.sync_cloud_escalations().await {
-                error!("Hybrid sync cloud escalations error: {}", e);
+                error!("[bug] Hybrid sync cloud escalations error: {}", e);
                 let _ = ::server_telemetry::record_sync_daemon_error_total(
                     &self.pg_pool,
                     1.0,
@@ -42,7 +42,7 @@ impl HybridSyncDaemon {
                 .await;
             }
             if let Err(e) = self.sync_telemetry_step().await {
-                error!("Hybrid sync telemetry error: {}", e);
+                error!("[bug] Hybrid sync telemetry error: {}", e);
                 let _ = ::server_telemetry::record_sync_daemon_error_total(
                     &self.pg_pool,
                     1.0,
@@ -53,7 +53,7 @@ impl HybridSyncDaemon {
             }
 
             if let Err(e) = self.sync_pos_offline_transactions().await {
-                error!("Hybrid sync pos offline transactions error: {}", e);
+                error!("[bug] Hybrid sync pos offline transactions error: {}", e);
                 let _ = ::server_telemetry::record_sync_daemon_error_total(
                     &self.pg_pool,
                     1.0,
@@ -64,11 +64,11 @@ impl HybridSyncDaemon {
             }
 
             if let Err(e) = self.prune_stuck_agent_missions().await {
-                error!("Hybrid sync prune agent missions error: {}", e);
+                error!("[cleanup] Hybrid sync prune agent missions error: {}", e);
             }
 
             if let Err(e) = self.prune_stuck_ohc_job_queue().await {
-                error!("Hybrid sync prune ohc_job_queue error: {}", e);
+                error!("[cleanup] Hybrid sync prune ohc_job_queue error: {}", e);
             }
 
             tokio::time::sleep(Duration::from_secs(5)).await;
