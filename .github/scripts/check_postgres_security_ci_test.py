@@ -35,6 +35,36 @@ def main() -> None:
         ("cargo test -p server_auth multitenancy_isolation:: -- --nocapture", "cargo test -p server_auth", "exact suite command"),
         ("POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}", "POSTGRES_SECURITY_RESULT: success", "required result propagation"),
         ('require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"', 'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"', "non-markdown enforcement"),
+        (
+            "        run: cargo test -p server_auth multitenancy_isolation:: -- --nocapture",
+            "        run: |\n          # cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          true",
+            "commented suite command",
+        ),
+        (
+            "        run: cargo test -p server_auth multitenancy_isolation:: -- --nocapture",
+            "        run: |\n          if false; then\n            cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          fi",
+            "unreachable suite command",
+        ),
+        (
+            "                AND NOT rolsuper\n                AND NOT rolinherit\n                AND NOT rolbypassrls\n                AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')",
+            "                # AND NOT rolsuper\n                # AND NOT rolinherit\n                # AND NOT rolbypassrls\n                # AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')",
+            "commented role assertions",
+        ),
+        (
+            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          if false; then\n            psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "unreachable role proof",
+        ),
+        (
+            '            require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"',
+            '            # require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"\n            true',
+            "commented required-result enforcement",
+        ),
+        (
+            '            require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"',
+            '            if false; then\n              require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"\n            fi',
+            "unreachable required-result enforcement",
+        ),
     )
     for old, new, label in mutations:
         expect_rejected(workflow, old, new, label)
