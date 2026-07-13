@@ -278,6 +278,11 @@ export default function TriagePage() {
                       <span className="text-xl">{getSourceIcon(item.source || "")}</span>
                       <span className="font-outfit font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">
                         {item.customer_id || item.source || "Unknown Source"}
+                        {(item.source || "").toLowerCase().includes("whatsapp") && (
+                          <span className="ml-2 text-[10px] uppercase tracking-wider bg-[#25D366]/10 text-[#075E54] dark:text-[#25D366] px-2 py-0.5 rounded-full font-bold border border-[#25D366]/20">
+                            WhatsApp
+                          </span>
+                        )}
                       </span>
                     </div>
                     <span className={`app-badge ${badgeTone(item.priority)}`}>

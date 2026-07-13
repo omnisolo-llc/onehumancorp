@@ -70,20 +70,6 @@ export default function FeedPage() {
     }
   };
 
-  const simulateInvoiceDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/agents/approvals/simulate-invoice-draft', { method: 'POST' });
-      const res = await fetch('/api/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
 
     fetchFeed();
