@@ -65,7 +65,43 @@ Removal-matrix evidence captured at `36d36f4337526841344b98103230fcaa1ac1e9d8`:
 - `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0 with no output.
 - `cargo check -p ohc-mono --locked` exited 0. Cargo emitted four existing unused-variable warnings for `db` in `src/server/api/staff_mesh.rs`; no warning was suppressed for this work.
 - `bazel test --config=local --remote_cache= --remote_executor= --bes_backend= //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exited 0 with 3/3 Bazel test targets passing. The integration log reports 6 passed and 0 failed; the Vitest log reports 235 test files and 943 tests passed; the deployment artifact target reports its checks passed. Bazel also warned that some declared test sizes exceed its size guidance.
-- The separately produced Bazel graph contained 7,283 labels; its producer exited 0 before the negative scan found zero Chatwoot labels.
+- The initial separately produced Bazel graph contained 7,283 labels; its producer exited 0 before the negative scan found zero Chatwoot labels.
+
+That initial graph result was then reproduced from the corrected report tree with a private producer file and a separate negative command. The producer must succeed before the residue status is evaluated; status 1 is required to mean no match. The exact block was:
+
+```bash
+set -euo pipefail
+umask 077
+query_dir=$(mktemp -d /tmp/ohc-chatwoot-bazel-query.XXXXXX)
+printf 'query_dir=%s\n' "$query_dir"
+(
+  trap 'rm -rf "$query_dir"' EXIT HUP INT TERM
+  test "$(stat -c '%a' "$query_dir")" = 700
+
+  bazel query //... >"$query_dir/labels.txt" 2>"$query_dir/query.err"
+  label_count=$(wc -l <"$query_dir/labels.txt")
+  test "$label_count" -eq 7283
+
+  set +e
+  rg -i 'chatwoot' "$query_dir/labels.txt" >/dev/null
+  residue_status=$?
+  set -e
+  test "$residue_status" -eq 1
+
+  chmod -R go-rwx "$query_dir"
+  test "$(stat -c '%a' "$query_dir")" = 700
+  if find "$query_dir" -mindepth 1 -perm /077 -print -quit | grep -q .; then
+    printf 'non-private query evidence entry found\n' >&2
+    exit 1
+  fi
+  printf 'bazel_query_labels=%s\nresidue_scan_status=%s\nprivate_directory_mode=%s\n' \
+    "$label_count" "$residue_status" "$(stat -c '%a' "$query_dir")"
+)
+test ! -e "$query_dir"
+printf 'secure_query_dir_absent=1\n'
+```
+
+The block exited 0 and reported `bazel_query_labels=7283`, `residue_scan_status=1`, `private_directory_mode=700`, and `secure_query_dir_absent=1`. It printed neither label contents nor query diagnostics.
 
 The deployment renders and locked Cargo metadata were rerun from the corrected report tree in one private, copy-pasteable block. The main default inventory intentionally activates 5 services, while `--profile '*'` expands it to all 11 declared services. The e2e default and all-profile inventories each contain the same 2 services. The exact block was:
 
