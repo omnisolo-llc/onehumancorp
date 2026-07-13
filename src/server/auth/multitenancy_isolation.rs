@@ -20,7 +20,10 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
     // In Cloud multi-tenant mode, querying with org_id "system" must be rejected.
     temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
         let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
-        assert!(res.is_err(), "Must reject system id in multitenant mode");
+        assert_eq!(
+            res.unwrap_err(),
+            "tenant_id 'system' cannot be queried in multi-tenant mode"
+        );
     })
     .await;
 }
@@ -36,13 +39,26 @@ async fn test_standalone_mode_allows_system_org_id() {
     let repo = PgUserRepository::new(pool.clone());
 
     temp_env::async_with_vars([("OHC_MULTITENANT", Some("false"))], async {
+        let mut role_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *role_tx, "system")
+            .await
+            .unwrap();
+        let (session_user, current_user, bypasses_rls): (String, String, bool) = sqlx::query_as(
+            "SELECT session_user::text, current_user::text, rolbypassrls FROM pg_roles WHERE rolname = current_user",
+        )
+        .fetch_one(&mut *role_tx)
+        .await
+        .unwrap();
+        assert_eq!(session_user, "ohc_security_test");
+        assert_eq!(current_user, "ohc_bypassrls");
+        assert!(bypasses_rls, "system context must explicitly enter BYPASSRLS role");
+        eprintln!(
+            "postgres security system context: session_user={session_user} current_user={current_user} rolbypassrls={bypasses_rls}"
+        );
+        role_tx.rollback().await.unwrap();
+
         let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
-        if let Err(e) = res {
-            assert_ne!(
-                e,
-                "tenant_id 'system' cannot be queried in multi-tenant mode"
-            );
-        }
+        assert_eq!(res.unwrap_err(), "user not found");
     })
     .await;
 }
@@ -85,10 +101,9 @@ async fn test_revoke_token_tenant_isolation() {
 
     // Call revoke token on the CURRENT tenant
     let future_time = chrono::Utc::now() + chrono::Duration::hours(1);
-    let res: Result<(), String> = repo
-        .revoke_token(current_jti.to_string(), future_time, current_tenant)
-        .await;
-    assert!(res.is_ok(), "revoke_token should succeed");
+    repo.revoke_token(current_jti.to_string(), future_time, current_tenant)
+        .await
+        .unwrap();
 
     // Ensure the other tenant's expired token still exists, proving GC only cleared current_tenant
     let mut tx2 = pool.begin().await.unwrap();
@@ -146,7 +161,7 @@ async fn test_pool_connection_tenant_leakage_prevention() {
         sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
             .fetch_one(&mut *tx1)
             .await
-            .unwrap_or((None,));
+            .unwrap();
     assert_eq!(row1.0.as_deref(), Some(tenant_a));
 
     tx1.commit().await.unwrap();
@@ -158,7 +173,7 @@ async fn test_pool_connection_tenant_leakage_prevention() {
         sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
             .fetch_one(&mut *tx2)
             .await
-            .unwrap_or((None,));
+            .unwrap();
     tx2.commit().await.unwrap();
 
     assert!(
@@ -249,19 +264,13 @@ async fn test_rls_policies_protect_cross_tenant_writes() {
         .execute(&mut *tx1)
         .await;
 
-    // The insert should fail due to WITH CHECK policy violations
-    assert!(
-        insert_result.is_err(),
-        "CRITICAL VULNERABILITY: RLS bypass detected! A tenant successfully wrote data for another tenant."
-    );
-
-    // Check that the error is indeed an RLS policy violation (error code 42501 in postgres)
-    if let Err(sqlx::Error::Database(db_err)) = insert_result {
-        assert_eq!(
-            db_err.code().as_deref(),
-            Some("42501"),
-            "Expected an RLS violation (42501), got something else."
-        );
+    match insert_result {
+        Err(sqlx::Error::Database(db_error)) if db_error.code().as_deref() == Some("42501") => {}
+        Err(error) => panic!("expected PostgreSQL RLS denial 42501, got {error:?}"),
+        Ok(result) => panic!(
+            "CRITICAL VULNERABILITY: RLS bypass inserted {} row(s) for another tenant",
+            result.rows_affected()
+        ),
     }
 
     tx1.rollback().await.unwrap();
