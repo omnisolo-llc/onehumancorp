@@ -151,6 +151,29 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        return;
     }
 
+    // Reserve inventory via Redlock before intent
+    if (productId && productId !== 'custom-charge') {
+        setStatus('Reserving inventory...');
+        try {
+            const qty = cart && cart.length > 0 ? cart.find(c => c.product.id === productId)?.quantity || 1 : 1;
+            const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: qty, ttl_seconds: 15 })
+            });
+            const reserveData = await reserveRes.json();
+            if (!reserveRes.ok || !reserveData.success) {
+                setStatus('Failed to reserve inventory: Item is currently being checked out by another customer.');
+                if (onOptimisticRollback) onOptimisticRollback();
+                return;
+            }
+        } catch (e) {
+            setStatus('Failed to connect to reservation service');
+            if (onOptimisticRollback) onOptimisticRollback();
+            return;
+        }
+    }
+
     setStatus('Waiting for card tap...');
 
     // We must create an intent first by calling the backend

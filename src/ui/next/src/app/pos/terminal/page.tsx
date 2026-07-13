@@ -256,6 +256,8 @@ export default function POSTerminal() {
       }
       return p;
     }));
+    setCart(prev => prev.filter(item => item.product.id !== productId));
+    setOrderStatus('Item just sold out. Please select another item.');
   };
 
   const handleOptimisticRollback = (productId: string) => {
