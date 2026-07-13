@@ -96,6 +96,21 @@ def main() -> None:
             "required-result alternate-zero early success",
         ),
         (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          exec /bin/true\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result exec replacement",
+        ),
+        (
+            '            if [[ "$result" != "success" ]]; then',
+            '            if [[ "$result" == "success" ]]; then',
+            "weakened require-success condition",
+        ),
+        (
+            "              false",
+            "              true",
+            "weakened required-result failure command",
+        ),
+        (
             "          .github/scripts/check_repo_hygiene_test.sh",
             "          exit 0\n          .github/scripts/check_repo_hygiene_test.sh",
             "check-changes direct early success",
@@ -126,9 +141,39 @@ def main() -> None:
             "check-changes alternate-zero early success",
         ),
         (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          exec /bin/true\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes exec replacement",
+        ),
+        (
             '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             '          exit 00\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "application-role proof early success",
+        ),
+        (
+            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "          true <<'SQL'",
+            "inert admin SQL heredoc owner",
+        ),
+        (
+            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "          true <<'SQL'",
+            "inert application-role SQL heredoc owner",
+        ),
+        (
+            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          "$(printf psql)" "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "substituted application-role SQL owner",
+        ),
+        (
+            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          command psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "wrapped application-role SQL owner",
+        ),
+        (
+            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exec /bin/true\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            "application-role proof exec replacement",
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
