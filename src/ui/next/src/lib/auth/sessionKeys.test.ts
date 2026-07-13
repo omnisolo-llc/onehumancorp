@@ -17,29 +17,35 @@ const activeEnv = () => ({
 });
 
 describe("active web-session key", () => {
-  it("decodes a canonical 256-bit active key without retaining secret text", () => {
+  it("imports a canonical 256-bit active key without retaining secret material", async () => {
     const env = activeEnv();
-    const ring = parseSessionKeyRing(env);
+    const ring = await parseSessionKeyRing(env);
     expect(ring.active.id).toBe("prod-v1");
-    expect(Array.from(ring.active.key)).toEqual(Array.from(ACTIVE_BYTES));
+    expect(ring.active.key).toBeInstanceOf(CryptoKey);
+    expect(ring.active.key.extractable).toBe(false);
+    expect(ring.active.key.usages).toEqual(["encrypt", "decrypt"]);
+    await expect(crypto.subtle.exportKey("raw", ring.active.key)).rejects.toThrow();
     expect(ring.previous).toBeUndefined();
     expect(JSON.stringify(ring)).not.toContain(env.OHC_WEB_SESSION_SECRET);
+    expect(JSON.stringify(ring)).toBe('{"active":{"id":"prod-v1","key":{}}}');
   });
 
-  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("requires %s", (name) => {
+  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("requires %s", async (name) => {
     const env: Record<string, string> = activeEnv();
     delete env[name];
-    expect(() => parseSessionKeyRing(env)).toThrow(`${name} is required`);
+    await expect(parseSessionKeyRing(env)).rejects.toThrow(`${name} is required`);
   });
 
-  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("rejects empty required value %s", (name) => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), [name]: "" })).toThrow(`${name} is required`);
-  });
-
-  it.each([" space", "slash/id", "x".repeat(33)])("rejects active key id %j", (id) => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_KEY_ID: id })).toThrow(
-      "OHC_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}",
+  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("rejects empty required value %s", async (name) => {
+    await expect(parseSessionKeyRing({ ...activeEnv(), [name]: "" })).rejects.toThrow(
+      `${name} is required`,
     );
+  });
+
+  it.each([" space", "slash/id", "x".repeat(33)])("rejects active key id %j", async (id) => {
+    await expect(
+      parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_KEY_ID: id }),
+    ).rejects.toThrow("OHC_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}");
   });
 
   it.each([
@@ -51,70 +57,102 @@ describe("active web-session key", () => {
     ["uniform", encode(new Uint8Array(32).fill(7))],
     ["31 zero plus one", encode(Uint8Array.from([...new Uint8Array(31), 1]))],
     ["two-byte period", encode(Uint8Array.from({ length: 32 }, (_, index) => index % 2))],
+    [
+      "sixteen-byte period",
+      encode(Uint8Array.from({ length: 32 }, (_, index) => (index % 16) * 13 + 7)),
+    ],
     ["ascending counter", encode(Uint8Array.from({ length: 32 }, (_, index) => index))],
     ["descending counter", encode(Uint8Array.from({ length: 32 }, (_, index) => 255 - index))],
-  ])("rejects structurally weak or malformed material: %s", (_case, secret) => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_SECRET: secret })).toThrow(
+  ])("rejects structurally weak or malformed material: %s", async (_case, secret) => {
+    await expect(
+      parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_SECRET: secret }),
+    ).rejects.toThrow(
       "OHC_WEB_SESSION_SECRET must be canonical base64url for acceptable 32-byte key material",
     );
+  });
+
+  it("parses with Edge Web APIs when the Node Buffer global is unavailable", async () => {
+    const env = activeEnv();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "Buffer");
+    Object.defineProperty(globalThis, "Buffer", {
+      configurable: true,
+      enumerable: descriptor?.enumerable ?? false,
+      value: undefined,
+      writable: true,
+    });
+    try {
+      const result = parseSessionKeyRing(env);
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).resolves.toMatchObject({ active: { id: "prod-v1" } });
+    } finally {
+      if (descriptor === undefined) Reflect.deleteProperty(globalThis, "Buffer");
+      else Object.defineProperty(globalThis, "Buffer", descriptor);
+    }
   });
 });
 
 describe("previous web-session key", () => {
-  it("accepts one distinct previous key", () => {
-    const ring = parseSessionKeyRing({
+  it("imports one distinct previous key as decrypt-only without exposing material", async () => {
+    const env = {
       ...activeEnv(),
       OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
       OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
-    });
+    };
+    const ring = await parseSessionKeyRing(env);
     expect(ring.previous?.id).toBe("prod-v0");
-    expect(Array.from(ring.previous?.key ?? [])).toEqual(Array.from(PREVIOUS_BYTES));
+    expect(ring.previous?.key).toBeInstanceOf(CryptoKey);
+    expect(ring.previous?.key.extractable).toBe(false);
+    expect(ring.previous?.key.usages).toEqual(["decrypt"]);
+    await expect(crypto.subtle.exportKey("raw", ring.previous!.key)).rejects.toThrow();
+    expect(JSON.stringify(ring)).toBe(
+      '{"active":{"id":"prod-v1","key":{}},"previous":{"id":"prod-v0","key":{}}}',
+    );
   });
 
-  it("requires a complete pair", () => {
-    expect(() =>
+  it("requires a complete pair", async () => {
+    await expect(
       parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0" }),
-    ).toThrow("previous key id and secret must be configured together");
-    expect(() =>
+    ).rejects.toThrow("previous key id and secret must be configured together");
+    await expect(
       parseSessionKeyRing({
         ...activeEnv(),
         OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
-    ).toThrow("previous key id and secret must be configured together");
+    ).rejects.toThrow("previous key id and secret must be configured together");
   });
 
-  it("requires distinct ids and material", () => {
-    expect(() =>
+  it("requires distinct ids and material", async () => {
+    await expect(
       parseSessionKeyRing({
         ...activeEnv(),
         OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
         OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
-    ).toThrow("previous key id must differ from active key id");
-    expect(() =>
+    ).rejects.toThrow("previous key id must differ from active key id");
+    await expect(
       parseSessionKeyRing({
         ...activeEnv(),
         OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
         OHC_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
       }),
-    ).toThrow("previous key material must differ from active key material");
+    ).rejects.toThrow("previous key material must differ from active key material");
   });
 
-  it("applies id and material validation to the previous key", () => {
-    expect(() =>
+  it("applies id and material validation to the previous key", async () => {
+    await expect(
       parseSessionKeyRing({
         ...activeEnv(),
         OHC_WEB_SESSION_PREVIOUS_KEY_ID: "bad/id",
         OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
-    ).toThrow("OHC_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
-    expect(() =>
+    ).rejects.toThrow("OHC_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
+    await expect(
       parseSessionKeyRing({
         ...activeEnv(),
         OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
         OHC_WEB_SESSION_PREVIOUS_SECRET: encode(new Uint8Array(32)),
       }),
-    ).toThrow(
+    ).rejects.toThrow(
       "OHC_WEB_SESSION_PREVIOUS_SECRET must be canonical base64url for acceptable 32-byte key material",
     );
   });
