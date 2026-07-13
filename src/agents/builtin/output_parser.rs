@@ -60,19 +60,6 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
             }
         }
 
-        // Fallback mechanic: extract JSON from markdown wrappers
-        if !msg.content.is_empty() {
-            let content = msg.content.trim();
-            if content.starts_with("```json") && content.ends_with("```") {
-                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
-                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Ok(data) = self.validate_schema(&parsed_json) {
-                        return Ok(data);
-                    }
-                }
-            }
-        }
-
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
@@ -112,19 +99,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
-            }
-        }
-
-        // Fallback mechanic: extract JSON from markdown wrappers
-        if !msg.content.is_empty() {
-            let content = msg.content.trim();
-            if content.starts_with("```json") && content.ends_with("```") {
-                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
-                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Ok(data) = self.validate_schema(&parsed_json) {
-                        return Ok(data);
-                    }
-                }
             }
         }
 
@@ -533,6 +507,18 @@ mod tests {
             .expect("Expected TestOutput in test");
         assert_eq!(result.result, "recovered_from_markdown");
         assert_eq!(*client.call_count.lock().await, 2);
+    }
+
+    #[test]
+    fn test_structured_output_parser_rejects_markdown_wrapper() {
+        let parser = StructuredOutputParser::<TestOutput>::new();
+        let message = Message::assistant(FENCED_MARKDOWN_COMPLETION);
+
+        let error = parser
+            .parse_message(&message)
+            .expect_err("markdown must not bypass native structured output");
+
+        assert!(error.contains("Expected native tool_calls API object"));
     }
 
     #[tokio::test]
@@ -1208,11 +1194,13 @@ mod strict_output_tests {
 
     struct MockStrictClient {
         responses: Mutex<Vec<ChatResponse>>,
+        call_count: Mutex<usize>,
     }
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockStrictClient {
         async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            *self.call_count.lock().await += 1;
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Err("No more responses".into());
@@ -1272,6 +1260,7 @@ mod strict_output_tests {
                     usage: Usage::default(),
                 },
             ]),
+            call_count: Mutex::new(0),
         });
 
         let parser: Box<dyn OutputParser<StrictTestOutput> + Send + Sync> =
@@ -1285,7 +1274,12 @@ mod strict_output_tests {
             &crate::retry::ExponentialBackoffWithJitter::new(0, 0)
         ).await;
 
-        assert!(result.is_ok());
-        let _ = result;
+        assert_eq!(
+            result.expect("markdown should recover through a native tool call"),
+            StrictTestOutput {
+                strict: "success".to_string(),
+            }
+        );
+        assert_eq!(*client.call_count.lock().await, 2);
     }
 }
