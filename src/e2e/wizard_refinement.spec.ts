@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language', async ({ page }) => {
-    await page.route('**/setup.html', async route => { const fs = require('fs'); const path = require('path'); return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8') }); }); await page.goto('http://mock/setup.html');
+    await page.route('**/setup.html', async route => { const fs = require('fs'); const path = require('path'); return route.fulfill({ contentType: 'text/html', body: fs.readFileSync(process.env.RUNFILES_DIR ? path.join(process.env.RUNFILES_DIR, '_main', 'src', 'ui', 'tauri', 'src', 'ui', 'setup.html') : path.join(process.cwd(), 'src', 'ui', 'tauri', 'src', 'ui', 'setup.html'), 'utf-8') }); }); await page.goto('http://mock/setup.html');
     await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
     await expect(page.locator('#generate-storefront-btn')).toBeVisible();
   });

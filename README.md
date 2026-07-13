@@ -58,9 +58,9 @@ The platform supports four operating modes:
 
 | Mode | Local footprint | Remote footprint | Notes |
 |------|-----------------|------------------|-------|
-| **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Redis and Chatwoot | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Valkey and PowerSync | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
 | **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
-| **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Redis and Chatwoot are not required for the standalone wrapper flow. |
+| **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Valkey and PowerSync are not required for the standalone wrapper flow. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
 ```mermaid
@@ -148,7 +148,6 @@ Services:
 | `server` | 8080 | Rust API server, auth endpoints, and optional embedded UI |
 | `postgres` | 5432 | PostgreSQL |
 | `redis` | 6379 | Redis |
-| `chatwoot` | 3002 | Chat platform |
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
 
