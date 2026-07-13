@@ -14,12 +14,18 @@ rust_library(
         "mod.rs",
         "ledger.rs",
         "funding_engine.rs",
+        "multi_currency_ledger.rs",
+        "fx_cache.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:sqlx",
+        "@crates//:serde",
+        "@crates//:uuid",
+        "@crates//:redis",
+        "//src/server/common:server_common",
     ],
 )
 
