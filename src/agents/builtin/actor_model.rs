@@ -198,28 +198,25 @@ impl Actor for ToolActor {
                 }
 
                 // Master Catalog B.2: Tools (The Agent's Hands): Read-only operations run concurrently; mutating operations run serially.
-                let mut ro_futures = Vec::new();
-                for tc in read_only_calls {
+                let ro_futures = read_only_calls.into_iter().map(|tc_clone| {
                     let agent_tools = agent.tools.clone();
-                    let tc_clone = tc.clone();
-
-                    ro_futures.push(async move {
-                        let tool = agent_tools.iter().find(|t| t.name == tc_clone.name);
-                        match tool {
+                    async move {
+                        let tool = agent_tools.iter().find(|t| t.name == tc_clone.name).cloned();
+                        let res = match tool {
                             Some(t) => {
-                                let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                                    t,
+                                Some(ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                    &t,
                                     &tc_clone,
                                     2,
                                     &crate::agent::AgentRunConfig::default(),
                                 )
-                                .await;
-                                (tc_clone, Some(res))
-                            }
-                            None => (tc_clone, None),
-                        }
-                    });
-                }
+                                .await)
+                            },
+                            None => None,
+                        };
+                        (tc_clone, res)
+                    }
+                });
 
                 let ro_results = futures::future::join_all(ro_futures).await;
                 for (tc, res_opt) in ro_results {
