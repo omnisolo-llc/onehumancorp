@@ -13,6 +13,7 @@ pub struct MarketplaceAgent {
     pub author: String,
     pub version: String,
     pub endpoint: String, // Where to fetch the agent payload/definition
+    pub downloads: u32,
 }
 
 #[async_trait::async_trait]
@@ -156,6 +157,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
+                    downloads: 12500,
                 },
                 MarketplaceAgent {
                     id: "agent-2".to_string(),
@@ -164,6 +166,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-2".to_string(),
+                    downloads: 8300,
                 },
                 MarketplaceAgent {
                     id: "agent-3".to_string(),
@@ -172,6 +175,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-3".to_string(),
+                    downloads: 4200,
                 }
             ];
 
@@ -191,6 +195,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
+                    downloads: 12500,
                 })
             } else if agent_id == "agent-2" {
                 Ok(MarketplaceAgent {
@@ -200,6 +205,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-2".to_string(),
+                    downloads: 8300,
                 })
             } else if agent_id == "agent-3" {
                 Ok(MarketplaceAgent {
@@ -209,6 +215,7 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-3".to_string(),
+                    downloads: 4200,
                 })
             } else {
                 Err("Not found".to_string())
@@ -264,6 +271,7 @@ mod tests {
             author: "Tester".to_string(),
             version: "1.0".to_string(),
             endpoint: "http://example.com".to_string(),
+            downloads: 0,
         };
 
         let published = client.publish_agent(new_agent).await.unwrap();
@@ -277,6 +285,7 @@ mod tests {
             author: "".to_string(),
             version: "".to_string(),
             endpoint: "".to_string(),
+            downloads: 0,
         };
         let error_res = client.publish_agent(error_agent).await;
         assert!(error_res.is_err());

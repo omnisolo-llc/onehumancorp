@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useMarketplace } from '../hooks/useMarketplace.js';
 import Spinner from 'ink-spinner';
+const AnySpinner = Spinner as any;
 
 interface MarketplaceProps {
   onBack: () => void;
@@ -33,7 +34,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onBack }) => {
 
       {loading && (
         <Box marginTop={1}>
-          <Text color="yellow"><Spinner type="dots" /> Fetching Pre-built Agents...</Text>
+          <Text color="yellow"><AnySpinner type="dots" /> Fetching Pre-built Agents...</Text>
         </Box>
       )}
 

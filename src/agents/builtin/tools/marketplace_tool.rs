@@ -53,6 +53,7 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
                 author: args.agent_author.unwrap_or_default(),
                 version: args.agent_version.unwrap_or_else(|| "1.0.0".to_string()),
                 endpoint: args.agent_endpoint.unwrap_or_default(),
+                downloads: 0,
             };
 
             match self.client.publish_agent(agent).await {
