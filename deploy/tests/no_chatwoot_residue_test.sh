@@ -24,6 +24,7 @@ active_roots=(
   src
   deploy
   docs/business
+  'docs/research/[customer_success]_invisible_ambassador_agent.md'
   docs/technical/developer
   docs/technical/reports
 )
@@ -109,6 +110,7 @@ historical=(
   docs/reports/tool_integration_research_report_q3.md
   docs/research/triage_report_bazel.md
 )
+historical_marker='> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.'
 for path in "${historical[@]}"; do
   if ! git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
     scanner_error "historical inventory lookup failed" "$path"
@@ -116,14 +118,12 @@ for path in "${historical[@]}"; do
   if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
     scanner_error "tracked historical regular input invalid" "$path"
   fi
-  if rg -q '^> Superseded architecture: .*native omnichannel' "$path" 2>/dev/null; then
-    continue
-  else
-    status=$?
+  historical_lines=()
+  if ! mapfile -t -n 2 historical_lines < "$path"; then
+    scanner_error "historical marker read failed" "$path"
   fi
-  if [[ "$status" -eq 1 ]]; then
-    printf 'missing native-architecture superseded marker: %q\n' "$path" >&2
+  if [[ "${historical_lines[1]-}" != "$historical_marker" ]]; then
+    printf 'missing or misplaced native-architecture superseded marker: %q\n' "$path" >&2
     exit 1
   fi
-  scanner_error "historical marker scan failed" "$path"
 done
