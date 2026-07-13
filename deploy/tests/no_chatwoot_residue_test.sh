@@ -15,17 +15,29 @@ active_roots=(
   docs/technical/reports
 )
 
-if ! tracked_inventory="$(git ls-files -s -- "${active_roots[@]}")"; then
+if mapfile -d '' -t tracked_records < <(git ls-files -s -z -- "${active_roots[@]}"); then
+  inventory_pid=$!
+else
+  echo "chat platform residue scanner failed" >&2
+  exit 2
+fi
+if ! wait "$inventory_pid"; then
   echo "chat platform residue scanner failed" >&2
   exit 2
 fi
 tracked=()
 symlinks=()
-while IFS=$'\t' read -r metadata path; do
+for record in "${tracked_records[@]}"; do
+  if [[ "$record" != *$'\t'* ]]; then
+    echo "chat platform residue scanner failed" >&2
+    exit 2
+  fi
+  metadata="${record%%$'\t'*}"
+  path="${record#*$'\t'}"
   [[ -z "$path" || "$path" == "$guard_path" ]] && continue
   tracked+=("$path")
   [[ "${metadata%% *}" == "120000" ]] && symlinks+=("$path")
-done <<< "$tracked_inventory"
+done
 if ((${#tracked[@]} == 0)); then
   echo "chat platform residue scan failed: no tracked active files were discovered" >&2
   exit 2
