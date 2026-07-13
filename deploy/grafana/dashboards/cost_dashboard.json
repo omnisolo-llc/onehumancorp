@@ -31,7 +31,7 @@
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
       },
       "title": "Aesthetic Mandate Injector",
-      "transparent": true,
+      ,
       "type": "text"
     },
     {
@@ -108,7 +108,7 @@
       ],
       "title": "LLM Cost by Agent (USD/sec)",
       "type": "timeseries",
-      "transparent": true
+
     },
     {
       "datasource": "Prometheus",
@@ -184,7 +184,7 @@
       ],
       "title": "API Cost by Integration (USD/sec)",
       "type": "timeseries",
-      "transparent": true
+
     },
     {
       "datasource": "Prometheus",
@@ -260,7 +260,7 @@
       ],
       "title": "Storage Cost (Bytes/sec)",
       "type": "timeseries",
-      "transparent": true
+
     },
     {
       "datasource": "Prometheus",
@@ -336,7 +336,7 @@
       ],
       "title": "Email Send Cost (Count/sec)",
       "type": "timeseries",
-      "transparent": true
+
     }
   ],
   "refresh": false,
