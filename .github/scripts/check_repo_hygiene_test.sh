@@ -3,6 +3,7 @@ set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 checker="$script_dir/check_repo_hygiene.sh"
+repo_root=$(cd -- "$script_dir/../.." && pwd)
 test_root=$(mktemp -d)
 trap 'rm -rf -- "$test_root"' EXIT
 
@@ -63,10 +64,81 @@ assert_near_misses_allowed() {
     fail 'near-miss repository did not report success'
 }
 
+assert_literal_bazel_header_forbidden() {
+  local label=$1
+  local path=$2
+  local flag=$3
+  local assignment_style=$4
+  local repo output rendered synthetic_value
+  repo=$(new_repo)
+  output="$repo/checker.output"
+  synthetic_value="unit-test-credential-placeholder"
+
+  mkdir -p -- "$repo/$(dirname -- "$path")"
+  case "$assignment_style" in
+    equals)
+      printf 'common --%s=x-build-service-api-key=%s\n' "$flag" "$synthetic_value" > "$repo/$path"
+      ;;
+    quoted-spaced)
+      printf 'common --%s "x-build-service-api-key = %s"\n' "$flag" "$synthetic_value" > "$repo/$path"
+      ;;
+    *)
+      fail "$label: unknown assignment style"
+      ;;
+  esac
+  git -C "$repo" add -- "$path"
+
+  if (cd -- "$repo" && "$checker") >"$output" 2>&1; then
+    fail "$label: checker accepted a tracked literal Bazel credential header"
+  fi
+
+  printf -v rendered '%q' "$path"
+  grep -Fq -- "repo hygiene: tracked Bazel API credential header has a literal value: $rendered" "$output" ||
+    fail "$label: checker did not identify the shell-escaped offending path"
+  if grep -Fq -- "$synthetic_value" "$output"; then
+    fail "$label: diagnostic exposed the credential value"
+  fi
+}
+
+assert_bazel_header_references_allowed() {
+  local repo output
+  repo=$(new_repo)
+  output="$repo/checker.output"
+
+  mkdir -p -- "$repo/.github/workflows"
+  {
+    printf '%s\n' 'common --remote_header=x-build-service-api-key=${{ secrets.BUILD_SERVICE_API_KEY }}'
+    printf '%s\n' 'common --bes_header="x-build-service-api-key=${BUILD_SERVICE_API_KEY}"'
+    printf '%s\n' 'common --remote_header=x-build-service-api-key=$BUILD_SERVICE_API_KEY'
+    printf '%s\n' 'common --remote_header=x-build-service-auth=unit-test-near-miss'
+  } > "$repo/.github/workflows/build.yml"
+  git -C "$repo" add -- '.github/workflows/build.yml'
+
+  (cd -- "$repo" && "$checker") >"$output" 2>&1 ||
+    fail 'protected Bazel credential references or near misses were rejected'
+  grep -Fxq -- 'repo hygiene: ok' "$output" ||
+    fail 'protected Bazel credential reference repository did not report success'
+}
+
+assert_optional_local_bazelrc_contract() {
+  grep -Fxq -- '/.bazelrc.local' "$repo_root/.gitignore" ||
+    fail 'the optional local Bazel rc is not narrowly ignored'
+  grep -Fxq -- 'try-import %workspace%/.bazelrc.local' "$repo_root/.bazelrc" ||
+    fail 'the tracked Bazel rc does not try-import the optional local rc'
+  if grep -Eq -- '^[[:space:]]*(common|always|build|test|run)[[:space:]]+--announce_rc([[:space:]]|$)' "$repo_root/.bazelrc"; then
+    fail 'the tracked Bazel rc enables credential-bearing option announcements by default'
+  fi
+}
+
 assert_forbidden 'root basename' '.ohc_jwt_secret'
 assert_forbidden 'nested basename' 'nested/.ohc_jwt_secret'
 assert_forbidden 'space-containing path' 'directory with spaces/.ohc_jwt_secret'
 assert_forbidden 'newline-containing directory' $'directory\nwith-control/.ohc_jwt_secret'
 assert_near_misses_allowed
+assert_literal_bazel_header_forbidden 'remote header equals' '.bazelrc' 'remote_header' 'equals'
+assert_literal_bazel_header_forbidden 'BES header quoted and spaced' 'config with spaces/build.bazelrc' 'bes_header' 'quoted-spaced'
+assert_literal_bazel_header_forbidden 'newline path diagnostic' $'config\nwith-control/build.bazelrc' 'remote_header' 'equals'
+assert_bazel_header_references_allowed
+assert_optional_local_bazelrc_contract
 
 printf 'repo hygiene test: ok\n'

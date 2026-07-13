@@ -25,6 +25,7 @@
 /bazelisk
 /bazelisk-*
 **/bazelisk-linux-amd64
+/.bazelrc.local
 /CLAUDE_OHC.md
 /test-results
 /code_review_response.md

@@ -11,7 +11,7 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
-Remediation update: F-01 through F-10 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence.
+Remediation update: F-01 through F-11 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence.
 
 ## Completed optimization work
 
@@ -31,6 +31,7 @@ Remediation update: F-01 through F-10 have now been addressed in focused follow-
 | Memory worker boundaries | Added injectable, deadline-bound summarization; explicit system authority for cross-tenant acquisition/filesystem ingestion; and organization-scoped failure/final mutations | 5 Cargo worker tests and the Bazel workers target passed; real Postgres/RLS assertions remained skipped because `OHC_DATABASE_URL` was unset |
 | Telemetry privacy | Removed raw task and error bodies from LangSmith/Langfuse logs while retaining provider, event, run ID, and coarse error class | Emitted-log capture regression, 2 observability tests, and all 520 agent tests passed |
 | JavaScript supply chain | Constrained vulnerable transitive releases in root/UI pnpm and npm graphs and added four production audit gates to CI | Root/UI pnpm and npm production audits report zero vulnerabilities; 817 UI tests, 58 CLI tests, MCP smoke test, and Bazel UI target pass |
+| Build credential hygiene | Removed tracked literal remote-cache/BES API headers and added fail-closed tracked-file enforcement | Disposable Git behavior tests, current-tree hygiene scan, and tracked-rc Bazel announcement scan pass without emitting credential values |
 
 ### UI-01 — Universal UI shell and rendered consistency
 
@@ -144,6 +145,14 @@ The required `postgres-security` CI job uses `pgvector/pgvector:pg16`, sets requ
 The new remote GitHub Actions `postgres-security` job has not yet run, so its remote CI result remains unverified. This does not change the current-code remediation status: the enforcement is implemented and the exact disposable Postgres/application-role flow passed locally.
 
 Local verification used a fresh disposable pgvector PostgreSQL 16 container and the same admin/application-role flow. Before the suite, PostgreSQL reported `session_user=current_user=ohc_security_test`, `rolsuper=false`, `rolinherit=false`, `rolbypassrls=false`, explicit `ohc_bypassrls` membership, and `row_security=on`. The standalone body proved an explicit switch to `current_user=ohc_bypassrls` with `rolbypassrls=true`, then produced the deterministic `user not found` repository result. The cloud IDOR body matched the exact application-validation rejection, and the cross-tenant write body accepted only PostgreSQL error `42501`; arbitrary database/setup errors can no longer produce green tests. The exact required-lane command executed all six bodies: 6 passed, 0 failed in 5.13 seconds. The full `server_auth` Cargo suite passed 28 tests, and `//src/server/auth:server_auth_unit_test` passed under Bazel with the embedded migrations declared as compile data. The container was removed afterward. No repository or production credentials were used or recorded.
+
+### F-11 — Critical — tracked Bazel remote-cache and BES API credentials
+
+**Status (2026-07-13): Remediated in the current tree; external credential response and history remediation remain.** Three tracked literal API-key header assignments were removed from `.bazelrc` without displaying, copying, hashing, or recording their values. The tracked default `--announce_rc` setting was also removed so future local or CI-injected header values are not printed automatically. Default and local builds no longer require tracked credentials. The tracked rc now only try-imports an optional, narrowly ignored `/.bazelrc.local`; a disposable Bazel 9.1.1 probe proved both the present-file and absent-file behavior. Existing CI injection through `bazel-contrib/setup-bazel` and protected GitHub secret expressions remains unchanged.
+
+Repository hygiene now fails closed when any tracked text file contains a literal `--bes_header` or `--remote_header` assignment to an `x-*-api-key` header. Pure GitHub Actions secret and shell environment references remain allowed. The scanner emits only NUL-delimited paths to the shell wrapper, and diagnostics render only shell-escaped paths, never matching lines or values. Disposable Git regressions cover both flags, equals and quoted/spaced assignments, paths containing spaces and newlines, protected GitHub and environment references, and a non-credential near miss. The behavior suite and current-tree checker pass; a non-outputting tracked-file scan reports zero current literal matches. Bazel loaded only the tracked workspace rc during a captured `--announce_rc` probe, and a non-outputting scan of that mode-0600 capture reported zero API-key header occurrences before the capture was deleted.
+
+This repository change cannot invalidate material that may already have escaped. The affected BuildBuddy/Nativelink credentials must be rotated or revoked externally. Git history must be assessed and, if required, purged; remote-cache and BES logs/artifacts must also be assessed for credential exposure. Credential rotation/revocation, history rewriting, and external log/artifact assessment were **not performed** by this remediation.
 
 ## Passing and unverified test evidence
 
