@@ -12,6 +12,8 @@ pub struct CreateCheckoutSessionRequest {
     pub device_id: Option<String>,
     pub cart_payload: Option<serde_json::Value>,
     pub discount_code: Option<String>,
+    pub target_currency: Option<String>,
+    pub target_region: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -78,6 +80,20 @@ pub async fn create_checkout_session_handler(
     }
 
     let mut final_amount = req_data.amount_cents;
+    let mut settlement_amount = final_amount;
+    let mut snapshotted_fx_rate: f64 = 1.0;
+    let mut applied_tax_rate: f64 = 0.0;
+
+    if let (Some(t_currency), Some(t_region)) = (&req_data.target_currency, &req_data.target_region) {
+        let fx_service = crate::api::fx_cache::FxCacheService::new(hub.redis_client.clone().expect("Redis client is not initialized"));
+        if let Ok(rate) = fx_service.get_rate("USD", t_currency).await {
+            snapshotted_fx_rate = rate;
+            settlement_amount = ((final_amount as f64) * rate).round() as i64;
+        }
+        if let Ok(tax) = fx_service.get_tax_rate(t_region).await {
+            applied_tax_rate = tax;
+        }
+    }
     if let Some(discount_code) = &req_data.discount_code {
         let is_valid: Result<bool, sqlx::Error> = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM reward_claims WHERE tenant_id = $1 AND discount_code = $2 AND status = 'Active')"
@@ -130,15 +146,19 @@ pub async fn create_checkout_session_handler(
     }
 
     let query = sqlx::query(
-        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
+        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status, settlement_currency, settlement_amount_cents, snapshotted_fx_rate, applied_tax_rate)
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, $8, $9, $10)"
     )
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&req_data.r#type)
     .bind(final_amount)
     .bind(&req_data.device_id)
-    .bind(&updated_cart_payload);
+    .bind(&updated_cart_payload)
+    .bind(&req_data.target_currency)
+    .bind(settlement_amount)
+    .bind(snapshotted_fx_rate)
+    .bind(applied_tax_rate);
 
     match query.execute(&mut *db_tx).await {
         Ok(_) => {

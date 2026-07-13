@@ -26,6 +26,7 @@ pub mod syndication_handler;
 pub mod dynamic_workflows;
 
 pub mod catalog;
+pub mod fx_cache;
 pub mod shipping;
 pub mod meta_webhook;
 pub mod docs;

@@ -73,13 +73,22 @@ pub struct Product {
     pub description: Option<String>,
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
+    pub currency: Option<String>,
+    pub original_price_cents: Option<i64>,
+    pub original_currency: Option<String>,
     pub inventory_count: Option<i32>,
     pub variants: Option<Vec<ProductVariantRequest>>,
+}
+
+#[derive(Deserialize)]
+pub struct GetProductsQuery {
+    pub target_currency: Option<String>,
 }
 
 async fn handle_get_products(
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Query(query): axum::extract::Query<GetProductsQuery>,
 ) -> impl IntoResponse {
     let tenant_id = claims
         .organization_id
@@ -98,7 +107,7 @@ async fn handle_get_products(
     };
 
     let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1"
+        "SELECT id, title, description, type as item_type, price_cents, currency, inventory_count FROM products WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_all(&mut *conn)
@@ -126,15 +135,32 @@ async fn handle_get_products(
                     });
                 }
 
-                products.push(Product {
+                let mut p = Product {
                     id: p_id,
                     title: row.try_get("title").unwrap_or_default(),
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
+                    currency: row.try_get("currency").ok(),
+                    original_price_cents: None,
+                    original_currency: None,
                     inventory_count: row.try_get("inventory_count").ok(),
                     variants: if variants.is_empty() { None } else { Some(variants) },
-                });
+                };
+
+                if let Some(ref target_currency) = query.target_currency {
+                    let base_currency = p.currency.clone().unwrap_or_else(|| "USD".to_string());
+                    if &base_currency != target_currency {
+                        let fx_service = crate::api::fx_cache::FxCacheService::new(hub.redis_client.clone().expect("Redis client is not initialized"));
+                        if let Ok(rate) = fx_service.get_rate(&base_currency, target_currency).await {
+                            p.original_price_cents = p.price_cents;
+                            p.original_currency = Some(base_currency);
+                            p.price_cents = Some(((p.price_cents.unwrap_or(0) as f64) * rate).round() as i64);
+                            p.currency = Some(target_currency.clone());
+                        }
+                    }
+                }
+                products.push(p);
             }
             (StatusCode::OK, Json(products)).into_response()
         }
