@@ -3824,8 +3824,8 @@ pub async fn simulate_agent_feed_item_handler(
         cache.invalidate(&format!("ui_unified_agent_feed:{}:mobile:true", tenant_id)).await;
     }
     if let Some(cache) = UI_UNIFIED_FEED_CACHE.get() {
-        cache.invalidate(&format!("ui_unified_feed:{}:mobile:false", tenant_id)).await;
-        cache.invalidate(&format!("ui_unified_feed:{}:mobile:true", tenant_id)).await;
+        cache.invalidate(&format!("ui_dashboard_unified:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_dashboard_unified:{}:mobile:true", tenant_id)).await;
     }
 
     let cache = crate::api::agent_feed::get_agent_feed_cache();
