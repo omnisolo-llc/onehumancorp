@@ -2901,22 +2901,29 @@ impl Agent {
         self: Arc<Self>,
         cfg: AgentRunConfig,
         initial_message: String,
-    ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    ) -> tokio::sync::mpsc::Receiver<AgentEvent> {
+        const QUERY_EVENT_CAPACITY: usize = 64;
+        let (tx, rx) = tokio::sync::mpsc::channel(QUERY_EVENT_CAPACITY);
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "query");
 
         tokio::spawn(async move {
+            let event_tx = tx.clone();
             let mut on_event = |event: AgentEvent| {
-                // We use an unbounded channel so send does not block or drop events if the consumer is slow.
-                let _ = tx.send(event);
+                let _ = event_tx.try_send(event);
             };
 
-            if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
+            let result = tokio::select! {
+                _ = tx.closed() => return,
+                result = self.run(&cfg, &initial_message, &mut on_event) => result,
+            };
+            if let Err(e) = result {
                 // Propagate the error through the stream so it is not silently swallowed.
-                let _ = tx.send(AgentEvent::TaskError {
-                    error: format!("Agent run failed: {}", e),
-                });
+                let _ = tx
+                    .send(AgentEvent::TaskError {
+                        error: format!("Agent run failed: {}", e),
+                    })
+                    .await;
             }
         });
 
@@ -3760,10 +3767,26 @@ impl Agent {
                 "llm_interaction",
                 agent_id = %final_cfg.agent_id,
                 model = %final_cfg.model,
+                estimated_input_tokens = tracing::field::Empty,
+                system_chars = tracing::field::Empty,
+                history_chars = tracing::field::Empty,
+                tool_schema_chars = tracing::field::Empty,
                 input_tokens = tracing::field::Empty,
                 output_tokens = tracing::field::Empty,
                 total_tokens = tracing::field::Empty,
                 estimated_cost_usd = tracing::field::Empty,
+            );
+
+            let request_profile = crate::request_profile::profile_request(&req);
+            llm_span.record(
+                "estimated_input_tokens",
+                request_profile.estimated_input_tokens as i64,
+            );
+            llm_span.record("system_chars", request_profile.system_chars as i64);
+            llm_span.record("history_chars", request_profile.history_chars as i64);
+            llm_span.record(
+                "tool_schema_chars",
+                request_profile.tool_schema_chars as i64,
             );
 
             let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
@@ -8134,7 +8157,7 @@ mod tests {
         )
         .build();
 
-        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
+        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
         assert_eq!(prompt, expected);
     }
@@ -9559,7 +9582,36 @@ mod stream_tests {
     use super::*;
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
-    use std::sync::Arc;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    use tokio::sync::Notify;
+
+    struct CancellationGuard(Arc<AtomicBool>);
+
+    impl Drop for CancellationGuard {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    struct BlockingStreamLlmClient {
+        started: Arc<Notify>,
+        cancelled: Arc<AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for BlockingStreamLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let _guard = CancellationGuard(self.cancelled.clone());
+            self.started.notify_one();
+            std::future::pending().await
+        }
+    }
 
     struct StreamMockLlmClient {
         pub responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
@@ -9613,6 +9665,31 @@ mod stream_tests {
             has_task_complete,
             "Stream should eventually emit TaskComplete event"
         );
+    }
+
+    #[tokio::test]
+    async fn query_stops_when_receiver_is_dropped() {
+        let started = Arc::new(Notify::new());
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let client = Arc::new(BlockingStreamLlmClient {
+            started: started.clone(),
+            cancelled: cancelled.clone(),
+        });
+        let agent = Arc::new(Agent::new(client, vec![]));
+
+        let receiver = agent.query(AgentRunConfig::default(), "start".to_string());
+        tokio::time::timeout(std::time::Duration::from_secs(1), started.notified())
+            .await
+            .expect("LLM call did not start");
+        drop(receiver);
+
+        tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while !cancelled.load(Ordering::SeqCst) {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("dropping the query receiver did not cancel the LLM call");
     }
 
     #[tokio::test]

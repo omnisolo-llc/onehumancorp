@@ -25,6 +25,7 @@
 /bazelisk
 /bazelisk-*
 **/bazelisk-linux-amd64
+/.bazelrc.local
 /CLAUDE_OHC.md
 /test-results
 /code_review_response.md
@@ -33,6 +34,9 @@
 /.[jJ]ules
 *.key
 *.certSigningRequest
+
+# Runtime JWT signing material belongs only in the safe user-data directory.
+.ohc_jwt_secret
 
 # Test binary, built with `go test -c`
 *.test

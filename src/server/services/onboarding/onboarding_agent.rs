@@ -428,65 +428,46 @@ Your response:",
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
-
         tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key); // pii-safe
+        if let Some(cached_state) = cache.get(&cache_key).await {
+            tracing::debug!("Onboarding cache hit for tenant_id={} user_id={}", tenant_id, user_id);
+            tracing::debug!("Cache hit for onboarding state key: {}", cache_key); // pii-safe
+            return Ok(cached_state);
+        }
+        tracing::debug!("Cache miss for onboarding state key: {}", cache_key); // pii-safe
 
-        let pool = self.hub.pool.clone();
-        let tid = tenant_id.to_string();
-        let uid = user_id.to_string();
+        let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let state_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(3600), move || {
-            let pool_clone = pool.clone();
-            let tid_clone = tid.clone();
-            let uid_clone = uid.clone();
-            async move {
-                let mut tx = match pool_clone.begin().await {
-                    Ok(tx) => tx,
-                    Err(e) => {
-                        tracing::error!("Failed to begin transaction: {}", e);
-                        return None;
-                    }
-                };
+        use sqlx::Row;
 
-                if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tid_clone).await {
-                    tracing::error!("Failed to set org context: {}", e);
-                    return None;
-                }
+        let row = sqlx::query(
+            "SELECT current_step, state_json, updated_at FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
 
-                use sqlx::Row;
+        let state = if let Some(record) = row {
+            let mut state: serde_json::Value = record.get("state_json");
+            let current_step: i32 = record.get("current_step");
+            if let Some(obj) = state.as_object_mut() {
+                obj.insert("step".to_string(), serde_json::json!(current_step));
 
-                let row_result = sqlx::query(
-                    "SELECT current_step, state_json, updated_at FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
-                )
-                .bind(&tid_clone)
-                .bind(&uid_clone)
-                .fetch_optional(&mut *tx)
-                .await;
-
-                match row_result {
-                    Ok(Some(record)) => {
-                        let mut state: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
-                        let current_step: i32 = record.try_get("current_step").unwrap_or(0);
-                        if let Some(obj) = state.as_object_mut() {
-                            obj.insert("step".to_string(), serde_json::json!(current_step));
-
-                            // Add updated_at from DB
-                            if let Ok(updated_at) = record.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") {
-                                obj.insert("updated_at".to_string(), serde_json::json!(updated_at.timestamp_millis()));
-                            }
-                        }
-                        Some(state)
-                    }
-                    Ok(None) => Some(serde_json::json!({ "step": 0 })),
-                    Err(e) => {
-                        tracing::error!("Failed to fetch onboarding state: {}", e);
-                        None
-                    }
+                // Add updated_at from DB
+                if let Ok(updated_at) = record.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") {
+                    obj.insert("updated_at".to_string(), serde_json::json!(updated_at.timestamp_millis()));
                 }
             }
-        }).await;
+            state
+        } else {
+            serde_json::json!({ "step": 0 })
+        };
 
-        Ok(state_opt.unwrap_or_else(|| serde_json::json!({ "step": 0 })))
+        cache.set(&cache_key, state.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(state)
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
