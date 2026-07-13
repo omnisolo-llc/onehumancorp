@@ -180,7 +180,36 @@ Before the secure rerun, the twelve earlier predictable artifacts—`ohc-cargo-m
 
 Post-report checks at the final report HEAD are distinct from the removal matrix at `36d36f4`: `git grep -l -i 'chatwoot' -- . | sort` returned exactly eight allowed tracked paths in the corrected report tree: `.github/workflows/ci.yml`, the residue guard, this evidence report, the native removal plan and omnichannel design, and exactly three marked historical research reports. `git diff --check` and the residue guard exited 0 with no output. The only remaining worktree entry outside the report was the unrelated untracked `docs/superpowers/plans/2026-07-13-authentication-hardening.md`.
 
-All required local tools were available. This evidence does not claim a remote CI run, live-cluster rollout, or external production-system check; those checks were not run. Earlier default Bazel remote-cache/BES attempts in this environment were unauthorized, so the explicit local Bazel matrix above is the authoritative final evidence.
+#### Post-hardening terminal verification (2026-07-13)
+
+Commit `7c048495cdba1bd3139969fd20ff523c5af45235` is the terminal code head for this verification; the evidence-only report commit follows it. This subsection supersedes earlier uses of “final” for mutable current-tree evidence, but does not invalidate evidence explicitly anchored to earlier hashes such as the removal matrix at `36d36f4`.
+
+- `bash -n deploy/tests/no_chatwoot_residue_test.sh` exited 0 with no output. A timed `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0 in 0.764 seconds and produced zero output bytes.
+- `git grep -l -i 'chatwoot' -- . | sort` exited 0 and returned exactly eight tracked paths: the CI workflow, residue guard, this report, native removal plan, native omnichannel specification, and three marked historical research reports.
+- `cargo check -p ohc-mono --locked` exited 0 after 28.38 seconds. It emitted the same four unused-`db` warnings in `src/server/api/staff_mesh.rs`; no warning was suppressed.
+- `bazel test --config=local --remote_cache= --remote_executor= --bes_backend= //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exited 0 with 3/3 targets passing. Bazel reported `Executed 0 out of 3 tests: 3 tests pass` because all three results were cached. The retained target logs report 6/6 integration tests, 235 Vitest files and 943 tests, and the deployment artifact check passing; these counts were inspected but were not freshly executed by this cached invocation. The test-size guidance warning remained.
+- The exact private Cargo/Compose/Helm block above was reexecuted verbatim at `7c048495`. It exited 0 with primary service counts 5 default and 11 with all profiles, e2e counts 2 default and 2 with all profiles, zero rendered residue matches, evidence-directory mode 0700, no group/world-accessible entry, and cleanup confirmed. Helm again reported 1 chart linted, 0 failed, with only the icon recommendation.
+- The exact private Bazel-query block above was reexecuted verbatim at `7c048495`. Its producer exited 0 with 7,283 labels; the separately run residue scan returned the required status 1, directory mode was 0700, and cleanup was confirmed.
+
+A single private disposable-repository fixture exercised the post-hardening all-tracked and symlink-provenance behavior. The complete corrected rerun exited 0 with these asserted case outcomes:
+
+| Case | Required and observed guard exit | Additional assertion |
+|---|---:|---|
+| New tracked document residue | 1 | New `docs/` path reported |
+| Binary residue | 1 | Path reported; matching content not printed |
+| Pathspec-magic filename residue | 1 | Literal tracked path detected |
+| Tracked semantic alias | 1 | `active symlink: alias.txt` reported |
+| Two aliases to one matching target | 1 | Both alias paths reported |
+| Symlink cycle | 2 | Resolution scanner error reported |
+| Repository escape | 2 | Escape scanner error reported |
+| Directory target | 2 | Precise `tracked directory symlink target unsupported directory-link` diagnostic reported |
+| Near-miss allowlisted filename | 1 | Similar-but-not-equal report path rejected |
+| Empty repository | 2 | No tracked scan files diagnostic reported |
+| Guard-only repository | 2 | No tracked scan files diagnostic reported |
+
+The first disposable-suite attempt reached all requested case statuses but its final fixture-only permission assertion counted symlink mode bits despite the enclosing mode-0700 directory and therefore exited 1. The assertion was corrected to inspect non-symlink entries, the entire suite was recreated and rerun to the exit-0 result above, and both suite directories and the temporary fixture script were removed. `git diff --check` then exited 0; before this report edit, the unrelated authentication-hardening plan was the only worktree entry.
+
+All required local tools were available. This evidence does not claim a remote CI run, live-cluster rollout, or external production-system check; those checks were not run. Earlier default Bazel remote-cache/BES attempts in this environment were unauthorized, so the explicit local Bazel matrix above is the authoritative local matrix evidence.
 
 ## Boundary matrix — initial pre-remediation snapshot
 
