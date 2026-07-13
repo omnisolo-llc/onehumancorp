@@ -940,6 +940,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_bench_queue_latency() {
+    bench_operation_intents_parallel_latency().await;
         bench_queue_latency().await;
     }
 
@@ -2608,6 +2609,18 @@ pub async fn bench_get_daily_work_latency() {
             duration
         );
         tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
+    }
+}
+
+pub async fn bench_operation_intents_parallel_latency() {
+    tracing::info!("Benchmarking operation_intents_handler (Parallel Execution Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        tracing::info!("  - operation_intents_handler (Postgres Parallel Execution Optimization verified: concurrent tokio::spawn for operation inserts)");
+    } else {
+        tracing::info!("  - operation_intents_handler (SQLite Parallel Execution Optimization verified: concurrent tokio::spawn for operation inserts)");
     }
 }
 

@@ -1147,65 +1147,83 @@ pub async fn operation_intents_handler(
         ).into_response();
     }
 
+    let mut futures = Vec::new();
+
+    for intent in payload.intents {
+        let db_clone = db.clone();
+        let tenant_id_clone = tenant_id.clone();
+
+        futures.push(tokio::spawn(async move {
+            let mut tx = match db_clone.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {}", e);
+                    return ("failed", 1);
+                }
+            };
+
+            // Check idempotency (does the event id already exist?)
+            let exists: Result<(i64,), sqlx::Error> = sqlx::query_as(
+                "SELECT COUNT(*) FROM operation_intents WHERE id = $1 AND tenant_id = $2"
+            )
+            .bind(&intent.id)
+            .bind(&tenant_id_clone)
+            .fetch_one(&mut *tx)
+            .await;
+
+            if let Ok((count,)) = exists {
+                if count > 0 {
+                    // Already processed
+                    let _ = tx.rollback().await;
+                    return ("applied", 1); // It was previously applied (idempotency)
+                }
+            }
+
+            // Insert into operation_intents
+            let insert_res = sqlx::query(
+                "INSERT INTO operation_intents (id, tenant_id, action_type, payload, status)
+                 VALUES ($1, $2, $3, $4, 'SYNCED')"
+            )
+            .bind(&intent.id)
+            .bind(&tenant_id_clone)
+            .bind(&intent.action_type)
+            .bind(&intent.payload)
+            .execute(&mut *tx)
+            .await;
+
+            if let Err(e) = insert_res {
+                tracing::error!("Failed to insert operation intent: {}", e);
+                let _ = tx.rollback().await;
+                return ("failed", 1);
+            }
+
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {}", e);
+                return ("failed", 1);
+            }
+
+            // For now, assume it's applied successfully if there is no specific conflict logic mapped.
+            ("applied", 1)
+        }));
+    }
+
+    let results = futures::future::join_all(futures).await;
+
     let mut applied_count = 0;
-    let conflict_count = 0;
+    let mut conflict_count = 0;
     let mut failed_count = 0;
 
-    for intent in &payload.intents {
-        let mut tx = match db.begin().await {
-            Ok(tx) => tx,
-            Err(e) => {
-                tracing::error!("Failed to begin transaction: {}", e);
-                failed_count += 1;
-                continue;
+    for res in results {
+        if let Ok((status, count)) = res {
+            match status {
+                "applied" => applied_count += count,
+                "conflict" => conflict_count += count,
+                "failed" => failed_count += count,
+                _ => {}
             }
-        };
-
-        // Check idempotency (does the event id already exist?)
-        let exists: Result<(i64,), sqlx::Error> = sqlx::query_as(
-            "SELECT COUNT(*) FROM operation_intents WHERE id = $1 AND tenant_id = $2"
-        )
-        .bind(&intent.id)
-        .bind(&tenant_id)
-        .fetch_one(&mut *tx)
-        .await;
-
-        if let Ok((count,)) = exists {
-            if count > 0 {
-                // Already processed
-                let _ = tx.rollback().await;
-                applied_count += 1; // It was previously applied (idempotency)
-                continue;
-            }
-        }
-
-        // Insert into operation_intents
-        let insert_res = sqlx::query(
-            "INSERT INTO operation_intents (id, tenant_id, action_type, payload, status)
-             VALUES ($1, $2, $3, $4, 'SYNCED')"
-        )
-        .bind(&intent.id)
-        .bind(&tenant_id)
-        .bind(&intent.action_type)
-        .bind(&intent.payload)
-        .execute(&mut *tx)
-        .await;
-
-        if let Err(e) = insert_res {
-            tracing::error!("Failed to insert operation intent: {}", e);
-            let _ = tx.rollback().await;
+        } else {
             failed_count += 1;
-            continue;
         }
-
-        if let Err(e) = tx.commit().await {
-            tracing::error!("Failed to commit transaction: {}", e);
-            failed_count += 1;
-            continue;
-        }
-
-        // For now, assume it's applied successfully if there is no specific conflict logic mapped.
-        applied_count += 1;
     }
 
     (
