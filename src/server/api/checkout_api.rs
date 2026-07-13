@@ -12,6 +12,7 @@ pub struct CreateCheckoutSessionRequest {
     pub device_id: Option<String>,
     pub cart_payload: Option<serde_json::Value>,
     pub discount_code: Option<String>,
+    pub target_currency: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -77,7 +78,7 @@ pub async fn create_checkout_session_handler(
         }
     }
 
-    let mut final_amount = req_data.amount_cents;
+let mut final_amount = req_data.amount_cents;
     if let Some(discount_code) = &req_data.discount_code {
         let is_valid: Result<bool, sqlx::Error> = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM reward_claims WHERE tenant_id = $1 AND discount_code = $2 AND status = 'Active')"
@@ -96,6 +97,21 @@ pub async fn create_checkout_session_handler(
                 .await;
         }
     }
+
+    // FX conversion
+    let mut fx_rate = 1.0;
+    if let Some(target) = &req_data.target_currency {
+        if target != "USD" {
+             if let Some(redis) = hub.redis_client.clone() {
+                 let fx_service = crate::services::capital::fx_cache::FxCacheService::new(redis, hub.pool.clone());
+                 fx_rate = fx_service.get_rate("USD", target).await.unwrap_or(1.0);
+                 final_amount = (final_amount as f64 * fx_rate).round() as i64;
+             }
+        }
+    }
+
+    // Also save localized currency and fx_rate to checkout_sessions
+    // let's update the INSERT query
 
     // Redlock inventory reservation in checkout flow
     if let Some(cart) = &req_data.cart_payload {
@@ -127,6 +143,20 @@ pub async fn create_checkout_session_handler(
                 }
             }
         }
+    }
+
+    // Add columns to checkout_sessions dynamically if not exists, but wait, we need to alter table or just use cart_payload for fx data to not break the schema.
+    // actually, let's put it in cart_payload for now since cart_payload is JSONB
+    if let Some(cart) = &mut updated_cart_payload {
+        if let Some(obj) = cart.as_object_mut() {
+            obj.insert("target_currency".to_string(), serde_json::Value::String(req_data.target_currency.clone().unwrap_or("USD".to_string())));
+            obj.insert("fx_rate".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(fx_rate).unwrap()));
+        }
+    } else {
+        updated_cart_payload = Some(serde_json::json!({
+            "target_currency": req_data.target_currency.clone().unwrap_or("USD".to_string()),
+            "fx_rate": fx_rate
+        }));
     }
 
     let query = sqlx::query(

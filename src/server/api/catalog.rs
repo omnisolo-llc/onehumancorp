@@ -77,13 +77,22 @@ pub struct Product {
     pub variants: Option<Vec<ProductVariantRequest>>,
 }
 
+use axum::extract::Query;
+use std::collections::HashMap;
+
 async fn handle_get_products(
+    Query(params): Query<HashMap<String, String>>,
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let target_currency = params.get("target_currency").cloned();
+    let fx_service = hub.redis_client.clone().map(|redis| {
+        crate::services::capital::fx_cache::FxCacheService::new(redis, hub.pool.clone())
+    });
 
     let mut conn = match hub.pool.acquire().await {
         Ok(c) => c,
@@ -107,6 +116,15 @@ async fn handle_get_products(
     match rows {
         Ok(rows) => {
             let mut products = Vec::new();
+
+            // fetch rate once for all products
+            let mut fx_rate = 1.0;
+            if let (Some(target), Some(fx)) = (target_currency.as_deref(), fx_service.as_ref()) {
+                if target != "USD" {
+                     fx_rate = fx.get_rate("USD", target).await.unwrap_or(1.0);
+                }
+            }
+
             for row in rows {
                 let p_id: String = row.try_get("id").unwrap_or_default();
 
@@ -119,19 +137,23 @@ async fn handle_get_products(
                 let mut variants = Vec::new();
                 for vr in v_rows {
                     let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
-                    let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
+                    let final_modifier = (modifier as f64 * fx_rate).round() as i64;
+                    let modifier_str = format!("{:.2}", (final_modifier as f64) / 100.0);
                     variants.push(ProductVariantRequest {
                         name: vr.try_get("name").unwrap_or_default(),
                         price_modifier: modifier_str,
                     });
                 }
 
+                let raw_price_cents: Option<i64> = row.try_get("price_cents").ok();
+                let converted_price = raw_price_cents.map(|c| (c as f64 * fx_rate).round() as i64);
+
                 products.push(Product {
                     id: p_id,
                     title: row.try_get("title").unwrap_or_default(),
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
-                    price_cents: row.try_get("price_cents").ok(),
+                    price_cents: converted_price,
                     inventory_count: row.try_get("inventory_count").ok(),
                     variants: if variants.is_empty() { None } else { Some(variants) },
                 });
