@@ -6612,6 +6612,36 @@ async fn create_ui_bom_item_handler(
                                     .await
                                     .map_err(|e| e.to_string())?;
 
+                                    let articles = crate::api::docs::get_articles();
+                                    for article in articles {
+                                        sqlx::query(
+                                            "INSERT OR IGNORE INTO help_articles (tenant_id, category, title, desc_text, link) VALUES (?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(&article.category)
+                                        .bind(&article.title)
+                                        .bind(&article.desc)
+                                        .bind(&article.link)
+                                        .execute(pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
+                                    let videos = crate::api::docs::get_videos();
+                                    for video in videos {
+                                        sqlx::query(
+                                            "INSERT OR IGNORE INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES (?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(video.id)
+                                        .bind(&video.title)
+                                        .bind(&video.duration)
+                                        .bind(&video.video_url)
+                                        .execute(pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
                                     sqlx::query(
                                         "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                                     )
@@ -6701,6 +6731,36 @@ async fn create_ui_bom_item_handler(
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
+
+                                    let articles = crate::api::docs::get_articles();
+                                    for article in articles {
+                                        sqlx::query(
+                                            "INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(&article.category)
+                                        .bind(&article.title)
+                                        .bind(&article.desc)
+                                        .bind(&article.link)
+                                        .execute(&db.pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
+
+                                    let videos = crate::api::docs::get_videos();
+                                    for video in videos {
+                                        sqlx::query(
+                                            "INSERT INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                        )
+                                        .bind(tenant_id)
+                                        .bind(video.id)
+                                        .bind(&video.title)
+                                        .bind(&video.duration)
+                                        .bind(&video.video_url)
+                                        .execute(&db.pool)
+                                        .await
+                                        .map_err(|e| e.to_string())?;
+                                    }
 
                                     sqlx::query(
                                         "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"

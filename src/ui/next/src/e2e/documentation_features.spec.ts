@@ -30,3 +30,14 @@ test.describe('Documentation Features', () => {
   });
 
 });
+
+  test('Walkthroughs can be triggered', async ({ page }) => {
+    await page.goto('/');
+    const helpButton = page.locator('#ohc-floating-help-btn');
+    await expect(helpButton).toBeVisible();
+    await helpButton.click({ force: true });
+
+    // Check if the walkthrough start button is there
+    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
+    await expect(tourButton).toBeVisible();
+  });
