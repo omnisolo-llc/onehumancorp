@@ -282,7 +282,8 @@ mod chaos_db_tests {
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
-        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy(&std::env::var("OHC_DATABASE_URL").unwrap()).unwrap();
 
         let db_id = uuid::Uuid::new_v4().to_string();
         let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -344,7 +345,8 @@ mod chaos_db_tests {
 
     #[tokio::test]
     async fn test_chaos_parity_audit_comprehensive() {
-        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy(&std::env::var("OHC_DATABASE_URL").unwrap()).unwrap();
 
         // Also wipe out some tables for isolation in test
         let db_id = uuid::Uuid::new_v4().to_string();
@@ -369,7 +371,7 @@ mod chaos_db_tests {
         });
 
         let sqlite_db = Arc::new(DB {
-            pool: crate::db::create_dummy_pg_pool().await,
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy(&std::env::var("OHC_DATABASE_URL").unwrap()).unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 

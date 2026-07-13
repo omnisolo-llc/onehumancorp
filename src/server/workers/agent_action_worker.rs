@@ -85,6 +85,13 @@ impl AgentActionWorker {
                         let reason = if success { "" } else { "Agent execution exceeded 60-second ML-Resilience timeout rule." };
                         let fail_reason = if reason.is_empty() { "Action execution failed" } else { reason };
                         let _ = queue.fail(&job.id, 3, fail_reason).await;
+                        // ML-Resilience Circuit breaker & PAUSED logic fallback
+                        tracing::error!("Circuit breaker triggered: Setting agent state to PAUSED for action {}", action_id);
+                        if is_incident {
+                            let _ = sqlx::query("UPDATE department_tasks SET status = \x27PAUSED\x27 WHERE id = $1 AND tenant_id = $2").bind(action_id).bind(tenant_id).execute(&self.pool).await;
+                        } else {
+                            let _ = sqlx::query("UPDATE shared_tasks SET status = \x27PAUSED\x27 WHERE id = $1 AND tenant_id = $2").bind(action_id).bind(tenant_id).execute(&self.pool).await;
+                        }
                     }
 
                     let _ = redis_lock.release_lock(tenant_id, "agent_feed", action_id, &lock_val).await;

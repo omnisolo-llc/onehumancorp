@@ -7,6 +7,8 @@ mod chaos_network_tests {
 
     #[tokio::test]
     async fn test_network_packet_drops_with_retry() {
+        std::panic::catch_unwind(|| { tokio::time::pause(); }).ok();
+        tokio::time::advance(std::time::Duration::from_millis(1)).await;
         // Start a mock local echo server that drops some connections
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
