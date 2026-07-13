@@ -140,6 +140,8 @@ Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 
 The required `postgres-security` CI job uses `pgvector/pgvector:pg16`, sets required mode, proves the application-role attributes before running `cargo test -p server_auth multitenancy_isolation:: -- --nocapture`, and is enforced by `ci-required` for every non-markdown change. A stdlib-only static/behavioral contract rejects removal or weakening of the service, required environment, role/RLS assertions, exact command, or required-job wiring and runs in `check-changes`.
 
+The new remote GitHub Actions `postgres-security` job has not yet run, so its remote CI result remains unverified. This does not change the current-code remediation status: the enforcement is implemented and the exact disposable Postgres/application-role flow passed locally.
+
 Local verification used a fresh disposable pgvector PostgreSQL 16 container and the same admin/application-role flow. Before the suite, PostgreSQL reported `current_user=ohc_security_test`, `rolsuper=false`, `rolbypassrls=false`, and `row_security=on`. The exact required-lane command executed all six bodies: 6 passed, 0 failed in 2.26 seconds. The full `server_auth` Cargo suite passed 28 tests, and `//src/server/auth:server_auth_unit_test` passed under Bazel with the embedded migrations declared as compile data. The container was removed afterward. No repository or production credentials were used or recorded.
 
 ## Passing and unverified test evidence
