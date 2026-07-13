@@ -1,7 +1,6 @@
 use axum::{extract::State, Json, response::IntoResponse};
 use std::sync::Arc;
 use crate::hub::Hub;
-use axum::http::HeaderMap;
 use tracing::info;
 
 #[derive(serde::Serialize)]
