@@ -1,5 +1,7 @@
 # OHC Maintainer SRE Triage & Speed Report
 
+> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
+
 ## Mission Status
 The infrastructure clean-up and triage mission successfully resolved current build test failures out of the box via resetting to the pristine commit without any complex code patching to `src/server/db.rs` or `src/server/sip.rs`.
 - `bazelisk test //...` run is 100% green without the database error flakiness on the updated dependencies and lockfile.

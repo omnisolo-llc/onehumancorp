@@ -58,7 +58,7 @@ export const experts: ExpertCatalogItem[] = [
     usageCount: 391,
     model: 'Auto',
     skills: ['Inbox Triage', 'Tone Rewriter', 'Policy Checker'],
-    connectors: ['Chatwoot', 'Instagram DMs', 'QQ Mail'],
+    connectors: ['Native Omnichannel Inbox', 'Instagram DMs', 'WhatsApp', 'SMS', 'Email'],
   },
   {
     id: 'finance-controller',

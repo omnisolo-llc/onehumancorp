@@ -16,10 +16,10 @@
 
 **Current State**:
 - Default resources in `values.yaml` for backend and subcharts are loosely defined, causing either node over-provisioning or container OOMKills.
-- Chatwoot limits are excessively high for idle tenants.
+- Native inbox worker and outbox resource profiles need right-sizing for idle tenants.
 
 **Action Plan**:
-- Tune CPU/Memory requests to accurately reflect baseline idle states, and set aggressive HPA scaling to manage peak loads dynamically.
+- Right-size native inbox worker and outbox CPU/Memory requests for baseline idle states, and set aggressive HPA scaling to manage peak loads dynamically.
 - Implement an explicit VPA for memory to ensure safe limits without HPA collisions.
 
 ## 3. Local Efficiency (Standalone Mode)

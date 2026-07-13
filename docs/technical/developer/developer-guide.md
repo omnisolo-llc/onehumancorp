@@ -201,7 +201,6 @@ Services:
 | Server | 8080 | http://localhost:8080 (API + optional UI) |
 | Redis | 6379 | redis://localhost:6379 |
 | PostgreSQL | 5432 | postgres://localhost:5432/ohc |
-| Chatwoot | 3002 | http://localhost:3002 |
 
 ### 2 — Seed demo data
 
