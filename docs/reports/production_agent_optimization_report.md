@@ -180,4 +180,28 @@ Local verification used a fresh disposable pgvector PostgreSQL 16 container and 
 
 ## Benchmark and final verification
 
-Reproducible before/after benchmark data and the complete final formatting/lint/test matrix will be added in the next phase. UI visual consistency is also a newly requested review track and will be documented separately after rendered desktop/mobile inspection.
+The deterministic quality anchor is commit `a9803a9fa5b3065d6c063ff49ccb4f10c7ba590a`. For comparable measurement, the exact pre-optimization production tree was `e6fa6cc48d42ddbc33c1db21ab495957a3629a06`, the direct parent of optimization commit `56766ff9f`; it contains the quality anchor plus build-only fixes. The optimized production tree was `4508e39a091f41b27eb7ebbbbe8a65ef5801e63d`. The benchmark runner was overlaid as instrumentation on the detached baseline worktree because it did not exist before the optimization; no baseline production source was changed. The worktree was removed after measurement.
+
+The runner uses the same deterministic production fixture as the quality regression: one `Lookup` native tool, the user message `What is six times seven?`, one fake-provider response, and the exact answer `The verified answer is 42.` It runs on a Tokio current-thread runtime, performs exactly 20 warmups followed by 200 measured turns, and asserts the answer, complete native tool schema, user-message presence, stable request profile, and exactly one LLM call on every turn. It prints only one aggregate JSON object. Each production tree was built in a separate release target directory to prevent cross-worktree Cargo artifact reuse, then executed seven times pinned to CPU 0 with `taskset -c 0`.
+
+Environment: `rustc 1.95.0 (59807616e 2026-04-14)` on x86_64 Linux, AMD Ryzen 7 6800U with Radeon Graphics, 16 online logical CPUs. The measurement commands were equivalent to:
+
+```text
+CARGO_TARGET_DIR=/tmp/ohc-agent-benchmark-target cargo build --release -p ohc_builtin_agent --example agent_path_baseline
+taskset -c 0 /tmp/ohc-agent-benchmark-target/release/examples/agent_path_baseline
+CARGO_TARGET_DIR=/tmp/ohc-agent-optimized-target cargo build --release -p ohc_builtin_agent --example agent_path_baseline
+taskset -c 0 /tmp/ohc-agent-optimized-target/release/examples/agent_path_baseline
+```
+
+Representative exact outputs are the runs whose median and p95 equal the median across the seven run-level results:
+
+```json
+{"schema_version":1,"iterations":200,"median_micros":43,"p95_micros":59,"request_profile":{"system_chars":159,"history_chars":24,"tool_result_chars":0,"tool_schema_chars":87,"message_count":1,"tool_count":1,"estimated_input_tokens":68},"llm_calls_per_turn":1.0,"quality_passed":true}
+{"schema_version":1,"iterations":200,"median_micros":50,"p95_micros":68,"request_profile":{"system_chars":0,"history_chars":24,"tool_result_chars":0,"tool_schema_chars":87,"message_count":1,"tool_count":1,"estimated_input_tokens":28},"llm_calls_per_turn":1.0,"quality_passed":true}
+```
+
+Across all seven baseline runs, run-level medians ranged from 43–46 microseconds and p95 values from 57–67 microseconds. Across all seven optimized runs, medians ranged from 43–53 microseconds and p95 values from 57–91 microseconds. These ranges overlap, so this evidence does **not** establish a latency improvement. This is an intentionally deterministic in-process harness, not a provider-network or end-user latency benchmark.
+
+The request-size change is deterministic: the native provider schema remains exactly 87 characters in the `tools` field, while its duplicate textual representation is removed from the system prompt. Attributed input characters fall from 270 to 111, a reduction of 159 characters (58.9%); the documented four-characters-per-token estimate falls from 68 to 28, a reduction of 40 estimated tokens (58.8%). This estimate is attribution telemetry rather than a provider tokenizer or billing count. Tool calls remain exactly 1.0 per turn, and all 1,400 measured turns per production tree preserved the answer/schema/message invariants.
+
+Focused runner verification passed: `rustfmt --edition 2024 --check src/agents/builtin/examples/agent_path_baseline.rs`; `cargo test -p ohc_builtin_agent --example agent_path_baseline` (3 passed); release compilation for both measured production trees; `bazel build //src/agents/builtin:agent_path_baseline` (1 target, 367 actions); and `git diff --check`. The requested `cargo fmt --all -- --check` remains blocked by widespread pre-existing formatting differences outside this change. Both `cargo clippy -p ohc_builtin_agent --example agent_path_baseline -- -D warnings` and its `--no-deps` form reached unrelated existing code before the runner and failed on pre-existing warnings in `server_pricing` and the built-in-agent library; examples include `type_complexity` in `src/server/pricing/cost_aggregator.rs`, `empty_line_after_doc_comments` in `prompt_construction.rs`, and `unnecessary_sort_by` in the stores. No lint suppression or unrelated cleanup was added. The repository-wide final test matrix is recorded with the final handoff rather than inferred from the benchmark alone.
