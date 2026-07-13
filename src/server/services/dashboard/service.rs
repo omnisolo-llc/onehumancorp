@@ -71,7 +71,7 @@ impl MyDashboardService {
             filtered.push(::server_ohc::orchestration::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
-                transcript: Vec::new(),
+                transcript: if mobile_optimized { Vec::new() } else { m.transcript.clone() },
                 agenda: m.agenda.clone(),
             });
         }
