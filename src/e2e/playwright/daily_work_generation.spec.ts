@@ -23,10 +23,10 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     const workItemId = result.id;
 
     // 2. Navigate to Daily Work Feed at mobile resolution
-    await page.goto('/dashboard/daily-work');
+    await page.goto('/dashboard.html');
 
     // Wait for the feed to load
-    await expect(page.locator('text=Loading your work feed...')).not.toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Loading Agent Proposals...')).not.toBeVisible({ timeout: 10000 });
 
     // 3. Verify the surfaced actionable card
     const card = page.locator(`[data-testid="daily-work-card-${workItemId}"]`);
