@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code') || 'SALE';
   const percent = searchParams.get('percent') || '0';
   const theme = searchParams.get('theme') || 'light';
+  const rawBranding = searchParams.get('branding') !== 'false';
 
   const html = `
     <!DOCTYPE html>
@@ -46,9 +47,11 @@ export async function GET(request: Request) {
         <div class="title">${escapeHtml(title)}</div>
         <div class="discount">${escapeHtml(percent)}% OFF</div>
         <div class="code">${escapeHtml(code)}</div>
+        ${rawBranding ? `
         <div class="footer">
           <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
         </div>
+        ` : ''}
       </div>
     </body>
     </html>

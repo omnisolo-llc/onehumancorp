@@ -14,6 +14,17 @@ export default function FlashSaleGeneratorPage() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ hours: 24, minutes: 0, seconds: 0 });
+  const [removeBranding, setRemoveBranding] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
+      setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
+  }, []);
 
   // Initialize with tomorrow's date
   useEffect(() => {
@@ -38,7 +49,7 @@ export default function FlashSaleGeneratorPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/flash-sale/embed?tenant=${tenant}&title=${encodeURIComponent(saleTitle)}&code=${encodeURIComponent(discountCode)}&percent=${encodeURIComponent(discountPercent)}&end=${encodeURIComponent(endDate)}&theme=${theme}" width="100%" height="250" style="border:none; border-radius:16px; overflow:hidden;"></iframe>`;
+  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/flash-sale/embed?tenant=${tenant}&title=${encodeURIComponent(saleTitle)}&code=${encodeURIComponent(discountCode)}&percent=${encodeURIComponent(discountPercent)}&end=${encodeURIComponent(endDate)}&theme=${theme}&branding=${!removeBranding}" width="100%" height="250" style="border:none; border-radius:16px; overflow:hidden;"></iframe>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -133,6 +144,26 @@ export default function FlashSaleGeneratorPage() {
                             Dark
                         </button>
                     </div>
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            id="removeBranding"
+                            checked={removeBranding}
+                            onChange={(e) => {
+                                if (!hasPro) {
+                                    e.preventDefault();
+                                    setShowPaywall(true);
+                                    return;
+                                }
+                                setRemoveBranding(e.target.checked);
+                            }}
+                            className="w-4 h-4 text-[#FF3B30] rounded border-gray-300 focus:ring-[#FF3B30]"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Branding</span>
+                    </label>
                 </div>
 
                 <div className="mb-6">
@@ -233,14 +264,50 @@ export default function FlashSaleGeneratorPage() {
                     </div>
                 </div>
 
+                {!removeBranding && (
                 <div className="mt-4 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                         ⚡ Powered by OHC
                     </a>
                 </div>
+                )}
             </div>
         </div>
       </main>
+
+      {/* Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
+            <button
+              onClick={() => setShowPaywall(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </div>
+            <h2 className="text-xl font-bold mb-2 text-gray-900">Upgrade to Remove Branding</h2>
+            <p className="text-gray-600 mb-6">
+              Remove the "Powered by OHC" branding and unlock premium widgets by upgrading to our Pro plan.
+            </p>
+            <button
+              onClick={() => {
+                setShowPaywall(false);
+                setHasPro(true);
+                setRemoveBranding(true);
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('has_pro', 'true');
+                }
+              }}
+              className="w-full py-3 bg-[#FF3B30] hover:bg-[#E02424] text-white rounded-xl font-semibold transition-colors"
+            >
+              Upgrade Now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Embed Modal */}
       {showModal && (

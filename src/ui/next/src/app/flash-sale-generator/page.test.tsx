@@ -82,4 +82,32 @@ describe('FlashSaleGeneratorPage', () => {
     expect(textarea.value).toContain('tenant=cool-shop');
     expect(textarea.value).toContain('theme=dark');
   });
+
+  it('shows soft paywall when trying to remove branding without pro', () => {
+    localStorage.setItem('has_pro', 'false');
+    render(<FlashSaleGeneratorPage />);
+
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
+    fireEvent.click(removeBrandingCheckbox);
+
+    expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
+  });
+
+  it('allows removing branding when user has pro', () => {
+    localStorage.setItem('has_pro', 'true');
+    render(<FlashSaleGeneratorPage />);
+
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
+    fireEvent.click(removeBrandingCheckbox);
+
+    expect(removeBrandingCheckbox).toBeChecked();
+    expect(screen.queryByText('Upgrade to Remove Branding')).toBeNull();
+
+    const getWidgetButton = screen.getByRole('button', { name: 'Get Widget' });
+    fireEvent.click(getWidgetButton);
+
+    const textareas = screen.getAllByRole('textbox');
+    const textarea = textareas.find(ta => (ta as HTMLTextAreaElement).value.includes('<iframe')) as HTMLTextAreaElement;
+    expect(textarea.value).toContain('branding=false');
+  });
 });
