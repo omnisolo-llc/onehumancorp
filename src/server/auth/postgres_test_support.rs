@@ -72,6 +72,7 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         END
         $$;
         ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+        GRANT ohc_bypassrls TO ohc_security_test;
         GRANT USAGE ON SCHEMA public TO ohc_security_test;
         GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ohc_security_test;
         GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ohc_security_test;
@@ -117,14 +118,14 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SET app.current_tenant = ''").await?;
+                conn.execute("SELECT set_config('role', 'none', false), set_config('app.current_tenant', '', false)").await?;
                 Ok(true)
             })
         })
         .after_release(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("RESET ALL").await?;
+                conn.execute("SELECT set_config('role', 'none', false), set_config('app.current_tenant', '', false)").await?;
                 Ok(true)
             })
         })
@@ -136,13 +137,25 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
             panic!("connect through OHC_DATABASE_URL application role: {error}")
         });
 
-    let (current_user, is_superuser, bypasses_rls, row_security): (String, bool, bool, String) =
-        sqlx::query_as(
-            "SELECT current_user::text, rolsuper, rolbypassrls, current_setting('row_security') FROM pg_roles WHERE rolname = current_user",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap_or_else(|error| panic!("verify PostgreSQL application role: {error}"));
+    let (
+        session_user,
+        current_user,
+        is_superuser,
+        inherits_roles,
+        bypasses_rls,
+        bypass_member,
+        row_security,
+    ): (String, String, bool, bool, bool, bool, String) = sqlx::query_as(
+        "SELECT session_user::text, current_user::text, rolsuper, rolinherit, rolbypassrls, pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER'), current_setting('row_security') FROM pg_roles WHERE rolname = current_user",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap_or_else(|error| panic!("verify PostgreSQL application role: {error}"));
+    assert_eq!(session_user, "ohc_security_test", "unexpected session user");
+    assert_eq!(
+        current_user, session_user,
+        "pool must start as its login role"
+    );
     assert!(
         !is_superuser,
         "security tests must not run as superuser ({current_user})"
@@ -150,6 +163,14 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
     assert!(
         !bypasses_rls,
         "security tests must use NOBYPASSRLS ({current_user})"
+    );
+    assert!(
+        !inherits_roles,
+        "security tests must require explicit SET ROLE ({current_user})"
+    );
+    assert!(
+        bypass_member,
+        "security application role must be able to SET ROLE ohc_bypassrls"
     );
     assert_eq!(row_security, "on", "security tests require row_security=on");
 
