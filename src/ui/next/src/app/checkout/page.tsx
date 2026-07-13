@@ -312,7 +312,7 @@ function CheckoutContent() {
                 </span>
               </div>
 
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 my-2">
+              <div className="bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-indigo-200/50 shadow-sm rounded-xl p-4 my-2">
                 <p className="text-indigo-800 text-xs font-medium">
                   A 20% discount (
                   {discountParam && !isNaN(Number(discountParam))
@@ -413,7 +413,7 @@ function CheckoutContent() {
                 </div>
               )}
 
-              <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
+              <div className="bg-green-50 border border-green-200/50 shadow-sm rounded-xl p-4 my-2 mb-4">
                 <div className="flex justify-between items-center">
                   <span className="text-green-800 text-sm font-bold">
                     Available Rewards
@@ -563,7 +563,7 @@ function CheckoutContent() {
       {/* Post-Purchase Referral Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-200/50 shadow-sm">
             {/* Background embellishment */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
 
@@ -591,7 +591,7 @@ function CheckoutContent() {
               </p>
             )}
 
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
+            <div className="bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-indigo-200/50 shadow-sm rounded-xl p-4 mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-xl">💰</span>
                 <h3 className="font-bold text-indigo-900 font-outfit text-sm">

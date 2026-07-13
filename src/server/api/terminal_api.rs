@@ -3,6 +3,32 @@ use std::sync::Arc;
 use crate::hub::Hub;
 use tracing::info;
 
+fn extract_tenant_from_auth(
+    auth_info: &Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: &axum::http::HeaderMap,
+) -> Result<String, String> {
+    match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                Err("Unauthenticated: Missing tenant ID".to_string())
+            } else {
+                Ok(auth.org_id.clone())
+            }
+        },
+        None => {
+            let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Some(tenant_override) = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
+                Ok(tenant_override.to_string())
+            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                Ok(id)
+            } else {
+                Err("Unauthenticated".to_string())
+            }
+        }
+    }
+}
+
+
 #[derive(serde::Serialize)]
 pub struct TerminalTokenResponse {
     pub token: String,
@@ -74,15 +100,9 @@ pub async fn start_terminal_session_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<StartTerminalSessionRequest>,
 ) -> Json<StartTerminalSessionResponse> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated".to_string() })
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: e })
     };
 
     let session_id = uuid::Uuid::new_v4().to_string();
@@ -137,15 +157,9 @@ pub async fn update_terminal_session_status_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<UpdateTerminalSessionStatusRequest>,
 ) -> Json<UpdateTerminalSessionStatusResponse> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated".to_string() })
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: e })
     };
 
     let pool = crate::db::get_pool();
@@ -206,15 +220,9 @@ pub async fn end_terminal_session_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<EndTerminalSessionRequest>,
 ) -> Json<EndTerminalSessionResponse> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated".to_string() })
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return Json(EndTerminalSessionResponse { success: false, error_message: e })
     };
 
     let pool = crate::db::get_pool();
@@ -269,20 +277,9 @@ pub async fn reserve_inventory_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<ReserveInventoryRequest>,
 ) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(info) => info.org_id.clone(),
-        None => {
-            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            // WARNING: SECURITY FIX
-            // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
-                tenant_override.to_string()
-            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-                id
-            } else {
-                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
-            }
-        }
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": e }))).into_response()
     };
 
     let service = crate::services::inventory::InventoryService::new(
@@ -341,25 +338,9 @@ pub async fn sync_offline_transactions_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<SyncOfflineTransactionsRequest>,
 ) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
-                )
-                    .into_response();
-            } else {
-                auth.org_id.clone()
-            }
-        }
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
-        }
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": e }))).into_response()
     };
 
     info!(tenant_id = %tenant_id, tx_count = req_data.transactions.len(), "Syncing offline POS transactions");
@@ -697,20 +678,9 @@ pub async fn commit_inventory_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<CommitInventoryRequest>,
 ) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(info) => info.org_id.clone(),
-        None => {
-            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            // WARNING: SECURITY FIX
-            // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
-                tenant_override.to_string()
-            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-                id
-            } else {
-                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
-            }
-        }
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": e }))).into_response()
     };
 
     let service = crate::services::inventory::InventoryService::new(
@@ -793,22 +763,9 @@ pub async fn create_payment_intent_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<PaymentIntentRequest>,
 ) -> Json<Result<PaymentIntentResponse, String>> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(Err("Unauthenticated: Missing tenant ID".to_string()));
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => {
-            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-                id
-            } else {
-                return Json(Err("Unauthenticated".to_string()))
-            }
-        }
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return Json(Err(e))
     };
 
     let idempotency_key = req_data.idempotency_key.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
@@ -1093,30 +1050,13 @@ pub async fn capture_payment_intent_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<CapturePaymentIntentRequest>,
 ) -> Json<CapturePaymentIntentResponse> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(CapturePaymentIntentResponse {
-                    success: false,
-                    status: "".to_string(),
-                    error_message: Some("Unauthenticated: Missing tenant ID".to_string()),
-                });
-            } else {
-                auth.org_id.clone()
-            }
-        },
-        None => {
-            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-                id
-            } else {
-                return Json(CapturePaymentIntentResponse {
-                    success: false,
-                    status: "".to_string(),
-                    error_message: Some("Unauthenticated".to_string()),
-                });
-            }
-        }
+    let tenant_id = match extract_tenant_from_auth(&auth_info, &_headers) {
+        Ok(t) => t,
+        Err(e) => return Json(CapturePaymentIntentResponse {
+            success: false,
+            status: "".to_string(),
+            error_message: Some(e),
+        })
     };
 
     info!(tenant_id = %tenant_id, payment_intent_id = %req_data.payment_intent_id, "Capturing Stripe Terminal Payment Intent");
