@@ -96,9 +96,15 @@ test.describe("Documentation Features Flow", () => {
     await expect(page.locator("text=Hello AI").first()).toBeVisible();
   });
 
-  test("User can access the Changelog", async ({ page }) => {
-    await page.goto("/changelog");
+  test("User can access the Changelog from dashboard", async ({ page }) => {
+    // Go to dashboard
+    await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
+
+    // Click changelog button
+    const changelogBtn = page.locator('button:has-text("Changelog")');
+    await expect(changelogBtn).toBeVisible();
+    await changelogBtn.click();
 
     // Verify title
     await expect(
@@ -109,7 +115,20 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("Advanced User can access API Documentation", async ({ page }) => {
-    await page.goto("/api-docs");
+    await page.goto("/help");
+    await page.waitForLoadState("networkidle");
+
+    // Toggle advanced settings
+    const advancedCheckbox = page.locator('[data-testid="advanced-settings-checkbox"]');
+    await expect(advancedCheckbox).toBeVisible();
+    await advancedCheckbox.check();
+
+    // Verify the API docs link appears
+    const apiDocsLink = page.locator('a[href="/api-docs"]');
+    await expect(apiDocsLink).toBeVisible();
+
+    // Click the link
+    await apiDocsLink.click();
     await page.waitForLoadState("networkidle");
 
     // Verify the advanced disclaimer

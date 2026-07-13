@@ -404,6 +404,9 @@ export default function Dashboard() {
         >
           Start Tour
         </button>
+        <button type="button" onClick={() => router.push("/changelog")} className="app-button min-h-[44px]">
+          Changelog
+        </button>
         <button type="button" onClick={() => router.push("/onboarding")} className="app-button min-h-[44px]">
           Launch Site
         </button>
