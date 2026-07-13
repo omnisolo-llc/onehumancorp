@@ -15,7 +15,6 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  NODE_DISABLE_COMPILE_CACHE: "1"
 
 permissions:
   contents: read
@@ -67,14 +66,8 @@ jobs:
         run: |
           .github/scripts/check_repo_hygiene_test.sh
           .github/scripts/check_repo_hygiene.sh
-          pip3 install --user pyyaml || sudo apt-get update && sudo apt-get install -y python3-yaml || true
-
           python3 .github/scripts/check_postgres_security_ci_test.py
           python3 .github/scripts/check_postgres_security_ci.py
-
-      - name: Clean up node compile cache
-        if: always()
-        run: sudo rm -rf /tmp/node-compile-cache || true
 
   dependency-audit:
     name: Production dependency audit
