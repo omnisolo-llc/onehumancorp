@@ -35,8 +35,24 @@ for record in "${tracked_records[@]}"; do
   metadata="${record%%$'\t'*}"
   path="${record#*$'\t'}"
   [[ -z "$path" || "$path" == "$guard_path" ]] && continue
-  tracked+=("$path")
-  [[ "${metadata%% *}" == "120000" ]] && symlinks+=("$path")
+  mode="${metadata%% *}"
+  case "$mode" in
+    100644|100755)
+      if [[ ! -f "$path" || ! -r "$path" ]]; then
+        echo "chat platform residue scan failed: tracked active file missing or unreadable: $path" >&2
+        exit 2
+      fi
+      tracked+=("$path")
+      ;;
+    120000)
+      tracked+=("$path")
+      symlinks+=("$path")
+      ;;
+    *)
+      echo "chat platform residue scan failed: unsupported tracked mode $mode: $path" >&2
+      exit 2
+      ;;
+  esac
 done
 if ((${#tracked[@]} == 0)); then
   echo "chat platform residue scan failed: no tracked active files were discovered" >&2
@@ -79,9 +95,23 @@ historical=(
   docs/research/triage_report_bazel.md
 )
 for path in "${historical[@]}"; do
-  git ls-files --error-unmatch "$path" >/dev/null
-  rg -q '^> Superseded architecture: .*native omnichannel' "$path" || {
+  if ! git ls-files --error-unmatch "$path" >/dev/null; then
+    echo "chat platform residue scanner failed: $path" >&2
+    exit 2
+  fi
+  if [[ ! -f "$path" || ! -r "$path" ]]; then
+    echo "chat platform residue scan failed: historical file missing or unreadable: $path" >&2
+    exit 2
+  fi
+  if rg -q '^> Superseded architecture: .*native omnichannel' "$path"; then
+    continue
+  else
+    status=$?
+  fi
+  if [[ "$status" -eq 1 ]]; then
     echo "missing native-architecture superseded marker: $path" >&2
     exit 1
-  }
+  fi
+  echo "chat platform residue scanner failed: $path" >&2
+  exit 2
 done
