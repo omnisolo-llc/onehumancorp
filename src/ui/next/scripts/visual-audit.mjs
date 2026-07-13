@@ -1,6 +1,13 @@
-import { chmod, mkdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
+import {
+  HYDRATION_FAILURE_PATTERN,
+  classifyConsoleError,
+  failureReasons,
+  isCoverageComplete,
+  shouldFailAudit,
+} from './visual-audit-policy.mjs';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
 const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/ohc-visual-audit';
@@ -95,25 +102,16 @@ function createResult({ route, viewportName, viewport }, attempted = true) {
     status: null,
     ...emptyMetrics(viewport),
     consoleErrors: [],
+    expectedServiceErrors: [],
+    unexpectedConsoleErrors: [],
+    hydrationErrors: [],
+    pageErrors: [],
     screenshot: path.join(outputDir, `${viewportName}__${slug}.png`),
     screenshotWritten: false,
     navigationError: null,
     captureError: null,
     screenshotError: null,
   };
-}
-
-function failureReasons(result) {
-  const reasons = [];
-  if (result.navigationError) reasons.push('navigation error');
-  if (result.status !== null && result.status >= 400) reasons.push(`HTTP ${result.status}`);
-  for (const [shell, count] of Object.entries(result.shellCounts)) {
-    if (count !== 1) reasons.push(`${shell} count ${count}`);
-  }
-  if (result.horizontalOverflow) {
-    reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);
-  }
-  return reasons;
 }
 
 process.umask(0o077);
@@ -144,15 +142,36 @@ try {
       context = await browser.newContext({ viewport: auditCase.viewport });
       page = await context.newPage();
 
-      const recordConsoleError = (value) => {
-        if (result.consoleErrors.length < MAX_CONSOLE_ERRORS) {
-          result.consoleErrors.push(redactAndLimit(value));
-        }
+      const recordBounded = (collection, diagnostic) => {
+        if (collection.length >= MAX_CONSOLE_ERRORS) return;
+        collection.push({
+          message: redactAndLimit(diagnostic.message),
+          locationUrl: redactAndLimit(diagnostic.locationUrl),
+          pageUrl: redactAndLimit(diagnostic.pageUrl),
+        });
       };
       page.on('console', (message) => {
-        if (message.type() === 'error') recordConsoleError(message.text());
+        if (message.type() !== 'error') return;
+        const diagnostic = {
+          message: message.text(),
+          locationUrl: message.location().url || '',
+          pageUrl: page.url(),
+        };
+        recordBounded(result.consoleErrors, diagnostic);
+        const classification = classifyConsoleError(diagnostic);
+        if (classification === 'expected-service') recordBounded(result.expectedServiceErrors, diagnostic);
+        if (classification === 'unexpected') recordBounded(result.unexpectedConsoleErrors, diagnostic);
+        if (classification === 'hydration') recordBounded(result.hydrationErrors, diagnostic);
       });
-      page.on('pageerror', (error) => recordConsoleError(error.message));
+      page.on('pageerror', (error) => {
+        const diagnostic = {
+          message: error.message,
+          locationUrl: error.stack || '',
+          pageUrl: page.url(),
+        };
+        recordBounded(result.pageErrors, diagnostic);
+        if (HYDRATION_FAILURE_PATTERN.test(error.message)) recordBounded(result.hydrationErrors, diagnostic);
+      });
 
       try {
         const response = await page.goto(`${baseUrl}${auditCase.route}`, {
@@ -160,7 +179,14 @@ try {
           timeout: 30_000,
         });
         result.status = response?.status() ?? null;
-        await page.waitForTimeout(750);
+        await page.waitForFunction(() => document.querySelectorAll('.app-sidebar').length === 1
+          && document.querySelectorAll('.app-topbar').length === 1
+          && document.querySelectorAll('.app-main').length === 1, undefined, { timeout: 30_000 });
+        if (auditCase.route === '/inbox') {
+          await page.getByTestId('inbox-settled').waitFor({ state: 'visible', timeout: 30_000 });
+        }
+        await page.waitForLoadState('load', { timeout: 5_000 }).catch(() => {});
+        await page.waitForTimeout(1_000);
       } catch (error) {
         result.navigationError = redactAndLimit(error instanceof Error ? error.message : error);
       }
@@ -276,6 +302,19 @@ try {
     return leftIndex - rightIndex;
   });
 
+  for (const result of results) {
+    if (!result.screenshotWritten) continue;
+    try {
+      const screenshotStat = await stat(result.screenshot);
+      if (!screenshotStat.isFile()) throw new Error('screenshot path is not a file');
+    } catch (error) {
+      result.screenshotWritten = false;
+      result.screenshotError ||= redactAndLimit(
+        `screenshot verification failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
   if (outputReady) {
     const reportPath = path.join(outputDir, 'report.json');
     await writeFile(reportPath, `${JSON.stringify(results, null, 2)}\n`, { mode: 0o600 });
@@ -291,8 +330,7 @@ const failures = results
     reasons: failureReasons(result),
   }))
   .filter((result) => result.reasons.length > 0);
-const coverageComplete = results.length === auditCases.length
-  && results.every((result) => result.attempted && result.completed);
+const coverageComplete = isCoverageComplete(results, auditCases);
 
 process.stdout.write(`${JSON.stringify({
   pages: results.length,
@@ -305,4 +343,4 @@ process.stdout.write(`${JSON.stringify({
   screenshots: results.filter((result) => result.screenshotWritten).length,
 }, null, 2)}\n`);
 
-if (failures.length > 0 || !coverageComplete || fatalError || !outputReady) process.exitCode = 1;
+if (shouldFailAudit({ results, expectedCases: auditCases, fatalError, outputReady })) process.exitCode = 1;
