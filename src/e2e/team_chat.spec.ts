@@ -44,7 +44,7 @@ test.describe('Team Chat E2E', () => {
   test('should navigate back to the team page when clicking back button', async ({ page }) => {
     await page.goto('/team/chat');
     // Using aria-label or just clicking the button with the svg inside. It pushes to /team
-    const backButton = page.locator('button', { has: page.locator('svg') }).first();
+    const backButton = page.getByLabel('Back to Team');
     await backButton.click();
     await expect(page).toHaveURL(/\/team$/);
   });

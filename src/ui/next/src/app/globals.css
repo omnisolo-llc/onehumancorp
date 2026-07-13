@@ -771,7 +771,7 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 16px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -1266,7 +1266,7 @@ html.dark .glass-panel {
   }
 }
 /* Global border radius to fix UI regression */
-.app-card, .glassmorphism, .glass-card {
+.app-card, .app-panel, .glassmorphism, .glass-card, .glass-panel {
   border-radius: 16px !important;
 }
 .glass-control {
