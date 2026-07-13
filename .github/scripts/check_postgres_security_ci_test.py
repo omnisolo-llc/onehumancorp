@@ -30,6 +30,11 @@ def main() -> None:
     mutations = (
         ("pgvector/pgvector:pg16", "postgres:16", "pgvector service"),
         ("OHC_REQUIRE_POSTGRES_TESTS: \"1\"", "OHC_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
+        (
+            "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+            '      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security\n      PATH: "/tmp/fake-bin"',
+            "postgres-security job PATH override",
+        ),
         ("AND NOT rolbypassrls", "OR rolbypassrls", "NOBYPASSRLS assertion"),
         ("current_setting('row_security') = 'on'", "true", "row_security assertion"),
         ("cargo test -p server_auth multitenancy_isolation:: -- --nocapture", "cargo test -p server_auth", "exact suite command"),
@@ -191,9 +196,39 @@ def main() -> None:
             "suite swallowing shell override",
         ),
         (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            "suite optional-skip environment",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          PATH: "/tmp/fake-bin"\n        run:',
+            "suite PATH override",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        working-directory: /tmp\n        run:",
+            "suite working-directory override",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        \"shell\": bash {0} || true\n        run:",
+            "quoted suite shell override",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        shell : bash {0} || true\n        run:",
+            "spaced suite shell override",
+        ),
+        (
             "      - name: Provision and verify non-superuser application role\n        run:",
             "      - name: Provision and verify non-superuser application role\n        shell: bash {0} || true\n        run:",
             "role-proof swallowing shell override",
+        ),
+        (
+            "      - name: Provision and verify non-superuser application role\n        run:",
+            '      - name: Provision and verify non-superuser application role\n        env:\n          PATH: "/tmp/fake-bin"\n        run:',
+            "role-proof PATH override",
         ),
         (
             "      - name: Check required CI results\n        env:",
@@ -204,6 +239,11 @@ def main() -> None:
             "      - name: Check required CI results\n        env:",
             "      - name: Check required CI results\n        shell: bash {0} || true\n        env:",
             "required-result swallowing shell override",
+        ),
+        (
+            "      - name: Check required CI results\n        env:",
+            "      - name: Check required CI results\n        working-directory: /tmp\n        env:",
+            "required-result working-directory override",
         ),
         (
             "      - name: Provision and verify non-superuser application role\n        run:",
@@ -221,6 +261,11 @@ def main() -> None:
             "contract swallowing shell override",
         ),
         (
+            "      - name: Check tracked artifacts\n        run:",
+            '      - name: Check tracked artifacts\n        env:\n          PATH: "/tmp/fake-bin"\n        run:',
+            "contract PATH override",
+        ),
+        (
             "  postgres-security:\n    name: PostgreSQL tenant isolation",
             "  postgres-security:\n    name: PostgreSQL tenant isolation\n    continue-on-error: true",
             "ignored postgres-security job failure",
@@ -231,9 +276,19 @@ def main() -> None:
             "postgres-security swallowing shell default",
         ),
         (
+            "  postgres-security:\n    name: PostgreSQL tenant isolation",
+            "  postgres-security:\n    name: PostgreSQL tenant isolation\n    \"defaults\":\n      run:\n        shell: bash {0} || true",
+            "quoted postgres-security shell default",
+        ),
+        (
             "  ci-required:\n    name: CI Required",
             "  ci-required:\n    name: CI Required\n    continue-on-error: true",
             "ignored ci-required job failure",
+        ),
+        (
+            "  ci-required:\n    name: CI Required",
+            "  ci-required:\n    name: CI Required\n    \"continue-on-error\": true",
+            "quoted ignored ci-required job failure",
         ),
         (
             "  ci-required:\n    name: CI Required",
