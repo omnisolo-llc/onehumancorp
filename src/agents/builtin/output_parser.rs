@@ -1109,7 +1109,7 @@ mod tests_clamped {
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
 
-        let result = retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await;
+        let result = retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await;
 
         assert!(result.is_ok());
         assert_eq!(result.expect("Should be OK").result, "success");
