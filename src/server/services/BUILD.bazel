@@ -15,6 +15,8 @@ exports_files(
         "inventory/service.rs",
         "customer_memory_graph/mod.rs",
         "customer_memory_graph/service.rs",
+        "localization/mod.rs",
+        "localization/fx_cache.rs",
         ],
     visibility = ["//visibility:public"],
 )
@@ -35,6 +37,8 @@ rust_library(
         "inventory/service.rs",
         "customer_memory_graph/mod.rs",
         "customer_memory_graph/service.rs",
+        "localization/mod.rs",
+        "localization/fx_cache.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",

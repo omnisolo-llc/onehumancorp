@@ -28,6 +28,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/help-center-regression.spec.ts",
     "//src/ui/next:src/e2e/project-showcase.spec.ts",
     "//src/ui/next:src/e2e/ambassador-auto-reply.spec.ts",
+    "multi_currency_checkout.spec.ts",
     "//src/ui/next:src/e2e/kitchen-offline.spec.ts",
     "//src/ui/next:src/e2e/digital_business_card.spec.ts",
     "//src/ui/next:src/e2e/test_observation_masking.spec.ts",

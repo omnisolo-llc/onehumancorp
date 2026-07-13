@@ -28,3 +28,31 @@ impl FxCacheService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_rate_same_currency() {
+        let client = Arc::new(redis::Client::open("redis://127.0.0.1/").unwrap());
+        let service = FxCacheService::new(client);
+        let rate = service.get_rate("USD", "USD").await;
+        assert!(rate.is_ok());
+        assert_eq!(rate.unwrap(), Some(1.0));
+    }
+
+    #[tokio::test]
+    async fn test_set_and_get_rate() {
+        let client = Arc::new(redis::Client::open("redis://127.0.0.1/").unwrap());
+        let service = FxCacheService::new(client);
+
+        let set_res = service.set_rate("USD", "EUR", 0.95).await;
+
+        if set_res.is_ok() {
+            let rate = service.get_rate("USD", "EUR").await;
+            assert!(rate.is_ok());
+            assert_eq!(rate.unwrap(), Some(0.95));
+        }
+    }
+}

@@ -12,6 +12,7 @@ pub struct CreateCheckoutSessionRequest {
     pub device_id: Option<String>,
     pub cart_payload: Option<serde_json::Value>,
     pub discount_code: Option<String>,
+    pub target_currency: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -130,15 +131,16 @@ pub async fn create_checkout_session_handler(
     }
 
     let query = sqlx::query(
-        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
+        "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status, target_currency, base_currency)
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, 'USD')"
     )
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&req_data.r#type)
     .bind(final_amount)
     .bind(&req_data.device_id)
-    .bind(&updated_cart_payload);
+    .bind(&updated_cart_payload)
+    .bind(&req_data.target_currency);
 
     match query.execute(&mut *db_tx).await {
         Ok(_) => {

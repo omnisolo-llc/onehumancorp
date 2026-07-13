@@ -2,10 +2,11 @@ use crate::hub::Hub;
 use axum::http::StatusCode;
 use axum::{
     Router,
-    extract::{Extension, Json},
+    extract::{Extension, Json, Query},
     response::IntoResponse,
     routing::{get, post},
 };
+use crate::services::localization::fx_cache::FxCacheService;
 
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -66,6 +67,11 @@ pub struct ErrorResponse {
 }
 
 
+#[derive(Deserialize)]
+pub struct GetProductsQuery {
+    pub target_currency: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct Product {
     pub id: String,
@@ -75,11 +81,13 @@ pub struct Product {
     pub price_cents: Option<i64>,
     pub inventory_count: Option<i32>,
     pub variants: Option<Vec<ProductVariantRequest>>,
+    pub target_currency: Option<String>,
 }
 
 async fn handle_get_products(
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
+    Query(query): Query<GetProductsQuery>,
 ) -> impl IntoResponse {
     let tenant_id = claims
         .organization_id
@@ -106,6 +114,18 @@ async fn handle_get_products(
 
     match rows {
         Ok(rows) => {
+            let mut rate = 1.0;
+            if let Some(target) = &query.target_currency {
+                if target != "USD" {
+                    if let Some(client) = &hub.redis_client {
+                        let fx_service = FxCacheService::new(Arc::new(client.clone()));
+                        if let Ok(Some(r)) = fx_service.get_rate("USD", target).await {
+                            rate = r;
+                        }
+                    }
+                }
+            }
+
             let mut products = Vec::new();
             for row in rows {
                 let p_id: String = row.try_get("id").unwrap_or_default();
@@ -119,21 +139,26 @@ async fn handle_get_products(
                 let mut variants = Vec::new();
                 for vr in v_rows {
                     let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
-                    let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
+                    let modifier_adjusted = (modifier as f64 * rate).round() as i64;
+                    let modifier_str = format!("{:.2}", (modifier_adjusted as f64) / 100.0);
                     variants.push(ProductVariantRequest {
                         name: vr.try_get("name").unwrap_or_default(),
                         price_modifier: modifier_str,
                     });
                 }
 
+                let base_price_cents: Option<i64> = row.try_get("price_cents").ok();
+                let adjusted_price_cents = base_price_cents.map(|c| (c as f64 * rate).round() as i64);
+
                 products.push(Product {
                     id: p_id,
                     title: row.try_get("title").unwrap_or_default(),
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
-                    price_cents: row.try_get("price_cents").ok(),
+                    price_cents: adjusted_price_cents,
                     inventory_count: row.try_get("inventory_count").ok(),
                     variants: if variants.is_empty() { None } else { Some(variants) },
+                    target_currency: query.target_currency.clone(),
                 });
             }
             (StatusCode::OK, Json(products)).into_response()
