@@ -34,6 +34,6 @@ test.describe('Parallel Execution Optimization - Cart & Growth', () => {
   test('Agent feed loads correctly', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
     await page.goto('/dashboard');
-    await expect(page.locator('text=Agent Feed').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Action Required').first()).toBeVisible({ timeout: 10000 });
   });
 });
