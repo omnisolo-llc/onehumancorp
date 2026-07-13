@@ -553,6 +553,27 @@ impl InventoryService {
             .await
             .unwrap_or(None);
 
+        if update_result.is_none() {
+            // Check if it exists in inventory_levels, but committed_count < quantity
+            // This happens on offline POS transactions where reserve was not called, or was expired
+            let exists_in_levels: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
+                .bind(product_id)
+                .bind(tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
+
+            if exists_in_levels.is_some() {
+                update_result = sqlx::query_scalar("UPDATE inventory_levels SET available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 RETURNING available_count")
+                    .bind(quantity)
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+            }
+        }
+
         if update_result.is_some() {
             let inventory_level_res = sqlx::query("SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
                 .bind(product_id)
