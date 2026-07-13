@@ -201,4 +201,49 @@ test.describe('Onboarding Flow', () => {
     ]);
   });
 
+
+  test('should show "Draft Saved!" when clicking Save Draft button', async ({ page }) => {
+    // Start local http server to serve the page because Docker is not available in sandbox
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/*setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    // Mock tooltips and API calls
+    await page.route('**/api/tooltips', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    await page.route('**/api/onboarding/draft', async route => {
+       await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    await page.route('**/api/onboarding/start', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ organization_id: 'test-org-123' })
+      });
+    });
+
+    await page.goto('http://127.0.0.1:18789/setup.html');
+    await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
+
+    // Initial Screen
+    await expect(page.locator('.container')).toBeVisible();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
+
+    // Step Context
+    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
+
+    // Click Save Draft
+    await page.locator('#step-context [data-testid="save-draft-btn"]').click();
+
+    // Check Draft Saved message
+    const draftMsg = page.locator('#draft-saved-msg');
+    await expect(draftMsg).toBeVisible();
+    await expect(draftMsg).toHaveText('Draft Saved!');
+  });
+
 });
