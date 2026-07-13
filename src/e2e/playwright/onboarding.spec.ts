@@ -210,7 +210,6 @@ test.describe('Onboarding Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    // Mock tooltips and API calls
     await page.route('**/api/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
@@ -225,6 +224,14 @@ test.describe('Onboarding Flow', () => {
         contentType: 'application/json',
         body: JSON.stringify({ organization_id: 'test-org-123' })
       });
+    });
+
+    await page.route('**/*dashboard.html*', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
+    });
+
+    await page.route('**/*dashboard.html', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
 
     await page.goto('http://127.0.0.1:18789/setup.html');

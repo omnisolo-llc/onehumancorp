@@ -65,7 +65,7 @@ features = [ "full",]
 
 [dependencies.tonic]
 workspace = true
-features = [ "transport",]
+features = [ "transport", "tls",]
 
 [dependencies.prost]
 workspace = true

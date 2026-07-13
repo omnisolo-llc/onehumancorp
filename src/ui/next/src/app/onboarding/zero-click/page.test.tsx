@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { afterEach } from 'vitest';
 import ZeroClickBuilderPage from './page';
 
 // Mock Next.js router
@@ -19,7 +20,11 @@ describe('ZeroClickBuilderPage', () => {
     // Reset fetch mock
     global.fetch = vi.fn() as unknown as typeof fetch;
     localStorage.clear();
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('NODE_ENV', 'test');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('renders the initial form', () => {
