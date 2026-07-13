@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
-cd "$repo_root"
+scanner_error() {
+  printf 'chat platform residue scanner failed' >&2
+  for detail in "$@"; do
+    printf ' %q' "$detail" >&2
+  done
+  printf '\n' >&2
+  exit 2
+}
+
+if ! repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  scanner_error "repository root unavailable"
+fi
+if ! cd "$repo_root" 2>/dev/null; then
+  scanner_error "repository root inaccessible" "$repo_root"
+fi
 
 guard_path="deploy/tests/no_chatwoot_residue_test.sh"
 active_roots=(
@@ -15,22 +28,19 @@ active_roots=(
   docs/technical/reports
 )
 
-if mapfile -d '' -t tracked_records < <(git ls-files -s -z -- "${active_roots[@]}"); then
+if mapfile -d '' -t tracked_records < <(git ls-files -s -z -- "${active_roots[@]}" 2>/dev/null); then
   inventory_pid=$!
 else
-  echo "chat platform residue scanner failed" >&2
-  exit 2
+  scanner_error "active inventory read failed"
 fi
 if ! wait "$inventory_pid"; then
-  echo "chat platform residue scanner failed" >&2
-  exit 2
+  scanner_error "active inventory command failed"
 fi
 tracked=()
 symlinks=()
 for record in "${tracked_records[@]}"; do
   if [[ "$record" != *$'\t'* ]]; then
-    echo "chat platform residue scanner failed" >&2
-    exit 2
+    scanner_error "malformed active inventory record"
   fi
   metadata="${record%%$'\t'*}"
   path="${record#*$'\t'}"
@@ -38,54 +48,61 @@ for record in "${tracked_records[@]}"; do
   mode="${metadata%% *}"
   case "$mode" in
     100644|100755)
-      if [[ ! -f "$path" || ! -r "$path" ]]; then
-        echo "chat platform residue scan failed: tracked active file missing or unreadable: $path" >&2
-        exit 2
+      if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
+        scanner_error "tracked active regular input invalid" "$path"
       fi
       tracked+=("$path")
       ;;
     120000)
+      if [[ ! -L "$path" ]]; then
+        scanner_error "tracked active symlink input invalid" "$path"
+      fi
       tracked+=("$path")
       symlinks+=("$path")
       ;;
     *)
-      echo "chat platform residue scan failed: unsupported tracked mode $mode: $path" >&2
-      exit 2
+      scanner_error "unsupported tracked active mode" "$mode" "$path"
       ;;
   esac
 done
 if ((${#tracked[@]} == 0)); then
-  echo "chat platform residue scan failed: no tracked active files were discovered" >&2
-  exit 2
+  scanner_error "no tracked active files were discovered"
 fi
 
-matches=""
-if matches="$(git grep -n -i 'chatwoot' -- "${tracked[@]}")"; then
-  :
-elif [[ $? -ne 1 ]]; then
-  echo "chat platform residue scanner failed" >&2
-  exit 2
+if mapfile -d '' -t matching_paths < <(git grep -I -i -l -z 'chatwoot' -- "${tracked[@]}" 2>/dev/null); then
+  grep_pid=$!
+else
+  scanner_error "active residue result read failed"
+fi
+if wait "$grep_pid"; then
+  grep_status=0
+else
+  grep_status=$?
+fi
+if [[ "$grep_status" -ne 0 && "$grep_status" -ne 1 ]]; then
+  scanner_error "active residue command failed"
 fi
 
-symlink_matches=()
+symlink_match_paths=()
+symlink_match_targets=()
 for path in "${symlinks[@]}"; do
-  if ! target="$(readlink -- "$path")"; then
-    echo "chat platform residue scanner failed" >&2
-    exit 2
+  if ! target="$(readlink -- "$path" 2>/dev/null)"; then
+    scanner_error "tracked active symlink read failed" "$path"
   fi
   if [[ "${target,,}" == *chatwoot* ]]; then
-    symlink_matches+=("$path -> $target")
+    symlink_match_paths+=("$path")
+    symlink_match_targets+=("$target")
   fi
 done
 
-if [[ -n "$matches" ]] || ((${#symlink_matches[@]} != 0)); then
+if ((${#matching_paths[@]} != 0 || ${#symlink_match_paths[@]} != 0)); then
   echo "active Chatwoot residue remains:" >&2
-  if [[ -n "$matches" ]]; then
-    printf '%s\n' "$matches" >&2
-  fi
-  if ((${#symlink_matches[@]} != 0)); then
-    printf '%s\n' "${symlink_matches[@]}" >&2
-  fi
+  for path in "${matching_paths[@]}"; do
+    printf 'active file: %q\n' "$path" >&2
+  done
+  for ((i = 0; i < ${#symlink_match_paths[@]}; i++)); do
+    printf 'active symlink: %q -> %q\n' "${symlink_match_paths[i]}" "${symlink_match_targets[i]}" >&2
+  done
   exit 1
 fi
 
@@ -95,23 +112,20 @@ historical=(
   docs/research/triage_report_bazel.md
 )
 for path in "${historical[@]}"; do
-  if ! git ls-files --error-unmatch "$path" >/dev/null; then
-    echo "chat platform residue scanner failed: $path" >&2
-    exit 2
+  if ! git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+    scanner_error "historical inventory lookup failed" "$path"
   fi
-  if [[ ! -f "$path" || ! -r "$path" ]]; then
-    echo "chat platform residue scan failed: historical file missing or unreadable: $path" >&2
-    exit 2
+  if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
+    scanner_error "tracked historical regular input invalid" "$path"
   fi
-  if rg -q '^> Superseded architecture: .*native omnichannel' "$path"; then
+  if rg -q '^> Superseded architecture: .*native omnichannel' "$path" 2>/dev/null; then
     continue
   else
     status=$?
   fi
   if [[ "$status" -eq 1 ]]; then
-    echo "missing native-architecture superseded marker: $path" >&2
+    printf 'missing native-architecture superseded marker: %q\n' "$path" >&2
     exit 1
   fi
-  echo "chat platform residue scanner failed: $path" >&2
-  exit 2
+  scanner_error "historical marker scan failed" "$path"
 done
