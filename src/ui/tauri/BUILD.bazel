@@ -212,7 +212,6 @@ TAURI_MOBILE_SRCS = glob([
     "//src/server/integrations/mailchimp:Cargo.toml",
     "//src/server/integrations/ayrshare:Cargo.toml",
     "//src/server/integrations/chromadb:Cargo.toml",
-    "//src/server/integrations/chatwoot:Cargo.toml",
     "//src/server/integrations/doordash:Cargo.toml",
     "//src/agents/builtin/llm:Cargo.toml",
     "//src/agents/builtin/tools:Cargo.toml",
