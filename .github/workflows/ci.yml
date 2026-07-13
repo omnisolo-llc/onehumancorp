@@ -721,12 +721,17 @@ jobs:
           psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN
+              CREATE ROLE ohc_bypassrls;
+            END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_security_test') THEN
               CREATE ROLE ohc_security_test LOGIN PASSWORD 'ohc_security_test';
             END IF;
           END
           $$;
+          ALTER ROLE ohc_bypassrls BYPASSRLS NOLOGIN;
           ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+          GRANT ohc_bypassrls TO ohc_security_test;
           GRANT CONNECT ON DATABASE ohc_security TO ohc_security_test;
           SQL
 
@@ -739,7 +744,9 @@ jobs:
               WHERE rolname = current_user
                 AND current_user = 'ohc_security_test'
                 AND NOT rolsuper
+                AND NOT rolinherit
                 AND NOT rolbypassrls
+                AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')
             ) THEN
               RAISE EXCEPTION 'PostgreSQL security lane is not using the NOBYPASSRLS application role';
             END IF;
@@ -748,7 +755,9 @@ jobs:
             END IF;
           END
           $$;
-          SELECT current_user, rolsuper, rolbypassrls, current_setting('row_security')
+          SELECT current_user, rolsuper, rolinherit, rolbypassrls,
+                 pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER') AS bypass_member,
+                 current_setting('row_security')
           FROM pg_roles
           WHERE rolname = current_user;
           SQL
