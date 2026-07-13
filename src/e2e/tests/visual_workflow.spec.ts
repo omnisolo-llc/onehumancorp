@@ -28,7 +28,7 @@ test.describe('Visual Workflow Builder', () => {
     await expect(page.locator('text=node-2 → node-3')).toBeVisible();
 
     // 5. Run the workflow (Since it calls fetch, it should show Waiting or an Error/Result)
-    await page.getByRole('button', { name: '▶ Run Workflow' }).click();
+    await page.getByRole('button', { name: 'Run Workflow' }).click();
 
     // Expect the Human In Loop node to return the error
     await expect(page.locator('text=USER_FIXABLE: Human in loop required')).toBeVisible({ timeout: 15000 });
@@ -55,7 +55,7 @@ test.describe('Visual Workflow Builder', () => {
     // Fill input without nodes
     await page.locator('input[type="text"]').fill('test run without nodes');
 
-    await page.getByRole('button', { name: '▶ Run Workflow' }).click();
+    await page.getByRole('button', { name: 'Run Workflow' }).click();
     // It should handle gracefully, usually returning an error or specific text from the mock backend
     await expect(page.locator('.whitespace-pre-wrap').or(page.locator('text=Error:'))).toBeVisible({ timeout: 5000 });
   });
@@ -64,7 +64,7 @@ test.describe('Visual Workflow Builder', () => {
     await page.goto('/visual-workflow');
 
     // Verify touch targets (buttons should be min 44px height usually, checking they are visible)
-    const runButton = page.getByRole('button', { name: '▶ Run Workflow' });
+    const runButton = page.getByRole('button', { name: 'Run Workflow' });
     await expect(runButton).toBeVisible();
 
     // Checking Workspace Canvas is present
