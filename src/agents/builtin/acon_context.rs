@@ -39,6 +39,7 @@ impl AconStrategy {
             for msg in messages.iter_mut().take(threshold) {
                 if msg.role == Role::Tool {
                     for tr in &mut msg.tool_results {
+                        println!("DEBUG ACON: msg_count={} threshold={} len={} min_size={}", msg_count, threshold, tr.content.len(), self.config.min_size_to_omit);
                         if tr.error.is_empty()
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()

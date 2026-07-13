@@ -15,6 +15,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_DISABLE_COMPILE_CACHE: "1"
 
 permissions:
   contents: read
