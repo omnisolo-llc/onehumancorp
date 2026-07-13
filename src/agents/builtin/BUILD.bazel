@@ -229,6 +229,23 @@ rust_binary(
     ],
 )
 
+rust_binary(
+    name = "agent_path_baseline",
+    srcs = ["examples/agent_path_baseline.rs"],
+    crate_name = "agent_path_baseline",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        ":core",
+        ":ohc_builtin_agent_lib",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
 AGENT_UNIT_TEST_FILTERS = [
     "agent",
     "prompt_construction",
