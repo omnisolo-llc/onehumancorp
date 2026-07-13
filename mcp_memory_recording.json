@@ -1,8 +1,0 @@
-{
-  "task": "Add terminal_id to POS offline synchronization",
-  "learnings": [
-    "Database changes should be encapsulated in incremental goose migrations.",
-    "Updating Rust APIs requires careful schema alignment via SQLX bindings.",
-    "The Flutter UI communicates `terminal_id` property, ensure backend models accept it correctly."
-  ]
-}
