@@ -1937,7 +1937,7 @@ pub async fn bench_ui_omni_inbox_latency() {
             "  - list_ui_omni_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized queries return trimmed payload)");
     } else {
         tracing::info!("  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
@@ -1968,7 +1968,7 @@ pub async fn bench_ui_inbox_latency() {
             "  - list_ui_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized queries return trimmed payload)");
     } else {
         tracing::info!(
             "  - list_ui_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -2179,7 +2179,7 @@ pub async fn bench_list_jobs_latency() {
             "  - list_jobs (Postgres Parallel Execution / Payload Optimization): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized queries return trimmed payload)");
     } else {
         tracing::info!("  - list_jobs (Parallel Execution Optimization verified, Hybrid Cache)");
     }
@@ -2335,7 +2335,7 @@ pub async fn bench_ui_ledger_latency() {
             "  - load_ui_ledger_from_db (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized queries return trimmed payload)");
     } else {
         tracing::info!(
             "  - load_ui_ledger_from_db (Parallel Execution Optimization verified, Hybrid Cache)"

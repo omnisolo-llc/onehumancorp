@@ -415,6 +415,8 @@ export BACKEND_URL="$API_BASE_URL"
 export OHC_BACKEND_URL="$API_BASE_URL"
 export OHC_API_URL="$API_BASE_URL"
 export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
+export OHC_AGENT_AUTH_DISABLED="true"
+export OHC_ENV="test"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
