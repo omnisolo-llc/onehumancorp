@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import DOMPurify from "dompurify";
+import DOMPurify from "isomorphic-dompurify";
 import { marked } from "marked";
 import { WalkthroughTarget } from "./Walkthrough";
 

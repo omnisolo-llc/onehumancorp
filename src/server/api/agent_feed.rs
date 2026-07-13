@@ -257,7 +257,7 @@ async fn create_feed_item(
         value_payload = cp.clone();
     }
 
-    match service.process_event(&tenant_id, &payload.event_source, &value_payload).await {
+    match service.process_event(&tenant_id, &payload.event_source, &value_payload, payload.proposed_action.clone()).await {
         Ok(item) => {
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);

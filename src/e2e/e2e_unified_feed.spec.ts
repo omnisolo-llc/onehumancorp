@@ -24,12 +24,12 @@ test.describe('Unified Action Feed e2e', () => {
       lifecycle_state: "PENDING"
     };
 
-    const res = await request.post('/api/agent-feed', {
+    await loginAs(page, adminUser);
+
+    const res = await page.request.post('/api/agent-feed', {
       data: feedItemPayload
     });
     expect(res.ok()).toBeTruthy();
-
-    await loginAs(page, adminUser);
 
     // We expect to land on unified feed or can navigate there
     await page.goto('/unified-feed');
@@ -70,12 +70,12 @@ test.describe('Unified Action Feed e2e', () => {
       lifecycle_state: "PENDING"
     };
 
-    const res = await request.post('/api/agent-feed', {
+    await loginAs(page, adminUser);
+
+    const res = await page.request.post('/api/agent-feed', {
       data: feedItemPayload
     });
     expect(res.ok()).toBeTruthy();
-
-    await loginAs(page, adminUser);
 
     // We expect to land on unified feed or can navigate there
     await page.goto('/unified-feed');

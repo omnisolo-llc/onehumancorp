@@ -177,7 +177,7 @@ impl BookingReengagementWorker {
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let service = crate::services::agent_feed::service::AgentFeedService::new(pool.clone());
-                            let _ = service.process_event(&tenant_id, "sales", &context_payload).await;
+                            let _ = service.process_event(&tenant_id, "sales", &context_payload, None).await;
                         },
                         crate::db::DbStore::Sqlite(_) => {
                              // AgentFeedService only supports Postgres pool currently, so we fallback for sqlite manually

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import DOMPurify from 'dompurify';
+import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough, Step } from './Walkthrough';
