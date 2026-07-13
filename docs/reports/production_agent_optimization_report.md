@@ -11,7 +11,7 @@ The production agent path now avoids duplicate tool schemas, no longer caches re
 
 The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
 
-Remediation update: F-01 through F-08 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence. Explicit Postgres CI coverage remains open.
+Remediation update: F-01 through F-10 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence.
 
 ## Completed optimization work
 
@@ -136,11 +136,17 @@ All six `server_auth` multitenancy tests return immediately when `OHC_DATABASE_U
 
 Smallest regression: `multitenancy_suite_requires_postgres_in_ci`.
 
+**Status (2026-07-13): Remediated.** Commits `627b64a87` and `104d87a6a` route all six tests through one policy/setup helper. Local optional mode prints `SKIPPED postgres security test: ...` once per test, while `OHC_REQUIRE_POSTGRES_TESTS=1` turns a missing or non-Postgres URL into a test-entry failure. Four pure policy tests cover the decision table without mutating process-global environment state. The helper creates `vector` and `uuid-ossp`, runs the embedded `src/server/migrations` migrator once, provisions/grants the application role, connects the test pools through that role, and asserts that it is neither superuser nor `BYPASSRLS` and that `row_security` is on. The connection-leakage pool remains limited to one connection, and deterministic token fixtures are cleaned up.
+
+The required `postgres-security` CI job uses `pgvector/pgvector:pg16`, sets required mode, proves the application-role attributes before running `cargo test -p server_auth multitenancy_isolation:: -- --nocapture`, and is enforced by `ci-required` for every non-markdown change. A stdlib-only static/behavioral contract rejects removal or weakening of the service, required environment, role/RLS assertions, exact command, or required-job wiring and runs in `check-changes`.
+
+Local verification used a fresh disposable pgvector PostgreSQL 16 container and the same admin/application-role flow. Before the suite, PostgreSQL reported `current_user=ohc_security_test`, `rolsuper=false`, `rolbypassrls=false`, and `row_security=on`. The exact required-lane command executed all six bodies: 6 passed, 0 failed in 2.26 seconds. The full `server_auth` Cargo suite passed 28 tests, and `//src/server/auth:server_auth_unit_test` passed under Bazel with the embedded migrations declared as compile data. The container was removed afterward. No repository or production credentials were used or recorded.
+
 ## Passing and unverified test evidence
 
 | Command | Result | Interpretation |
 |---|---|---|
-| `cargo test -p server_auth multitenancy_isolation -- --nocapture` | 6 reported passed in 0.00s | **Unverified:** `OHC_DATABASE_URL` was unset and tests returned early |
+| `OHC_REQUIRE_POSTGRES_TESTS=1 cargo test -p server_auth multitenancy_isolation:: -- --nocapture` with disposable pgvector PostgreSQL and admin/application-role URLs | 6 passed, 0 failed in 2.26s | **Verified:** all six bodies ran as `ohc_security_test` with `rolsuper=false`, `rolbypassrls=false`, and `row_security=on` |
 | `cargo test -p ohc-mono --lib agent_memory_pipeline -- --nocapture` | 3 passed | SQLite and timeout behavior covered; real Postgres isolation remains environment-dependent |
 | `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Happy-path tests only; no cross-organization negative cases |
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
