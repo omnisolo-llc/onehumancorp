@@ -53,13 +53,13 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
     });
     await page.goto('http://mock/index.html');
 
+
     // 2. Choose Instant Build (it is now right on index.html instead of after start-btn)
-    await page.click('button:has-text("Instant Build")');
+    await page.click('#instant-build-btn');
 
     // 3. Enter business concept
     const bio = 'I bake and sell custom cupcakes in Austin via delivery.';
     await page.fill('#instant-bio', bio);
-
     // 4. Trigger build
     await page.click('#generate-storefront-btn');
 

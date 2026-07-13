@@ -2,37 +2,38 @@
 <html lang="en">
   <head>
     <style>
-      .glassmorphism {
+
+
+      .container.glassmorphism, .glassmorphism-input, .glassmorphism-btn {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          border-radius: 16px;
+        .container.glassmorphism, .glassmorphism-input, .glassmorphism-btn {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(40px) saturate(220%);
-          -webkit-backdrop-filter: blur(40px) saturate(220%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-      }
-      .old-glassmorphism {
+      }      .old-glassmorphism {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       .glassmorphism-btn {
         border-radius: 8px;
+        min-height: 44px;
+        min-width: 44px;
       }
       .glassmorphism-input {
         border-radius: 8px;
+        min-height: 44px;
+        min-width: 44px;
       }
     </style>
     <meta charset="UTF-8" />
@@ -50,8 +51,8 @@
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -72,13 +73,16 @@
         font-size: 14px;
         margin-bottom: 30px;
       }
+      button, input, select, textarea {
+        min-height: 44px;
+        min-width: 44px;
+        border-radius: 8px;
+      }
       button {
         background-color: #0066FF;
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px;
-        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -99,7 +103,8 @@
         }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(40px) saturate(220%);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1 {
@@ -113,28 +118,172 @@
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
         }
-        input:focus {
+        input:focus, textarea:focus, select:focus {
           border-color: #0066FF;
           background: rgba(22, 22, 26, 0.7);
         }
       }
-    </style>
-  </head>
+    </style>  </head>
   <body>
+
     <div class="container glassmorphism" id="main-view">
-      <h1>Welcome to OHC</h1>
-      <p>Let's get your workspace set up.</p>
-      <button id="start-btn" style="margin-bottom: 10px;">Start Onboarding</button>
-      <button id="instant-build-btn" style="background-color: transparent; color: #0066FF; border: 1px solid #0066FF; box-shadow: none;">Instant Build</button>
+      <div
+        style="
+          width: 64px;
+          height: 64px;
+          background: rgba(0, 102, 255, 0.1);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 24px;
+        "
+      >
+        <svg
+          style="width: 32px; height: 32px; color: #0066FF"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+      </div>
+      <h1 style="font-size: 30px;">Setup Assistant</h1>
+      <p style="margin-bottom: 30px; font-size: 14px; line-height: 1.5; color: #555;">
+        Zero tech skills needed. We do the heavy lifting. Review and add
+        any extra details to help our AI generate the perfect store.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+        <button id="start-btn" style="min-height: 44px; border-radius: 8px;">
+          Start My Business
+        </button>
+        <button
+          id="instant-build-btn"
+          style="
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #1d1d1f;
+            min-height: 44px;
+            border-radius: 8px;
+            box-shadow: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          "
+        >
+          <svg style="width: 20px; height: 20px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          Instant Build
+        </button>
+      </div>
     </div>
 
     <div class="container glassmorphism" id="instant-build-view" style="display: none;">
-      <h1>Instant Build</h1>
-      <p>Tell us about your business concept.</p>
-      <textarea id="instant-bio" class="glassmorphism-input" placeholder="e.g. I bake and sell custom cupcakes..." style="width: 100%; height: 100px; padding: 12px; margin-bottom: 20px; box-sizing: border-box; resize: none; font-family: inherit; font-size: 14px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.5);"></textarea>
-      <button id="generate-storefront-btn">Generate Storefront</button>
-    </div>
+      <div
+        style="
+          width: 64px;
+          height: 64px;
+          background: rgba(0, 102, 255, 0.1);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 24px;
+        "
+      >
+        <svg
+          style="width: 32px; height: 32px; color: #0066FF"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+      </div>
+      <h1>Tell us about your business</h1>
+      <p>Type a quick description and our AI will build your entire workspace in seconds.</p>
 
+      <textarea
+        id="instant-bio"
+        class="glassmorphism-input"
+        placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+        style="
+          width: 100%;
+          height: 120px;
+          padding: 14px;
+          margin-bottom: 20px;
+          box-sizing: border-box;
+          resize: none;
+          font-family: inherit;
+          font-size: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-radius: 8px;
+        "
+      ></textarea>
+
+      <input
+        type="url"
+        id="instant-image-url"
+        class="glassmorphism-input"
+        placeholder="Image URL (Optional - e.g. logo or storefront)"
+        inputmode="url"
+        autocomplete="url"
+        style="
+          width: 100%;
+          min-height: 44px;
+          padding: 14px;
+          margin-bottom: 20px;
+          box-sizing: border-box;
+          font-family: inherit;
+          font-size: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-radius: 8px;
+        "
+      />
+
+      <div style="display: flex; gap: 12px;">
+        <button
+          id="back-to-main-btn"
+          style="
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #1d1d1f;
+            min-height: 44px;
+            border-radius: 8px;
+            box-shadow: none;
+            flex: 1;
+          "
+        >
+          Back
+        </button>
+        <button id="generate-storefront-btn" style="flex: 2; border-radius: 8px; min-height: 44px;">
+          Generate Storefront
+        </button>
+      </div>
+    </div>
     <div class="container glassmorphism" id="loading-view" style="display: none;">
       <h1 id="loading-title">Building...</h1>
       <p id="step-provisioning" style="opacity: 0; transition: opacity 0.5s;">Provisioning resources...</p>
@@ -156,6 +305,7 @@
         });
       }
 
+
       if (instantBuildBtn) {
         instantBuildBtn.addEventListener('click', () => {
           mainView.style.display = 'none';
@@ -163,6 +313,13 @@
         });
       }
 
+      const backToMainBtn = document.getElementById('back-to-main-btn');
+      if (backToMainBtn) {
+        backToMainBtn.addEventListener('click', () => {
+          instantBuildView.style.display = 'none';
+          mainView.style.display = 'block';
+        });
+      }
             if (generateStorefrontBtn) {
         generateStorefrontBtn.addEventListener('click', async () => {
           const prompt = document.getElementById('instant-bio').value;
@@ -178,6 +335,9 @@
 
           try {
              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+
+             const imageUrl = document.getElementById('instant-image-url') ? document.getElementById('instant-image-url').value : undefined;
+
              const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
                  method: 'POST',
                  headers: {
@@ -185,9 +345,8 @@
                      'X-Tenant-ID': 'e2e-tenant',
                      'X-User-ID': 'e2e-admin-user'
                  },
-                 body: JSON.stringify({ prompt: prompt })
+                 body: JSON.stringify({ prompt: prompt, image_url: imageUrl || undefined })
              });
-
              if (!res.ok) {
                  const errData = await res.json().catch(()=>({}));
                  throw new Error(errData.error || errData.message || 'Failed to generate storefront');
