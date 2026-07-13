@@ -268,7 +268,7 @@ test.describe('Mobile global controls', () => {
         const controlSelector = [
           '#ohc-floating-help-btn',
           '#ai-chat-trigger-btn',
-          '[aria-label="Voice Assistant"]',
+          '[data-voice-assistant-surface="trigger"]',
         ].join(',');
 
         const visibleControlLabels = await page.locator(controlSelector).evaluateAll((controls) => controls
@@ -280,9 +280,9 @@ test.describe('Mobile global controls', () => {
               && style.display !== 'none'
               && style.visibility !== 'hidden';
           })
-          .map((control) => control.getAttribute('aria-label') || control.id));
+          .map((control) => control.getAttribute('data-voice-assistant-surface') || control.id));
 
-        expect(visibleControlLabels).toEqual(['Voice Assistant']);
+        expect(visibleControlLabels).toEqual(['trigger']);
 
         const collisions = await page.evaluate(({ controls }) => {
           const isVisible = (element: Element) => {
