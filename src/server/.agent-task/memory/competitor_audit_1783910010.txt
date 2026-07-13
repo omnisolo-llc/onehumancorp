@@ -1,0 +1,1 @@
+Competitor Audit Finding: OHC-HA dynamic escalation is functioning. Local SQLite fallback is operational.

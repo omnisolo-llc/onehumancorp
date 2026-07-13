@@ -713,6 +713,131 @@ pub async fn get_summaries_handler(
     (axum::http::StatusCode::OK, Json(GetSummariesResponse { summaries })).into_response()
 }
 
+
+#[derive(Serialize)]
+pub struct GetShiftsResponse {
+    pub shifts: Vec<serde_json::Value>,
+}
+
+pub async fn get_shifts_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query("SELECT id, start_time, end_time, role, status, staff_id FROM shifts WHERE tenant_id = $1 ORDER BY start_time DESC")
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await;
+
+    let shifts = rows.map(|rows| rows.into_iter().map(|row| {
+        use sqlx::Row;
+        serde_json::json!({
+            "id": row.get::<String, _>("id"),
+            "start_time": match row.try_get::<String, _>("start_time") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("start_time").unwrap_or_else(|_| chrono::Utc::now()) },
+            "end_time": match row.try_get::<String, _>("end_time") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("end_time").unwrap_or_else(|_| chrono::Utc::now()) },
+            "role": row.get::<String, _>("role"),
+            "status": row.get::<String, _>("status"),
+            "staff_id": row.get::<String, _>("staff_id"),
+        })
+    }).collect::<Vec<_>>()).unwrap_or_default();
+
+    (axum::http::StatusCode::OK, Json(GetShiftsResponse { shifts })).into_response()
+}
+
+pub async fn get_escalations_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query("SELECT id, summary, status FROM escalations WHERE tenant_id = $1 ORDER BY created_at DESC")
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await;
+
+    let escalations = rows.map(|rows| rows.into_iter().map(|row| {
+        use sqlx::Row;
+        serde_json::json!({
+            "id": row.get::<String, _>("id"),
+            "summary": row.get::<String, _>("summary"),
+            "status": row.get::<String, _>("status"),
+        })
+    }).collect::<Vec<_>>()).unwrap_or_default();
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "escalations": escalations }))).into_response()
+}
+
+pub async fn simulate_event_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+    let task_id = format!("task_{}", Uuid::new_v4());
+    let staff_id = "unassigned";
+
+    let pool = crate::db::get_pool();
+    let res = sqlx::query(
+        "INSERT INTO staff_tasks (id, tenant_id, staff_id, description, status, priority) VALUES ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(&task_id)
+    .bind(&tenant_id)
+    .bind(&staff_id)
+    .bind("Simulated Event: Low Inventory")
+    .bind("pending")
+    .bind("high")
+    .execute(&pool)
+    .await;
+
+    if res.is_ok() {
+        (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+    } else {
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to simulate event"}))).into_response()
+    }
+}
+
+pub async fn generate_summary_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let summary_id = format!("sum_{}", Uuid::new_v4());
+
+    // Simulate LLM summary generation
+    let summary_text = "Shift Summary: Staff completed 3 inventory tasks and handled 2 orders smoothly. No escalations reported. (Simulated AI Summary)";
+
+    let pool = crate::db::get_pool();
+    let res = sqlx::query(
+        "INSERT INTO shift_summaries (id, tenant_id, shift_date, summary_text) VALUES ($1, $2, CURRENT_DATE, $3)",
+    )
+    .bind(&summary_id)
+    .bind(&tenant_id)
+    .bind(&summary_text)
+    .execute(&pool)
+    .await;
+
+    if res.is_ok() {
+        (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+    } else {
+        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "failed to generate summary"}))).into_response()
+    }
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     Router::new()
         .route("/", post(create_staff_handler).get(get_staff_handler))
@@ -721,6 +846,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/tasks", post(create_task_handler).get(get_tasks_handler))
         .route("/tasks/{id}", post(update_task_handler).delete(delete_task_handler))
         .route("/summaries", axum::routing::get(get_summaries_handler))
+        .route("/shifts", axum::routing::get(get_shifts_handler))
+        .route("/escalations", axum::routing::get(get_escalations_handler))
+        .route("/simulate-event", axum::routing::post(simulate_event_handler))
+        .route("/generate-summary", axum::routing::post(generate_summary_handler))
         .with_state(db)
 }
 
