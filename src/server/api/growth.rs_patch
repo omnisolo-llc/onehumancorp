@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+        .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/seasonal-promo/generate", post(handle_promo_generate))
+        .route("/referrals/milestones/status", get(handle_get_referral_milestones))
+=======
+        .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route("/seasonal-promo/generate", post(handle_promo_generate))
+        .route("/referrals/milestones/status", get(handle_get_referral_milestones))
+>>>>>>> REPLACE

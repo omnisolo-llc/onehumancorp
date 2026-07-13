@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Cost Dashboard Loop', () => {
   test('Cost dashboard loads and displays main metrics correctly', async ({ page }) => {

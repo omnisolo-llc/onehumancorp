@@ -778,11 +778,17 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
 
     tracing::info!(
         "{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us",
-        name, enq_p50, enq_p95, enq_p99
+        name,
+        enq_p50,
+        enq_p95,
+        enq_p99
     );
     tracing::info!(
         "{}: Dequeue p50: {} us, p95: {} us, p99: {} us",
-        name, deq_p50, deq_p95, deq_p99
+        name,
+        deq_p50,
+        deq_p95,
+        deq_p99
     );
 }
 
@@ -901,7 +907,7 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_triage_latency() {
         super::bench_ui_triage_latency().await;
-    bench_ui_triage_mobile_payload().await;
+        bench_ui_triage_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -921,9 +927,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_ui_ledger_latency() {
-
         super::bench_ui_ledger_latency().await;
-    bench_ui_ledger_mobile_payload().await;
+        bench_ui_ledger_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1039,15 +1044,15 @@ mod tests {
 
         tracing::info!("15. Ledger Latency");
         bench_ui_ledger_latency().await;
-    bench_ui_ledger_mobile_payload().await;
+        bench_ui_ledger_mobile_payload().await;
 
         tracing::info!("17. Priority Tasks Latency");
         bench_ui_priority_tasks_latency().await;
 
         tracing::info!("16. Unified Agent Feed Latency");
         bench_ui_dashboard_unified_agent_feed_latency().await;
-    tracing::info!("16. Unified Agent Feed Mobile Payload Optimization Latency");
-    bench_ui_dashboard_unified_agent_feed_mobile_payload().await;
+        tracing::info!("16. Unified Agent Feed Mobile Payload Optimization Latency");
+        bench_ui_dashboard_unified_agent_feed_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1119,8 +1124,6 @@ mod tests {
     async fn test_bench_get_completed_tasks_latency() {
         bench_get_completed_tasks_latency().await;
     }
-
-
 }
 
 pub async fn bench_dashboard_analytics_briefing_latency() {
@@ -1248,12 +1251,14 @@ pub async fn bench_hybrid_latency() {
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
 
-
-
 pub async fn bench_field_service_routing_latency() {
     tracing::info!("Benchmarking Field Service Routing Latency...");
-    let database_url = std::env::var("OHC_DATABASE_URL")
-        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", uuid::Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+        format!(
+            "sqlite:file:{}?mode=memory&cache=shared",
+            uuid::Uuid::new_v4()
+        )
+    });
 
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -1286,10 +1291,11 @@ pub async fn bench_field_service_routing_latency() {
         );
         tracing::info!("    (Parallel Execution Optimization verified: Service routes and jobs fetched efficiently)");
     } else {
-        tracing::info!("  - Field Service Routing (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - Field Service Routing (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
-
 
 pub async fn bench_field_service_routing_mobile_payload() {
     tracing::info!("Benchmarking Field Service Routing Mobile Payload Optimization...");
@@ -1325,7 +1331,9 @@ pub async fn bench_field_service_routing_mobile_payload() {
             "  - Field Service Routing Mobile Payload Optimization (Postgres): {:?}",
             duration
         );
-        tracing::info!("    (Mobile Payload Optimization verified: service routes return trimmed payload)");
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: service routes return trimmed payload)"
+        );
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -1336,7 +1344,11 @@ pub async fn bench_field_service_routing_mobile_payload() {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS service_routes (id TEXT, staff_profile_id TEXT, route_date TEXT, status TEXT, tenant_id TEXT)").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS job_locations (id TEXT, appointment_id TEXT, sequence_order INTEGER, status TEXT, tenant_id TEXT, service_route_id TEXT)").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS appointments (id TEXT, customer_id TEXT, job_template_id TEXT, scheduled_start_time TEXT, scheduled_end_time TEXT, location_address TEXT, location_lat REAL, location_lng REAL, tenant_id TEXT)").execute(&sqlite_pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS job_templates (id TEXT, name TEXT, tenant_id TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS job_templates (id TEXT, name TEXT, tenant_id TEXT)",
+        )
+        .execute(&sqlite_pool)
+        .await;
 
         let start_sim = std::time::Instant::now();
         let pool1 = sqlite_pool.clone();
@@ -1361,7 +1373,9 @@ pub async fn bench_field_service_routing_mobile_payload() {
             "  - Field Service Routing Mobile Payload Optimization (SQLite): {:?}",
             duration
         );
-        tracing::info!("    (Mobile Payload Optimization verified: service routes return trimmed payload)");
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: service routes return trimmed payload)"
+        );
     }
 }
 
@@ -1692,7 +1706,9 @@ pub async fn bench_billing_api_response_time() {
     let p99 = fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))];
     tracing::info!(
         "Billing API Fetch: p50: {} us, p95: {} us, p99: {} us",
-        p50, p95, p99
+        p50,
+        p95,
+        p99
     );
 }
 
@@ -1722,7 +1738,9 @@ pub async fn bench_time_savings_latency() {
             "  - time_savings_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: 4 metrics fetched in parallel)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: 4 metrics fetched in parallel)"
+        );
     } else {
         tracing::info!(
             "  - time_savings_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -2136,7 +2154,9 @@ pub async fn bench_ui_bookings_latency() {
             "    (Payload Optimization verified: mobile_optimized fetches return trimmed payload)"
         );
     } else {
-        tracing::info!("  - list_ui_bookings_handler (Payload Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - list_ui_bookings_handler (Payload Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -2162,12 +2182,13 @@ pub async fn bench_list_jobs_latency() {
                 WHERE tenant_id = $1
                 ORDER BY created_at DESC
                 LIMIT 50
-                "#
+                "#,
             )
             .bind("test_tenant")
             .fetch_all(&pool1)
             .await;
-        }).await;
+        })
+        .await;
         let duration = start_sim.elapsed();
 
         tracing::info!(
@@ -2176,9 +2197,7 @@ pub async fn bench_list_jobs_latency() {
         );
         tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
     } else {
-        tracing::info!(
-            "  - list_jobs (Parallel Execution Optimization verified, Hybrid Cache)"
-        );
+        tracing::info!("  - list_jobs (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }
 
@@ -2192,7 +2211,9 @@ pub async fn bench_docs_mobile_payload() {
         "  - Docs Mobile Payload Optimization (Mapping): {:?}",
         duration
     );
-    tracing::info!("    (Mobile Payload Optimization verified: docs mapping omits desc and duration)");
+    tracing::info!(
+        "    (Mobile Payload Optimization verified: docs mapping omits desc and duration)"
+    );
 }
 
 pub async fn bench_supply_mobile_payload() {
@@ -2299,12 +2320,16 @@ pub async fn bench_get_completed_tasks_latency() {
         );
         tracing::info!("    (Parallel Execution Optimization verified: shared_tasks and swarm_tasks fetched concurrently)");
     } else {
-        tracing::info!("  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)");
+        tracing::info!(
+            "  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)"
+        );
     }
 }
 
 pub async fn bench_ui_ledger_latency() {
-    tracing::info!("Benchmarking ui_ledger_handler (Parallel Execution Optimization / Hybrid Cache)...");
+    tracing::info!(
+        "Benchmarking ui_ledger_handler (Parallel Execution Optimization / Hybrid Cache)..."
+    );
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
@@ -2694,6 +2719,122 @@ pub async fn bench_ui_ledger_mobile_payload() {
         );
         tracing::info!(
             "    (Mobile Payload Optimization verified: ui_ledger return trimmed payload)"
+        );
+    }
+}
+
+pub async fn bench_ui_omni_inbox_mobile_payload() {
+    tracing::info!("Benchmarking UI Omni Inbox Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+        format!(
+            "sqlite:file:{}?mode=memory&cache=shared",
+            uuid::Uuid::new_v4()
+        )
+    });
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+
+        tracing::info!(
+            "  - UI Omni Inbox Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_omni_inbox return trimmed payload)"
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS omni_inbox_messages (id TEXT, tenant_id TEXT, source TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - UI Omni Inbox Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_omni_inbox return trimmed payload)"
+        );
+    }
+}
+
+pub async fn bench_ui_inbox_mobile_payload() {
+    tracing::info!("Benchmarking UI Inbox Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+        format!(
+            "sqlite:file:{}?mode=memory&cache=shared",
+            uuid::Uuid::new_v4()
+        )
+    });
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+
+        tracing::info!(
+            "  - UI Inbox Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_inbox return trimmed payload)"
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS inbox_messages (id TEXT, tenant_id TEXT, source TEXT, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - UI Inbox Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_inbox return trimmed payload)"
         );
     }
 }

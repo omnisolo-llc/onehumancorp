@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Zero Click Builder Mobile Onboarding', () => {
   test.use({ viewport: { width: 375, height: 812 } }); // Mobile-first constraint

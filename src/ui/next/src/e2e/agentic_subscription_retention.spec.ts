@@ -1,5 +1,10 @@
+<<<<<<< HEAD
+import { test, expect } from '../../../../e2e/fixtures';
+import { setupAuthAndDatabase } from './test_setup';
+=======
 import { test, expect } from '@playwright/test';
 import { setupAuthAndDatabase } from '../../../../e2e/test_setup';
+>>>>>>> 7ec66c03e (fix: Cost UI polishing, pricing cache crash bug fix, and E2E import repair)
 
 test.describe('Agentic Subscription Retention CUJ', () => {
   let tenantId: string;

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Embeddable Storefront Widget Growth Loop', () => {
     test('dashboard shows the embed storefront widget and copies HTML', async ({ page }) => {

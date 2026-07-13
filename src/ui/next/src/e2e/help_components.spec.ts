@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Help Components', () => {
   test('Help Center page loads with articles', async ({ page }) => {

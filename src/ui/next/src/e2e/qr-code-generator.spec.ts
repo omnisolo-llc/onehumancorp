@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('QR Code Generation Widget', () => {
     test('renders correctly and generates QR code', async ({ page }) => {

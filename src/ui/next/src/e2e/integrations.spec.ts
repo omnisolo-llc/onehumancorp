@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Integrations Loop', () => {
     test('Integrations loop connects Mercado Pago and Zoom', async ({ page }) => {

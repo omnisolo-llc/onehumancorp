@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Kitchen Command Center Offline Sync', () => {
   test.describe.configure({ mode: 'serial' });

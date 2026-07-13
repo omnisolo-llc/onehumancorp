@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Omnichannel Returns & Exchange Flow', () => {
   test('Customer initiates return and Owner approves it', async ({ page }) => {

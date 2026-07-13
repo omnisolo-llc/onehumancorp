@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Viral Loop Dashboard Widget', () => {
     test('dashboard surfaces viral loop metrics correctly and increments on invite generation', async ({ page }) => {

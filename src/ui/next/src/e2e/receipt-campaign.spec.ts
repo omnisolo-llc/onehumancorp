@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Automated Receipt Campaign Growth Loop', () => {
     test('generate receipt endpoint returns 502 when backend is unavailable', async ({ request }) => {

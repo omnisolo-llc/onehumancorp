@@ -51,9 +51,6 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      .glass-control {
-        border-radius: 8px !important;
-      }
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
           border-radius: 16px !important;
@@ -128,7 +125,7 @@
         min-width: 44px;
         box-sizing: border-box;
       }
-      /* Added missing glass-control definition */
+      /* Base glass-control */
       .glass-control {
         border-radius: 8px !important;
         background: rgba(255, 255, 255, 0.65);
@@ -138,22 +135,18 @@
       }
       textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
         border-radius: 8px !important;
+        min-height: 44px;
       }
       @media (prefers-color-scheme: dark) {
         .glass-control {
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
-      }
-      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
-        border-radius: 8px !important;
-        min-height: 44px;
-      }
-      @media (prefers-color-scheme: dark) {
         textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
           border-radius: 8px !important;
         }
       }
+
       button, .btn-primary {
         min-width: 44px;
         background-color: #0066FF;
