@@ -185,13 +185,98 @@ impl Actor for ToolActor {
                 );
 
                 let mut tool_results = Vec::new();
+                let mut read_only_calls = Vec::new();
+                let mut mutating_calls = Vec::new();
+
                 for tc in &msg.tool_calls {
+                    let is_read_only = agent.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                    if is_read_only {
+                        read_only_calls.push(tc.clone());
+                    } else {
+                        mutating_calls.push(tc.clone());
+                    }
+                }
+
+                // Master Catalog B.2: Tools (The Agent's Hands): Read-only operations run concurrently; mutating operations run serially.
+                let mut ro_futures = Vec::new();
+                for tc in read_only_calls {
+                    let agent_tools = agent.tools.clone();
+                    let tc_clone = tc.clone();
+
+                    ro_futures.push(async move {
+                        let tool = agent_tools.iter().find(|t| t.name == tc_clone.name);
+                        match tool {
+                            Some(t) => {
+                                let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                    t,
+                                    &tc_clone,
+                                    2,
+                                    &crate::agent::AgentRunConfig::default(),
+                                )
+                                .await;
+                                (tc_clone, Some(res))
+                            }
+                            None => (tc_clone, None),
+                        }
+                    });
+                }
+
+                let ro_results = futures::future::join_all(ro_futures).await;
+                for (tc, res_opt) in ro_results {
+                    match res_opt {
+                        Some(res) => {
+                            match res {
+                                Ok(content) => {
+                                    error_counts.insert(tc.name.clone(), 0);
+                                    tool_results.push(ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content,
+                                        error: String::new(),
+                                    });
+                                }
+                                Err(e) => {
+                                    let error_str = match e {
+                                        ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => {
+                                            let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
+                                            error_counts.insert(tc.name.clone(), count);
+                                            if count > 2 {
+                                                format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg)
+                                            } else {
+                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &tc.name, &msg).error
+                                            }
+                                        },
+                                        ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
+                                        ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
+                                        ohc_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
+                                    };
+                                    tool_results.push(ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: error_str,
+                                    });
+                                }
+                            }
+                        }
+                        None => {
+                            tool_results.push(ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: String::new(),
+                                error: format!("Tool {} not found", tc.name),
+                            });
+                        }
+                    }
+                }
+
+                // Mutating tools serially
+                for tc in mutating_calls {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
                             let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                 t,
-                                tc,
+                                &tc,
                                 2,
                                 &crate::agent::AgentRunConfig::default(),
                             )
