@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Keep global help and voice controls accessible without covering mobile product actions, and remove the inbox literal `\n` artifact.
+**Goal:** Keep help and voice controls accessible without covering mobile product actions in initial, scrolled, or active states, and remove the inbox literal `\n` artifact.
 
-**Architecture:** Hide the two redundant closed help triggers below `sm`, because AppShell owns mobile Help Center access. Keep VoiceAssistant globally available but place its marked mobile wrapper in the unused top-right brand row, retaining desktop bottom-center behavior.
+**Architecture:** Hide the two redundant closed help triggers below `sm`, because AppShell owns mobile Help Center access. Move the single VoiceAssistant owner from RootLayout into AppShell: mobile trigger/status surfaces use normal topbar flow, while responsive desktop classes retain bottom-center fixed behavior.
 
 **Tech Stack:** Next.js 14, React 18, Tailwind CSS 3, Vitest, Playwright.
 
@@ -43,13 +43,13 @@ Add `hidden sm:block` to the closed HelpWidget and HelpChat fixed trigger wrappe
 
 - [ ] **Step 2: Move and mark mobile voice control**
 
-Add `data-global-floating-control="voice-assistant"` to the VoiceAssistant wrapper. Use mobile classes equivalent to `fixed top-2 right-4 bottom-auto left-auto w-auto max-w-none translate-x-0 px-0 flex-col-reverse`, overridden at `sm` by the existing bottom-center layout and `sm:flex-col`.
+Remove the RootLayout import/render and render one VoiceAssistant in AppShell's topbar action region. Mark the root, trigger, and status surface/state. Use mobile normal-flow classes with stable full-width status layout, overridden at `sm` by the existing bottom-center fixed layout.
 
 - [ ] **Step 3: Run collision test to verify it passes**
 
 Run the Task 1 Playwright command.
 
-Expected: 12 route/viewport cases pass at 320 and 390 with Voice Assistant as the only visible closed global trigger and zero collisions.
+Expected: route/viewport cases pass at 320 and 390 initially and after scrolling, with Voice Assistant as the only visible mobile voice trigger and zero collisions in idle, listening, processing, error, and success states.
 
 - [ ] **Step 4: Run affected component tests**
 
@@ -119,3 +119,29 @@ Record exact counts, build evidence, 18x2 matrix results, Chromium override, exp
 - [ ] **Step 6: Clean generated artifacts and final review**
 
 Restore only run-generated `.next`, `tsconfig.tsbuildinfo`, `test-results`, `playwright-report`, and coverage changes; run `git diff --check`, review all commits, and require a clean `git status --short`.
+
+### Task 5: Review correction for active and scrolled voice states
+
+**Files:**
+- Modify: `src/ui/next/src/app/layout.tsx`
+- Modify: `src/ui/next/src/app/components/AppShell.tsx`
+- Modify: `src/ui/next/src/components/VoiceAssistant.tsx`
+- Modify: `src/ui/next/src/components/VoiceAssistant.test.tsx`
+- Modify: `src/ui/next/src/e2e/app-shell-style.spec.ts`
+- Modify: `docs/reports/production_agent_optimization_report.md`
+
+- [ ] **Step 1: Add RED ownership and state regressions**
+
+Assert RootLayout no longer owns VoiceAssistant, AppShell owns exactly one instance, responsive classes are normal-flow below `sm` and fixed at desktop, and trigger/status markers remain accessible. Browser tests must mock media recording and voice API results to observe listening, processing, error, and success after scroll at both widths.
+
+- [ ] **Step 2: Verify RED against reviewed defects**
+
+Run affected Vitest files and the mobile collision Playwright grep. Expected failures: RootLayout ownership remains, voice is viewport-fixed on mobile, scrolled topbar intersects it, and active state surfaces are unmarked/untested.
+
+- [ ] **Step 3: Implement shell-owned mobile flow**
+
+Move VoiceAssistant into AppShell topbar actions, remove RootLayout ownership, add stable surface/state markers, keep mobile panels in normal flow with stable width, and preserve desktop fixed bottom-center placement.
+
+- [ ] **Step 4: Verify GREEN and full gates**
+
+Run focused component/browser tests, full Vitest, TypeScript, build, expanded production Playwright, secured audit, visual inspection including scrolled/active states, and final Bazel. Amend UI-01 and the historical TypeScript statement using actual results.
