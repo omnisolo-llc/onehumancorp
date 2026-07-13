@@ -71,6 +71,36 @@ EXPECTED_HYGIENE_LINES = (
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
+EXPECTED_POSTGRES_JOB_KEYS = (
+    "name",
+    "needs",
+    "if",
+    "runs-on",
+    "timeout-minutes",
+    "services",
+    "env",
+    "steps",
+)
+EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes", "steps")
+EXPECTED_CHANGES_JOB_KEYS = ("name", "runs-on", "timeout-minutes", "outputs", "steps")
+EXPECTED_POSTGRES_ENV = (
+    "    env:",
+    '      OHC_REQUIRE_POSTGRES_TESTS: "1"',
+    "      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
+    "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+)
+EXPECTED_REQUIRED_ENV = (
+    "        env:",
+    "          EVENT_NAME: ${{ github.event_name }}",
+    "          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}",
+    "          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}",
+    "          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}",
+    "          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}",
+    "          BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}",
+    "          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}",
+    "          DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}",
+    "          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}",
+)
 
 
 @dataclass(frozen=True)
@@ -101,6 +131,30 @@ def indentation(line: str) -> int:
 
 def active_config_lines(lines: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(line for line in lines if line.strip() and not line.lstrip().startswith("#"))
+
+
+def canonical_mapping_key(line: str, indent: int) -> str | None:
+    if indentation(line) != indent or not line.strip() or line.lstrip().startswith("#"):
+        return None
+    content = line[indent:]
+    match = re.match(r'(?:(?:"([^"]+)")|(?:\'([^\']+)\')|([^:]+?))\s*:', content)
+    if match is None:
+        return None
+    return next(group.strip() for group in match.groups() if group is not None)
+
+
+def mapping_keys(lines: tuple[str, ...], indent: int) -> tuple[str, ...]:
+    return tuple(
+        key for line in lines if (key := canonical_mapping_key(line, indent)) is not None
+    )
+
+
+def require_exact_keys(
+    lines: tuple[str, ...], indent: int, expected: tuple[str, ...], context: str
+) -> None:
+    actual = mapping_keys(lines, indent)
+    if actual != expected:
+        raise ContractError(f"{context}: expected keys {expected!r}, found {actual!r}")
 
 
 def mapping_block(lines: tuple[str, ...], name: str, indent: int) -> tuple[str, ...]:
@@ -163,6 +217,10 @@ def require_unconditional_step(step: Step, context: str) -> None:
             raise ContractError(f"{context}: continue-on-error is forbidden")
         if line.startswith("        shell:"):
             raise ContractError(f"{context}: shell override is forbidden")
+
+
+def require_exact_step_keys(step: Step, expected: tuple[str, ...], context: str) -> None:
+    require_exact_keys(step.lines, 8, expected, context)
 
 
 def require_active(lines: tuple[str, ...], exact: str, context: str) -> None:
@@ -228,6 +286,9 @@ def check_workflow(path: Path) -> None:
     security = mapping_block(jobs, "postgres-security", 2)
     required = mapping_block(jobs, "ci-required", 2)
     changes = mapping_block(jobs, "check-changes", 2)
+    require_exact_keys(security, 4, EXPECTED_POSTGRES_JOB_KEYS, "postgres-security job")
+    require_exact_keys(required, 4, EXPECTED_REQUIRED_JOB_KEYS, "ci-required job")
+    require_exact_keys(changes, 4, EXPECTED_CHANGES_JOB_KEYS, "check-changes job")
     require_non_ignorable_job(security, "postgres-security")
     require_non_ignorable_job(required, "ci-required")
     require_non_ignorable_job(changes, "check-changes")
@@ -242,10 +303,14 @@ def check_workflow(path: Path) -> None:
         ("      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
     ):
         require_active(security, exact, context)
+    postgres_env = mapping_block(security, "env", 4)
+    if active_config_lines(postgres_env) != EXPECTED_POSTGRES_ENV:
+        raise ContractError("postgres-security job env does not match the exact required allowlist")
     if not any("pg_isready" in line for line in active_config_lines(security)):
         raise ContractError("service health check: missing active pg_isready configuration")
 
     role_step = named_step(security, "Provision and verify non-superuser application role")
+    require_exact_step_keys(role_step, ("run",), "application-role proof")
     require_unconditional_step(role_step, "application-role proof")
     role_style, role_run = role_step.run()
     if role_style != "block":
@@ -272,6 +337,7 @@ def check_workflow(path: Path) -> None:
     require_no_control_transfer_before(role_lines, role_assertions, "application-role proof")
 
     suite_step = named_step(security, "Run PostgreSQL tenant-isolation suite")
+    require_exact_step_keys(suite_step, ("run",), "exact multitenancy suite")
     require_unconditional_step(suite_step, "exact multitenancy suite")
     suite_style, suite_run = suite_step.run()
     exact_suite = "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"
@@ -286,6 +352,10 @@ def check_workflow(path: Path) -> None:
         "ci-required result propagation",
     )
     required_step = named_step(required, "Check required CI results")
+    require_exact_step_keys(required_step, ("env", "run"), "required-result enforcement")
+    required_env = mapping_block(required_step.lines, "env", 8)
+    if active_config_lines(required_env) != EXPECTED_REQUIRED_ENV:
+        raise ContractError("required-result step env does not match the exact result allowlist")
     require_unconditional_step(required_step, "required-result enforcement")
     required_style, required_run = required_step.run()
     if required_style != "block":
@@ -308,6 +378,7 @@ def check_workflow(path: Path) -> None:
         raise ContractError("postgres-security enforcement is not in the active non-markdown branch")
 
     hygiene_step = named_step(changes, "Check tracked artifacts")
+    require_exact_step_keys(hygiene_step, ("run",), "check-changes hygiene")
     require_unconditional_step(hygiene_step, "check-changes hygiene")
     hygiene_style, hygiene_run = hygiene_step.run()
     if hygiene_style != "block":
