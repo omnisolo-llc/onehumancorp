@@ -83,6 +83,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Reject active Chatwoot residue
+        run: bash deploy/tests/no_chatwoot_residue_test.sh
+
       - name: Audit root pnpm lock
         run: npx --yes pnpm@11.9.0 audit --prod
 
