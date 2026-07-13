@@ -564,7 +564,7 @@ impl InventoryService {
                 .unwrap_or(None);
 
             if exists_in_levels.is_some() {
-                update_result = sqlx::query_scalar("UPDATE inventory_levels SET available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 RETURNING available_count")
+                update_result = sqlx::query_scalar("UPDATE inventory_levels SET available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1 RETURNING available_count")
                     .bind(quantity)
                     .bind(product_id)
                     .bind(tenant_id)
