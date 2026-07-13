@@ -168,7 +168,7 @@ This repository change cannot invalidate material that may already have escaped.
 | `cargo test -p ohc-mono --lib agent_memory_pipeline -- --nocapture` | 3 passed | SQLite and timeout behavior covered; real Postgres isolation remains environment-dependent |
 | `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Includes the cross-organization agent/resource/mutation isolation regression |
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
-| `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
+| `cargo test -p ohc_builtin_agent service -- --nocapture` | 9 passed | Current filtered service suite includes verified-mTLS identity, captured-tenant memory, and receiver-drop cancellation regressions |
 | `cargo test -p ohc_builtin_agent_tools --lib` | 157 passed | Tenant-aware tool schemas no longer expose tenant selection; tools regressions remain green |
 | `cargo test -p ohc_builtin_agent --lib` | 520 passed | Process tenant, captured-memory, cancellation, and emitted-log redaction regressions pass with the full agent suite |
 | `bazel test //src/agents/builtin:ohc_builtin_agent_lib_unit_test` | 1 target passed | Bazel build/test graph includes and validates the tenant-capability changes |
