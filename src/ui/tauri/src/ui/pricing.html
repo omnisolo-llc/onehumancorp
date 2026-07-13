@@ -287,7 +287,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500MB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Products Limit</li>
           </ul>
-          <button id="btn-Free" class="btn-secondary" style="pointer-events: none; opacity: 0.7;" disabled>Current Plan</button>
+          <button id="btn-Free" class="btn-secondary" style="pointer-events: none; opacity: 0.7;" disabled>Loading...</button>
         </div>
 
         <!-- Starter Plan -->
@@ -302,7 +302,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 5GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 Products Limit</li>
           </ul>
-          <button id="btn-Starter" class="btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
+          <button id="btn-Starter" class="btn-primary" onclick="upgradePlan('Starter')" disabled>Loading...</button>
         </div>
 
         <!-- Pro Plan -->
@@ -315,7 +315,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 50GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button id="btn-Pro" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
+          <button id="btn-Pro" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')" disabled>Loading...</button>
         </div>
 
         <!-- Business Plan -->
@@ -328,7 +328,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button id="btn-Business" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
+          <button id="btn-Business" class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')" disabled>Loading...</button>
         </div>
       </div>
 
@@ -398,6 +398,8 @@
                     const btn = document.getElementById(`btn-${plan}`);
                     if (!btn) return;
 
+                    btn.disabled = false; // Enable by default unless Free
+
                     if (plan === currentPlan) {
                         btn.className = 'btn-secondary';
                         btn.style.backgroundColor = '';
@@ -407,21 +409,22 @@
                             btn.onclick = null;
                             btn.innerText = 'Current Plan';
                         } else {
-                            btn.disabled = false;
                             btn.onclick = managePlan;
                             btn.innerText = 'Manage Plan';
                         }
-                    } else if (plan === 'Free' && currentPlan !== 'Free') {
-                        // User is on a paid plan, but looking at Free
+                    } else if (plan === 'Free') {
                         btn.className = 'btn-secondary';
                         btn.style.backgroundColor = '';
                         btn.style.boxShadow = '';
-                        btn.disabled = false;
                         btn.innerText = 'Downgrade to Free';
                         btn.onclick = managePlan;
-                    } else if (plan !== currentPlan && plan !== 'Free' && currentPlan !== 'Free') {
-                        btn.innerText = 'Manage Plan';
-                        btn.onclick = managePlan;
+                    } else {
+                        btn.innerText = currentPlan === 'Free' ? `Upgrade to ${plan} via Stripe` : 'Manage Plan';
+                        if (currentPlan === 'Free') {
+                            btn.onclick = () => upgradePlan(plan);
+                        } else {
+                            btn.onclick = managePlan;
+                        }
                     }
                 });
             }
