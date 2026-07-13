@@ -438,6 +438,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
 
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
+  OHC_AGENT_TOKEN="test_agent_token" \
+  OHC_AGENT_AUTH_KEY="test_agent_auth_key_must_be_at_least_32_bytes_long" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \

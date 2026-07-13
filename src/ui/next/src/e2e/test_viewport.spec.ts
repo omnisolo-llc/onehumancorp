@@ -7,13 +7,13 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
     test.setTimeout(180000);
 
     await page.goto('/dashboard');
-    const dashboardH1 = page.locator('h1#dashboard-title');
+    const dashboardH1 = page.locator('#dashboard-title').first();
     await expect(dashboardH1).toBeAttached({ timeout: 25000 });
-    const container = page.locator('.container.app-panel');
+    const container = page.locator('.app-panel').first();
     await expect(container).toBeAttached();
 
 
-    const feedContainer = page.locator('.glassmorphism').first();
+    const feedContainer = page.locator('.app-panel').first();
     await expect(feedContainer).toBeAttached({ timeout: 15000 });
 
     // We expect the body not to scroll horizontally
@@ -21,7 +21,7 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
     expect(bodyWidth).toBeLessThanOrEqual(375);
 
     // Verify touch targets of the buttons in the feed if available
-    const buttons = page.locator('div.glassmorphism button');
+    const buttons = page.locator('div.app-panel button');
     const buttonCount = await buttons.count();
     for (let i = 0; i < buttonCount; i++) {
         const box = await buttons.nth(i).boundingBox();

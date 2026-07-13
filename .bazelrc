@@ -2,8 +2,8 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
-build --config=remote-cache
-build --config=bes
+# build --config=remote-cache
+# build --config=bes
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -101,9 +101,9 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-common:bes --bes_timeout=600s
-common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# common:bes --bes_timeout=600s
+# common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
+# common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -131,10 +131,10 @@ common:nativelink --jobs=50
 # Read only Bazel cache
 common:nativelink --remote_upload_local_results=false
 
-common:remote-cache --config=nativelink
-common:remote-cache --remote_download_minimal
-common:remote-cache --remote_local_fallback
-common:remote-cache --remote_timeout=10m
+# common:remote-cache --config=nativelink
+# common:remote-cache --remote_download_minimal
+# common:remote-cache --remote_local_fallback
+# common:remote-cache --remote_timeout=10m
 
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
