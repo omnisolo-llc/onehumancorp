@@ -590,6 +590,13 @@ export default function FeedPage() {
             Simulate Invoice Follow-up
           </button>
           <button
+             onClick={simulateInvoiceDraft}
+             data-testid="simulate-invoice-draft-btn"
+             className="text-xs bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Invoice Draft
+          </button>
+          <button
              onClick={simulateBookingDraft}
              data-testid="simulate-booking-btn"
              className="text-xs bg-green-100 text-green-700 border border-green-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
