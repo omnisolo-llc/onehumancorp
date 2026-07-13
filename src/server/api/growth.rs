@@ -366,6 +366,7 @@ where
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
         .route("/referrals/leaderboard", get(handle_referral_leaderboard))
+        .route("/viral-leaderboard/data", get(handle_viral_leaderboard_data))
         .route("/referrals/click", post(handle_referral_click_post).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
@@ -2911,6 +2912,47 @@ async fn handle_referral_leaderboard(
     Ok(Json(ReferralLeaderboardResponse { leaderboard }))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ViralLeaderboardDataQuery {
+    pub tenant: Option<String>,
+    pub metric: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ViralLeaderboardEntry {
+    pub emoji: String,
+    pub name: String,
+    pub score: String,
+}
+
+async fn handle_viral_leaderboard_data(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ViralLeaderboardDataQuery>,
+) -> Result<Json<Vec<ViralLeaderboardEntry>>, StatusCode> {
+    let tenant = query.tenant.unwrap_or_else(|| "demo".to_string());
+
+    let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
+        .bind(&tenant)
+        .fetch_all(&state.pool)
+        .await;
+
+    let mut leaderboard = Vec::new();
+
+    if let Ok(results) = rows {
+        use sqlx::Row;
+        let emojis = ["🥇", "🥈", "🥉", "🏅", "🏅"];
+        for (i, row) in results.into_iter().enumerate() {
+            let user_id: String = row.get(0);
+            let conversions: i32 = row.get(1);
+            let emoji = emojis.get(i).unwrap_or(&"⭐").to_string();
+            let score = format!("{} {}", conversions, if query.metric.as_deref() == Some("buyers") { "Purchases" } else { "Referrals" });
+            leaderboard.push(ViralLeaderboardEntry { emoji, name: user_id, score });
+        }
+    }
+
+    Ok(Json(leaderboard))
+}
+
 async fn handle_referral_stats(
 
     Extension(state): Extension<GrowthState>,
@@ -3501,6 +3543,53 @@ mod tests {
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
     }
 
+
+    #[tokio::test]
+    async fn test_viral_leaderboard_data() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let viral_loop_tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker };
+
+        sqlx::query("DELETE FROM referrals WHERE tenant_id = 'test-leaderboard'").execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, conversions) VALUES ($1, $2, $3, $4)")
+            .bind(uuid::Uuid::new_v4())
+            .bind("test-leaderboard")
+            .bind("user1")
+            .bind(10)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, conversions) VALUES ($1, $2, $3, $4)")
+            .bind(uuid::Uuid::new_v4())
+            .bind("test-leaderboard")
+            .bind("user2")
+            .bind(20)
+            .execute(&pool).await.unwrap();
+
+        let query = ViralLeaderboardDataQuery {
+            tenant: Some("test-leaderboard".to_string()),
+            metric: Some("referrers".to_string()),
+        };
+
+        let res = handle_viral_leaderboard_data(Extension(state), axum::extract::Query(query)).await.unwrap();
+        let data = res.0;
+
+        assert_eq!(data.len(), 2);
+        assert_eq!(data[0].name, "user2");
+        assert_eq!(data[0].score, "20 Referrals");
+        assert_eq!(data[0].emoji, "🥇");
+
+        assert_eq!(data[1].name, "user1");
+        assert_eq!(data[1].score, "10 Referrals");
+        assert_eq!(data[1].emoji, "🥈");
+    }
 
     #[tokio::test]
     async fn test_referral_leaderboard() {
