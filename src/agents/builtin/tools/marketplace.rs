@@ -29,9 +29,14 @@ pub struct HttpMarketplaceProvider {
 
 impl HttpMarketplaceProvider {
     pub fn new(registry_url: &str) -> Self {
+        let http_client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Self {
             registry_url: registry_url.to_string(),
-            http_client: reqwest::Client::new(),
+            http_client,
         }
     }
 }
@@ -44,14 +49,22 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
             .query(&[("q", query)])
             .send()
             .await
-            .map_err(|e| format!("Failed to search marketplace: {}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    "Marketplace search request timed out".to_string()
+                } else {
+                    format!("Failed to search marketplace: {}", e)
+                }
+            })?;
 
-        if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Marketplace returned status: {} - {}", status, error_text));
         }
 
         let agents: Vec<MarketplaceAgent> = response.json().await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
+            .map_err(|e| format!("Failed to parse JSON response: {}", e))?;
 
         Ok(agents)
     }
@@ -61,14 +74,25 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
         let response = self.http_client.get(&url)
             .send()
             .await
-            .map_err(|e| format!("Failed to fetch agent: {}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    "Marketplace fetch request timed out".to_string()
+                } else {
+                    format!("Failed to fetch agent: {}", e)
+                }
+            })?;
 
-        if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+        let status = response.status();
+        if !status.is_success() {
+            if status.as_u16() == 404 {
+                return Err(format!("Agent '{}' not found", agent_id));
+            }
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Marketplace returned status: {} - {}", status, error_text));
         }
 
         let agent: MarketplaceAgent = response.json().await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
+            .map_err(|e| format!("Failed to parse JSON response: {}", e))?;
 
         Ok(agent)
     }
@@ -79,14 +103,22 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
             .json(&agent)
             .send()
             .await
-            .map_err(|e| format!("Failed to publish agent: {}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    "Marketplace publish request timed out".to_string()
+                } else {
+                    format!("Failed to publish agent: {}", e)
+                }
+            })?;
 
-        if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(format!("Marketplace returned status: {} - {}", status, error_text));
         }
 
         let published_agent: MarketplaceAgent = response.json().await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
+            .map_err(|e| format!("Failed to parse JSON response: {}", e))?;
 
         Ok(published_agent)
     }
