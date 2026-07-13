@@ -1,15 +1,15 @@
 # Production agent optimization and security review
 
-Date: 2026-07-12  
+Date: 2026-07-13
 Reviewed branch: `main`  
-Audit head: `64332c4aa`  
+Initial audit head: `64332c4aa`
 Priority: correctness and security first, then performance and token efficiency
 
 ## Executive summary
 
 The production agent path now avoids duplicate tool schemas, no longer caches responses by truncated prompt prefixes, confines outbound HTTP and file access, fails closed on built-in-agent authentication, and isolates circuit breakers per provider client. Focused Cargo and Bazel tests pass for those changes.
 
-The end-to-end audit also found unresolved production boundary defects. Most importantly, the server's general gRPC SPIFFE interceptor trusts an unverified request header, agent-manager mutations do not consistently enforce organization ownership, model-callable business tools accept tenant IDs from model output, and closing an agent result stream does not stop paid producer work. These findings need focused remediation before the cloud path should be considered tenant-safe.
+The initial end-to-end audit also found production boundary defects: the general gRPC SPIFFE interceptor trusted an unverified request header, agent-manager mutations lacked consistent organization ownership checks, model-callable business tools accepted tenant IDs from model output, and closing an agent result stream did not stop paid producer work. Those current-tree defects were remediated in the focused commits recorded under F-01 through F-11. Operational items that code changes cannot complete—especially credential rotation, history/log assessment, and remote CI execution—remain explicitly listed.
 
 Remediation update: F-01 through F-11 have now been addressed in focused follow-up commits. The original finding text below is retained as the audit snapshot; each resolved finding carries a dated status and verification evidence.
 
@@ -54,7 +54,9 @@ Fresh verification at the final UI head produced the following exact evidence:
 
 The production server still logs expected missing-service errors in this isolated environment: proxy/fetch connection refusals for local backends on ports 8080 and 18789, Postgres on 5432, and the backend-served Swagger CSS/bundle. The audit allows only the enumerated message plus URL/port/path combinations; an identical 500 response on an unknown API path is a tested failure. Next also identifies request-header/request-URL API routes as dynamic during static generation. These messages did not cause navigation, hydration, shell, screenshot, test, or build failures.
 
-## Boundary matrix
+## Boundary matrix — initial pre-remediation snapshot
+
+This matrix records the state observed at the initial audit head. It is retained as finding evidence, not as a description of current HEAD; the dated status blocks under F-01 through F-11 are the current-state record.
 
 | Path | Trust boundary and authorization source | Tenant handling | Deadline/cancellation | Telemetry | Conclusion |
 |---|---|---|---|---|---|
@@ -68,11 +70,15 @@ The production server still logs expected missing-service errors in this isolate
 
 ### F-01 — Critical — client-spoofable SPIFFE authentication
 
+**Status (2026-07-12): Remediated.** Commits `629d99030`, `4a4a5e4d3`, and `b7b50ddb8` enforce exact trusted SPIFFE identity structure, extract exactly one validated SPIFFE URI SAN from the verified peer certificate, require server identity/client CA configuration in cloud mode, and ignore caller-supplied identity metadata there. Standalone mode remains loopback-bound and may use its explicit validated metadata path. Certificate regressions reject missing, invalid, ambiguous, and untrusted SANs; strict parser regressions reject empty, encoded, extra-segment, and untrusted identities; cloud regressions require peer-certificate identity and complete mTLS configuration. The later full `server_auth` suite passed 28 tests and its Bazel target passed.
+
 `src/server/lib.rs:418` reads `x-spiffe-id` directly from request metadata and treats successful string parsing as authentication. The Tonic server is not configured with client-certificate verification on this path. `src/server/auth/mod.rs:768` only checks slash positions; it accepts untrusted domains and empty organization/agent components. A remote client can therefore manufacture the identity used by intercepted gRPC services.
 
 Smallest regression: `spiffe_interceptor_rejects_identity_without_verified_peer_certificate`.
 
 ### F-02 — High — cross-tenant agent-manager reads and mutations
+
+**Status (2026-07-12): Remediated.** Commit `229b22937` derives one authenticated organization for every agent-manager operation; verifies agent ownership before fire/delegate mutations; scopes identities, skills, snapshots, restore, dashboard agents, costs, meetings, and approvals; and removes the agent-ID-prefix ownership fallback. The regression `cross_org_resources_and_mutations_are_rejected` exercises cross-organization fire/delegation plus identity, skill, snapshot, and restore isolation. The focused `cargo test -p ohc-mono --lib services::agent -- --nocapture` suite passed 7 tests.
 
 `fire_agent` derives an organization but calls `Hub::fire_agent` by caller-supplied agent ID without verifying ownership (`src/server/services/agent/service.rs:153`). `delegate_task` likewise accepts globally registered sender and recipient IDs without checking either organization (`:171`). `get_identities` reads all agents (`:215`), while skills and snapshots are stored in global vectors and returned without organization filtering (`:232`, `:267`).
 
@@ -104,7 +110,7 @@ Smallest regression: `run_task_memory_uses_authenticated_request_tenant`.
 
 ### F-06 — High — memory worker has incomplete tenant and timeout controls
 
-**Status (2026-07-12): Remediated in code; real Postgres/RLS execution remains unverified.** Commits `8be295f0c` and `68b3649c2` add a testable summarization boundary with a 60-second deadline, redact provider error bodies, use explicit system authority for cross-tenant acquisition and filesystem ingestion, and run failure/final mutations under the row's organization. Failure resets require both session and agent IDs. Five focused Cargo tests and `//src/server/workers:server_workers_unit_test` pass. Because `OHC_DATABASE_URL` was unset, the Postgres-named Cargo test returned early; F-10 still blocks an end-to-end RLS verification claim.
+**Status (2026-07-12): Remediated in code; the worker-specific real Postgres/RLS path remains unverified.** Commits `8be295f0c` and `68b3649c2` add a testable summarization boundary with a 60-second deadline, redact provider error bodies, use explicit system authority for cross-tenant acquisition and filesystem ingestion, and run failure/final mutations under the row's organization. Failure resets require both session and agent IDs. Five focused Cargo tests and `//src/server/workers:server_workers_unit_test` pass. Because `OHC_DATABASE_URL` was unset for that worker test, its Postgres body returned early. F-10 separately verifies the six `server_auth` tenant-isolation bodies; it does not execute this worker-specific path.
 
 The Postgres worker explicitly clears tenant context to fetch work across tenants (`src/server/workers/agent_memory_pipeline.rs:154`). Final inserts set tenant context, but failure-status updates execute directly on the pool with only `session_id` (`:226`, `:237`). Summarization provider calls at `:204` are not wrapped in a deadline, although embedding calls are. The filesystem-memory Postgres insert also lacks an explicit tenant transaction. These paths are safe only under undocumented role and globally-unique-ID assumptions.
 
@@ -160,7 +166,7 @@ This repository change cannot invalidate material that may already have escaped.
 |---|---|---|
 | `OHC_REQUIRE_POSTGRES_TESTS=1 cargo test -p server_auth multitenancy_isolation:: -- --nocapture` with disposable pgvector PostgreSQL and admin/application-role URLs | 6 passed, 0 failed in 5.13s | **Verified:** all six bodies began as `ohc_security_test` with `rolsuper=false`, `rolinherit=false`, `rolbypassrls=false`, explicit bypass-role membership, and `row_security=on`; system context explicitly switched roles |
 | `cargo test -p ohc-mono --lib agent_memory_pipeline -- --nocapture` | 3 passed | SQLite and timeout behavior covered; real Postgres isolation remains environment-dependent |
-| `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Happy-path tests only; no cross-organization negative cases |
+| `cargo test -p ohc-mono --lib services::agent -- --nocapture` | 7 passed | Includes the cross-organization agent/resource/mutation isolation regression |
 | `cargo test -p ohc-mono --lib orchestration::queue -- --nocapture` | 17 passed | SQLite behavior covered; Postgres/RLS claims require a configured database to be considered verified |
 | `cargo test -p ohc_builtin_agent service -- --nocapture` | 7 passed | Auth/configuration and basic service behavior pass; no receiver-cancellation regression exists |
 | `cargo test -p ohc_builtin_agent_tools --lib` | 157 passed | Tenant-aware tool schemas no longer expose tenant selection; tools regressions remain green |
@@ -176,7 +182,9 @@ This repository change cannot invalidate material that may already have escaped.
 - No private-key PEM blocks or the removed `default_auth_key_change_me` fallback were found.
 - The credentialed-Postgres-URL pattern matched 66 files in the scan scope (the `docs/` tree was excluded). Most inspected paths are tests, local defaults, or deployment templates; they need environment-by-environment validation before being classified as real credentials. No values are reproduced here.
 
-## Remediation order
+## Historical remediation sequence — completed in current-tree code
+
+This is the execution order used after the initial audit, not an open to-do list. Remaining operational actions are documented in the individual status blocks.
 
 1. Replace header-trusting SPIFFE interception with verified mTLS peer identity and reject empty/untrusted identities.
 2. Scope all agent-manager operations, skills, identities, and snapshots to the authenticated organization.
@@ -187,6 +195,7 @@ This repository change cannot invalidate material that may already have escaped.
 7. Redact task/error bodies from logs and add telemetry field tests.
 8. Upgrade vulnerable JavaScript dependency paths and add enforced advisory scanning.
 9. Remove the tracked secret candidate and make Postgres security tests explicit in CI.
+10. Remove tracked Bazel remote-cache/BES credentials and enforce secret-free tracked configuration.
 
 ## Benchmark and final verification
 
