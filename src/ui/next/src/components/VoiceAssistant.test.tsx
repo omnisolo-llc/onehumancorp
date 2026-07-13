@@ -66,9 +66,14 @@ describe('VoiceAssistant', () => {
   };
 
   it('renders correctly', async () => {
-    renderWithProvider(<VoiceAssistant />);
-    const button = await screen.findByRole('button');
+    const { container } = renderWithProvider(<VoiceAssistant />);
+    const button = await screen.findByRole('button', { name: 'Voice Assistant' });
     expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('data-voice-assistant-surface', 'trigger');
+    expect(container.querySelector('[data-voice-assistant-root]')).toHaveClass('sm:fixed');
+    expect(container.querySelector('[data-voice-assistant-root]')).not.toHaveClass('fixed');
+    button.focus();
+    expect(button).toHaveFocus();
   });
 
   it('handles microphone mousedown to start recording', async () => {
@@ -80,6 +85,8 @@ describe('VoiceAssistant', () => {
     await waitFor(() => {
       expect(global.navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
       expect(mockStart).toHaveBeenCalled();
+      expect(screen.getByText('Listening...').closest('[data-voice-assistant-surface="status"]'))
+        .toHaveAttribute('data-voice-assistant-state', 'listening');
     });
   });
 
