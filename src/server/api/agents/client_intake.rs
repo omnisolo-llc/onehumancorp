@@ -1,3 +1,12 @@
+
+static CLIENT_INTAKE_PROMPT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+pub fn get_client_intake_prompt() -> &'static str {
+    CLIENT_INTAKE_PROMPT.get_or_init(|| {
+        crate::pricing::compression::reduce_tokens("You are a professional service agency proposal drafter.")
+    }).as_str()
+}
+
 use axum::{
     extract::{State, Query, Form},
     response::IntoResponse,
@@ -122,7 +131,7 @@ async fn handle_client_intake(
         let llm_request = ChatRequest {
             model: "default".to_string(),
             messages: vec![Message::user(format!("Write a personalized 2 sentence proposal message for {} based on inquiry: {}", service_name, payload.details))],
-            system: "You are a professional service agency proposal drafter.".to_string(),
+            system: get_client_intake_prompt().to_string(),
             max_tokens: 500,
             temperature: 0.7,
             tools: vec![],

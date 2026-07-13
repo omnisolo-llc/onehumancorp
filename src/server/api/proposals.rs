@@ -1,3 +1,14 @@
+
+static PROPOSAL_SYSTEM_PROMPT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+pub fn get_proposal_system_prompt() -> &'static str {
+    PROPOSAL_SYSTEM_PROMPT.get_or_init(|| {
+        crate::pricing::compression::reduce_tokens(
+            "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array."
+        )
+    }).as_str()
+}
+
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -107,11 +118,9 @@ async fn draft_agent(
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
-
     let req = ChatRequest {
         model: "default-model".to_string(),
-        system: system_prompt,
+        system: get_proposal_system_prompt().to_string(),
         messages: vec![Message::user(payload.inquiry.clone())],
         temperature: 0.1,
         max_tokens: 1024,
@@ -199,10 +208,10 @@ async fn get_proposal(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let (proposal_res, items_res) = tokio::join!(
-        sqlx::query_as::<_, Proposal>("SELECT * FROM proposals WHERE id = $1")
+        sqlx::query_as::<_, Proposal>("SELECT id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url, created_at, updated_at FROM proposals WHERE id = $1")
             .bind(&id)
             .fetch_optional(&pool),
-        sqlx::query_as::<_, ProposalLineItem>("SELECT * FROM proposal_line_items WHERE proposal_id = $1")
+        sqlx::query_as::<_, ProposalLineItem>("SELECT id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at FROM proposal_line_items WHERE proposal_id = $1")
             .bind(&id)
             .fetch_all(&pool)
     );
@@ -255,7 +264,7 @@ async fn approve_proposal(
     };
 
     let line_items = match sqlx::query_as::<_, ProposalLineItem>(
-        "SELECT * FROM proposal_line_items WHERE proposal_id = $1"
+        "SELECT id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at FROM proposal_line_items WHERE proposal_id = $1"
     )
     .bind(&id)
     .fetch_all(&mut *tx)

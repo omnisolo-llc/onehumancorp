@@ -236,7 +236,7 @@ async fn draft_quote_agent(
 
     let req = ChatRequest {
         model: "default-model".to_string(),
-        system: system_prompt.clone(),
+        system: crate::pricing::compression::reduce_tokens(&system_prompt),
         messages: vec![Message::user(payload.inquiry)],
         temperature: 0.1,
         max_tokens: 1024,
@@ -298,7 +298,7 @@ async fn update_quote(
         }
     };
 
-    let current_quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+    let current_quote = match sqlx::query_as::<_, Quote>("SELECT id, tenant_id, customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at FROM quotes WHERE id = $1")
         .bind(quote_id)
         .fetch_optional(&mut *tx)
         .await
@@ -412,10 +412,10 @@ async fn get_quote(
     };
 
     let (quote_res, items_res) = tokio::join!(
-        sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        sqlx::query_as::<_, Quote>("SELECT id, tenant_id, customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at FROM quotes WHERE id = $1")
             .bind(quote_id)
             .fetch_optional(&pool),
-        sqlx::query_as::<_, QuoteLineItem>("SELECT * FROM quote_line_items WHERE quote_id = $1")
+        sqlx::query_as::<_, QuoteLineItem>("SELECT id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id FROM quote_line_items WHERE quote_id = $1")
             .bind(quote_id)
             .fetch_all(&pool)
     );
@@ -517,7 +517,7 @@ async fn accept_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+    let quote = match sqlx::query_as::<_, Quote>("SELECT id, tenant_id, customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at FROM quotes WHERE id = $1")
         .bind(quote_id)
         .fetch_optional(&pool)
         .await
@@ -579,7 +579,7 @@ async fn accept_quote(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
     }
 
-    let line_items = sqlx::query_as::<_, QuoteLineItem>("SELECT * FROM quote_line_items WHERE quote_id = $1")
+    let line_items = sqlx::query_as::<_, QuoteLineItem>("SELECT id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id FROM quote_line_items WHERE quote_id = $1")
         .bind(quote_id)
         .fetch_all(&pool)
         .await
