@@ -21,16 +21,31 @@ export type PublicApiContract = Readonly<{
   cachePolicy: "private-no-store";
 }>;
 
-export type PublicRouteEntry = Readonly<{
-  method: "GET" | "POST";
-  invocation: Invocation;
-  matcher:
-    | Readonly<{ kind: "exact"; path: string }>
-    | Readonly<{ kind: "framework-prefix"; path: "/_next/static/" }>;
-  reason: string;
-  owner: "authentication" | "framework";
-  api?: PublicApiContract;
-}>;
+export type PublicRouteEntry =
+  | Readonly<{
+      method: "GET";
+      invocation: "page";
+      matcher: Readonly<{ kind: "exact"; path: string }>;
+      reason: string;
+      owner: "authentication";
+      api?: never;
+    }>
+  | Readonly<{
+      method: "GET" | "POST";
+      invocation: "route-handler";
+      matcher: Readonly<{ kind: "exact"; path: string }>;
+      reason: string;
+      owner: "authentication";
+      api: PublicApiContract;
+    }>
+  | Readonly<{
+      method: "GET";
+      invocation: "asset";
+      matcher: Readonly<{ kind: "framework-prefix"; path: "/_next/static/" }>;
+      reason: string;
+      owner: "framework";
+      api?: never;
+    }>;
 
 export type RouteDecision =
   | Readonly<{ access: "public"; entry: PublicRouteEntry }>
