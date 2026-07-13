@@ -6,6 +6,9 @@
       "esnext"
     ],
     "allowJs": true,
+    "types": [
+      "vitest/globals"
+    ],
     "skipLibCheck": true,
     "strict": false,
     "noEmit": true,
@@ -15,7 +18,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "plugins": [
       {
         "name": "next"

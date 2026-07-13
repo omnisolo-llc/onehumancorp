@@ -111,7 +111,7 @@ pub async fn create_checkout_session_handler(
                             return (StatusCode::BAD_REQUEST, Json(CreateCheckoutSessionResponse {
                                 session_id: "".to_string(),
                                 success: false,
-                                error_message: Some(res.error_message),
+                                error_message: Some("Item is currently being checked out by another customer.".to_string()),
                             })).into_response()
                         },
                         Err(e) => {

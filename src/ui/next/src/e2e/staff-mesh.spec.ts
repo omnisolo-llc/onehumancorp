@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
   test('CUJ: Manager creates staff, staff logs in offline via PIN', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agentic Invoicing System E2E', () => {
   test('should verify invoice generator page renders properly', async ({ page }) => {

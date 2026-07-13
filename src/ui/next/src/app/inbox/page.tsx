@@ -1,7 +1,7 @@
 "use client";
 import DOMPurify from 'isomorphic-dompurify';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
@@ -219,10 +219,27 @@ function InboxWorkspace({
     }
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   function handleAttachPhoto() {
-    // Mock attaching a photo by appending an image markdown URL
-    const mockImageUrl = "https://example.com/mock-upload.jpg";
-    setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${mockImageUrl})`);
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64String = event.target?.result as string;
+      setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${base64String})`);
+    };
+    reader.readAsDataURL(file);
+
+    // reset input
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
   }
 
   async function handleApproveAndSend(inboxMessageId: string) {
@@ -272,7 +289,7 @@ function InboxWorkspace({
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
-      <div className="w-full max-w-[375px] mx-auto md:max-w-none">
+      <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
         <div className="app-grid two gap-4">
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
@@ -304,7 +321,7 @@ function InboxWorkspace({
             </div>
 
                 {/* Manual Reply Box */}
-                {selected.status !== "resolved" && selected.status !== "dismissed" && (
+                {selected && selected.status !== "resolved" && selected.status !== "dismissed" && (
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="app-metric-label mb-2">Manual Reply</div>
                     <textarea
@@ -328,10 +345,11 @@ function InboxWorkspace({
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                         Attach Photo
                       </button>
+                      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelected} />
                     </div>
                   </div>
                 )}
-\n          </section>
+          </section>
 
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
@@ -452,6 +470,16 @@ function PowerSyncInboxContent() {
   return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
 }
 
+function InboxLoadingState() {
+  return (
+    <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+      <div className="app-panel">
+        <div className="app-empty">Loading inbox messages...</div>
+      </div>
+    </AppShell>
+  );
+}
+
 function ApiInboxFallback() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -478,7 +506,7 @@ function ApiInboxFallback() {
   if (error) {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel">
+        <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
       </AppShell>
@@ -486,13 +514,7 @@ function ApiInboxFallback() {
   }
 
   if (loading) {
-    return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel">
-          <div className="app-empty">Loading inbox messages...</div>
-        </div>
-      </AppShell>
-    );
+    return <InboxLoadingState />;
   }
 
   return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
@@ -501,13 +523,7 @@ function ApiInboxFallback() {
 export default function InboxPage() {
   return (
     <PowerSyncProvider
-      fallback={(
-        <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-          <div className="app-panel">
-            <div className="app-empty">Loading local database...</div>
-          </div>
-        </AppShell>
-      )}
+      fallback={<InboxLoadingState />}
       unsupportedFallback={<ApiInboxFallback />}
     >
       <PowerSyncInboxContent />

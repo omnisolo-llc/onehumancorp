@@ -59,3 +59,8 @@ tree-sitter-python = "0.25.0"
 
 [lib]
 path = "lib.rs"
+
+[[example]]
+name = "agent_path_baseline"
+path = "examples/agent_path_baseline.rs"
+test = true

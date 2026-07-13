@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 import { e2eTestTenant } from './fixtures';
 
 test.describe('Post-Purchase Share Widget Generator', () => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Pydantic-First Tool Schema Validation', () => {
   test('should successfully validate correct tool payload', async ({ page }) => {

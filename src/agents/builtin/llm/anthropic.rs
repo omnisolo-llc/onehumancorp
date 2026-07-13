@@ -1,69 +1,17 @@
 use async_trait::async_trait;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use reqwest::Client;
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use super::LlmClient;
-
-use std::sync::Mutex;
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
-
-struct CircuitBreaker {
-    failures: Mutex<usize>,
-    last_failure: Mutex<Option<Instant>>,
-    max_failures: usize,
-    reset_timeout: Duration,
-}
-
-impl CircuitBreaker {
-    fn new(max_failures: usize, reset_timeout: Duration) -> Self {
-        CircuitBreaker {
-            failures: Mutex::new(0),
-            last_failure: Mutex::new(None),
-            max_failures,
-            reset_timeout,
-        }
-    }
-
-    fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
-        if *failures >= self.max_failures {
-            let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    return true;
-                }
-                return false;
-            }
-        }
-        true
-    }
-
-    fn record_success(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures = 0;
-    }
-
-    fn record_failure(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures += 1;
-        let mut last_failure = self.last_failure.lock().unwrap();
-        *last_failure = Some(Instant::now());
-    }
-}
-
-static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
-
-fn get_circuit_breaker() -> &'static CircuitBreaker {
-    GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
-}
-
+use super::circuit_breaker::CircuitBreaker;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+use std::time::Duration;
 
 pub struct AnthropicClient {
     api_key: String,
     client: Client,
+    circuit_breaker: CircuitBreaker,
 }
 
 impl AnthropicClient {
@@ -74,6 +22,7 @@ impl AnthropicClient {
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
+            circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
         }
     }
 }
@@ -173,7 +122,7 @@ impl LlmClient for AnthropicClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let cb = get_circuit_breaker();
+        let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
@@ -266,9 +215,12 @@ impl LlmClient for AnthropicClient {
 
         // Prompt caching: cache the last user message
         if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user")
-            && let Some(last_content) = last_user.content.last_mut() {
-                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
-            }
+            && let Some(last_content) = last_user.content.last_mut()
+        {
+            last_content.cache_control = Some(AnthropicCacheControl {
+                r#type: "ephemeral",
+            });
+        }
 
         let system = if req.system.is_empty() {
             vec![]
@@ -276,7 +228,9 @@ impl LlmClient for AnthropicClient {
             vec![AnthropicSystem {
                 r#type: "text",
                 text: req.system.clone(),
-                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }),
+                cache_control: Some(AnthropicCacheControl {
+                    r#type: "ephemeral",
+                }),
             }]
         };
 
@@ -290,7 +244,9 @@ impl LlmClient for AnthropicClient {
                 description: t.description.clone(),
                 input_schema: t.parameters.clone(),
                 cache_control: if i == num_tools - 1 {
-                    Some(AnthropicCacheControl { r#type: "ephemeral" })
+                    Some(AnthropicCacheControl {
+                        r#type: "ephemeral",
+                    })
                 } else {
                     None
                 },
@@ -305,7 +261,7 @@ impl LlmClient for AnthropicClient {
             tools,
         };
 
-        let resp = self
+        let resp = match self
             .client
             .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", &self.api_key)
@@ -314,10 +270,17 @@ impl LlmClient for AnthropicClient {
             .header("anthropic-beta", "prompt-caching-2024-07-31")
             .json(&payload)
             .send()
-            .await?;
+            .await
+        {
+            Ok(response) => response,
+            Err(error) => {
+                cb.record_transport_error(&error);
+                return Err(error.into());
+            }
+        };
 
         if !resp.status().is_success() {
-            cb.record_failure();
+            cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("anthropic api error (status {}): {}", status, body).into());
@@ -325,12 +288,11 @@ impl LlmClient for AnthropicClient {
 
         let result = resp.json::<AnthropicResponse>().await;
         if let Err(e) = result {
-            cb.record_failure();
+            cb.record_non_failure();
             return Err(format!("api error: failed to parse response: {:?}", e).into());
         }
         let result = result.unwrap();
         cb.record_success();
-
 
         // Extract content + tool calls from response
         let mut text_content = String::new();
@@ -348,7 +310,10 @@ impl LlmClient for AnthropicClient {
                         tool_calls.push(ToolCall {
                             id: id.clone(),
                             name: name.clone(),
-                            arguments: block.input.clone().unwrap_or(Value::Object(Default::default())),
+                            arguments: block
+                                .input
+                                .clone()
+                                .unwrap_or(Value::Object(Default::default())),
                         });
                     }
                 }
@@ -367,7 +332,7 @@ impl LlmClient for AnthropicClient {
                 response_id: result.id.clone(),
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.usage.input_tokens,
                 output_tokens: result.usage.output_tokens,
                 cache_creation_input_tokens: result.usage.cache_creation_input_tokens,

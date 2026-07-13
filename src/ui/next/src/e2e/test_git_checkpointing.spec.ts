@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agent Protocol Git Checkpointing (SOTA Harness)', () => {
   test('creates task, executes steps, and verifies checkpoints can be restored via real stack', async ({ page }) => {

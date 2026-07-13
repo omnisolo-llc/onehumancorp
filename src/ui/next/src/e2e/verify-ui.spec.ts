@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test('Verify onboarding UI', async ({ page }) => {
   // Mock external API responses to eliminate backend dependencies

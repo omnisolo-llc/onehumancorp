@@ -4,11 +4,14 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_auth",
+    compile_data = ["//src/server/migrations"],
     srcs = [
         "grpc.rs",
         "mod.rs",
         "orchestration.rs",
+        "peer_identity.rs",
         "postgres_store.rs",
+        "postgres_test_support.rs",
         "sqlite_store.rs",
         "user_repository.rs",
         "multitenancy_isolation.rs",
@@ -38,6 +41,7 @@ rust_library(
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:uuid",
+        "@crates//:x509-parser",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -48,6 +52,7 @@ rust_test(
     name = "server_auth_unit_test",
     size = "small",
     crate = ":server_auth",
+    deps = ["@crates//:rcgen"],
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],

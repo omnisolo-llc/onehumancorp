@@ -51,9 +51,6 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      .glass-control {
-        border-radius: 8px !important;
-      }
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
           border-radius: 16px !important;
@@ -128,7 +125,7 @@
         min-width: 44px;
         box-sizing: border-box;
       }
-      /* Added missing glass-control definition */
+      /* Base glass-control */
       .glass-control {
         border-radius: 8px !important;
         background: rgba(255, 255, 255, 0.65);
@@ -138,22 +135,18 @@
       }
       textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
         border-radius: 8px !important;
+        min-height: 44px;
       }
       @media (prefers-color-scheme: dark) {
         .glass-control {
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
-      }
-      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
-        border-radius: 8px !important;
-        min-height: 44px;
-      }
-      @media (prefers-color-scheme: dark) {
         textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
           border-radius: 8px !important;
         }
       }
+
       button, .btn-primary {
         min-width: 44px;
         background-color: #0066FF;
@@ -2893,29 +2886,42 @@
           }
         }
 
-        // Merge from localStorage as fallback
+        // Compare updated_at from backend and localStorage to prioritize the most recent
         const stored = localStorage.getItem("onboardingState");
+        let parsedStored = null;
         if (stored) {
-          const parsed = JSON.parse(stored);
-          state = { ...state, ...parsed };
-          if (parsed.businessName && !parsed.business_name) {
-            state.business_name = parsed.businessName;
-          }
-          if (parsed.business_name && !parsed.businessName) {
-            state.businessName = parsed.business_name;
-          }
+          parsedStored = JSON.parse(stored);
         }
 
-        // Merge backend state, taking priority if it has advanced further or exists
+        // Default to merging backend state if it exists
         if (loadedState && Object.keys(loadedState).length > 0) {
-          if (!state.step || (loadedState.step && loadedState.step >= state.step)) {
-              state = { ...state, ...loadedState };
+          // Compare updated_at timestamps
+          const backendUpdatedAt = loadedState.updated_at || 0;
+          const localUpdatedAt = parsedStored ? (parsedStored.updated_at || 0) : 0;
+
+          if (localUpdatedAt > backendUpdatedAt) {
+             // Local is newer, so start with backend and override with local
+             state = { ...state, ...loadedState, ...parsedStored };
+          } else {
+             // Backend is newer or equal, so start with local and override with backend
+             if (parsedStored) {
+                 state = { ...state, ...parsedStored };
+             }
+             state = { ...state, ...loadedState };
           }
-          if (loadedState.businessName && !loadedState.business_name) {
-             state.business_name = loadedState.businessName;
-          }
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        } else if (parsedStored) {
+          // No backend state, just use local
+          state = { ...state, ...parsedStored };
         }
+
+        // Ensure business name consistency
+        if (state.businessName && !state.business_name) {
+            state.business_name = state.businessName;
+        }
+        if (state.business_name && !state.businessName) {
+            state.businessName = state.business_name;
+        }
+        localStorage.setItem("onboardingState", JSON.stringify(state));
 
         populateForm();
 
@@ -3118,6 +3124,7 @@
 
       var saveStateTimer = null;
       function saveCurrentState() {
+        state.updated_at = Date.now();
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
         state.businessName = inputs.name.value; // Sync for E2E

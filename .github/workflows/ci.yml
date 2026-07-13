@@ -63,7 +63,39 @@ jobs:
           fi
 
       - name: Check tracked artifacts
-        run: .github/scripts/check_repo_hygiene.sh
+        run: |
+          .github/scripts/check_repo_hygiene_test.sh
+          .github/scripts/check_repo_hygiene.sh
+          python3 .github/scripts/check_postgres_security_ci_test.py
+          python3 .github/scripts/check_postgres_security_ci.py
+
+  dependency-audit:
+    name: Production dependency audit
+    needs:
+      - check-changes
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Audit root pnpm lock
+        run: npx --yes pnpm@11.9.0 audit --prod
+
+      - name: Audit UI pnpm lock
+        working-directory: src/ui/next
+        run: npx --yes pnpm@11.9.0 audit --prod
+
+      - name: Audit root npm lock
+        run: npm audit --omit=dev
+
+      - name: Audit UI npm lock
+        working-directory: src/ui/next
+        run: npm audit --omit=dev
 
   bazel-build:
     name: Bazel build (${{ matrix.name }})
@@ -640,6 +672,99 @@ jobs:
             --config=linux \
             --nocache_test_results
 
+  postgres-security:
+    name: PostgreSQL tenant isolation
+    needs:
+      - check-changes
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ohc_security
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ohc_security"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      OHC_REQUIRE_POSTGRES_TESTS: "1"
+      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
+      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo build inputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-postgres-security-${{ hashFiles('Cargo.lock', 'src/server/Cargo.lock') }}
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Provision and verify non-superuser application role
+        run: |
+          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN
+              CREATE ROLE ohc_bypassrls;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_security_test') THEN
+              CREATE ROLE ohc_security_test LOGIN PASSWORD 'ohc_security_test';
+            END IF;
+          END
+          $$;
+          ALTER ROLE ohc_bypassrls BYPASSRLS NOLOGIN;
+          ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+          GRANT ohc_bypassrls TO ohc_security_test;
+          GRANT CONNECT ON DATABASE ohc_security TO ohc_security_test;
+          SQL
+
+          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1
+              FROM pg_roles
+              WHERE rolname = current_user
+                AND current_user = 'ohc_security_test'
+                AND NOT rolsuper
+                AND NOT rolinherit
+                AND NOT rolbypassrls
+                AND pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER')
+            ) THEN
+              RAISE EXCEPTION 'PostgreSQL security lane is not using the NOBYPASSRLS application role';
+            END IF;
+            IF NOT (current_setting('row_security') = 'on') THEN
+              RAISE EXCEPTION 'row_security must be on';
+            END IF;
+          END
+          $$;
+          SELECT current_user, rolsuper, rolinherit, rolbypassrls,
+                 pg_has_role(current_user, 'ohc_bypassrls', 'MEMBER') AS bypass_member,
+                 current_setting('row_security')
+          FROM pg_roles
+          WHERE rolname = current_user;
+          SQL
+
+      - name: Run PostgreSQL tenant-isolation suite
+        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"
+
   ci-required:
     name: CI Required
     needs:
@@ -649,6 +774,7 @@ jobs:
       - bazel-test-e2e
       - kind-e2e
       - docker-e2e
+      - postgres-security
     if: ${{ always() }}
     runs-on: oci-runner
     timeout-minutes: 5
@@ -663,6 +789,7 @@ jobs:
           BAZEL_TEST_E2E_RESULT: ${{ needs.bazel-test-e2e.result }}
           KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}
           DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}
+          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}
         run: |
           set -euo pipefail
 
@@ -672,13 +799,14 @@ jobs:
           echo "bazel-test-e2e: ${BAZEL_TEST_E2E_RESULT}"
           echo "kind-e2e: ${KIND_E2E_RESULT}"
           echo "docker-e2e: ${DOCKER_E2E_RESULT}"
+          echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"
 
           require_success() {
             local name="$1"
             local result="$2"
             if [[ "$result" != "success" ]]; then
               echo "::error::${name} finished with result '${result}', expected 'success'."
-              exit 1
+              false
             fi
           }
 
@@ -687,7 +815,7 @@ jobs:
             local result="$2"
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               echo "::error::${name} finished with result '${result}', expected 'success' or 'skipped'."
-              exit 1
+              false
             fi
           }
 
@@ -704,9 +832,11 @@ jobs:
             allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
             allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
+            allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"
           else
             require_success "bazel-test" "$BAZEL_TEST_RESULT"
             require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"
             require_success "docker-e2e" "$DOCKER_E2E_RESULT"
+            require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"
           fi

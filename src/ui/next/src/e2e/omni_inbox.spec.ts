@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Omnichannel Inbox UI', () => {
   test('Owner sees sender id and known customer in inbox', async ({ page }) => {

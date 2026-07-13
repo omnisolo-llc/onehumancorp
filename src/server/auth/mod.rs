@@ -4,6 +4,7 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
+pub mod peer_identity;
 pub mod postgres_store;
 pub mod sqlite_store;
 pub mod user_repository;
@@ -766,11 +767,15 @@ impl Default for Store {
 }
 
 pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
-    let parts: Vec<&str> = spiffe_id.split('/').collect();
-    if parts.len() < 7 || parts[3] != "org" || parts[5] != "agent" {
-         return Err(Status::unauthenticated("Invalid SPIFFE ID format"));
+    grpc::validate_spiffe_id(spiffe_id)?;
+    let path = spiffe_id
+        .strip_prefix("spiffe://")
+        .ok_or_else(|| Status::unauthenticated("invalid SPIFFE scheme"))?;
+    let parts: Vec<&str> = path.split('/').collect();
+    if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+        return Err(Status::unauthenticated("invalid SPIFFE identity path"));
     }
-    Ok((parts[4].to_string(), parts[6].to_string()))
+    Ok((parts[2].to_string(), parts[4].to_string()))
 }
 
 pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Result<String, String> {
@@ -781,6 +786,7 @@ pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Res
         .map(|s| s.to_string())
 }
 
+#[derive(Clone, Debug)]
 pub struct AuthInfo {
     pub spiffe_id: String,
     pub org_id: String,
@@ -1100,3 +1106,5 @@ mod store_tests {
 
 #[cfg(test)]
 mod multitenancy_isolation;
+#[cfg(test)]
+mod postgres_test_support;

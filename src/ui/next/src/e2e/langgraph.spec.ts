@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('LangGraph State Machine', () => {
   test('should execute a task via LangGraph mechanics and trigger tool node routing from sidebar', async ({ page }) => {

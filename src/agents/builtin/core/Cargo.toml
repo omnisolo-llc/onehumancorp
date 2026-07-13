@@ -22,3 +22,6 @@ sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustl
 tokio = { workspace = true }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+temp-env = "0.3.6"
