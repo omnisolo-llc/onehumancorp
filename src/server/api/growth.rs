@@ -3152,7 +3152,7 @@ mod tests {
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             org_id: "test-org".to_string(),
             agent_id: "test-agent".to_string(),
         };
@@ -3206,7 +3206,7 @@ mod tests {
         // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
         // We just ensure we can invoke the handler without panic.
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            spiffe_id: format!("spiffe://onehumancorp.io/{}/agent1", "test-tenant-zero"),
             org_id: "test-tenant-zero".to_string(),
             agent_id: "owner@test.com".to_string(),
         };
@@ -3232,7 +3232,7 @@ mod tests {
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             agent_id: "agent-xyz".to_string(),
             org_id: "org-123".to_string(),
         };
@@ -3396,7 +3396,7 @@ mod tests {
 
         let test_tenant = format!("test-org-{}", uuid::Uuid::new_v4());
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", test_tenant),
+            spiffe_id: format!("spiffe://onehumancorp.io/{}/agent1", test_tenant),
             org_id: test_tenant.clone(),
             agent_id: "test-agent".to_string(),
         };
@@ -3440,7 +3440,7 @@ mod tests {
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            spiffe_id: format!("spiffe://onehumancorp.io/{}/agent1", "test-tenant-zero"),
             org_id: "test-tenant-zero".to_string(),
             agent_id: "owner@test.com".to_string(),
         };
@@ -3484,7 +3484,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             org_id: "test-org".to_string(),
             agent_id: "test-agent".to_string(),
         };
@@ -3520,7 +3520,7 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             org_id: tenant_id.to_string(),
             agent_id: "test-agent".to_string(),
         };
@@ -3580,7 +3580,7 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             org_id: tenant_id.to_string(),
             agent_id: "test-agent".to_string(),
         };
@@ -4074,7 +4074,7 @@ mod cloud_bridge_tests {
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/test".to_string(),
             agent_id: "agent-xyz".to_string(),
             org_id: "org-123".to_string(),
         };

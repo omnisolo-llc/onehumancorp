@@ -106,8 +106,8 @@ mod tests {
     #[test]
     fn test_validate_spiffe_id() {
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/agent-1").is_ok());
-        assert!(validate_spiffe_id("spiffe://ohc.local/org/org-2/agent/agent-2").is_ok());
-        assert!(validate_spiffe_id("spiffe://ohc.os/org/org-3/agent/agent-3").is_ok());
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-2/agent/agent-2").is_ok());
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-3/agent/agent-3").is_ok());
         assert!(validate_spiffe_id("spiffe://us-east.ohc.global/org/org-4/agent/agent-4").is_ok());
 
         assert!(validate_spiffe_id("invalid").is_err());
