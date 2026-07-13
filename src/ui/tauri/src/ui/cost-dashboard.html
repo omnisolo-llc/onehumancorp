@@ -299,7 +299,7 @@
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade</button>
             <button id="manage-billing-btn" class="btn-outline" style="margin-top: 12px;">Manage Billing</button>
             <button id="view-detailed-costs" class="btn-outline" style="margin-top: 12px;">View Detailed Costs</button>
-            <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
+
             <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
             <div id="plan-message" style="margin-top: 12px; font-weight: 500; font-size: 14px; color: #34C759; display: none;"></div>
             <div id="usage-warning-message" style="color: #FF3B30; font-size: 13px; margin-top: 8px; display: none;"></div>
@@ -308,6 +308,8 @@
           <!-- Cost Dashboard Widget -->
           <div class="ohc-growth-card glassmorphism" id="cost-dashboard-widget" style="display:none;">
             <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><button id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px; display: inline-block; cursor: pointer;" onclick="document.getElementById('cost-dashboard-widget').style.display='none'; document.getElementById('my-plan-widget').style.display='block';">Back to My Plan</button>
+            <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
+            <div id="cost-dashboard-message" style="display:none; margin-top: 12px; font-weight: 500; font-size: 14px;"></div>
 
 
 
@@ -494,22 +496,7 @@
 
             const planMessageDiv = document.getElementById('plan-message');
 
-            document.getElementById('download-invoice-btn').addEventListener('click', async () => {
-                const res = await fetch('/api/billing/download-invoice', { method: 'POST', headers });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.url) {
-                        window.open(data.url, '_blank');
-                    }
-                    planMessageDiv.innerText = 'Invoice download is ready for your current billing period.';
-                    planMessageDiv.style.color = '#34C759';
-                    planMessageDiv.style.display = 'block';
-                } else {
-                    planMessageDiv.innerText = 'Failed to download invoice.';
-                    planMessageDiv.style.color = '#FF3B30';
-                    planMessageDiv.style.display = 'block';
-                }
-            });
+
 
             document.getElementById('manage-billing-btn').addEventListener('click', async () => {
                 try {
@@ -1738,6 +1725,46 @@
         const backToMyPlanBtn = document.getElementById('back-to-my-plan');
         const myPlanWidget = document.getElementById('my-plan-widget');
         const costDashboardWidget = document.getElementById('cost-dashboard-widget');
+        const downloadInvoiceBtn = document.getElementById('download-invoice-btn');
+        if (downloadInvoiceBtn) {
+            downloadInvoiceBtn.addEventListener('click', async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const reqHeaders = {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    };
+                    const res = await fetch('/api/billing/download-invoice', { method: 'POST', headers: reqHeaders });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.url) {
+                            window.open(data.url, '_blank');
+                        }
+                        const messageEl = document.getElementById('cost-dashboard-message');
+                        if (messageEl) {
+                            messageEl.innerText = 'Invoice download is ready for your current billing period.';
+                            messageEl.style.color = '#34C759';
+                            messageEl.style.display = 'block';
+                        }
+                    } else {
+                        const messageEl = document.getElementById('cost-dashboard-message');
+                        if (messageEl) {
+                            messageEl.innerText = 'Failed to download invoice.';
+                            messageEl.style.color = '#FF3B30';
+                            messageEl.style.display = 'block';
+                        }
+                    }
+                } catch(e) {
+                    console.error(e);
+                    const messageEl = document.getElementById('cost-dashboard-message');
+                    if (messageEl) {
+                        messageEl.innerText = 'Failed to download invoice.';
+                        messageEl.style.color = '#FF3B30';
+                        messageEl.style.display = 'block';
+                    }
+                }
+            });
+        }
 
         if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
             viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='cost-dashboard.html?view=cost-dashboard'; });
