@@ -14,6 +14,9 @@ report() {
 
 while IFS= read -r -d '' path; do
   case "$path" in
+    .ohc_jwt_secret|*/.ohc_jwt_secret)
+      report "forbidden runtime secret artifact is tracked: $path"
+      ;;
     .empty_commit_trigger*|*/.empty_commit_trigger*|get_business_context_code|get_business_context_code.rs|*/get_business_context_code|*/get_business_context_code.rs|bazelisk-linux-amd64|*/bazelisk-linux-amd64)
       report "forbidden generated artifact is tracked: $path"
       ;;
@@ -35,7 +38,7 @@ while IFS= read -r -d '' path; do
   if [ -f "$path" ]; then
     if git diff --numstat --no-index /dev/null "$path" 2>/dev/null | grep -q "^-"; then
       case "$path" in
-        *.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.woff|*.woff2|*.ttf|src/server/auth/.ohc_jwt_secret)
+        *.png|*.jpg|*.jpeg|*.gif|*.ico|*.icns|*.woff|*.woff2|*.ttf)
           # Allowed binary files
           ;;
         *)
