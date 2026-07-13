@@ -14,13 +14,32 @@ export default function ViralGiveGetWidgetPage() {
   const [copied, setCopied] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [boxesActive, setBoxesActive] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       setTenantId(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
+
+  const handleToggleBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+      e.preventDefault();
+      setShowSoftPaywall(true);
+      return;
+    }
+    setRemoveBranding(e.target.checked);
+  };
+
+  const claimTrialExtension = () => {
+    const text = `I'm capturing more leads with my OHC Give-Get widget! Get 1 month free when you join: ${window.location.origin}/onboarding?ref=${tenantId}\n\n⚡ Powered by OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    setShowSoftPaywall(false);
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -132,6 +151,23 @@ export default function ViralGiveGetWidgetPage() {
             </div>
           </div>
 
+          {!removeBranding && (
+            <div className="text-center mb-6" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af', textDecoration: 'none', fontWeight: 'bold' }}>⚡ Powered by OHC</a>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 mb-8">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Remove "Powered by OHC" branding</p>
+              <p className="text-xs text-gray-500">Requires Pro subscription</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={removeBranding} onChange={handleToggleBranding} />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0066FF]"></div>
+            </label>
+          </div>
+
           <button
             id="generate-btn"
             onClick={handleGenerate}
@@ -167,6 +203,47 @@ export default function ViralGiveGetWidgetPage() {
 
         </div>
       </main>
+
+      {/* Soft Paywall Modal */}
+      {showSoftPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center bg-white">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="text-5xl mb-4">✨</div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Removing OHC branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
+            </p>
+
+            <button
+              onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+            >
+              Upgrade to Pro
+            </button>
+
+            <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+
+            <button
+              onClick={claimTrialExtension}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
+            >
+              Share on X to get 7 Days Free
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

@@ -65,4 +65,58 @@ test.describe('Viral Give-Get Widget', () => {
         const shareLink = page.locator('#share-link');
         await expect(shareLink).toHaveValue(/\/give-get\/join\?ref=.+/);
     });
+
+    test('should show soft paywall when attempting to remove branding without pro', async ({ page, adminUser, loginAs }) => {
+        await loginAs(page, adminUser);
+        await page.goto('/dashboard');
+        await page.evaluate(() => {
+            localStorage.setItem('tenant', 'e2e-test-store');
+            localStorage.setItem('has_pro', 'false');
+        });
+        await page.reload();
+
+        const link = page.locator('a[id="give-get-widget-btn"]');
+        await expect(link).toBeVisible();
+        await link.click();
+
+        const removeBrandingCheckbox = page.locator('input[type="checkbox"]');
+        await removeBrandingCheckbox.check();
+
+        // Soft paywall should appear
+        const paywallModal = page.locator('h2', { hasText: 'Upgrade to Pro' });
+        await expect(paywallModal).toBeVisible();
+    });
+
+    test('should hide branding when pro is enabled and toggle is clicked', async ({ page, adminUser, loginAs }) => {
+        await loginAs(page, adminUser);
+        await page.goto('/dashboard');
+        await page.evaluate(() => {
+            localStorage.setItem('tenant', 'e2e-test-store');
+            localStorage.setItem('has_pro', 'true');
+        });
+        await page.reload();
+
+        const link = page.locator('a[id="give-get-widget-btn"]');
+        await expect(link).toBeVisible();
+        await link.click();
+
+        const removeBrandingCheckbox = page.locator('input[type="checkbox"]');
+        await removeBrandingCheckbox.check();
+
+        // Soft paywall should not appear
+        const paywallModal = page.locator('h2', { hasText: 'Upgrade to Pro' });
+        await expect(paywallModal).not.toBeVisible();
+
+        const generateBtn = page.locator('#generate-btn');
+        await expect(generateBtn).toBeVisible();
+        await generateBtn.click();
+
+        // Wait for the result area to show
+        const resultArea = page.locator('#result-area');
+        await expect(resultArea).toBeVisible({ timeout: 5000 });
+
+        // The generated link should NOT include the branding parameter as true
+        const shareLink = page.locator('#share-link');
+        await expect(shareLink).toHaveValue(/branding=false/);
+    });
 });

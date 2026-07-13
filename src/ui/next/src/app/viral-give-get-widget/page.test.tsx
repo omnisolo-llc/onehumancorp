@@ -106,4 +106,19 @@ describe('ViralGiveGetWidgetPage', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
+
+  it('renders Powered by OHC branding by default', () => {
+    render(<ViralGiveGetWidgetPage />);
+    const elements = screen.getAllByText(/Powered by OHC/i);
+    expect(elements.length).toBeGreaterThan(0);
+  });
+
+  it('shows soft paywall when trying to remove branding without pro', () => {
+    render(<ViralGiveGetWidgetPage />);
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+
+    const elements = screen.getAllByText('Upgrade to Pro');
+    expect(elements.length).toBeGreaterThan(0);
+  });
 });
