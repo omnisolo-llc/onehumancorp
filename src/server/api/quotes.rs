@@ -619,6 +619,64 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch quote for approve: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let update_res = sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1")
+        .bind(quote_id)
+        .execute(&pool)
+        .await;
+
+    if let Err(e) = update_res {
+        tracing::error!("Failed to accept quote: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+    }
+
+    let total_amount = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    let mut payment_link = String::new();
+    match stripe_client.create_checkout_session(
+        &format!("Deposit for Quote #{}", quote.id),
+        &quote.customer_id.to_string(),
+        total_amount,
+        None,
+        None
+    ).await {
+        Ok(url) => {
+            payment_link = url.clone();
+
+            // update quote with stripe link
+            let _ = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2")
+                .bind(&payment_link)
+                .bind(quote_id)
+                .execute(&pool)
+                .await;
+        },
+        Err(e) => {
+            tracing::error!("Failed to create Stripe payment link for quote: {}", e);
+        }
+    }
+
+    // Return the updated quote to the client
+    let mut updated_quote = quote.clone();
+    updated_quote.status = "ACCEPTED".to_string();
+    updated_quote.stripe_payment_link = Some(payment_link.clone());
+
+    (StatusCode::OK, Json(updated_quote)).into_response()
+};
+
     let quote = match sqlx::query_as::<_, Quote>(
         "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
     )
