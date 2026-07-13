@@ -2309,11 +2309,14 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     CREATE TABLE IF NOT EXISTS pricing_rules (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
+                        target_id TEXT NOT NULL,
                         name TEXT NOT NULL,
                         base_price_cents INTEGER NOT NULL,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
                         rules_json TEXT NOT NULL DEFAULT '[]',
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (tenant_id, target_id)
                     );
 
                     CREATE TABLE IF NOT EXISTS project_tasks (

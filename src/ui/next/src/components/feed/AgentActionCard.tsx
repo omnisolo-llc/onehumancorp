@@ -148,6 +148,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "incident_resolution" ||
           (approval.proposed_action || approval.context_payload)
+            ?.type === "dynamic_pricing_recommendation" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.type === "yield_management_recommendation" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_reengagement" ||
@@ -1269,6 +1273,43 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </>
             ) : (approval.proposed_action || approval.context_payload)
+                ?.type === "dynamic_pricing_recommendation" || (approval.proposed_action || approval.context_payload)
+                ?.type === "yield_management_recommendation" ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Action:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    Apply Dynamic Rule
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Rule Type:
+                  </span>
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                    {(approval.proposed_action || approval.context_payload)
+                      .rule_config?.name || "Dynamic Rule"}
+                  </span>
+                </div>
+                {((approval.proposed_action || approval.context_payload)?.rule_config?.config?.adjustment_percent) && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Adjustment:
+                    </span>
+                    <span className={`font-semibold ${(approval.proposed_action || approval.context_payload).rule_config.config.adjustment_percent < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {(approval.proposed_action || approval.context_payload).rule_config.config.adjustment_percent > 0 ? '+' : ''}{(approval.proposed_action || approval.context_payload).rule_config.config.adjustment_percent}%
+                    </span>
+                  </div>
+                )}
+                {((approval.proposed_action || approval.context_payload)?.recommendation) && (
+                  <div className="text-sm mt-1 text-gray-700 dark:text-gray-300">
+                    {(approval.proposed_action || approval.context_payload).recommendation}
+                  </div>
+                )}
+              </div>
+            ) : (approval.proposed_action || approval.context_payload)
                 ?.feature_type === "incident_resolution" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -1542,6 +1583,49 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <span className="animate-pulse">Loading...</span>
               ) : (
                 "Dismiss"
+              )}
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.type === "dynamic_pricing_recommendation" || (approval.proposed_action || approval.context_payload)
+            ?.type === "yield_management_recommendation" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Approve & Apply Rule"
+              data-testid="approve-dynamic-pricing"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Apply"
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(approval.id);
+                setEditContent(
+                  JSON.stringify((approval.proposed_action || approval.context_payload)?.rule_config || {}, null, 2)
+                );
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Adjust Details"
+              data-testid="adjust-dynamic-pricing"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Adjust Details"
               )}
             </button>
           </div>

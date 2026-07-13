@@ -55,4 +55,40 @@ describe('AgentActionCard', () => {
     expect(screen.getByTestId('save-proposal')).toBeInTheDocument();
     expect(screen.getByTestId('cancel-edit-proposal')).toBeInTheDocument();
   });
+
+  it('renders dynamic pricing recommendation layout', () => {
+    const dynamicPricingApproval = {
+      ...defaultApproval,
+      proposed_action: {
+        type: 'dynamic_pricing_recommendation',
+        rule_config: {
+          name: 'Clearance: Summer Hats'
+        }
+      }
+    };
+    render(<AgentActionCard approval={dynamicPricingApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
+
+    expect(screen.getByText('Apply Dynamic Rule')).toBeInTheDocument();
+    expect(screen.getByText('Clearance: Summer Hats')).toBeInTheDocument();
+    expect(screen.getByTestId('approve-dynamic-pricing')).toBeInTheDocument();
+    expect(screen.getByTestId('adjust-dynamic-pricing')).toBeInTheDocument();
+  });
+
+  it('renders yield management recommendation layout', () => {
+    const yieldManagementApproval = {
+      ...defaultApproval,
+      proposed_action: {
+        type: 'yield_management_recommendation',
+        rule_config: {
+          name: 'Peak Surge: Guitar Lesson'
+        }
+      }
+    };
+    render(<AgentActionCard approval={yieldManagementApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
+
+    expect(screen.getByText('Apply Dynamic Rule')).toBeInTheDocument();
+    expect(screen.getByText('Peak Surge: Guitar Lesson')).toBeInTheDocument();
+    expect(screen.getByTestId('approve-dynamic-pricing')).toBeInTheDocument();
+    expect(screen.getByTestId('adjust-dynamic-pricing')).toBeInTheDocument();
+  });
 });

@@ -126,3 +126,71 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(marketingCard).not.toBeVisible();
   });
 });
+
+  test("6. Tapping Approve & Apply on Dynamic Pricing recommendation dismisses the card", async ({ page, request }) => {
+    await request.post("/api/e2e/setup", {
+      data: {
+        query: `
+          DELETE FROM agent_feed_items WHERE id = 'e2e-feed-test-4';
+          INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+          VALUES
+            ('e2e-feed-test-4', 'e2e-tenant', 'Pricing Agent', '{"type": "pricing_analysis"}'::jsonb, '{"type": "dynamic_pricing_recommendation", "target_id": "test-prod-1", "recommendation": "Clearance discount", "action": "create_rule", "rule_config": {"name": "Clearance: Test"}}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        `
+      }
+    });
+
+    await performLogin(page);
+
+    await page.goto("/dashboard");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    const pricingCard = page.locator("text=Apply Dynamic Rule").first();
+    await expect(pricingCard).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("text=Clearance: Test").first()).toBeVisible();
+
+    const parent = pricingCard.locator('..').locator('..');
+    const approveButton = parent.locator('button[data-testid="approve-dynamic-pricing"]').first();
+    await expect(approveButton).toBeVisible({ timeout: 15000 });
+    await approveButton.click();
+
+    await expect(pricingCard).not.toBeVisible({ timeout: 15000 });
+  });
+
+  test("7. Tapping Adjust Details on Dynamic Pricing recommendation shows the edit textarea", async ({ page, request }) => {
+    await request.post("/api/e2e/setup", {
+      data: {
+        query: `
+          DELETE FROM agent_feed_items WHERE id = 'e2e-feed-test-4';
+          INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+          VALUES
+            ('e2e-feed-test-4', 'e2e-tenant', 'Pricing Agent', '{"type": "pricing_analysis"}'::jsonb, '{"type": "dynamic_pricing_recommendation", "target_id": "test-prod-1", "recommendation": "Clearance discount", "action": "create_rule", "rule_config": {"name": "Clearance: Test"}}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        `
+      }
+    });
+
+    await performLogin(page);
+
+    await page.goto("/dashboard");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    const pricingCard = page.locator("text=Apply Dynamic Rule").first();
+    await expect(pricingCard).toBeVisible({ timeout: 15000 });
+
+    const parent = pricingCard.locator('..').locator('..');
+    const adjustButton = parent.locator('button[data-testid="adjust-dynamic-pricing"]').first();
+    await expect(adjustButton).toBeVisible({ timeout: 15000 });
+    await adjustButton.click();
+
+    // Verify textarea is shown
+    await expect(parent.locator('textarea')).toBeVisible({ timeout: 15000 });
+
+    // Check that we can save the edited details
+    const saveButton = parent.locator('button[data-testid="save-proposal"]').first();
+    await expect(saveButton).toBeVisible();
+    await saveButton.click();
+
+    // Card should disappear after saving
+    await expect(pricingCard).not.toBeVisible({ timeout: 15000 });
+  });
