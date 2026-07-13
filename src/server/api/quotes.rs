@@ -669,30 +669,11 @@ async fn approve_quote(
         }
     }
 
-    // Return the updated quote to the client
     let mut updated_quote = quote.clone();
     updated_quote.status = "ACCEPTED".to_string();
     updated_quote.stripe_payment_link = Some(payment_link.clone());
 
-    (StatusCode::OK, Json(updated_quote)).into_response()
-};
-
-    let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
-    )
-    .bind(quote_id)
-    .fetch_optional(&pool)
-    .await
-    {
-        Ok(Some(q)) => q,
-        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            tracing::error!("Failed to approve quote: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
+    (StatusCode::OK, Json(serde_json::json!({"quote": updated_quote}))).into_response()
 }
 
 // Temporary marker to slice off old approve_quote
