@@ -1096,7 +1096,7 @@ pub async fn calcom_webhook_handler(
 
             // In a real app, create calendar events in the OHC dashboard
             // and auto-generate meeting links (e.g., Zoom).
-            tracing::info!("Created booking: {}", booking_uid);
+            tracing::info!("Created booking: {}", booking_uid); // pii-safe
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()

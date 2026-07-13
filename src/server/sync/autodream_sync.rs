@@ -136,8 +136,8 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         if total_synced > 0 && ::server_config::is_telemetry_enabled() {
             let _ = sqlx::query(
                 r#"
-                INSERT INTO telemetry_buffer (metric_name, metric_type, metric_value, labels)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, sync_status)
+                VALUES ($1, $2, $3, $4, 'pending')
                 "#,
             )
             .bind("ohc_autodream_sync_completed_total")
@@ -151,8 +151,8 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         if total_failed > 0 && ::server_config::is_telemetry_enabled() {
             let _ = sqlx::query(
                 r#"
-                INSERT INTO telemetry_buffer (metric_name, metric_type, metric_value, labels)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, sync_status)
+                VALUES ($1, $2, $3, $4, 'pending')
                 "#,
             )
             .bind("ohc_autodream_sync_failed_total")
