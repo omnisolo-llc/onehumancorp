@@ -4,12 +4,14 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_auth",
+    compile_data = ["//src/server/migrations"],
     srcs = [
         "grpc.rs",
         "mod.rs",
         "orchestration.rs",
         "peer_identity.rs",
         "postgres_store.rs",
+        "postgres_test_support.rs",
         "sqlite_store.rs",
         "user_repository.rs",
         "multitenancy_isolation.rs",
