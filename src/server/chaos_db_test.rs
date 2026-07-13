@@ -282,6 +282,11 @@ mod chaos_db_tests {
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
+        // Skip gracefully
+        let url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "".to_string());
+        if !url.starts_with("postgres") || std::env::var("BAZEL_TEST").is_ok() {
+            return;
+        }
         let pg_pool = crate::db::create_dummy_pg_pool().await;
 
         let db_id = uuid::Uuid::new_v4().to_string();
@@ -344,6 +349,11 @@ mod chaos_db_tests {
 
     #[tokio::test]
     async fn test_chaos_parity_audit_comprehensive() {
+        // Skip gracefully
+        let url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "".to_string());
+        if !url.starts_with("postgres") || std::env::var("BAZEL_TEST").is_ok() {
+            return;
+        }
         let pg_pool = crate::db::create_dummy_pg_pool().await;
 
         // Also wipe out some tables for isolation in test

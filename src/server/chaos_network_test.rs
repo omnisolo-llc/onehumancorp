@@ -5,7 +5,7 @@ mod chaos_network_tests {
     use tokio::net::TcpListener;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_network_packet_drops_with_retry() {
         // Start a mock local echo server that drops some connections
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -91,6 +91,7 @@ mod chaos_network_tests {
         // Now test explicitly simulating the 60 second ML-Resilience fallback timeout
         let res_timeout: Result<(), String> = db.execute_with_retry("network_timeout_test", || async {
             // Sleep longer than the 60s timeout
+            // tokio::time::pause(); // removed because start_paused = true is already freezing time
             tokio::time::advance(std::time::Duration::from_secs(65)).await;
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
             Err("should not get here".to_string())
