@@ -292,8 +292,28 @@ def validate_yaml(path: Path) -> None:
         ruby = shutil.which("ruby")
         if ruby is None:
             raise ContractError("no real YAML parser is available (need PyYAML or Ruby Psych)")
+        ruby_program = r'''
+require "psych"
+root = Psych.parse_file(ARGV.fetch(0))
+walk = nil
+walk = lambda do |node|
+  case node
+  when Psych::Nodes::Mapping
+    seen = {}
+    node.children.each_slice(2) do |key, value|
+      abort "non-scalar YAML mapping key is forbidden" unless key.is_a?(Psych::Nodes::Scalar)
+      abort "duplicate YAML mapping key: #{key.value}" if seen.key?(key.value)
+      seen[key.value] = true
+      walk.call(value)
+    end
+  when Psych::Nodes::Sequence, Psych::Nodes::Document, Psych::Nodes::Stream
+    node.children.each { |child| walk.call(child) }
+  end
+end
+walk.call(root)
+'''
         result = subprocess.run(
-            [ruby, "-e", 'require "psych"; Psych.parse_file(ARGV.fetch(0))', str(path)],
+            [ruby, "-e", ruby_program, str(path)],
             capture_output=True,
             check=False,
             text=True,
@@ -302,8 +322,38 @@ def validate_yaml(path: Path) -> None:
             diagnostic = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "parse failed"
             raise ContractError(f"workflow is not valid YAML: {diagnostic}")
         return
+
+    class UniqueKeyLoader(yaml.SafeLoader):
+        pass
+
+    def construct_unique_mapping(loader, node, deep=False):
+        seen = set()
+        for key_node, _value_node in node.value:
+            key = loader.construct_object(key_node, deep=False)
+            try:
+                duplicate = key in seen
+            except TypeError as error:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    "non-scalar YAML mapping key is forbidden",
+                    key_node.start_mark,
+                ) from error
+            if duplicate:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping",
+                    node.start_mark,
+                    f"duplicate YAML mapping key: {key!r}",
+                    key_node.start_mark,
+                )
+            seen.add(key)
+        return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
+
+    UniqueKeyLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_unique_mapping
+    )
     try:
-        yaml.safe_load(path.read_text(encoding="utf-8"))
+        yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
     except yaml.YAMLError as error:
         raise ContractError(f"workflow is not valid YAML: {error}") from error
 

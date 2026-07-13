@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import subprocess
 import tempfile
+from unittest import mock
 
 from check_postgres_security_ci import ContractError, check_workflow, validate_yaml
 
@@ -13,17 +14,21 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 
 
-def expect_rejected(workflow: str, old: str, new: str, label: str) -> None:
-    if old not in workflow:
-        raise AssertionError(f"test fixture cannot mutate {label}: marker missing")
+def expect_text_rejected(candidate_text: str, label: str) -> None:
     with tempfile.TemporaryDirectory() as directory:
         candidate = Path(directory) / "ci.yml"
-        candidate.write_text(workflow.replace(old, new), encoding="utf-8")
+        candidate.write_text(candidate_text, encoding="utf-8")
         try:
             check_workflow(candidate)
         except ContractError:
             return
     raise AssertionError(f"contract accepted weakened {label}")
+
+
+def expect_rejected(workflow: str, old: str, new: str, label: str) -> None:
+    if old not in workflow:
+        raise AssertionError(f"test fixture cannot mutate {label}: marker missing")
+    expect_text_rejected(workflow.replace(old, new), label)
 
 
 def assert_bash_env_can_preempt_a_step() -> None:
@@ -56,9 +61,44 @@ def assert_real_yaml_parser_rejects_unquoted_colon_space() -> None:
     raise AssertionError("real YAML parser accepted an unquoted colon-space scalar")
 
 
+def assert_parser_absence_fails_closed() -> None:
+    real_import = __import__
+
+    def import_without_yaml(name, *args, **kwargs):
+        if name == "yaml":
+            raise ImportError("simulated missing PyYAML")
+        return real_import(name, *args, **kwargs)
+
+    with (
+        mock.patch("builtins.__import__", side_effect=import_without_yaml),
+        mock.patch("check_postgres_security_ci.shutil.which", return_value=None),
+    ):
+        try:
+            validate_yaml(WORKFLOW)
+        except ContractError:
+            return
+    raise AssertionError("YAML validation did not fail closed without either parser")
+
+
+def assert_real_yaml_parser_rejects_nested_duplicates() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        duplicate = Path(directory) / "duplicate.yml"
+        duplicate.write_text(
+            "root:\n  nested:\n    security: enabled\n    security: disabled\n",
+            encoding="utf-8",
+        )
+        try:
+            validate_yaml(duplicate)
+        except ContractError:
+            return
+    raise AssertionError("real YAML parser accepted a recursively duplicated key")
+
+
 def main() -> None:
     assert_bash_env_can_preempt_a_step()
     assert_real_yaml_parser_rejects_unquoted_colon_space()
+    assert_parser_absence_fails_closed()
+    assert_real_yaml_parser_rejects_nested_duplicates()
     check_workflow(WORKFLOW)
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
@@ -382,6 +422,22 @@ def main() -> None:
     )
     for old, new, label in mutations:
         expect_rejected(workflow, old, new, label)
+    duplicate_documents = (
+        (
+            '\nenv:\n  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  BASH_ENV: /tmp/skip-security.sh\n',
+            "duplicate top-level env",
+        ),
+        (
+            "\ndefaults:\n  run:\n    shell: bash {0} || true\n",
+            "duplicate top-level defaults",
+        ),
+        (
+            "\njobs:\n  shadow-security:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n",
+            "duplicate top-level jobs",
+        ),
+    )
+    for suffix, label in duplicate_documents:
+        expect_text_rejected(workflow + suffix, label)
     print("postgres security CI contract behavior: ok")
 
 
