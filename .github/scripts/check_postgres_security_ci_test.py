@@ -65,6 +65,66 @@ def main() -> None:
             '            if false; then\n              require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"\n            fi',
             "unreachable required-result enforcement",
         ),
+        (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result direct early success",
+        ),
+        (
+            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n          if true; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "required-result guarded early success",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          exit 0\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes direct early success",
+        ),
+        (
+            "          .github/scripts/check_repo_hygiene_test.sh",
+            "          if true; then return 0; fi\n          .github/scripts/check_repo_hygiene_test.sh",
+            "check-changes guarded early return",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        if: ${{ false }}\n        run:",
+            "disabled suite step",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        continue-on-error: true\n        run:",
+            "ignored suite failure",
+        ),
+        (
+            "      - name: Check required CI results\n        env:",
+            "      - name: Check required CI results\n        if: ${{ false }}\n        env:",
+            "disabled required-result step",
+        ),
+        (
+            "      - name: Provision and verify non-superuser application role\n        run:",
+            "      - name: Provision and verify non-superuser application role\n        continue-on-error: true\n        run:",
+            "ignored role-proof failure",
+        ),
+        (
+            "      - name: Check tracked artifacts\n        run:",
+            "      - name: Check tracked artifacts\n        if: ${{ false }}\n        run:",
+            "disabled always-run contract step",
+        ),
+        (
+            "  postgres-security:\n    name: PostgreSQL tenant isolation",
+            "  postgres-security:\n    name: PostgreSQL tenant isolation\n    continue-on-error: true",
+            "ignored postgres-security job failure",
+        ),
+        (
+            "  ci-required:\n    name: CI Required",
+            "  ci-required:\n    name: CI Required\n    continue-on-error: true",
+            "ignored ci-required job failure",
+        ),
+        (
+            "  check-changes:\n    name: Check what files changed",
+            "  check-changes:\n    name: Check what files changed\n    continue-on-error: true",
+            "ignored check-changes job failure",
+        ),
     )
     for old, new, label in mutations:
         expect_rejected(workflow, old, new, label)
