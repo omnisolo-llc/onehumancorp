@@ -17,6 +17,8 @@ body {
 .app-shell {
   min-height: 100vh;
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(244, 246, 248, 0.92)),
     #f4f6f8;
@@ -144,6 +146,7 @@ body {
 .app-main {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
 }
 
 .app-topbar {
@@ -153,21 +156,31 @@ body {
   justify-content: space-between;
   gap: 20px;
   padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.65);
-
-  backdrop-filter: blur(30px) saturate(210%);
+  background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.4);
   position: sticky;
   top: 0;
   z-index: 40;
 }
 
-@media (prefers-color-scheme: dark) {
-  .app-topbar {
-    background: rgba(22, 22, 26, 0.7);
+.app-topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  pointer-events: none;
+}
 
-    backdrop-filter: blur(30px) saturate(210%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+@media (prefers-color-scheme: dark) {
+  .app-topbar::before {
+    background: rgba(22, 22, 26, 0.7);
+  }
+
+  .app-topbar {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -200,7 +213,14 @@ body {
 }
 
 .app-page {
+  min-width: 0;
+  max-width: 100%;
   padding: 20px 24px 28px;
+}
+
+.app-page > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-grid {
@@ -544,6 +564,7 @@ body {
   }
 
   .app-topbar {
+    height: auto;
     position: sticky;
     align-items: flex-start;
     flex-direction: column;
@@ -553,8 +574,40 @@ body {
 
   .app-topbar-right,
   .app-status-strip {
+    min-width: 0;
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .app-page {
+    padding: 14px;
+    overflow-x: clip;
+  }
+
+  /* Guard-owned phone canvases must fit the shell content box at narrow widths. */
+  .app-shell .app-page [class~="w-[300px]"] {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .app-shell .app-page [class~="w-[320px]"] {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .app-shell .app-page [class~="w-[340px]"] {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .app-shell .app-page [class~="w-[375px]"] {
+    width: 100%;
+    max-width: 375px;
+  }
+
+  .app-shell .app-page [class~="min-w-[375px]"] {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .app-grid.metrics,
@@ -718,10 +771,17 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.app-shell .app-card.rounded-full,
+.app-shell .app-panel.rounded-full,
+.app-shell .glassmorphism.rounded-full,
+.app-shell .glass-card.rounded-full {
+  border-radius: 9999px !important;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -1,68 +1,17 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 
-use std::sync::Mutex;
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
 use super::LlmClient;
-
-
-struct CircuitBreaker {
-    failures: Mutex<usize>,
-    last_failure: Mutex<Option<Instant>>,
-    max_failures: usize,
-    reset_timeout: Duration,
-}
-
-impl CircuitBreaker {
-    fn new(max_failures: usize, reset_timeout: Duration) -> Self {
-        CircuitBreaker {
-            failures: Mutex::new(0),
-            last_failure: Mutex::new(None),
-            max_failures,
-            reset_timeout,
-        }
-    }
-
-    fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
-        if *failures >= self.max_failures {
-            let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    return true;
-                }
-                return false;
-            }
-        }
-        true
-    }
-
-    fn record_success(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures = 0;
-    }
-
-    fn record_failure(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures += 1;
-        let mut last_failure = self.last_failure.lock().unwrap();
-        *last_failure = Some(Instant::now());
-    }
-}
-
-static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
-
-fn get_circuit_breaker() -> &'static CircuitBreaker {
-    GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
-}
+use super::circuit_breaker::CircuitBreaker;
+use std::time::Duration;
 
 pub struct OllamaClient {
     endpoint: String,
     client: Client,
+    circuit_breaker: CircuitBreaker,
 }
 
 impl OllamaClient {
@@ -79,6 +28,7 @@ impl OllamaClient {
                 .timeout(std::time::Duration::from_secs(300))
                 .build()
                 .unwrap(),
+            circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
         }
     }
 }
@@ -122,12 +72,11 @@ struct OllamaResponseMessage {
 
 #[async_trait]
 impl LlmClient for OllamaClient {
-
     async fn chat(
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let cb = get_circuit_breaker();
+        let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
@@ -172,20 +121,25 @@ impl LlmClient for OllamaClient {
         let resp = match resp_result {
             Ok(r) => r,
             Err(e) => {
-                cb.record_failure();
+                cb.record_transport_error(&e);
                 return Err(e.into());
             }
         };
 
-
         if !resp.status().is_success() {
-            cb.record_failure();
+            cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("ollama api error (status {}): {}", status, body).into());
         }
 
-        let result: OllamaResponse = resp.json().await?;
+        let result: OllamaResponse = match resp.json().await {
+            Ok(result) => result,
+            Err(error) => {
+                cb.record_non_failure();
+                return Err(error.into());
+            }
+        };
         cb.record_success();
 
         Ok(ChatResponse {
@@ -197,7 +151,7 @@ impl LlmClient for OllamaClient {
                 response_id: None,
                 previous_response_id: None,
             },
-                        usage: Usage {
+            usage: Usage {
                 input_tokens: result.prompt_eval_count,
                 output_tokens: result.eval_count,
                 cache_creation_input_tokens: 0,

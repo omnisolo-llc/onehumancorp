@@ -42,10 +42,10 @@ export default function AgentMarketplacePage() {
  }, [query]);
 
  return (
-   <div className="min-h-screen bg-[#f4f6f8] p-8 font-outfit flex flex-col items-center">
-     <div className="w-full max-w-6xl">
-       <header className="mb-8 flex justify-between items-end w-full">
-         <div>
+   <div className="min-h-screen w-full min-w-0 max-w-full bg-[#f4f6f8] p-8 font-outfit flex flex-col items-center">
+     <div className="w-full min-w-0 max-w-6xl">
+       <header className="mb-8 flex w-full min-w-0 flex-wrap items-end justify-between gap-4">
+         <div className="min-w-0">
            <h1 className="text-4xl font-bold text-[#18212f] mb-2">Agent Marketplace</h1>
            <p className="text-xl text-gray-600">
              Discover and install pre-built AI agents for your business. (AutoGPT Unique Harness Innovations)
@@ -53,7 +53,7 @@ export default function AgentMarketplacePage() {
          </div>
          <Link
            href="/agent-marketplace/publish"
-           className="px-6 py-2.5 bg-white text-[#18212f] font-semibold border border-gray-200 rounded-[12px] shadow-sm hover:bg-gray-50 transition-colors"
+           className="shrink-0 px-6 py-2.5 bg-white text-[#18212f] font-semibold border border-gray-200 rounded-[12px] shadow-sm hover:bg-gray-50 transition-colors"
          >
            Publish Agent
          </Link>

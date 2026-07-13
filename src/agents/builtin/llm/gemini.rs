@@ -1,69 +1,17 @@
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 use super::LlmClient;
-
-use std::sync::Mutex;
-use std::sync::OnceLock;
-use std::time::{Duration, Instant};
-
-struct CircuitBreaker {
-    failures: Mutex<usize>,
-    last_failure: Mutex<Option<Instant>>,
-    max_failures: usize,
-    reset_timeout: Duration,
-}
-
-impl CircuitBreaker {
-    fn new(max_failures: usize, reset_timeout: Duration) -> Self {
-        CircuitBreaker {
-            failures: Mutex::new(0),
-            last_failure: Mutex::new(None),
-            max_failures,
-            reset_timeout,
-        }
-    }
-
-    fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
-        if *failures >= self.max_failures {
-            let last_failure = self.last_failure.lock().unwrap();
-            if let Some(last) = *last_failure {
-                if last.elapsed() > self.reset_timeout {
-                    return true;
-                }
-                return false;
-            }
-        }
-        true
-    }
-
-    fn record_success(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures = 0;
-    }
-
-    fn record_failure(&self) {
-        let mut failures = self.failures.lock().unwrap();
-        *failures += 1;
-        let mut last_failure = self.last_failure.lock().unwrap();
-        *last_failure = Some(Instant::now());
-    }
-}
-
-static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
-
-fn get_circuit_breaker() -> &'static CircuitBreaker {
-    GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(60)))
-}
-
+use super::circuit_breaker::CircuitBreaker;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+use std::time::Duration;
 
 pub struct GeminiClient {
     api_key: String,
     base_url: String,
     client: Client,
+    circuit_breaker: CircuitBreaker,
 }
 
 impl GeminiClient {
@@ -75,6 +23,7 @@ impl GeminiClient {
                 .timeout(std::time::Duration::from_secs(60))
                 .build()
                 .unwrap(),
+            circuit_breaker: CircuitBreaker::new(3, Duration::from_secs(60)),
         }
     }
 }
@@ -145,7 +94,7 @@ impl LlmClient for GeminiClient {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let cb = get_circuit_breaker();
+        let cb = &self.circuit_breaker;
         if !cb.allow() {
             return Err("Circuit breaker is open: Too many consecutive LLM failures".into());
         }
@@ -194,16 +143,23 @@ impl LlmClient for GeminiClient {
             self.base_url, req.model, self.api_key
         );
 
-        let resp = self
+        let resp = match self
             .client
             .post(&url)
             .header("Content-Type", "application/json")
             .json(&payload)
             .send()
-            .await?;
+            .await
+        {
+            Ok(response) => response,
+            Err(error) => {
+                cb.record_transport_error(&error);
+                return Err(error.into());
+            }
+        };
 
         if !resp.status().is_success() {
-            cb.record_failure();
+            cb.record_http_status(resp.status());
             let status = resp.status().as_u16();
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("gemini api error (status {}): {}", status, body).into());
@@ -211,14 +167,18 @@ impl LlmClient for GeminiClient {
 
         let result = resp.json::<GeminiResponse>().await;
         if let Err(e) = result {
-            cb.record_failure();
+            cb.record_non_failure();
             return Err(format!("api error: failed to parse response: {:?}", e).into());
         }
         let result = result.unwrap();
-        cb.record_success();
 
-
-        let candidate = result.candidates.into_iter().next().ok_or("no candidates")?;
+        let candidate = match result.candidates.into_iter().next() {
+            Some(candidate) => candidate,
+            None => {
+                cb.record_non_failure();
+                return Err("no candidates".into());
+            }
+        };
         let finish_reason = candidate.finish_reason.unwrap_or_default();
 
         let text = candidate
@@ -229,9 +189,11 @@ impl LlmClient for GeminiClient {
             .collect::<Vec<String>>()
             .join("");
 
+        cb.record_success();
+
         let usage = result
             .usage_metadata
-                        .map(|u| Usage {
+            .map(|u| Usage {
                 input_tokens: u.prompt_token_count,
                 output_tokens: u.candidates_token_count,
                 cache_creation_input_tokens: 0,

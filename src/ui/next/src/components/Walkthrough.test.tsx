@@ -296,10 +296,8 @@ describe('Walkthrough Component', () => {
     const originalEnv = process.env.NEXT_PUBLIC_E2E;
     process.env.NEXT_PUBLIC_E2E = 'true';
 
-    const originalLocation = window.location;
-    // @ts-ignore
-    delete window.location;
-    window.location = { ...originalLocation, search: '?test_walkthrough=true' };
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, '', '?test_walkthrough=true');
 
     document.body.innerHTML = '<div id="step1">Target</div>';
 
@@ -314,7 +312,7 @@ describe('Walkthrough Component', () => {
     expect(screen.getByText('Target')).toBeInTheDocument();
 
     process.env.NEXT_PUBLIC_E2E = originalEnv;
-    window.location = originalLocation;
+    window.history.replaceState({}, '', originalUrl);
     document.body.innerHTML = '';
   });
 

@@ -442,7 +442,7 @@ Your response:",
         use sqlx::Row;
 
         let row = sqlx::query(
-            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+            "SELECT current_step, state_json, updated_at FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(tenant_id)
         .bind(user_id)
@@ -455,6 +455,11 @@ Your response:",
             let current_step: i32 = record.get("current_step");
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
+
+                // Add updated_at from DB
+                if let Ok(updated_at) = record.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") {
+                    obj.insert("updated_at".to_string(), serde_json::json!(updated_at.timestamp_millis()));
+                }
             }
             state
         } else {

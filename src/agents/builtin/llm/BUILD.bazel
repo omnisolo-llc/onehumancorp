@@ -6,6 +6,7 @@ rust_library(
     name = "llm",
     srcs = [
         "anthropic.rs",
+        "circuit_breaker.rs",
         "gemini.rs",
         "mod.rs",
         "ollama.rs",
@@ -18,7 +19,6 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/agents/builtin:core",
-        "//src/server/pricing:server_pricing",
         "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",

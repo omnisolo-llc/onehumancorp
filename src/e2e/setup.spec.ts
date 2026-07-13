@@ -117,6 +117,51 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
   });
+  test('should prioritize backend state if updated_at is newer', async ({ page }) => {
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const htmlContent = (() => {
+            try {
+                return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+            } catch(e) {
+                return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+            }
+        })();
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    // intercept tooltips
+    await page.route('**/api/tooltips', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    // Mock backend returning a newer state
+    await page.route('**/api/onboarding/draft', async route => {
+       await route.fulfill({ status: 200, body: JSON.stringify({
+           step: 4,
+           businessName: 'Backend Bakery',
+           categories: 'Home Baker',
+           updated_at: Date.now() + 10000 // Future timestamp
+       }) });
+    });
+
+    await page.goto('http://mock/setup.html');
+
+    // Skip to template step (mock localStorage with an older state)
+    await page.evaluate(() => {
+        localStorage.setItem('onboardingState', JSON.stringify({
+            step: 2,
+            businessName: 'Local Bakery',
+            categories: 'Home Baker',
+            updated_at: Date.now() - 10000 // Past timestamp
+        }));
+    });
+
+    await page.reload();
+
+    // Backend state should win
+    await expect(page.getByTestId('business-name')).toHaveValue('Backend Bakery');
+  });
+
   test('should auto-save progress and clear it on success', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
