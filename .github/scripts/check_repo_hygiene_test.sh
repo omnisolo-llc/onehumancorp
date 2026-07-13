@@ -121,13 +121,41 @@ assert_bazel_header_references_allowed() {
 }
 
 assert_optional_local_bazelrc_contract() {
+  local announce_pattern
+  announce_pattern='^[[:space:]]*(common|always|build|test|run)(:[^[:space:]]+)?[[:space:]]+--announce_rc([[:space:]]|$|=[[:space:]]*(true|1|yes)([[:space:]]|$))'
+
   grep -Fxq -- '/.bazelrc.local' "$repo_root/.gitignore" ||
     fail 'the optional local Bazel rc is not narrowly ignored'
   grep -Fxq -- 'try-import %workspace%/.bazelrc.local' "$repo_root/.bazelrc" ||
     fail 'the tracked Bazel rc does not try-import the optional local rc'
-  if grep -Eq -- '^[[:space:]]*(common|always|build|test|run)[[:space:]]+--announce_rc([[:space:]]|$)' "$repo_root/.bazelrc"; then
-    fail 'the tracked Bazel rc enables credential-bearing option announcements by default'
+  if grep -Eq -- "$announce_pattern" "$repo_root/.bazelrc"; then
+    fail 'the tracked Bazel rc enables credential-bearing option announcements'
   fi
+}
+
+assert_announce_rc_pattern_contract() {
+  local announce_pattern line
+  announce_pattern='^[[:space:]]*(common|always|build|test|run)(:[^[:space:]]+)?[[:space:]]+--announce_rc([[:space:]]|$|=[[:space:]]*(true|1|yes)([[:space:]]|$))'
+
+  for line in \
+    'build --announce_rc' \
+    'build:macos --announce_rc' \
+    'common:remote --announce_rc=true' \
+    'test:security --announce_rc = yes' \
+    'run:local --announce_rc=1'; do
+    printf '%s\n' "$line" | grep -Eq -- "$announce_pattern" ||
+      fail "announce_rc enablement pattern missed: $line"
+  done
+
+  for line in \
+    'build --noannounce_rc' \
+    'build:macos --announce_rc=false' \
+    'query:diagnostic --announce_rc' \
+    'build --announce_rc_backup'; do
+    if printf '%s\n' "$line" | grep -Eq -- "$announce_pattern"; then
+      fail "announce_rc enablement pattern rejected a near miss: $line"
+    fi
+  done
 }
 
 assert_forbidden 'root basename' '.ohc_jwt_secret'
@@ -139,6 +167,7 @@ assert_literal_bazel_header_forbidden 'remote header equals' '.bazelrc' 'remote_
 assert_literal_bazel_header_forbidden 'BES header quoted and spaced' 'config with spaces/build.bazelrc' 'bes_header' 'quoted-spaced'
 assert_literal_bazel_header_forbidden 'newline path diagnostic' $'config\nwith-control/build.bazelrc' 'remote_header' 'equals'
 assert_bazel_header_references_allowed
+assert_announce_rc_pattern_contract
 assert_optional_local_bazelrc_contract
 
 printf 'repo hygiene test: ok\n'
