@@ -4,9 +4,9 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Route to local file like setup.spec.ts
   const fs = require('fs');
   const path = require('path');
-  const tauriUiDir = process.env.RUNFILES_DIR
+  let tauriUiDir = process.env.RUNFILES_DIR
         ? path.join(process.env.RUNFILES_DIR, '_main', 'src', 'ui', 'tauri', 'src', 'ui')
-        : path.join(process.cwd(), '..', '..', 'src', 'ui', 'tauri', 'src', 'ui');
+        : path.join(process.cwd(), 'src', 'ui', 'tauri', 'src', 'ui');
   await page.route('**/setup.html', async route => {
       const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: htmlContent   });
