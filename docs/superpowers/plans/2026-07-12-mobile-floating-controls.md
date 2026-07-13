@@ -145,3 +145,36 @@ Move VoiceAssistant into AppShell topbar actions, remove RootLayout ownership, a
 - [ ] **Step 4: Verify GREEN and full gates**
 
 Run focused component/browser tests, full Vitest, TypeScript, build, expanded production Playwright, secured audit, visual inspection including scrolled/active states, and final Bazel. Amend UI-01 and the historical TypeScript statement using actual results.
+
+### Task 6: Review correction for voice lifetime and accessibility
+
+**Files:**
+- Modify: `src/ui/next/src/components/VoiceAssistant.test.tsx`
+- Modify: `src/ui/next/src/components/VoiceAssistant.tsx`
+- Modify: `docs/reports/production_agent_optimization_report.md` when final counts change
+
+- [ ] **Step 1: Write lifecycle RED tests**
+
+Use controllable `getUserMedia` promises and recorder instances. Assert that normal stop releases each track once; unmount during recording stops the active recorder and every track once, detaches callbacks, performs no fetch, and emits no post-unmount state warning; and a stream resolving after unmount has all tracks stopped without constructing or starting a recorder. Manually invoke retained recorder callbacks after unmount to prove they cannot send audio or update state.
+
+- [ ] **Step 2: Write accessibility RED tests**
+
+Assert Enter and Space independently start on non-repeating keydown and stop on keyup, repeated keydown does not request another stream, mouse hold remains start/stop, and `detail === 0` click toggles start/stop without a preceding keyboard sequence double-triggering. Assert dynamic `aria-pressed`/label values and visible `role="status"` live announcements, including assertive error output.
+
+- [ ] **Step 3: Run focused tests and confirm expected RED**
+
+Run: `pnpm exec vitest run src/components/VoiceAssistant.test.tsx`
+
+Expected: FAIL because the current component has no mounted/stream lifetime guard, keyboard or synthetic-click handlers, recording ARIA state, or live status semantics.
+
+- [ ] **Step 4: Implement idempotent media ownership**
+
+Add mounted, stream, recorder, recording, pending-intent/session, released-track, and timeout refs. Centralize exact-once track release. On unmount, invalidate work, detach callbacks, stop the recorder when active, release tracks, clear refs/timers, and never set state. After `getUserMedia`, validate the mounted session before constructing `MediaRecorder`. Guard `ondataavailable`, `onstop`, fetch continuations, event dispatch, timers, and failure state; log only fixed messages.
+
+- [ ] **Step 5: Implement accessible interaction semantics**
+
+Keep mouse/touch hold handlers. Add non-repeating Enter/Space keydown/keyup handlers with `preventDefault`, plus a keyboard-click suppression ref and a `detail === 0` assistive toggle. Expose `aria-pressed`, dynamic operational labels, and atomic live status semantics without changing shell-flow classes or collision markers.
+
+- [ ] **Step 6: Verify GREEN and code-dependent gates**
+
+Run focused VoiceAssistant tests, full Vitest, `pnpm exec tsc --noEmit`, `pnpm run build`, focused production collision/state Playwright, the 58-case scoped production suite, the secured 36-case visual audit, and `bazel test //src/ui/next:next_vitest --test_output=errors`. Record exact changed counts and require a clean worktree after commits.
