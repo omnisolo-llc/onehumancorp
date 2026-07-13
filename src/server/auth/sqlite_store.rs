@@ -152,6 +152,44 @@ impl UserRepository for SqliteUserRepository {
         })
     }
 
+    async fn get_by_login_identifier(
+        &self,
+        identifier: &str,
+        org_id: &str,
+    ) -> Result<Option<User>, String> {
+        validate_org_id!(org_id);
+        let rows = sqlx::query(
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at
+             FROM users
+             WHERE (username = $1 OR email = $1) AND tenant_id = $2 AND active = TRUE
+             LIMIT 2",
+        )
+        .bind(identifier)
+        .bind(org_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if rows.len() != 1 {
+            return Ok(None);
+        }
+        let row = &rows[0];
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or(serde_json::Value::Null);
+        let roles = serde_json::from_value(roles_json).unwrap_or_default();
+        Ok(Some(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("tenant_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        }))
+    }
+
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2";
@@ -296,6 +334,96 @@ mod tests {
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use sqlx::sqlite::SqlitePoolOptions;
     use chrono::Utc;
+
+    async fn login_lookup_repo() -> SqliteUserRepository {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE TABLE users (
+                id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT NOT NULL,
+                password_hash TEXT NOT NULL, roles TEXT NOT NULL, active BOOLEAN NOT NULL,
+                tenant_id TEXT NOT NULL, oidc_subject TEXT,
+                created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        for (id, username, email, active, tenant_id) in [
+            ("active", "alice", "alice@example.com", true, "tenant-a"),
+            (
+                "inactive",
+                "disabled",
+                "disabled@example.com",
+                false,
+                "tenant-a",
+            ),
+            ("other", "other", "other@example.com", true, "tenant-b"),
+        ] {
+            sqlx::query(
+                "INSERT INTO users
+                 (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+                 VALUES ($1, $2, $3, 'hash', '[]', $4, $5, $6, $6)",
+            )
+            .bind(id).bind(username).bind(email).bind(active).bind(tenant_id).bind(Utc::now())
+            .execute(&pool).await.unwrap();
+        }
+        SqliteUserRepository::new(pool)
+    }
+
+    #[tokio::test]
+    async fn login_identifier_lookup_is_active_and_tenant_scoped() {
+        let repo = login_lookup_repo().await;
+        assert_eq!(
+            repo.get_by_login_identifier("alice", "tenant-a")
+                .await
+                .unwrap()
+                .unwrap()
+                .id,
+            "active"
+        );
+        assert_eq!(
+            repo.get_by_login_identifier("alice@example.com", "tenant-a")
+                .await
+                .unwrap()
+                .unwrap()
+                .id,
+            "active"
+        );
+        assert!(
+            repo.get_by_login_identifier("disabled", "tenant-a")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            repo.get_by_login_identifier("other", "tenant-a")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            repo.get_by_login_identifier("missing", "tenant-a")
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        sqlx::query(
+            "INSERT INTO users
+             (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+             VALUES ('collision', 'alice@example.com', 'collision@example.com', 'hash', '[]', TRUE, 'tenant-a', $1, $1)",
+        ).bind(Utc::now()).execute(&repo.pool).await.unwrap();
+        assert!(
+            repo.get_by_login_identifier("alice@example.com", "tenant-a")
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
 
     #[tokio::test]
     async fn test_sqlite_create_user_organization_id_parity() {
