@@ -848,6 +848,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_operation_intents_parallel_execution() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let req = OperationIntentRequest {
+            intents: vec![
+                OperationIntent {
+                    id: "intent1".to_string(),
+                    action_type: "TEST_ACTION_1".to_string(),
+                    payload: serde_json::json!({"k": "v1"}),
+                    timestamp: None,
+                },
+                OperationIntent {
+                    id: "intent2".to_string(),
+                    action_type: "TEST_ACTION_2".to_string(),
+                    payload: serde_json::json!({"k": "v2"}),
+                    timestamp: None,
+                },
+                OperationIntent {
+                    id: "intent1".to_string(), // duplicate id, tests idempotency
+                    action_type: "TEST_ACTION_1".to_string(),
+                    payload: serde_json::json!({"k": "v1"}),
+                    timestamp: None,
+                }
+            ]
+        };
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://example.org/ns/default/sa/ohc-test/tenant/tenant_parallel_test".parse().unwrap());
+
+        let res = operation_intents_handler(axum::extract::State(pool.clone()), headers, axum::Json(req)).await;
+        let res = res.into_response();
+        assert_eq!(res.status(), axum::http::StatusCode::OK);
+
+        let body = axum::body::to_bytes(res.into_body(), 1024).await.unwrap();
+        let json: OperationIntentResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json.success, true);
+        assert_eq!(json.applied_count, 3); // 2 inserted, 1 idempotent (still returns applied = 1)
+        assert_eq!(json.conflict_count, 0);
+        assert_eq!(json.failed_count, 0);
+
+        // verify rows actually exist in db
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM operation_intents WHERE tenant_id = 'tenant_parallel_test'").fetch_one(&pool).await.unwrap();
+        assert_eq!(count.0, 2); // only two unique IDs inserted
+    }
+
+    #[tokio::test]
     async fn test_sync_events_conflict() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
@@ -1124,7 +1176,7 @@ pub struct OperationIntentRequest {
     pub intents: Vec<OperationIntent>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct OperationIntentResponse {
     pub success: bool,
     pub applied_count: i32,
