@@ -1,6 +1,7 @@
 use super::Tool;
-use ohc_builtin_agent_core::types::ToolError;
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
+use crate::tenant::TenantContext;
+use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -13,43 +14,52 @@ pub struct BookingStore {
 
 impl BookingStore {
     pub async fn get_pool(&self) -> Result<&sqlx::PgPool, ToolError> {
-        self.pool.get_or_try_init(|| async {
-            let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
-            sqlx::PgPool::connect(&database_url).await.map_err(|e| ToolError::Transient(e.to_string()))
-        }).await
+        self.pool
+            .get_or_try_init(|| async {
+                let database_url = std::env::var("OHC_DATABASE_URL")
+                    .unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
+                sqlx::PgPool::connect(&database_url)
+                    .await
+                    .map_err(|e| ToolError::Transient(e.to_string()))
+            })
+            .await
     }
 }
 
 pub type SharedBookingStore = Arc<RwLock<BookingStore>>;
 
 #[derive(Deserialize)]
-pub struct BookingGetServicesArgs {
-    pub tenant_id: String,
-}
+pub struct BookingGetServicesArgs {}
 
 pub struct BookingGetServicesExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingGetServicesArgs> for BookingGetServicesExecutor {
-    async fn execute_typed(&self, args: BookingGetServicesArgs) -> Result<String, ToolError> {
-        let tenant_id = args.tenant_id;
+    async fn execute_typed(&self, _args: BookingGetServicesArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
 
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        let rows = sqlx::query("SELECT id, title as name, description, price_cents FROM services WHERE tenant_id = $1")
-            .bind(&tenant_id)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        let rows = sqlx::query(
+            "SELECT id, title as name, description, price_cents FROM services WHERE tenant_id = $1",
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let mut services = Vec::new();
         for row in rows {
@@ -71,28 +81,25 @@ impl PydanticToolExecutor<BookingGetServicesArgs> for BookingGetServicesExecutor
     }
 }
 
-pub fn booking_get_services_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_get_services_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_get_services".to_string(),
         description: "List all available services for booking in the business.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
-            "properties": {
-                "tenant_id": {
-                    "type": "string",
-                    "description": "The tenant/business ID"
-                }
-            },
-            "required": ["tenant_id"]
+            "properties": {},
+            "required": []
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingGetServicesExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingGetServicesExecutor {
+            store,
+            tenant,
+        })),
     }
 }
 
 #[derive(Deserialize)]
 pub struct BookingUpsertServiceArgs {
-    pub tenant_id: String,
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
@@ -100,16 +107,21 @@ pub struct BookingUpsertServiceArgs {
 
 pub struct BookingUpsertServiceExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingUpsertServiceArgs> for BookingUpsertServiceExecutor {
     async fn execute_typed(&self, args: BookingUpsertServiceArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
-            .bind(&args.tenant_id)
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -118,7 +130,7 @@ impl PydanticToolExecutor<BookingUpsertServiceArgs> for BookingUpsertServiceExec
 
         sqlx::query("INSERT INTO services (id, tenant_id, name, description, price_cents) VALUES ($1, $2, $3, $4, $5)")
             .bind(&id)
-            .bind(&args.tenant_id)
+            .bind(tenant_id)
             .bind(&args.title)
             .bind(&args.description)
             .bind(args.price_cents)
@@ -126,13 +138,15 @@ impl PydanticToolExecutor<BookingUpsertServiceArgs> for BookingUpsertServiceExec
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         Ok(json!({ "status": "success", "service_id": id }).to_string())
     }
 }
 
-pub fn booking_upsert_service_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_upsert_service_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_upsert_service".to_string(),
         description: "Create or update a booking service offering.".to_string(),
@@ -140,34 +154,38 @@ pub fn booking_upsert_service_tool(store: SharedBookingStore) -> Tool {
         parameters: json!({
             "type": "object",
             "properties": {
-                "tenant_id": { "type": "string" },
                 "title": { "type": "string" },
                 "description": { "type": "string" },
                 "price_cents": { "type": "integer" }
             },
-            "required": ["tenant_id", "title", "price_cents"]
+            "required": ["title", "price_cents"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingUpsertServiceExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingUpsertServiceExecutor {
+            store,
+            tenant,
+        })),
     }
 }
 
 #[derive(Deserialize)]
-pub struct BookingListAppointmentsArgs {
-    pub tenant_id: String,
-}
+pub struct BookingListAppointmentsArgs {}
 
 pub struct BookingListAppointmentsExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmentsExecutor {
-    async fn execute_typed(&self, args: BookingListAppointmentsArgs) -> Result<String, ToolError> {
-        let tenant_id = args.tenant_id;
+    async fn execute_typed(&self, _args: BookingListAppointmentsArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(&tenant_id)
             .execute(&mut *tx)
             .await
@@ -204,28 +222,25 @@ impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmen
     }
 }
 
-pub fn booking_list_appointments_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_list_appointments_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_list_appointments".to_string(),
         description: "List all scheduled appointments for the business.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
-            "properties": {
-                "tenant_id": {
-                    "type": "string",
-                    "description": "The tenant/business ID"
-                }
-            },
-            "required": ["tenant_id"]
+            "properties": {},
+            "required": []
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingListAppointmentsExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingListAppointmentsExecutor {
+            store,
+            tenant,
+        })),
     }
 }
 
 #[derive(Deserialize)]
 pub struct BookingCreateAppointmentArgs {
-    pub tenant_id: String,
     pub customer_id: String,
     pub service_id: String,
     pub start_time: chrono::DateTime<chrono::Utc>,
@@ -234,16 +249,21 @@ pub struct BookingCreateAppointmentArgs {
 
 pub struct BookingCreateAppointmentExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppointmentExecutor {
     async fn execute_typed(&self, args: BookingCreateAppointmentArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
-            .bind(&args.tenant_id)
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -252,7 +272,7 @@ impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppoint
 
         sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')")
             .bind(&id)
-            .bind(&args.tenant_id)
+            .bind(tenant_id)
             .bind(&args.customer_id)
             .bind(&args.service_id)
             .bind(args.start_time)
@@ -261,13 +281,15 @@ impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppoint
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         Ok(json!({ "status": "success", "booking_id": id }).to_string())
     }
 }
 
-pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_create_appointment_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_create_appointment".to_string(),
         description: "Create a new appointment for a customer.".to_string(),
@@ -275,21 +297,22 @@ pub fn booking_create_appointment_tool(store: SharedBookingStore) -> Tool {
         parameters: json!({
             "type": "object",
             "properties": {
-                "tenant_id": { "type": "string" },
                 "customer_id": { "type": "string" },
                 "service_id": { "type": "string" },
                 "start_time": { "type": "string", "format": "date-time" },
                 "end_time": { "type": "string", "format": "date-time" }
             },
-            "required": ["tenant_id", "customer_id", "service_id", "start_time"]
+            "required": ["customer_id", "service_id", "start_time"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingCreateAppointmentExecutor {
+            store,
+            tenant,
+        })),
     }
 }
 
 #[derive(Deserialize)]
 pub struct BookingNegotiateTimeArgs {
-    pub tenant_id: String,
     pub customer_id: String,
     pub service_id: String,
     pub start_time: chrono::DateTime<chrono::Utc>,
@@ -298,18 +321,23 @@ pub struct BookingNegotiateTimeArgs {
 
 pub struct BookingNegotiateTimeExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExecutor {
     async fn execute_typed(&self, args: BookingNegotiateTimeArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
         // Tentatively lock the time slot for a short period (e.g. 15 minutes) while negotiating.
         // It's not a full booking, just a Redlock hold in Redis to avoid double booking during negotiation.
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
-            .bind(&args.tenant_id)
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -319,7 +347,7 @@ impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExec
 
         sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'pending')")
             .bind(&id)
-            .bind(&args.tenant_id)
+            .bind(tenant_id)
             .bind(&args.service_id)
             .bind(args.start_time)
             .bind(args.end_time)
@@ -327,13 +355,15 @@ impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExec
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         Ok(json!({ "status": "success", "message": "Time slot tentatively held for negotiation." }).to_string())
     }
 }
 
-pub fn booking_negotiate_time_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_negotiate_time_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_negotiate_time".to_string(),
         description: "Hold a time slot tentatively while negotiating a booking with a customer. It places a temporary lock to avoid double booking.".to_string(),
@@ -341,21 +371,19 @@ pub fn booking_negotiate_time_tool(store: SharedBookingStore) -> Tool {
         parameters: json!({
             "type": "object",
             "properties": {
-                "tenant_id": { "type": "string" },
                 "customer_id": { "type": "string" },
                 "service_id": { "type": "string" },
                 "start_time": { "type": "string", "format": "date-time" },
                 "end_time": { "type": "string", "format": "date-time" }
             },
-            "required": ["tenant_id", "customer_id", "service_id", "start_time", "end_time"]
+            "required": ["customer_id", "service_id", "start_time", "end_time"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingNegotiateTimeExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingNegotiateTimeExecutor { store, tenant })),
     }
 }
 
 #[derive(Deserialize)]
 pub struct BookingRescheduleArgs {
-    pub tenant_id: String,
     pub booking_id: String,
     pub new_start_time: chrono::DateTime<chrono::Utc>,
     pub new_end_time: Option<chrono::DateTime<chrono::Utc>>,
@@ -364,40 +392,49 @@ pub struct BookingRescheduleArgs {
 
 pub struct BookingRescheduleExecutor {
     pub store: SharedBookingStore,
+    pub tenant: TenantContext,
 }
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
     async fn execute_typed(&self, args: BookingRescheduleArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
-        let _ = sqlx::query("SET app.current_tenant = $1")
-            .bind(&args.tenant_id)
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         // Get original booking details
-        let original: (String, String, String) = sqlx::query_as("SELECT customer_id::text, service_id, status FROM bookings WHERE id = $1")
+        let original: (String, String, String) = sqlx::query_as("SELECT customer_id::text, service_id, status FROM bookings WHERE id = $1 AND tenant_id = $2")
             .bind(&args.booking_id)
+            .bind(tenant_id)
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(format!("Booking not found: {}", e)))?;
 
         // Cancel original and create new one with rescheduled_from_id
-        sqlx::query("UPDATE bookings SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        sqlx::query("UPDATE bookings SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(&args.booking_id)
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let new_id = uuid::Uuid::new_v4().to_string();
-        let _notes = args.reason.map(|r| format!("Rescheduled from {}. Reason: {}", args.booking_id, r));
+        let _notes = args
+            .reason
+            .map(|r| format!("Rescheduled from {}. Reason: {}", args.booking_id, r));
 
         sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&new_id)
-            .bind(&args.tenant_id)
+            .bind(tenant_id)
             .bind(&original.0)
             .bind(&original.1)
             .bind(args.new_start_time)
@@ -407,13 +444,15 @@ impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         Ok(json!({ "status": "success", "new_booking_id": new_id }).to_string())
     }
 }
 
-pub fn booking_reschedule_tool(store: SharedBookingStore) -> Tool {
+pub fn booking_reschedule_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
     Tool {
         name: "booking_reschedule".to_string(),
         description: "Reschedule an existing appointment to a new time slot.".to_string(),
@@ -421,14 +460,16 @@ pub fn booking_reschedule_tool(store: SharedBookingStore) -> Tool {
         parameters: json!({
             "type": "object",
             "properties": {
-                "tenant_id": { "type": "string" },
                 "booking_id": { "type": "string" },
                 "new_start_time": { "type": "string", "format": "date-time" },
                 "new_end_time": { "type": "string", "format": "date-time" },
                 "reason": { "type": "string" }
             },
-            "required": ["tenant_id", "booking_id", "new_start_time"]
+            "required": ["booking_id", "new_start_time"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BookingRescheduleExecutor { store })),
+        execute: Arc::new(PydanticAdapter::new(BookingRescheduleExecutor {
+            store,
+            tenant,
+        })),
     }
 }

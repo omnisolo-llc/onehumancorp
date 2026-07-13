@@ -19,7 +19,8 @@ function wait_for_port() {
     return 1
 }
 
-export PROTOC="$(pwd)/bazel-out/k8-fastbuild/bin/external/protobuf+/protoc"
+export PROTOC=/usr/bin/protoc
+export PROTOC_INCLUDE=/usr/include
 
 echo "[e2e-no-bazel] Building web app via Bazel..."
 cd src/ui/next && npm run build
