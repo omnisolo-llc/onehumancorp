@@ -74,9 +74,26 @@ async function tokenWithHeader(
   ring: SessionKeyRing,
   header: Record<string, unknown>,
 ): Promise<string> {
-  const token = await encryptRaw(ring, wirePayload());
-  const encoded = Buffer.from(JSON.stringify(header)).toString("base64url");
-  return [encoded, ...token.split(".").slice(1)].join(".");
+  const protectedSegment = Buffer.from(JSON.stringify(header)).toString("base64url");
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plaintext = new TextEncoder().encode(JSON.stringify(wirePayload()));
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData: new TextEncoder().encode(protectedSegment),
+        tagLength: 128,
+      },
+      ring.active.key,
+      plaintext,
+    ),
+  );
+  const ciphertext = encrypted.slice(0, -16);
+  const tag = encrypted.slice(-16);
+  plaintext.fill(0);
+  encrypted.fill(0);
+  return `${protectedSegment}..${encode(iv)}.${encode(ciphertext)}.${encode(tag)}`;
 }
 
 async function expectInvalid(promise: Promise<unknown>): Promise<void> {
@@ -152,6 +169,25 @@ describe("compact JWE web sessions", () => {
       kid: "unknown",
     });
     await expectInvalid(openSession(unknown, ring, CONTEXT, NOW));
+  });
+
+  it("rejects a non-canonical compact segment with unchanged authenticated bytes", async () => {
+    const ring = await activeRing();
+    const token = await sealSession(SESSION, ring, CONTEXT, {
+      now: NOW,
+      backendExpiresAt: SESSION.exp,
+    });
+    const segments = token.split(".");
+    const tag = segments[4];
+    const noncanonical = new Map([
+      ["A", "B"],
+      ["Q", "R"],
+      ["g", "h"],
+      ["w", "x"],
+    ]).get(tag.at(-1)!);
+    expect(noncanonical).toBeDefined();
+    segments[4] = `${tag.slice(0, -1)}${noncanonical}`;
+    await expectInvalid(openSession(segments.join("."), ring, CONTEXT, NOW));
   });
 
   it.each([
@@ -394,6 +430,24 @@ describe("compact JWE web sessions", () => {
     await expectInvalid(openSession("", ring, CONTEXT, NOW));
     await expectInvalid(openSession("not-a-jwe", ring, CONTEXT, NOW));
     await expectInvalid(openSession(`a.${"x".repeat(3800)}.b.c.d`, ring, CONTEXT, NOW));
+    await expectInvalid(openSession("é".repeat(3801), ring, CONTEXT, NOW));
+  });
+
+  it("accepts exact individual claim byte limits", async () => {
+    const ring = await activeRing();
+    for (const session of [
+      { ...SESSION, accessToken: "t".repeat(2048) },
+      { ...SESSION, user: { ...SESSION.user, id: "i".repeat(128) } },
+      { ...SESSION, user: { ...SESSION.user, organizationId: "o".repeat(128) } },
+      { ...SESSION, user: { ...SESSION.user, username: "u".repeat(254) } },
+      { ...SESSION, user: { ...SESSION.user, roles: ["r".repeat(64)] } },
+    ] as WebSession[]) {
+      const token = await sealSession(session, ring, CONTEXT, {
+        now: NOW,
+        backendExpiresAt: session.exp,
+      });
+      await expect(openSession(token, ring, CONTEXT, NOW)).resolves.toEqual(session);
+    }
   });
 
   it("uses Web APIs when Buffer is unavailable", async () => {

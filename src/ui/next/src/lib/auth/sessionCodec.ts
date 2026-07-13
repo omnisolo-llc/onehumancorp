@@ -9,6 +9,7 @@ const MAX_SESSION_SECONDS = 86400;
 const CLOCK_SKEW_SECONDS = 30;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
 type PlainObject = Record<PropertyKey, unknown>;
 
@@ -32,6 +33,22 @@ function hasExactKeys(value: PlainObject, expected: readonly string[]): boolean 
 
 function byteLength(value: string): number {
   return encoder.encode(value).byteLength;
+}
+
+function isCanonicalSegment(segment: string, allowEmpty = false): boolean {
+  if (segment.length === 0) return allowEmpty;
+  if (!BASE64URL.test(segment) || segment.length % 4 === 1) return false;
+  try {
+    const padding = "=".repeat((4 - (segment.length % 4)) % 4);
+    const binary = atob(`${segment.replace(/-/g, "+").replace(/_/g, "/")}${padding}`);
+    const canonical = btoa(binary)
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    return canonical === segment;
+  } catch {
+    return false;
+  }
 }
 
 function isBoundedString(value: unknown, maximum: number): value is string {
@@ -114,6 +131,7 @@ export async function sealSession(
   context: SessionCodecContext,
   options: Readonly<{ now: number; backendExpiresAt: number }>,
 ): Promise<string> {
+  let plaintext: Uint8Array | undefined;
   try {
     validateContext(context);
     if (!Number.isSafeInteger(options.now) || !Number.isSafeInteger(options.backendExpiresAt)) {
@@ -126,7 +144,8 @@ export async function sealSession(
     );
     if ((payload.exp as number) > options.backendExpiresAt) invalid();
 
-    const plaintext = Uint8Array.from(encoder.encode(JSON.stringify(payload)));
+    const encoded = encoder.encode(JSON.stringify(payload));
+    plaintext = encoded instanceof Uint8Array ? encoded : Uint8Array.from(encoded);
     if (plaintext.byteLength > MAX_PLAINTEXT_BYTES) invalid();
     const token = await new CompactEncrypt(plaintext)
       .setProtectedHeader({
@@ -140,6 +159,8 @@ export async function sealSession(
     return token;
   } catch {
     return invalid();
+  } finally {
+    plaintext?.fill(0);
   }
 }
 
@@ -149,16 +170,26 @@ export async function openSession(
   context: SessionCodecContext,
   now: number,
 ): Promise<WebSession> {
+  let decryptedPlaintext: Uint8Array | undefined;
   try {
     if (!Number.isSafeInteger(now)) invalid();
     if (
       typeof token !== "string" ||
       token.length === 0 ||
-      byteLength(token) > MAX_COMPACT_BYTES ||
-      token.split(".").length !== 5
+      token.length > MAX_COMPACT_BYTES
     ) {
       invalid();
     }
+    const segments = token.split(".");
+    if (
+      segments.length !== 5 ||
+      !isCanonicalSegment(segments[0]) ||
+      !isCanonicalSegment(segments[1], true) ||
+      segments[1] !== "" ||
+      !isCanonicalSegment(segments[2]) ||
+      !isCanonicalSegment(segments[3]) ||
+      !isCanonicalSegment(segments[4])
+    ) invalid();
     validateContext(context);
 
     const untrustedHeader = decodeProtectedHeader(token);
@@ -176,6 +207,7 @@ export async function openSession(
       contentEncryptionAlgorithms: ["A256GCM"],
       maxDecompressedLength: 0,
     });
+    decryptedPlaintext = result.plaintext;
     validateHeader(result.protectedHeader);
     if (result.plaintext.byteLength > MAX_PLAINTEXT_BYTES) invalid();
     const payload = validatePayload(JSON.parse(decoder.decode(result.plaintext)), context, now);
@@ -194,5 +226,7 @@ export async function openSession(
     };
   } catch {
     return invalid();
+  } finally {
+    decryptedPlaintext?.fill(0);
   }
 }
