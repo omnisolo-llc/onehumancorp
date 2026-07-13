@@ -220,9 +220,8 @@ function InboxWorkspace({
   }
 
   function handleAttachPhoto() {
-    // Mock attaching a photo by appending an image markdown URL
-    const mockImageUrl = "https://example.com/mock-upload.jpg";
-    setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${mockImageUrl})`);
+    // Alert the user that this feature is not yet available, rather than inserting mock data.
+    alert("Image uploading is currently unavailable. Please try again later.");
   }
 
   async function handleApproveAndSend(inboxMessageId: string) {

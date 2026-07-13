@@ -10,8 +10,8 @@ export default function SnapReceiptPage() {
 
   // To avoid mock data, we allow the user to input the amount and vendor,
   // or default to something based on the file. In a real app, the backend would OCR this.
-  const [amount, setAmount] = useState<number>(45.20);
-  const [vendor, setVendor] = useState<string>("Home Depot");
+  const [amount, setAmount] = useState<number>(0);
+  const [vendor, setVendor] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();

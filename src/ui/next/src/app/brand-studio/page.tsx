@@ -43,7 +43,7 @@ type BrandToolbox = {
     product_source: string;
     templates: string[];
     prompts: string[];
-    shots: { title: string; format: string; prompt: string; usage: string; mockup_svg: string }[];
+    shots: { title: string; format: string; prompt: string; usage: string; representation_svg: string }[];
     refinement_controls: string[];
   };
   store_profile?: {
@@ -305,7 +305,7 @@ export default function BrandStudioPage() {
                       <h3 className="font-semibold">{shot.title}</h3>
                       <div
                         className="mt-3 overflow-hidden rounded-lg border border-gray-100 bg-gray-50"
-                        dangerouslySetInnerHTML={{ __html: shot.mockup_svg }}
+                        dangerouslySetInnerHTML={{ __html: shot.representation_svg }}
                       />
                       <p className="mt-1 text-xs font-medium text-gray-500">{shot.format} / {shot.usage}</p>
                       <p className="mt-2 text-sm text-gray-600">{shot.prompt}</p>
