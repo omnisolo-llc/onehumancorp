@@ -60,19 +60,6 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
             }
         }
 
-        // Fallback mechanic: extract JSON from markdown wrappers
-        if !msg.content.is_empty() {
-            let content = msg.content.trim();
-            if content.starts_with("```json") && content.ends_with("```") {
-                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
-                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Ok(data) = self.validate_schema(&parsed_json) {
-                        return Ok(data);
-                    }
-                }
-            }
-        }
-
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
@@ -112,19 +99,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
-            }
-        }
-
-        // Fallback mechanic: extract JSON from markdown wrappers
-        if !msg.content.is_empty() {
-            let content = msg.content.trim();
-            if content.starts_with("```json") && content.ends_with("```") {
-                let json_str = content.trim_start_matches("```json").trim_end_matches("```").trim();
-                if let Ok(parsed_json) = serde_json::from_str::<serde_json::Value>(json_str) {
-                    if let Ok(data) = self.validate_schema(&parsed_json) {
-                        return Ok(data);
-                    }
-                }
             }
         }
 
@@ -474,21 +448,77 @@ mod tests {
         }
     }
 
+    const FENCED_MARKDOWN_COMPLETION: &str =
+        "```json\n{\n  \"result\": \"success_markdown\"\n}\n```";
+
+    struct MarkdownRecoveryLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for MarkdownRecoveryLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            match *count {
+                1 => Ok(create_text_resp(FENCED_MARKDOWN_COMPLETION)),
+                2 => {
+                    let feedback = req
+                        .messages
+                        .last()
+                        .and_then(|message| message.tool_results.first())
+                        .map(|result| format!("{}{}", result.content, result.error))
+                        .expect("retry request should contain structured-output feedback");
+                    assert!(
+                        feedback.contains(FENCED_MARKDOWN_COMPLETION),
+                        "feedback did not preserve the failed completion: {feedback}"
+                    );
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({
+                            "data": {"result": "recovered_from_markdown"}
+                        }),
+                    ))
+                }
+                call => panic!("unexpected markdown recovery call {call}"),
+            }
+        }
+    }
+
     #[tokio::test]
     async fn test_parse_structured_output_markdown_wrapper_fallback() {
-        // Fallback mechanic now seamlessly extracts the JSON without an extra LLM roundtrip
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_text_resp(
-                "```json\n{\n  \"result\": \"success_markdown\"\n}\n```",
-            )]),
+        // Plain-text JSON is rejected and recovered through a native tool call.
+        let client = Arc::new(MarkdownRecoveryLlmClient {
+            call_count: Mutex::new(0),
         });
 
         let req = create_test_req();
         let result: TestOutput =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
-                .await
-                .expect("Expected TestOutput in test");
-        assert_eq!(result.result, "success_markdown");
+            parse_structured_output(
+                &(client.clone() as Arc<dyn LlmClientForParser>),
+                req,
+                3,
+            )
+            .await
+            .expect("Expected TestOutput in test");
+        assert_eq!(result.result, "recovered_from_markdown");
+        assert_eq!(*client.call_count.lock().await, 2);
+    }
+
+    #[test]
+    fn test_structured_output_parser_rejects_markdown_wrapper() {
+        let parser = StructuredOutputParser::<TestOutput>::new();
+        let message = Message::assistant(FENCED_MARKDOWN_COMPLETION);
+
+        let error = parser
+            .parse_message(&message)
+            .expect_err("markdown must not bypass native structured output");
+
+        assert!(error.contains("Expected native tool_calls API object"));
     }
 
     #[tokio::test]
@@ -1041,15 +1071,22 @@ mod tests_clamped {
                 let last_msg = req.messages.last().unwrap();
                 assert_eq!(last_msg.role, crate::types::Role::Tool);
                 assert!(last_msg.tool_results[0].content.contains("Validation Error") || last_msg.tool_results[0].error.contains("Validation Error"), "content was: {}, error was: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
-                assert!(last_msg.tool_results[0].content.contains("{ invalid json") || last_msg.tool_results[0].error.contains("{ invalid json") || last_msg.tool_results[0].error.contains("Failed completion: Here is the data: { invalid json"), "content: {}, error: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
+                assert!(
+                    last_msg.tool_results[0].content.contains("{ invalid json")
+                        || last_msg.tool_results[0].error.contains("{ invalid json")
+                        || last_msg.tool_results[0]
+                            .error
+                            .contains("Failed completion: Here is the data: { invalid json"),
+                    "content was: {}, error was: {}",
+                    last_msg.tool_results[0].content,
+                    last_msg.tool_results[0].error
+                );
 
-                // Then return valid json
-                Ok(ChatResponse {
-                    message: super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})).message,
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("resp_2".to_string()),
-                })
+                // Then return valid structured output through the required native tool call.
+                Ok(super::tests::create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success"}}),
+                ))
             }
         }
     }
@@ -1157,11 +1194,13 @@ mod strict_output_tests {
 
     struct MockStrictClient {
         responses: Mutex<Vec<ChatResponse>>,
+        call_count: Mutex<usize>,
     }
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockStrictClient {
         async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            *self.call_count.lock().await += 1;
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Err("No more responses".into());
@@ -1221,6 +1260,7 @@ mod strict_output_tests {
                     usage: Usage::default(),
                 },
             ]),
+            call_count: Mutex::new(0),
         });
 
         let parser: Box<dyn OutputParser<StrictTestOutput> + Send + Sync> =
@@ -1234,7 +1274,12 @@ mod strict_output_tests {
             &crate::retry::ExponentialBackoffWithJitter::new(0, 0)
         ).await;
 
-        assert!(result.is_ok());
-        let _ = result;
+        assert_eq!(
+            result.expect("markdown should recover through a native tool call"),
+            StrictTestOutput {
+                strict: "success".to_string(),
+            }
+        );
+        assert_eq!(*client.call_count.lock().await, 2);
     }
 }

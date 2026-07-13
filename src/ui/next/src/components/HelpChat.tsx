@@ -213,7 +213,7 @@ export function HelpChat() {
   return (
     <div className="help-chat-wrapper pointer-events-none">
       {/* Floating Button */}
-      <div className="fixed bottom-24 right-6 z-[10000] pointer-events-auto">
+      <div className="fixed bottom-24 right-6 z-[10000] pointer-events-auto hidden sm:block">
         {!isOpen && (
           <WalkthroughTarget id="ai-chat-trigger">
             <button

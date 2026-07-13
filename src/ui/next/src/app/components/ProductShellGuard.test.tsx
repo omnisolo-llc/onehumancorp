@@ -49,7 +49,7 @@ test("does not double wrap routes that already render AppShell", () => {
   expect(screen.getByText("Assistant content")).toBeDefined();
 });
 
-test("keeps standalone public and widget routes outside the dashboard shell", () => {
+test("wraps formerly standalone widget routes in the dashboard shell", () => {
   navigationMock.pathname = "/work-intake-widget";
 
   render(
@@ -58,6 +58,7 @@ test("keeps standalone public and widget routes outside the dashboard shell", ()
     </ProductShellGuard>,
   );
 
-  expect(screen.queryByTestId("app-shell")).toBeNull();
+  expect(screen.getByTestId("app-shell")).toBeDefined();
+  expect(screen.getByRole("heading", { name: "Work Intake Widget" })).toBeDefined();
   expect(screen.getByText("Widget content")).toBeDefined();
 });
