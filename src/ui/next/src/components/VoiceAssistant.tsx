@@ -23,6 +23,11 @@ export function VoiceAssistant() {
   const suppressSyntheticClickRef = useRef(false);
   const keyboardClickResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const clearResetTimers = useCallback(() => {
+    resetTimersRef.current.forEach(clearTimeout);
+    resetTimersRef.current.clear();
+  }, []);
+
   const releaseStream = useCallback((stream: MediaStream | null) => {
     if (!stream) return;
     stream.getTracks().forEach((track) => {
@@ -33,10 +38,10 @@ export function VoiceAssistant() {
     if (mediaStreamRef.current === stream) mediaStreamRef.current = null;
   }, []);
 
-  const scheduleReset = useCallback((delay: number, resetTranscription: boolean) => {
+  const scheduleReset = useCallback((session: number, delay: number, resetTranscription: boolean) => {
     const timer = setTimeout(() => {
       resetTimersRef.current.delete(timer);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || session !== sessionRef.current) return;
       setStatus("idle");
       if (resetTranscription) setTranscription("");
     }, delay);
@@ -65,17 +70,18 @@ export function VoiceAssistant() {
       setTranscription(data.transcription);
       setStatus("success");
       window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: data }));
-      scheduleReset(5000, true);
+      scheduleReset(session, 5000, true);
     } catch {
       if (!mountedRef.current || session !== sessionRef.current) return;
       console.error("Failed to process voice command.");
       setStatus("error");
-      scheduleReset(3000, false);
+      scheduleReset(session, 3000, false);
     }
   }, [scheduleReset]);
 
   const startRecording = useCallback(async () => {
     if (pendingRequestRef.current || recordingRef.current) return;
+    clearResetTimers();
     wantsRecordingRef.current = true;
     pendingRequestRef.current = true;
     const session = ++sessionRef.current;
@@ -130,7 +136,7 @@ export function VoiceAssistant() {
       console.error("Failed to start voice recording.");
       setStatus("error");
     }
-  }, [releaseStream, sendVoiceCommand]);
+  }, [clearResetTimers, releaseStream, sendVoiceCommand]);
 
   const stopRecording = useCallback(() => {
     wantsRecordingRef.current = false;
@@ -208,8 +214,7 @@ export function VoiceAssistant() {
       wantsRecordingRef.current = false;
       pendingRequestRef.current = false;
       sessionRef.current += 1;
-      resetTimersRef.current.forEach(clearTimeout);
-      resetTimersRef.current.clear();
+      clearResetTimers();
       if (keyboardClickResetRef.current) clearTimeout(keyboardClickResetRef.current);
       keyboardClickResetRef.current = null;
 
@@ -228,7 +233,7 @@ export function VoiceAssistant() {
       audioChunksRef.current = [];
       releaseStream(mediaStreamRef.current);
     };
-  }, [releaseStream]);
+  }, [clearResetTimers, releaseStream]);
 
   const accessibleLabel = isRecording
     ? "Voice Assistant listening. Release Enter or Space, or activate again, to stop."

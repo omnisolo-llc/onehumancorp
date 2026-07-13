@@ -64,6 +64,7 @@ describe('VoiceAssistant', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     global.MediaRecorder = originalMediaRecorder;
     Object.defineProperty(global.navigator, 'mediaDevices', {
       configurable: true,
@@ -308,5 +309,78 @@ describe('VoiceAssistant', () => {
     expect(status).toHaveAttribute('aria-live', 'assertive');
     expect(consoleError).toHaveBeenCalledWith('Failed to start voice recording.');
     expect(consoleError).not.toHaveBeenCalledWith(expect.stringContaining('sensitive device detail'));
+  });
+
+  it('does not let an old success reset clear a newer listening session', async () => {
+    vi.useFakeTimers();
+    const first = createStream();
+    const second = createStream();
+    getUserMedia
+      .mockResolvedValueOnce(first.stream)
+      .mockResolvedValueOnce(second.stream);
+    renderVoiceAssistant();
+    const button = screen.getByRole('button');
+
+    await act(async () => {
+      fireEvent.mouseDown(button);
+      await Promise.resolve();
+    });
+    const firstRecorder = recorderInstances[0];
+    fireEvent.mouseUp(button);
+    await act(async () => firstRecorder.onstop?.());
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'success');
+
+    await act(async () => {
+      fireEvent.mouseDown(button);
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'listening');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    act(() => vi.advanceTimersByTime(5000));
+
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'listening');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    vi.useRealTimers();
+  });
+
+  it('does not let an old error reset clear a newer processing session', async () => {
+    vi.useFakeTimers();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const first = createStream();
+    const second = createStream();
+    getUserMedia
+      .mockResolvedValueOnce(first.stream)
+      .mockResolvedValueOnce(second.stream);
+    vi.mocked(global.fetch).mockImplementation((input) => Promise.resolve(
+      input === '/api/v1/voice/command'
+        ? { ok: false, json: () => Promise.resolve({}) } as Response
+        : { ok: true, json: () => Promise.resolve({}) } as Response,
+    ));
+    renderVoiceAssistant();
+    const button = screen.getByRole('button');
+
+    await act(async () => {
+      fireEvent.mouseDown(button);
+      await Promise.resolve();
+    });
+    const firstRecorder = recorderInstances[0];
+    fireEvent.mouseUp(button);
+    await act(async () => firstRecorder.onstop?.());
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'error');
+
+    await act(async () => {
+      fireEvent.mouseDown(button);
+      await Promise.resolve();
+    });
+    fireEvent.mouseUp(button);
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'processing');
+
+    act(() => vi.advanceTimersByTime(3000));
+
+    expect(screen.getByRole('status')).toHaveAttribute('data-voice-assistant-state', 'processing');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(consoleError).toHaveBeenCalledWith('Failed to process voice command.');
+    vi.useRealTimers();
   });
 });
