@@ -43,16 +43,17 @@
     }
 
     .header {
-      padding: 24px 20px 16px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(245, 245, 247, 0.8);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      padding: 16px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
     }
 
     .header h1 {
@@ -91,13 +92,13 @@
     }
 
     .glass-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(40px) saturate(220%);
-      -webkit-backdrop-filter: blur(40px) saturate(220%);
-      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 16px;
       padding: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
     }
 
     .task-list {
@@ -336,7 +337,7 @@
 
     async function fetchTasks() {
       try {
-        const response = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`);
+        const response = await fetch(`${baseUrl}/api/staff/tasks`);
         if (!response.ok) throw new Error('Network error');
         const tasks = await response.json();
 
@@ -363,9 +364,9 @@
     async function toggleTask(id, isCompleted) {
       const status = isCompleted ? 'completed' : 'pending';
       try {
-        await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks/${id}`, {
+        await fetch(`${baseUrl}/api/staff/tasks/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+
           body: JSON.stringify({ status, is_offline_synced: false })
         });
         fetchTasks();
@@ -379,9 +380,9 @@
       const originalText = btn.innerHTML;
       btn.innerHTML = 'Flagging...';
       try {
-        await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks/escalate`, {
+        await fetch(`${baseUrl}/api/staff/escalate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+
           body: JSON.stringify({ item: 'Cups', location_id: 'store-1' })
         });
         btn.innerHTML = 'Flagged Successfully!';
@@ -401,7 +402,7 @@
 
     async function fetchSummaries() {
       try {
-        const response = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/shift-summaries`);
+        const response = await fetch(`${baseUrl}/api/staff/summaries`);
         if (!response.ok) throw new Error('Network error');
         const summaries = await response.json();
 
@@ -413,7 +414,7 @@
         }
 
         // Also fetch high priority tasks to show in escalations
-        const taskResponse = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`);
+        const taskResponse = await fetch(`${baseUrl}/api/staff/tasks`);
         const tasks = await taskResponse.json();
         const escalations = tasks.filter(t => t.priority === 'high' && t.status !== 'completed');
 

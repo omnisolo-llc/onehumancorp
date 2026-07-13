@@ -502,7 +502,7 @@ pub async fn create_task_handler(
     (axum::http::StatusCode::OK, Json(TaskResponse { id: task_id })).into_response()
 }
 
-pub async fn get_tasks_handler(
+pub async fn get_staff_tasks_handler(
     headers: HeaderMap,
     State(db): State<Arc<DB>>,
 ) -> impl IntoResponse {
@@ -513,7 +513,7 @@ pub async fn get_tasks_handler(
 
     let tasks = match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
-            let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC")
+            let rows = sqlx::query("SELECT id, staff_id, description, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC")
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await;
@@ -522,7 +522,7 @@ pub async fn get_tasks_handler(
                 serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "staff_id": row.get::<String, _>("staff_id"),
-                    "title": row.get::<String, _>("title"),
+
                     "description": row.get::<String, _>("description"),
                     "status": row.get::<String, _>("status"),
                     "priority": row.get::<String, _>("priority"),
@@ -537,7 +537,7 @@ pub async fn get_tasks_handler(
             if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
             }
-            let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC")
+            let rows = sqlx::query("SELECT id, staff_id, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC")
                 .bind(&tenant_id)
                 .fetch_all(&mut *tx)
                 .await;
@@ -549,7 +549,7 @@ pub async fn get_tasks_handler(
                 serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "staff_id": row.get::<String, _>("staff_id"),
-                    "title": row.get::<String, _>("title"),
+
                     "description": row.get::<String, _>("description"),
                     "status": row.get::<String, _>("status"),
                     "priority": row.get::<String, _>("priority"),
@@ -659,7 +659,7 @@ pub async fn delete_task_handler(
 }
 
 
-pub async fn get_summaries_handler(
+pub async fn get_shift_summaries_handler(
     headers: HeaderMap,
     State(db): State<Arc<DB>>,
 ) -> impl IntoResponse {
@@ -718,9 +718,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/", post(create_staff_handler).get(get_staff_handler))
         .route("/{id}/pin", post(set_staff_pin_handler))
         .route("/timecard", post(sync_timecard_handler).get(get_timecard_handler))
-        .route("/tasks", post(create_task_handler).get(get_tasks_handler))
-        .route("/tasks/{id}", post(update_task_handler).delete(delete_task_handler))
-        .route("/summaries", axum::routing::get(get_summaries_handler))
+        .route("/tasks", post(create_task_handler).get(get_staff_tasks_handler))
+        .route("/tasks/{id}", post(update_task_handler).delete(delete_task_handler).put(update_task_handler))
+        .route("/escalate", post(escalate_issue_handler))
+        .route("/summaries", axum::routing::get(get_shift_summaries_handler))
         .with_state(db)
 }
 
@@ -937,7 +938,7 @@ pub async fn escalate_issue_handler(
     (axum::http::StatusCode::OK, Json(StaffEscalationResponse { success: true })).into_response()
 }
 
-pub async fn get_staff_tasks_handler(
+pub async fn get_staff_tasks_handler_new(
     headers: HeaderMap,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     State(_db): State<Arc<DB>>,
@@ -984,7 +985,7 @@ pub async fn get_staff_tasks_handler(
     (axum::http::StatusCode::OK, Json(serde_json::json!({ "tasks": tasks }))).into_response()
 }
 
-pub async fn get_shift_summaries_handler(
+pub async fn get_shift_summaries_handler_new(
     headers: HeaderMap,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     State(_db): State<Arc<DB>>,
