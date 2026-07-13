@@ -86,6 +86,22 @@ pub async fn dispatch_action(
                 tracing::info!("Created reward claim {} with discount code {}", id, discount_code);
             }
         }
+        "dynamic_pricing" => {
+            tracing::info!("Approved dynamic pricing rule for tenant: {}", tenant_id);
+            if let Some(target_id) = payload.get("target_id").and_then(|v| v.as_str()) {
+                let result = sqlx::query("UPDATE pricing_rules SET is_active = TRUE WHERE tenant_id = $1 AND target_id = $2")
+                    .bind(tenant_id)
+                    .bind(target_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if result.rows_affected() == 0 {
+                    tracing::warn!("Dynamic pricing rule approval failed: target_id {} not found for tenant {}", target_id, tenant_id);
+                }
+            } else {
+                tracing::warn!("Dynamic pricing rule approval failed: missing target_id");
+            }
+        }
 
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);

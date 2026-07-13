@@ -118,6 +118,7 @@ impl PricingAnalysisWorker {
         for target in stagnant_products {
             let proposal = json!({
                 "type": "dynamic_pricing_recommendation",
+                "feature_type": "dynamic_pricing",
                 "target_id": target.id,
                 "recommendation": format!("'{}' has high stock ({}) but low sales. Suggest a 15% discount to clear inventory.", target.title, target.inventory_count),
                 "action": "create_rule",
@@ -136,7 +137,7 @@ impl PricingAnalysisWorker {
                 crate::db::DbStore::Postgres => {
                     let mut conn = db.pool.acquire().await?;
                     ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
-                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
+                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, FALSE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json, is_active = FALSE")
                         .bind(uuid::Uuid::new_v4().to_string())
                         .bind(tenant_id)
                         .bind(&target.id)
@@ -208,6 +209,7 @@ impl PricingAnalysisWorker {
         for target in popular_services {
             let proposal = json!({
                 "type": "yield_management_recommendation",
+                "feature_type": "dynamic_pricing",
                 "target_id": target.id,
                 "recommendation": format!("'{}' is in high demand. Suggest a 10% premium for peak hours.", target.title),
                 "action": "create_rule",
@@ -226,7 +228,7 @@ impl PricingAnalysisWorker {
                 crate::db::DbStore::Postgres => {
                     let mut conn = db.pool.acquire().await?;
                     ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
-                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
+                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, FALSE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json, is_active = FALSE")
                         .bind(uuid::Uuid::new_v4().to_string())
                         .bind(tenant_id)
                         .bind(&target.id)
