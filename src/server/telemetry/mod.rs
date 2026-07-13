@@ -1325,13 +1325,15 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
     static CC_RE: OnceLock<Regex> = OnceLock::new();
     static API_KEY_RE: OnceLock<Regex> = OnceLock::new();
     static PHONE_RE: OnceLock<Regex> = OnceLock::new();
+    static IBAN_RE: OnceLock<Regex> = OnceLock::new();
 
     let ssn_re = SSN_RE.get_or_init(|| Regex::new(r"^\d{3}-\d{2}-\d{4}$").unwrap());
     let cc_re = CC_RE.get_or_init(|| Regex::new(r"^(\d{4}[- ]?){3,4}\d{1,4}$").unwrap());
     let api_key_re = API_KEY_RE.get_or_init(|| Regex::new(r"^(sk-|ak-|tok_)[a-zA-Z0-9]{10,}").unwrap());
     let phone_re = PHONE_RE.get_or_init(|| Regex::new(r"^\+?(\d{1,3})?[-. (]*\d{3}[-. )]*\d{3}[-. ]*\d{4}$").unwrap());
+    let iban_re = IBAN_RE.get_or_init(|| Regex::new(r"^[A-Z]{2}[0-9]{2}[a-zA-Z0-9]{4}[0-9]{7}([a-zA-Z0-9]?){0,16}$").unwrap());
 
-    ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s)
+    ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s) || iban_re.is_match(s)
 }
 
 pub fn is_sensitive_key(key: &str) -> bool {
@@ -1368,6 +1370,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("passport")
         || k.contains("bank")
         || k.contains("account")
+        || k.contains("iban")
         || k.contains("stripe")
         || k.contains("billing")
         || k.contains("ipaddress")
@@ -2003,5 +2006,9 @@ mod pii_pattern_tests {
         // Safe strings
         assert!(!is_pii_value_pattern("hello world"));
         assert!(!is_pii_value_pattern("1234"));
+
+        // IBAN
+        assert!(is_pii_value_pattern("GB82WEST12345698765432"));
+        assert!(!is_pii_value_pattern("GB82")); // Too short
     }
 }

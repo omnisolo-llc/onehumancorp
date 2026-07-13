@@ -14,7 +14,7 @@ import re
 import sys
 
 def check_file(filepath):
-    pii = r'\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude|tenant)\b'
+    pii = r'\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|iban|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude|tenant)\b'
 
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
