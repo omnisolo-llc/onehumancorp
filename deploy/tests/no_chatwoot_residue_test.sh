@@ -69,7 +69,7 @@ if ((${#tracked[@]} == 0)); then
   scanner_error "no tracked active files were discovered"
 fi
 
-if mapfile -d '' -t matching_paths < <(git grep -I -i -l -z 'chatwoot' -- "${tracked[@]}" 2>/dev/null); then
+if mapfile -d '' -t matching_paths < <(git grep -i -l -z 'chatwoot' -- "${tracked[@]}" 2>/dev/null); then
   grep_pid=$!
 else
   scanner_error "active residue result read failed"
@@ -84,14 +84,12 @@ if [[ "$grep_status" -ne 0 && "$grep_status" -ne 1 ]]; then
 fi
 
 symlink_match_paths=()
-symlink_match_targets=()
 for path in "${symlinks[@]}"; do
   if ! target="$(readlink -- "$path" 2>/dev/null)"; then
     scanner_error "tracked active symlink read failed" "$path"
   fi
   if [[ "${target,,}" == *chatwoot* ]]; then
     symlink_match_paths+=("$path")
-    symlink_match_targets+=("$target")
   fi
 done
 
@@ -100,8 +98,8 @@ if ((${#matching_paths[@]} != 0 || ${#symlink_match_paths[@]} != 0)); then
   for path in "${matching_paths[@]}"; do
     printf 'active file: %q\n' "$path" >&2
   done
-  for ((i = 0; i < ${#symlink_match_paths[@]}; i++)); do
-    printf 'active symlink: %q -> %q\n' "${symlink_match_paths[i]}" "${symlink_match_targets[i]}" >&2
+  for path in "${symlink_match_paths[@]}"; do
+    printf 'active symlink: %q\n' "$path" >&2
   done
   exit 1
 fi
