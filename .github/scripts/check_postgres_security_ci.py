@@ -8,6 +8,8 @@ not a general YAML parser.
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import sys
 
 
@@ -71,6 +73,7 @@ EXPECTED_HYGIENE_LINES = (
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
+EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"')
 EXPECTED_POSTGRES_JOB_KEYS = (
     "name",
     "needs",
@@ -137,6 +140,11 @@ def canonical_mapping_key(line: str, indent: int) -> str | None:
     if indentation(line) != indent or not line.strip() or line.lstrip().startswith("#"):
         return None
     content = line[indent:]
+    if content.startswith("? "):
+        explicit = content[2:].strip()
+        if len(explicit) >= 2 and explicit[0] == explicit[-1] and explicit[0] in ("'", '"'):
+            explicit = explicit[1:-1]
+        return explicit
     match = re.match(r'(?:(?:"([^"]+)")|(?:\'([^\']+)\')|([^:]+?))\s*:', content)
     if match is None:
         return None
@@ -277,8 +285,35 @@ def exact_psql_heredocs(lines: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[
     return lines[1:admin_end], lines[admin_end + 2 : app_end]
 
 
+def validate_yaml(path: Path) -> None:
+    try:
+        import yaml
+    except ImportError:
+        ruby = shutil.which("ruby")
+        if ruby is None:
+            raise ContractError("no real YAML parser is available (need PyYAML or Ruby Psych)")
+        result = subprocess.run(
+            [ruby, "-e", 'require "psych"; Psych.parse_file(ARGV.fetch(0))', str(path)],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        if result.returncode != 0:
+            diagnostic = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "parse failed"
+            raise ContractError(f"workflow is not valid YAML: {diagnostic}")
+        return
+    try:
+        yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as error:
+        raise ContractError(f"workflow is not valid YAML: {error}") from error
+
+
 def check_workflow(path: Path) -> None:
+    validate_yaml(path)
     workflow = tuple(path.read_text(encoding="utf-8").splitlines())
+    workflow_env = mapping_block(workflow, "env", 0)
+    if active_config_lines(workflow_env) != EXPECTED_WORKFLOW_ENV:
+        raise ContractError("workflow env must contain only FORCE_JAVASCRIPT_ACTIONS_TO_NODE24")
     workflow_defaults = mapping_block(workflow, "defaults", 0)
     if active_config_lines(workflow_defaults) != EXPECTED_WORKFLOW_DEFAULTS:
         raise ContractError("workflow defaults must be exactly defaults.run.shell: bash")
@@ -341,8 +376,9 @@ def check_workflow(path: Path) -> None:
     require_unconditional_step(suite_step, "exact multitenancy suite")
     suite_style, suite_run = suite_step.run()
     exact_suite = "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"
-    if suite_style != "scalar" or suite_run != exact_suite:
-        raise ContractError(f"exact multitenancy suite must be active scalar `run: {exact_suite}`")
+    quoted_suite = f'"{exact_suite}"'
+    if suite_style != "scalar" or suite_run != quoted_suite:
+        raise ContractError(f"exact multitenancy suite must be active quoted scalar `run: {quoted_suite}`")
 
     require_active(required, "      - postgres-security", "ci-required dependency")
     require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")

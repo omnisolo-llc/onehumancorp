@@ -2,9 +2,11 @@
 """Behavioral regression tests for the PostgreSQL security CI contract."""
 
 from pathlib import Path
+import os
+import subprocess
 import tempfile
 
-from check_postgres_security_ci import ContractError, check_workflow
+from check_postgres_security_ci import ContractError, check_workflow, validate_yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,10 +26,47 @@ def expect_rejected(workflow: str, old: str, new: str, label: str) -> None:
     raise AssertionError(f"contract accepted weakened {label}")
 
 
+def assert_bash_env_can_preempt_a_step() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        bash_env = Path(directory) / "bash_env.sh"
+        marker = Path(directory) / "body-ran"
+        bash_env.write_text("exit 0\n", encoding="utf-8")
+        environment = os.environ.copy()
+        environment.update(BASH_ENV=str(bash_env), BODY_MARKER=str(marker))
+        result = subprocess.run(
+            ["bash", "-c", 'printf reached > "$BODY_MARKER"; exit 97'],
+            check=False,
+            env=environment,
+        )
+        if result.returncode != 0 or marker.exists():
+            raise AssertionError("BASH_ENV regression did not preempt the Bash step body")
+
+
+def assert_real_yaml_parser_rejects_unquoted_colon_space() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        invalid = Path(directory) / "invalid.yml"
+        invalid.write_text(
+            "jobs:\n  security:\n    steps:\n      - run: cargo test multitenancy_isolation:: -- --nocapture\n",
+            encoding="utf-8",
+        )
+        try:
+            validate_yaml(invalid)
+        except ContractError:
+            return
+    raise AssertionError("real YAML parser accepted an unquoted colon-space scalar")
+
+
 def main() -> None:
+    assert_bash_env_can_preempt_a_step()
+    assert_real_yaml_parser_rejects_unquoted_colon_space()
     check_workflow(WORKFLOW)
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
+        (
+            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
+            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  BASH_ENV: /tmp/skip-security.sh',
+            "workflow BASH_ENV override",
+        ),
         ("pgvector/pgvector:pg16", "postgres:16", "pgvector service"),
         ("OHC_REQUIRE_POSTGRES_TESTS: \"1\"", "OHC_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
         (
@@ -41,12 +80,12 @@ def main() -> None:
         ("POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}", "POSTGRES_SECURITY_RESULT: success", "required result propagation"),
         ('require_success "postgres-security" "$POSTGRES_SECURITY_RESULT"', 'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"', "non-markdown enforcement"),
         (
-            "        run: cargo test -p server_auth multitenancy_isolation:: -- --nocapture",
+            '        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"',
             "        run: |\n          # cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          true",
             "commented suite command",
         ),
         (
-            "        run: cargo test -p server_auth multitenancy_isolation:: -- --nocapture",
+            '        run: "cargo test -p server_auth multitenancy_isolation:: -- --nocapture"',
             "        run: |\n          if false; then\n            cargo test -p server_auth multitenancy_isolation:: -- --nocapture\n          fi",
             "unreachable suite command",
         ),
@@ -202,6 +241,11 @@ def main() -> None:
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            '      - name: Run PostgreSQL tenant-isolation suite\n        ? env\n        :\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            "explicit-key suite optional-skip environment",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
             '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          PATH: "/tmp/fake-bin"\n        run:',
             "suite PATH override",
         ),
@@ -219,6 +263,11 @@ def main() -> None:
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
             "      - name: Run PostgreSQL tenant-isolation suite\n        shell : bash {0} || true\n        run:",
             "spaced suite shell override",
+        ),
+        (
+            "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
+            "      - name: Run PostgreSQL tenant-isolation suite\n        ? shell\n        : bash {0} || true\n        run:",
+            "explicit-key suite shell override",
         ),
         (
             "      - name: Provision and verify non-superuser application role\n        run:",
@@ -289,6 +338,11 @@ def main() -> None:
             "  ci-required:\n    name: CI Required",
             "  ci-required:\n    name: CI Required\n    \"continue-on-error\": true",
             "quoted ignored ci-required job failure",
+        ),
+        (
+            "  ci-required:\n    name: CI Required",
+            "  ci-required:\n    name: CI Required\n    ? continue-on-error\n    : true",
+            "explicit-key ignored ci-required job failure",
         ),
         (
             "  ci-required:\n    name: CI Required",
