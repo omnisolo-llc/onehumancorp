@@ -168,7 +168,8 @@ pub fn all_tools(
 ];
 
     if let Some(llm) = agent_llm {
-        tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
+        tools.push(llm_judge::llm_judge_tool(llm.clone(), "gemini-2.5-pro".to_string()));
+        tools.push(expert_team_tool::expert_team_tool(llm, "gemini-2.5-pro".to_string()));
     }
 
 

@@ -407,3 +407,27 @@ rust_test(
         "@crates//:serde_json",
     ],
 )
+
+rust_test(
+    name = "expert_team_orchestration_e2e_tests",
+    size = "small",
+    srcs = ["tests/expert_team_orchestration_e2e_test.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "//src/agents/builtin/llm",
+        "//src/agents/builtin/tools",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:serde_json",
+        "@crates//:dashmap",
+    ],
+)
