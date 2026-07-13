@@ -141,8 +141,10 @@ describe("compact JWE web sessions", () => {
       now: NOW,
       backendExpiresAt: SESSION.exp,
     });
-    const last = token.at(-1) === "A" ? "B" : "A";
-    await expectInvalid(openSession(`${token.slice(0, -1)}${last}`, ring, CONTEXT, NOW));
+    const segments = token.split(".");
+    const tag = segments[4];
+    segments[4] = `${tag[0] === "A" ? "B" : "A"}${tag.slice(1)}`;
+    await expectInvalid(openSession(segments.join("."), ring, CONTEXT, NOW));
     const unknown = await encryptRaw(ring, wirePayload(), {
       alg: "dir",
       enc: "A256GCM",
