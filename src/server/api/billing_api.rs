@@ -636,7 +636,8 @@ pub async fn cost_dashboard_handler(
         ::server_pricing::rate_limit::PlanTier::Business => 500.0,
     };
 
-    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit).with_alert_threshold(80.0);
+    let _ = budget_manager.record_spend_cents(total_costs_f64 as i64);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
 
