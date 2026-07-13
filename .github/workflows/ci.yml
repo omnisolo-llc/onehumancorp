@@ -806,7 +806,7 @@ jobs:
             local result="$2"
             if [[ "$result" != "success" ]]; then
               echo "::error::${name} finished with result '${result}', expected 'success'."
-              exit 1
+              false
             fi
           }
 
@@ -815,7 +815,7 @@ jobs:
             local result="$2"
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
               echo "::error::${name} finished with result '${result}', expected 'success' or 'skipped'."
-              exit 1
+              false
             fi
           }
 
