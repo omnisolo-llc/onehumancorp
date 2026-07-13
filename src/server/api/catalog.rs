@@ -75,6 +75,8 @@ pub struct Product {
     pub price_cents: Option<i64>,
     pub inventory_count: Option<i32>,
     pub variants: Option<Vec<ProductVariantRequest>>,
+    pub target_currency: Option<String>,
+    pub fx_rate: Option<f64>,
 }
 
 async fn handle_get_products(
@@ -134,6 +136,8 @@ async fn handle_get_products(
                     price_cents: row.try_get("price_cents").ok(),
                     inventory_count: row.try_get("inventory_count").ok(),
                     variants: if variants.is_empty() { None } else { Some(variants) },
+                    target_currency: None,
+                    fx_rate: None,
                 });
             }
             (StatusCode::OK, Json(products)).into_response()

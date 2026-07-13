@@ -1,0 +1,4 @@
+ALTER TABLE invoices ADD COLUMN settlement_currency VARCHAR(10) DEFAULT 'USD';
+ALTER TABLE invoices ADD COLUMN settlement_currency_amount_cents BIGINT DEFAULT 0;
+ALTER TABLE invoices ADD COLUMN fx_rate DOUBLE PRECISION DEFAULT 1.0;
+ALTER TABLE invoices ADD COLUMN applied_tax_rate DOUBLE PRECISION DEFAULT 0.0;

@@ -70,9 +70,6 @@ issue_description: |
   - Extend the existing `Checkout` service to generate `Stripe PaymentIntents` utilizing the localized currency and applying dynamic tax codes.
   - Integrate these flows into a Playwright test.
 
-  **Priority:** P1
-  **Estimated Scope:** Large
-
 issue_priority: P1
 issue_category: research
 issue_type: task
