@@ -1,3 +1,4 @@
+try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
@@ -26,7 +27,6 @@ build --action_env=CGO_ENABLED=1
 build --spawn_strategy=sandboxed,local
 build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
-build --announce_rc
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
 build --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
@@ -104,7 +104,6 @@ build --action_env=CI
 common:bes --bes_timeout=600s
 common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-common:bes --bes_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -118,7 +117,6 @@ common:buildbuddy --jobs=50
 common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
 common:buildbuddy-readonly --remote_upload_local_results=false
-common:buildbuddy-readonly --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
@@ -132,7 +130,6 @@ common:nativelink --remote_cache_compression=false
 common:nativelink --jobs=50
 # Read only Bazel cache
 common:nativelink --remote_upload_local_results=false
-common:nativelink --remote_header=x-nativelink-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 common:remote-cache --config=nativelink
 common:remote-cache --remote_download_minimal

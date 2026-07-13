@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+fail=0
 if [ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]; then
   cd "$BUILD_WORKSPACE_DIRECTORY"
+  script_dir="$BUILD_WORKSPACE_DIRECTORY/.github/scripts"
+else
+  script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 fi
-
-fail=0
+credential_matches=$(mktemp)
+trap 'rm -f -- "$credential_matches"' EXIT
 
 report() {
   printf 'repo hygiene: %s\n' "$*" >&2
@@ -19,6 +23,14 @@ report_path() {
   printf -v rendered '%q' "$path"
   report "$message: $rendered"
 }
+
+if ! python3 "$script_dir/check_tracked_bazel_credentials.py" > "$credential_matches"; then
+  report 'unable to scan tracked files for Bazel API credential headers'
+else
+  while IFS= read -r -d '' path; do
+    report_path 'tracked Bazel API credential header has a literal value' "$path"
+  done < "$credential_matches"
+fi
 
 while IFS= read -r -d '' path; do
   case "$path" in

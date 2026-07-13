@@ -5,6 +5,7 @@ package(default_visibility = ["//visibility:public"])
 sh_binary(
     name = "repo_hygiene",
     srcs = ["check_repo_hygiene.sh"],
+    data = ["check_tracked_bazel_credentials.py"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "@platforms//os:macos": [],
