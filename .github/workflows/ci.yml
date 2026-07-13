@@ -35,6 +35,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Reject active Chatwoot residue
+        run: bash deploy/tests/no_chatwoot_residue_test.sh
+
       - name: Check if only markdown files changed
         id: check
         run: |
@@ -82,9 +85,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Reject active Chatwoot residue
-        run: bash deploy/tests/no_chatwoot_residue_test.sh
 
       - name: Audit root pnpm lock
         run: npx --yes pnpm@11.9.0 audit --prod
