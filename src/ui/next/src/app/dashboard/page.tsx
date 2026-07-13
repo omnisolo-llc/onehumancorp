@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import { useWalkthrough } from "../../hooks/useWalkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import { UnlockProFeaturesWidget } from "./UnlockProFeaturesWidget";
@@ -120,7 +121,7 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const { isOpen: isWalkthroughOpen, start: startWalkthrough, close: closeWalkthrough, complete: completeWalkthrough } = useWalkthrough({ id: "dashboard", autoStartDelay: 1500 });
   const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -385,20 +386,14 @@ export default function Dashboard() {
       <InteractiveWalkthrough
         steps={walkthroughSteps}
         isOpen={isWalkthroughOpen}
-        onClose={() => setIsWalkthroughOpen(false)}
+        onClose={closeWalkthrough}
+        onComplete={completeWalkthrough}
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => {
-            try {
-              localStorage.setItem("TEST_WALKTHROUGH", "true");
-            } catch {
-              // ignore storage failures
-            }
-            setIsWalkthroughOpen(true);
-          }}
+          onClick={() => startWalkthrough()}
           id="dashboard-walkthrough-btn"
           className="app-button min-h-[44px]"
         >
