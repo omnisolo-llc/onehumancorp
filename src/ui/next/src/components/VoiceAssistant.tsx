@@ -94,17 +94,21 @@ export function VoiceAssistant() {
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (!mountedRef.current || session !== sessionRef.current) return;
+        if (!mountedRef.current
+          || session !== sessionRef.current
+          || mediaRecorderRef.current !== mediaRecorder) return;
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = async () => {
-        if (mediaRecorderRef.current === mediaRecorder) mediaRecorderRef.current = null;
-        recordingRef.current = false;
         releaseStream(stream);
-        if (!mountedRef.current || session !== sessionRef.current) return;
+        if (!mountedRef.current
+          || session !== sessionRef.current
+          || mediaRecorderRef.current !== mediaRecorder) return;
+        mediaRecorderRef.current = null;
+        recordingRef.current = false;
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         await sendVoiceCommand(audioBlob, session);
       };
@@ -268,6 +272,7 @@ export function VoiceAssistant() {
           onMouseLeave={endHold}
           onTouchStart={(event) => { event.preventDefault(); beginHold(); }}
           onTouchEnd={(event) => { event.preventDefault(); endHold(); }}
+          onTouchCancel={endHold}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onClick={handleClick}
