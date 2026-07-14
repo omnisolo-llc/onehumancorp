@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  authenticatedRequest,
+  stubAuthEnvironment,
+  TEST_BACKEND_ORIGIN,
+} from "@/lib/auth/authTestFixtures";
 import { GET } from "./route";
 
 describe("GET /api/finance/safe-to-spend", () => {
   beforeEach(() => {
-    vi.stubEnv("BACKEND_URL", "http://backend.internal");
+    stubAuthEnvironment();
     global.fetch = vi.fn();
   });
 
@@ -18,12 +23,9 @@ describe("GET /api/finance/safe-to-spend", () => {
       money_out: 100,
       tax_safe: 50,
     };
-    (global.fetch as any).mockResolvedValueOnce({
-      status: 200,
-      json: async () => backendResponse,
-    });
+    vi.mocked(global.fetch).mockResolvedValueOnce(Response.json(backendResponse));
 
-    const request = new Request("http://localhost/api/finance/safe-to-spend");
+    const request = await authenticatedRequest("/api/finance/safe-to-spend");
     const response = await GET(request);
     expect(response.status).toBe(200);
 
@@ -31,10 +33,12 @@ describe("GET /api/finance/safe-to-spend", () => {
     expect(json).toEqual(backendResponse);
 
     expect(global.fetch).toHaveBeenCalledWith(
-      "http://backend.internal/api/v1/payments/ledger/api/finance/safe-to-spend",
+      new URL(
+        `${TEST_BACKEND_ORIGIN}/api/v1/payments/ledger/api/finance/safe-to-spend`,
+      ),
       expect.objectContaining({
         method: "GET",
-      })
+      }),
     );
   });
 });

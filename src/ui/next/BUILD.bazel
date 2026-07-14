@@ -57,10 +57,12 @@ sh_test(
     srcs = ["bazel_vitest_test.sh"],
     data = glob([
         "src/**/*.css",
+        "src/**/*.snap",
         "src/**/*.ts",
         "src/**/*.tsx",
     ]) + [
         "next-env.d.ts",
+        "next.config.mjs",
         "package.json",
         "package-lock.json",
         "tsconfig.json",
