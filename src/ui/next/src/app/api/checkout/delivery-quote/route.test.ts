@@ -1,50 +1,35 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const proxyBackendRequest = vi.hoisted(() =>
+  vi.fn(async () => Response.json({ success: true, fee: 8.5 })),
+);
+
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+
 import { POST } from "./route";
 
 describe("POST /api/checkout/delivery-quote", () => {
-  beforeEach(() => {
-    vi.stubEnv("BACKEND_URL", "http://backend.internal");
-    global.fetch = vi.fn();
-  });
+  beforeEach(() => proxyBackendRequest.mockClear());
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
-
-  it("forwards delivery quote checks to the Rust backend", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, fee: 8.5, can_deliver: true }),
-    });
-
-    const body = {
+  it("delegates the unchanged POST body and query to the authenticated backend path", async () => {
+    const body = JSON.stringify({
       deliveryAddress: "123 Market St",
       coordinates: { lat: 37.77, lng: -122.41 },
-    };
-    const req = new Request("http://localhost/api/checkout/delivery-quote", {
-      method: "POST",
-      headers: {
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
     });
+    const request = new Request(
+      "http://localhost/api/checkout/delivery-quote?currency=USD",
+      { method: "POST", headers: { "content-type": "application/json" }, body },
+    );
 
-    const res = await POST(req);
+    const response = await POST(request);
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ success: true, fee: 8.5, can_deliver: true });
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/checkout/delivery-quote", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
-    });
+    expect(response.status).toBe(200);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/checkout/delivery-quote",
+    );
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).search).toBe("?currency=USD");
+    await expect(request.text()).resolves.toBe(body);
   });
 });

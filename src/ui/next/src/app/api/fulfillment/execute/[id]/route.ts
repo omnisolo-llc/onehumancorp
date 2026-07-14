@@ -1,35 +1,28 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8081';
-  const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
+const FULFILLMENT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
-  const authHeader = request.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-    'Content-Type': 'application/json'
-  };
-  if (authHeader) {
-    headers['authorization'] = authHeader;
+function invalidFulfillmentId(): Response {
+  return Response.json(
+    { error: "invalid fulfillment ID" },
+    {
+      status: 400,
+      headers: {
+        "cache-control": "private, no-store",
+        pragma: "no-cache",
+        "x-content-type-options": "nosniff",
+      },
+    },
+  );
+}
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const { id } = await context.params;
+  if (id === "." || id === ".." || !FULFILLMENT_ID.test(id)) {
+    return invalidFulfillmentId();
   }
-
-  try {
-    const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/fulfillment/execute/${(await params).id}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-
-    return NextResponse.json({}, { status: res.status });
-  } catch (e) {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
-  }
+  return proxyBackendRequest(request, `/api/fulfillment/execute/${id}`);
 }

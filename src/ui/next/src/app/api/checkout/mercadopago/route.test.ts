@@ -1,57 +1,37 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const proxyBackendRequest = vi.hoisted(() =>
+  vi.fn(async () => Response.json({ checkout_url: "https://checkout.example" })),
+);
+
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+
 import { POST } from "./route";
 
 describe("POST /api/checkout/mercadopago", () => {
-  beforeEach(() => {
-    vi.stubEnv("BACKEND_URL", "http://backend.internal");
-    global.fetch = vi.fn();
-  });
+  beforeEach(() => proxyBackendRequest.mockClear());
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
-
-  it("forwards MercadoPago checkout creation to the Rust backend", async () => {
-    const backendResponse = {
-      checkout_url: "https://www.mercadopago.com/checkout/v1/redirect?pref_id=real",
-      provider: "mercadopago",
-      status: "pending",
-    };
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => backendResponse,
-    });
-
-    const body = {
-      tenant_id: "tenant-1",
+  it("delegates the unchanged POST body and query to the authenticated backend path", async () => {
+    const body = JSON.stringify({
+      tenant_id: "browser-controlled",
       product_id: "cake-12",
       amount_cents: 4500,
       currency: "MXN",
-    };
-    const req = new Request("http://localhost/api/checkout/mercadopago", {
-      method: "POST",
-      headers: {
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
     });
+    const request = new Request(
+      "http://localhost/api/checkout/mercadopago?locale=es-MX",
+      { method: "POST", headers: { "content-type": "application/json" }, body },
+    );
 
-    const res = await POST(req);
+    const response = await POST(request);
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/checkout/mercadopago", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
-    });
+    expect(response.status).toBe(200);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/checkout/mercadopago",
+    );
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).search).toBe("?locale=es-MX");
+    await expect(request.text()).resolves.toBe(body);
   });
 });
