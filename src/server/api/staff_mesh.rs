@@ -721,7 +721,7 @@ pub struct GetShiftsResponse {
 
 pub async fn get_shifts_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -751,7 +751,7 @@ pub async fn get_shifts_handler(
 
 pub async fn get_escalations_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -778,7 +778,7 @@ pub async fn get_escalations_handler(
 
 pub async fn simulate_event_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -809,7 +809,7 @@ pub async fn simulate_event_handler(
 
 pub async fn generate_summary_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
