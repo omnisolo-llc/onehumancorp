@@ -34,6 +34,7 @@ export type BackendRequestOptions = Readonly<{
   backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   forwardQuery?: boolean;
   requestContentType?: "application/json";
+  suppressRequestBody?: true;
   resolveBackendPath?: (body: Uint8Array<ArrayBuffer>) => string | Promise<string>;
   transformRequestBody?: (
     body: Uint8Array<ArrayBuffer>,
@@ -283,7 +284,8 @@ export async function proxyAuthenticatedRequest(
     const hasBody =
       encodedRequest.byteLength > 0 &&
       backendMethod !== "GET" &&
-      backendMethod !== "HEAD";
+      backendMethod !== "HEAD" &&
+      options.suppressRequestBody !== true;
     const backend = await dependencies.fetchImpl(target, {
       method: backendMethod,
       headers,

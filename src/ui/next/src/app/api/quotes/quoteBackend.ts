@@ -1,7 +1,25 @@
+import { normalizeJsonRequestBody } from "@/lib/auth/backendTransport";
+
 const QUOTE_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const EMPTY_QUOTE_BODY = new TextEncoder().encode("{}");
+
+export function normalizeLegacyQuoteBody(
+  body: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> {
+  try {
+    return normalizeJsonRequestBody(body);
+  } catch {
+    return EMPTY_QUOTE_BODY;
+  }
+}
 
 export function quoteBackendPath(id: unknown, suffix = ""): string {
-  if (typeof id !== "string" || !QUOTE_ID.test(id)) {
+  if (
+    typeof id !== "string" ||
+    id === "." ||
+    id === ".." ||
+    !QUOTE_ID.test(id)
+  ) {
     throw new Error("invalid quote ID");
   }
   return `/api/v1/quotes/${id}${suffix}`;

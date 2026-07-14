@@ -1,7 +1,14 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import {
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+} from "@/lib/auth/backendTransport";
 
 export const runtime = "nodejs";
 
 export function POST(request: Request): Promise<Response> {
-  return proxyBackendRequest(request, "/api/proposals/draft");
+  return proxyBackendRequest(request, "/api/proposals/draft", {
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: normalizeJsonRequestBody,
+  });
 }

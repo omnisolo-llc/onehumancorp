@@ -1,1 +1,7 @@
-export { proxyCurrentBackendPath as GET } from "@/app/api/backendCatchAll";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/subscriptions", {
+    forwardQuery: false,
+  });
+}
