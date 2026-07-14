@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('AI Voice Receptionist Onboarding', () => {
   test('should allow merchant to toggle voice receptionist and get a number', async ({ page }) => {
     // 1. Log in
-    await page.goto('/login');
+    await page.goto('http://localhost:3000/login');
     await page.fill('input[name="email"]', 'merchant@example.com');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');

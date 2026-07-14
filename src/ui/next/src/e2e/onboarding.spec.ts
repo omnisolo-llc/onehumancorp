@@ -38,7 +38,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('maya@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('mypassword123');
 
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // // expect(storedTenantId).not.toBeNull();
@@ -72,7 +72,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('carlos@example.com');
     await page.getByPlaceholder(/••••••••/i).fill('password123');
 
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
@@ -106,7 +106,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('leo@music.com');
     await page.getByPlaceholder(/••••••••/i).fill('pass1234');
 
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
@@ -139,7 +139,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('fatima@foodcart.com');
     await page.getByPlaceholder(/••••••••/i).fill('halal123');
 
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
@@ -206,7 +206,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
 
     // Attempt to launch store
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
 
     // Expect validation errors to be visible
     await expect(page.getByText(/is required/i).first()).toBeVisible();
@@ -214,7 +214,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Fill in invalid email and password without number
     await page.getByPlaceholder(/you@example.com/i).fill('invalid-email');
     await page.getByPlaceholder(/••••••••/i).fill('password');
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.locator('button').filter({ hasText: 'Approve await page.getByRole('button', { name: 'Approve & Publish' }).click(); Publish' }).click();
 
     await expect(page.getByText('Please enter a valid email address')).toBeVisible();
     await expect(page.getByText('Password must be at least 8 characters and contain a number')).toBeVisible();
@@ -281,7 +281,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.goto('/onboarding');
     await expect(page.getByText("Setup Assistant")).toBeVisible();
 
-    await page.getByRole('button', { name: 'Instant Build' }).click();
+    await page.locator('button').filter({ hasText: 'Instant Build' }).click();
     await expect(page.getByText("Tell us about your business")).toBeVisible();
 
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
