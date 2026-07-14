@@ -9,6 +9,9 @@ test.describe('Viral Powered by OHC Widget', () => {
     const generateBtn = page.locator('#generate-btn');
     await expect(generateBtn).toBeVisible();
 
+    // Select Light theme
+    await page.selectOption('#theme-select', 'light');
+
     // Click generate
     await generateBtn.click();
 
@@ -20,6 +23,7 @@ test.describe('Viral Powered by OHC Widget', () => {
     const embedCode = page.locator('#embed-code');
     await expect(embedCode).toContainText('Powered by OHC');
     await expect(embedCode).toContainText('ohc.network/invite/');
+    await expect(embedCode).toContainText('rgba(255,255,255,0.9)');
   });
 
   test('should copy the share link to clipboard', async ({ page, context }) => {

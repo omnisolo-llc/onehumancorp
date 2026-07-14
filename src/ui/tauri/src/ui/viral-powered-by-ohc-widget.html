@@ -186,8 +186,16 @@
     <h1>Embed Footer Badge</h1>
     <p class="subtitle">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
 
+    <div style="margin-bottom: 16px; width: 100%;">
+      <label for="theme-select" style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500;">Theme</label>
+      <select id="theme-select" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); font-family: inherit; font-size: 14px; color: var(--text-main);">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+
     <div class="preview-box">
-      <div class="ohc-badge">
+      <div class="ohc-badge" id="preview-badge">
         <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         Powered by OHC
       </div>
@@ -208,6 +216,23 @@
   <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
 
   <script>
+    document.getElementById('theme-select').addEventListener('change', (e) => {
+      const isDark = e.target.value === 'dark';
+      const badge = document.getElementById('preview-badge');
+      if (isDark) {
+         badge.style.background = 'rgba(0,0,0,0.8)';
+         badge.style.color = '#fff';
+         badge.style.border = 'none';
+      } else {
+         badge.style.background = 'rgba(255,255,255,0.9)';
+         badge.style.color = '#000';
+         badge.style.border = '1px solid rgba(0,0,0,0.1)';
+      }
+    });
+
+    // Initialize default theme preview
+    document.getElementById('theme-select').dispatchEvent(new Event('change'));
+
     document.getElementById('generate-btn').addEventListener('click', async () => {
       const btn = document.getElementById('generate-btn');
       btn.disabled = true;
@@ -237,13 +262,18 @@
           // Using default format for demo due to API error
         }
 
+        const theme = document.getElementById('theme-select').value;
+        const isDark = theme === 'dark';
+        const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)';
+        const color = isDark ? '#fff' : '#000';
+        const borderStyle = isDark ? '' : 'border:1px solid rgba(0,0,0,0.1);';
         const snippet = `<!-- OHC Referral Footer Badge -->
 <script>
   (function() {
     var b = document.createElement('a');
     b.href = '${referralLink}';
     b.target = '_blank';
-    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:${bg};color:${color};border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);${borderStyle}';
     b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
     document.body.appendChild(b);
   })();
