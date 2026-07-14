@@ -1,39 +1,41 @@
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { privateJson } from "../assistantBackend";
+
 export const dynamic = "force-dynamic";
-import { NextResponse } from 'next/server';
-import { getBilling } from '../store';
 
-export async function GET(request?: Request) {
-  try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request?.headers?.get('x-tenant-id') || 'storefront';
-    
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-    };
-    
-    const authHeader = request?.headers?.get('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
-    const res = await fetch(`${backendUrl}/api/billing/my-plan`, {
-      headers,
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json({
-        plan: data.current_plan,
-        aiActionsUsed: data.ai_actions_used,
-        aiActionsLimit: data.ai_actions_limit || 0,
-        storageUsedGB: parseFloat((data.storage_used_bytes / (1024 * 1024 * 1024)).toFixed(2)),
-        storageLimitGB: data.storage_limit_bytes ? parseFloat((data.storage_limit_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
-        estimatedNextBill: data.next_bill_estimated / 100,
-      });
-    }
-  } catch (error) {
-    console.error('Failed to fetch real billing data from backend:', error);
+export async function GET(request: Request): Promise<Response> {
+  const response = await proxyBackendRequest(request, "/api/billing/my-plan");
+  if (!response.ok) return response;
+  const value = await response.json().catch(() => null);
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return privateJson(502, { error: "invalid billing response" });
   }
-
-  return NextResponse.json(getBilling());
+  const data = value as Record<string, unknown>;
+  const used = finiteNumber(data.ai_actions_used);
+  const limit = finiteNumber(data.ai_actions_limit);
+  const storage = finiteNumber(data.storage_used_bytes);
+  const storageLimit = finiteNumber(data.storage_limit_bytes);
+  const nextBill = finiteNumber(data.next_bill_estimated);
+  if (
+    typeof data.current_plan !== "string" ||
+    used === null ||
+    limit === null ||
+    storage === null ||
+    storageLimit === null ||
+    nextBill === null
+  ) {
+    return privateJson(502, { error: "invalid billing response" });
+  }
+  return privateJson(200, {
+    plan: data.current_plan,
+    aiActionsUsed: used,
+    aiActionsLimit: limit,
+    storageUsedGB: Number((storage / 1_073_741_824).toFixed(2)),
+    storageLimitGB: Number((storageLimit / 1_073_741_824).toFixed(2)),
+    estimatedNextBill: nextBill / 100,
+  });
 }
