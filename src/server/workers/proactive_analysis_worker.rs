@@ -127,10 +127,49 @@ impl ProactiveAnalysisWorker {
             }
             Err(_) => {
                 tracing::error!("Agent execution exceeded 60-second ML-Resilience timeout rule for job {}", job_id);
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', failed_reason = 'Agent execution exceeded 60-second ML-Resilience timeout rule.', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                let row = sqlx::query("SELECT retry_count, max_retries FROM ohc_job_queue WHERE id = $1")
                     .bind(&job_id)
-                    .execute(&db.pool)
+                    .fetch_optional(&db.pool)
                     .await?;
+
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let current_retries: i32 = r.try_get("retry_count").unwrap_or(0);
+                    let max_retries: i32 = r.try_get("max_retries").unwrap_or(3);
+                    let next_retry = current_retries + 1;
+
+                    if next_retry >= max_retries {
+                        sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                            .bind(next_retry)
+                            .bind(&job_id)
+                            .execute(&db.pool)
+                            .await?;
+                    } else {
+                        let backoff_seconds = 1 << next_retry;
+                        let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
+                        let query_str = if crate::is_standalone_runtime() {
+                            "UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3"
+                        } else {
+                            "UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2::timestamptz, updated_at = CURRENT_TIMESTAMP WHERE id = $3"
+                        };
+
+                        if crate::is_standalone_runtime() {
+                            sqlx::query(query_str)
+                                .bind(next_retry)
+                                .bind(new_next_retry_at.to_rfc3339())
+                                .bind(&job_id)
+                                .execute(&db.pool)
+                                .await?;
+                        } else {
+                            sqlx::query(query_str)
+                                .bind(next_retry)
+                                .bind(new_next_retry_at)
+                                .bind(&job_id)
+                                .execute(&db.pool)
+                                .await?;
+                        }
+                    }
+                }
                 return Ok(()); // fail safe, return ok to stop processing it this time
             }
         }

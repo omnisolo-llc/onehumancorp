@@ -119,9 +119,25 @@ impl OHCJobQueue {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
-        // Reset jobs that have been in PROCESSING for more than 1 hour.
-        // We move them back to PENDING and increment retry_count.
         let is_standalone = crate::is_standalone_runtime();
+
+        // Fail jobs that have been in PROCESSING for more than 1 hour and already reached max retries.
+        let fail_stale_query_str = if is_standalone {
+            "UPDATE ohc_job_queue
+             SET status = 'FAILED', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < datetime('now', '-1 hours') AND retry_count >= COALESCE(max_retries, 3) - 1"
+        } else {
+            "UPDATE ohc_job_queue
+             SET status = 'FAILED', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 hour' AND retry_count >= COALESCE(max_retries, 3) - 1"
+        };
+        sqlx::query(fail_stale_query_str)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Reset jobs that have been in PROCESSING for more than 1 hour (and haven't reached max retries).
+        // We move them back to PENDING and increment retry_count.
         let query_str = if is_standalone {
             "UPDATE ohc_job_queue
              SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
@@ -225,9 +241,8 @@ impl OHCJobQueue {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, failed_reason = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                     .bind(next_retry)
-                    .bind(reason)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await
