@@ -16,7 +16,7 @@ The current backend is written in Go (~50,000 lines of code) and handles:
 The most crucial factor in this evaluation is the system's performance bottleneck.
 
 * **LLM Latency:** The core of the platform is AI orchestration. Network calls to LLMs (Gemini, Anthropic, OpenAI) take hundreds of milliseconds to several seconds. No amount of CPU optimization in the backend language can reduce this network latency.
-* **Database & Integrations:** Most other operations involve querying PostgreSQL/SQLite, communicating with Redis, or sending data to external integrations (direct channel providers, Plane). These are also I/O bound.
+* **Database & Integrations:** Most other operations involve querying PostgreSQL/SQLite, communicating with Redis, or sending data to external integrations (Chatwoot, Plane). These are also I/O bound.
 * **CPU vs I/O:** C++ significantly outperforms Go in raw CPU crunching (e.g., complex math, video encoding, game engines). However, for I/O bound web services, Go's non-blocking I/O and goroutine scheduler provide excellent performance that easily saturates network links, making a C++ rewrite yield minimal real-world latency improvements.
 
 ## 2. Concurrency Model

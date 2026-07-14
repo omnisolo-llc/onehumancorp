@@ -157,6 +157,66 @@ spec:
               - 169.254.0.0/16
 {{- end }}
 ---
+{{- if .Values.chatwoot.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-chatwoot
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .Release.Name }}-chatwoot
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.chatwoot.service.port }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+{{- end }}
+---
 {{- if .Values.powersync.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -253,6 +313,12 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-ohc-core
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
       ports:
         - protocol: TCP
           port: {{ .Values.valkey.service.port }}
@@ -299,6 +365,12 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-ohc-core
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}

@@ -132,6 +132,7 @@ COMMON_HELM_SMOKE_ARGS=(
   --set valkey.enabled=false
   --set cnpg.enabled=false
   --set ohcCore.enabled=false
+  --set chatwoot.enabled=false
   --set powersync.enabled=false
   --set kube-prometheus-stack.enabled=false
   --set fluentBit.enabled=false

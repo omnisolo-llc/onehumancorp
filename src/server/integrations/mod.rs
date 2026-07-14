@@ -1,5 +1,8 @@
 pub mod catalog;
 pub mod registry;
+#[cfg(ohc_bazel)]
+#[cfg(not(ohc_bazel))]
+pub use ::server_integrations_chatwoot as chatwoot;
 pub use ::server_integrations_pubsub as pubsub;
 pub use ::server_integrations_nats as nats;
 pub mod stripe;
