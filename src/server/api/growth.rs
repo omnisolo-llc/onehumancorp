@@ -4241,6 +4241,24 @@ pub async fn handle_zero_click_generate(
         format!("{}.ohc.app", clean_name)
     };
 
+    sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(&_start_res.organization_id)
+        .bind("storefront_provisioner")
+        .bind(serde_json::json!({
+            "description": "Your store is ready! Tap here to review your catalog or connect Stripe.",
+            "url": format!("https://{}", _url)
+        }))
+        .bind(serde_json::json!({
+            "actions": [{ "label": "Review Store", "url": "/storefront" }]
+        }))
+        .execute(&db.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to seed agent feed item: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
     Ok(axum::Json(ZeroClickGenerateResponse {
         organization_id: _start_res.organization_id,
         user_id: _start_res.user_id,
