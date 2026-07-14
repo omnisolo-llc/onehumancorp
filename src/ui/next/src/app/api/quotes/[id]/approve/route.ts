@@ -11,5 +11,10 @@ export async function POST(
   } catch {
     return invalidQuoteId();
   }
-  return proxyBackendRequest(request, path, { backendMethod: "PATCH" });
+  return proxyBackendRequest(request, path, {
+    backendMethod: "PATCH",
+    forwardQuery: false,
+    requestContentType: "application/json",
+    suppressRequestBody: true,
+  });
 }

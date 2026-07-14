@@ -11,5 +11,8 @@ export async function GET(
   } catch {
     return invalidQuoteId();
   }
-  return proxyBackendRequest(request, path);
+  return proxyBackendRequest(request, path, {
+    forwardQuery: false,
+    requestContentType: "application/json",
+  });
 }

@@ -9,4 +9,8 @@ describe("subscription backend paths", () => {
     );
     expect(() => subscriptionBackendPath("../admin")).toThrow("invalid subscription ID");
   });
+
+  test.each([".", ".."])('rejects exact dot-segment subscription ID "%s"', (id) => {
+    expect(() => subscriptionBackendPath(id)).toThrow("invalid subscription ID");
+  });
 });

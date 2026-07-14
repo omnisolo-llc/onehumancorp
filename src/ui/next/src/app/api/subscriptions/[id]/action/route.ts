@@ -1,4 +1,7 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import {
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+} from "@/lib/auth/backendTransport";
 import {
   invalidSubscriptionId,
   subscriptionBackendPath,
@@ -14,5 +17,9 @@ export async function POST(
   } catch {
     return invalidSubscriptionId();
   }
-  return proxyBackendRequest(request, path);
+  return proxyBackendRequest(request, path, {
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: normalizeJsonRequestBody,
+  });
 }

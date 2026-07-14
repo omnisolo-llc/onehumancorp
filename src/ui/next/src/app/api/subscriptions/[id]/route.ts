@@ -14,5 +14,5 @@ export async function GET(
   } catch {
     return invalidSubscriptionId();
   }
-  return proxyBackendRequest(request, path);
+  return proxyBackendRequest(request, path, { forwardQuery: false });
 }

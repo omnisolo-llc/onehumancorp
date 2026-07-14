@@ -286,6 +286,30 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
+  it("allows a trusted action route to suppress the caller request body", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBeUndefined();
+      return Response.json({ ok: true });
+    });
+    const deps = await dependencies(fetchImpl);
+    const input = await request(deps, "/api/v1/quotes/quote-7/accept", {
+      method: "POST",
+      body: '{"attacker":"payload"}',
+      headers: { "content-type": "application/json" },
+    });
+
+    const response = await proxyAuthenticatedRequest(
+      input,
+      "/api/v1/quotes/quote-7/accept",
+      deps,
+      { suppressRequestBody: true },
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("strictly parses and canonically reserializes JSON request bodies", () => {
     const normalized = normalizeJsonRequestBody(
       new TextEncoder().encode(' { "nested": { "ok": true }, "items": [1, 2] } '),
