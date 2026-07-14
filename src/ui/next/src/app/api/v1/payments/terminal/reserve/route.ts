@@ -1,23 +1,5 @@
-import { NextResponse } from 'next/server';
-import { backendHeaders } from "../../../../ui/backendProxy";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-
-  try {
-    const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/v1/payments/terminal/reserve`, {
-      method: 'POST',
-      headers: backendHeaders(req, true),
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      return NextResponse.json(await res.json(), { status: res.status });
-    }
-
-    return NextResponse.json({ success: false, error_message: await res.text() }, { status: res.status });
-  } catch (e: any) {
-    return NextResponse.json({ success: false, error_message: 'Backend connection failed' }, { status: 500 });
-  }
+export function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/payments/terminal/reserve");
 }

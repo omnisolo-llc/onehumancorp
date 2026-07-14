@@ -1,79 +1,17 @@
-import { NextResponse } from "next/server";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export function backendHeaders(req: Request, withJson = false): Headers {
-  const headers = new Headers();
-  if (withJson) headers.set("Content-Type", "application/json");
-
-  for (const name of ["authorization", "cookie", "x-tenant-id", "x-user-id", "x-spiffe-id"]) {
-    const value = req.headers.get(name);
-    if (value) headers.set(name, value);
-  }
-
-  return headers;
+export function proxyBackendGet(request: Request, backendPath: string): Promise<Response> {
+  return proxyBackendRequest(request, backendPath);
 }
 
-export async function proxyBackendGet(req: Request, backendPath: string) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
-  const { search } = new URL(req.url);
-
-  try {
-    const res = await fetch(`${backendUrl}${backendPath}${search}`, {
-      method: "GET",
-      headers: backendHeaders(req),
-    });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
-  }
+export function proxyBackendPost(request: Request, backendPath: string): Promise<Response> {
+  return proxyBackendRequest(request, backendPath);
 }
 
-export async function proxyBackendPost(req: Request, backendPath: string) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
-  const { search } = new URL(req.url);
-
-  try {
-    const body = await req.json();
-    const res = await fetch(`${backendUrl}${backendPath}${search}`, {
-      method: "POST",
-      headers: backendHeaders(req, true),
-      body: JSON.stringify(body),
-    });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
-  }
+export function proxyBackendPatch(request: Request, backendPath: string): Promise<Response> {
+  return proxyBackendRequest(request, backendPath);
 }
 
-export async function proxyBackendPatch(req: Request, backendPath: string) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
-  const { search } = new URL(req.url);
-
-  try {
-    const body = await req.json();
-    const res = await fetch(`${backendUrl}${backendPath}${search}`, {
-      method: "PATCH",
-      headers: backendHeaders(req, true),
-      body: JSON.stringify(body),
-    });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
-  }
-}
-
-export async function proxyBackendPut(req: Request, backendPath: string) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
-  const { search } = new URL(req.url);
-
-  try {
-    const body = await req.json();
-    const res = await fetch(`${backendUrl}${backendPath}${search}`, {
-      method: "PUT",
-      headers: backendHeaders(req, true),
-      body: JSON.stringify(body),
-    });
-    return NextResponse.json(await res.json(), { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
-  }
+export function proxyBackendPut(request: Request, backendPath: string): Promise<Response> {
+  return proxyBackendRequest(request, backendPath);
 }

@@ -1,34 +1,29 @@
-import { NextResponse } from "next/server";
-import { backendHeaders } from "../../../../ui/backendProxy";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
+const decoder = new TextDecoder("utf-8", { fatal: true });
+const encoder = new TextEncoder();
 
-  try {
-    const body = await req.json();
-
-    // Normalize body to Rust API expectations
-    const payload = {
-      amount_cents: body.amount_cents || body.amount,
-      currency: body.currency || "usd",
-      product_id: body.product_id || null,
-      quantity: body.quantity || null,
-      order_id: body.order_id || null,
-    };
-
-    const res = await fetch(`${backendUrl}/api/v1/payments/terminal/intent`, {
-      method: "POST",
-      headers: backendHeaders(req),
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-
-    if (!res.ok || data?.Err) {
-      return NextResponse.json({ error: data?.Err || "Failed to create PaymentIntent" }, { status: res.status });
-    }
-
-    return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: "Backend connection failed: " + err.message }, { status: 500 });
+function normalizedIntent(body: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
+  const value = JSON.parse(decoder.decode(body));
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid request");
   }
+  const input = value as Record<string, unknown>;
+  return new Uint8Array(
+    encoder.encode(
+      JSON.stringify({
+        amount_cents: input.amount_cents ?? input.amount,
+        currency: input.currency ?? "usd",
+        product_id: input.product_id ?? null,
+        quantity: input.quantity ?? null,
+        order_id: input.order_id ?? null,
+      }),
+    ),
+  );
+}
+
+export function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/payments/terminal/intent", {
+    transformRequestBody: normalizedIntent,
+  });
 }
