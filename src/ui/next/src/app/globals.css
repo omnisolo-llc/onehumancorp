@@ -61,7 +61,7 @@ body {
 .app-brand-mark {
   width: 32px;
   height: 44px;
-  border-radius: 16px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: #2784ff;
@@ -241,7 +241,7 @@ body {
 
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -251,7 +251,7 @@ body {
 
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -260,7 +260,7 @@ body {
 
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: 8px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
@@ -271,7 +271,7 @@ body {
 
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -624,7 +624,7 @@ body {
   font-family: 'Outfit', 'Inter', sans-serif;
   color: #1D1D1F;
   transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 24px;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
@@ -695,7 +695,7 @@ body {
 }
 
 .glassmorphism {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -704,7 +704,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
-    border-radius: 16px !important;
+    border-radius: 8px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -713,7 +713,7 @@ body {
 }
 
 html.dark .glassmorphism {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -721,7 +721,7 @@ html.dark .glassmorphism {
 }
 
 .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -729,7 +729,7 @@ html.dark .glassmorphism {
 
 @media (prefers-color-scheme: dark) {
   .glass-card {
-    border-radius: 16px !important;
+    border-radius: 8px !important;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -737,7 +737,7 @@ html.dark .glassmorphism {
 }
 
 html.dark .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -852,7 +852,7 @@ button,
 
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -861,7 +861,7 @@ button,
 
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 
@@ -886,7 +886,7 @@ button,
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .setup-page #setup-screen>div:first-child {
@@ -993,7 +993,7 @@ button,
   align-self: flex-start;
   margin: 0 0 8px;
   border: 1px solid #cfe0ff;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #eef5ff;
   color: #1f6feb;
 }
@@ -1125,7 +1125,7 @@ button,
 .setup-page #setup-screen [class*="cursor-pointer"][class*="rounded-2xl"] {
   padding: 12px;
   border: 1px solid #d8e0ea;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #ffffff;
 }
 
@@ -1222,7 +1222,7 @@ select {
 
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
+  border-radius: 8px;
   font-family: 'Outfit', 'Inter', sans-serif;
   padding: 24px;
 }
@@ -1244,18 +1244,18 @@ html.dark .ohc-growth-card {
 }
 
 .app-card {
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .app-panel {
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 html.dark .glass-panel {
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 @layer utilities {
@@ -1267,7 +1267,7 @@ html.dark .glass-panel {
 }
 /* Global border radius to fix UI regression */
 .app-card, .glassmorphism, .glass-card {
-  border-radius: 16px !important;
+  border-radius: 8px !important;
 }
 .glass-control {
   border-radius: 8px !important;

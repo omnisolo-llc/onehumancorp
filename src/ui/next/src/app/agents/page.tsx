@@ -503,7 +503,7 @@ function CatalogPanel({
           {featuredScenarios.map((scenario) => (
             <div
               key={scenario.title}
-              className="min-w-[280px] md:min-w-[320px] snap-start p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-900/80 hover:shadow-md hover:border-teal-500/50 dark:hover:border-teal-500/50 transition-all flex flex-col justify-between"
+              className="min-w-[min(280px,100vw-3rem)] md:min-w-[320px] snap-start p-5 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-900/80 hover:shadow-md hover:border-teal-500/50 dark:hover:border-teal-500/50 transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">

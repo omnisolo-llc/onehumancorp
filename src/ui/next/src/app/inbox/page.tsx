@@ -521,6 +521,13 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
   return (
     <PowerSyncProvider
       fallback={<InboxLoadingState />}
