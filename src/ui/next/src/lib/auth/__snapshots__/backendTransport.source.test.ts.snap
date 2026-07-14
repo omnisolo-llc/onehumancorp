@@ -3,15 +3,7 @@
 exports[`protected backend transport source contract > keeps backend origin and browser identity forwarding out of route handlers 1`] = `
 [
   "src/app/api/auto-catalog/route.ts: browser identity forwarding",
-  "src/app/api/checkout/delivery-quote/route.ts: direct backend configuration",
-  "src/app/api/checkout/delivery-quote/route.ts: browser identity forwarding",
-  "src/app/api/checkout/mercadopago/route.ts: direct backend configuration",
-  "src/app/api/checkout/mercadopago/route.ts: browser identity forwarding",
   "src/app/api/deerflow/run/route.ts: direct backend configuration",
-  "src/app/api/fulfillment/execute/[id]/route.ts: direct backend configuration",
-  "src/app/api/fulfillment/execute/[id]/route.ts: browser identity forwarding",
-  "src/app/api/fulfillment/route.ts: direct backend configuration",
-  "src/app/api/fulfillment/route.ts: browser identity forwarding",
   "src/app/api/generate-offering/route.ts: direct backend configuration",
   "src/app/api/generate-offering/route.ts: browser identity forwarding",
   "src/app/api/inbox/webhook/route.ts: direct backend configuration",
