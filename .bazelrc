@@ -2,8 +2,8 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
-
-
+build --config=remote-cache
+build --config=bes
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -94,9 +94,6 @@ test --test_env=HOME
 test --test_env=MCPANY_DEBUG
 test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
 test --test_env=PATH
-test --test_env=OHC_AGENT_AUTH_KEY=fake-auth-key-must-contain-at-least-32-bytes
-test --test_env=OHC_AGENT_TOKEN=fake-token
-test --test_env=OHC_AGENT_SPIFFE_ID=spiffe://onehumancorp.io/system/system/agent/agent1
 
 # ── Action environment ────────────────────────────────────────────────────────
 build --action_env=GEMINI_API_KEY

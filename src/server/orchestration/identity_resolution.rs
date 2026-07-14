@@ -16,17 +16,27 @@ impl IdentityResolver {
     pub async fn resolve_or_create_customer(&self, tenant_id: &str, sender_id: &str, source: &str) -> Result<String, String> {
         let pool = &self.db.pool;
 
-        // Try to find a customer by email, phone, or preferences (social handle)
+        if sender_id.is_empty() || sender_id == "unknown" {
+            // Cannot reliably resolve without a sender id, let's just make one
+            let new_id = Uuid::new_v4().to_string();
+            return Ok(new_id);
+        }
+
+        // Try to find a customer by email, phone, or preferences (social handle), OR check customer_identities
         match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query(
                     r#"
-                    SELECT id FROM customers
-                    WHERE tenant_id = $1
+                    SELECT c.id FROM customers c
+                    LEFT JOIN customer_identities ci ON c.id::text = ci.customer_id AND ci.tenant_id = c.tenant_id
+                    WHERE c.tenant_id = $1
                     AND (
-                        email = $2 OR
-                        phone = $2 OR
-                        preferences->>'social_handle' = $2
+                        c.email = $2 OR
+                        c.phone = $2 OR
+                        c.phone LIKE '%' || $2 OR
+                        c.preferences->>'social_handle' = $2 OR
+                        c.preferences->>'instagram_handle' = $2 OR
+                        ci.channel_identity = $2
                     ) LIMIT 1
                     "#
                 )
@@ -45,16 +55,23 @@ impl IdentityResolver {
             DbStore::Sqlite(sqlite_pool) => {
                  let row = sqlx::query(
                     r#"
-                    SELECT id FROM customers
-                    WHERE tenant_id = ?
+                    SELECT c.id FROM customers c
+                    LEFT JOIN customer_identities ci ON c.id = ci.customer_id AND ci.tenant_id = c.tenant_id
+                    WHERE c.tenant_id = ?
                     AND (
-                        email = ? OR
-                        phone = ? OR
-                        json_extract(preferences, '$.social_handle') = ?
+                        c.email = ? OR
+                        c.phone = ? OR
+                        c.phone LIKE '%' || ? OR
+                        json_extract(c.preferences, '$.social_handle') = ? OR
+                        json_extract(c.preferences, '$.instagram_handle') = ? OR
+                        ci.channel_identity = ?
                     ) LIMIT 1
                     "#
                 )
                     .bind(tenant_id)
+                    .bind(sender_id)
+                    .bind(sender_id)
+                    .bind(sender_id)
                     .bind(sender_id)
                     .bind(sender_id)
                     .bind(sender_id)
@@ -76,14 +93,17 @@ impl IdentityResolver {
         let phone = if source == "whatsapp" || source == "sms" { Some(sender_id.to_string()) } else { None };
         let email = if source == "email" { Some(sender_id.to_string()) } else { None };
         let handle = if source == "instagram" || source == "facebook" { Some(sender_id.to_string()) } else { None };
-        let preferences = if let Some(h) = handle {
+        let preferences = if let Some(ref h) = handle {
              serde_json::json!({"social_handle": h})
         } else {
              serde_json::json!({})
         };
 
+        let identity_id = Uuid::new_v4().to_string();
+
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(&new_id)
                     .bind(tenant_id)
@@ -91,11 +111,23 @@ impl IdentityResolver {
                     .bind(&email)
                     .bind(&phone)
                     .bind(&preferences)
-                    .execute(pool)
+                    .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                    .bind(&identity_id)
+                    .bind(tenant_id)
+                    .bind(&new_id)
+                    .bind(source)
+                    .bind(sender_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             },
             DbStore::Sqlite(sqlite_pool) => {
+                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                  sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences) VALUES (?, ?, ?, ?, ?, ?)")
                     .bind(&new_id)
                     .bind(tenant_id)
@@ -103,9 +135,20 @@ impl IdentityResolver {
                     .bind(&email)
                     .bind(&phone)
                     .bind(&preferences)
-                    .execute(sqlite_pool)
+                    .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                 sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
+                    .bind(&identity_id)
+                    .bind(tenant_id)
+                    .bind(&new_id)
+                    .bind(source)
+                    .bind(sender_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                 tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
 

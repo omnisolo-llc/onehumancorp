@@ -4,12 +4,22 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InteractionEvent {
+    pub id: String,
+    pub channel: String,
+    pub raw_content: String,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CustomerProfileSummary {
+    pub customer_name: Option<String>,
     pub total_interactions: i64,
     pub last_interaction: Option<DateTime<Utc>>,
     pub segments: Vec<String>,
     pub preferences: Vec<String>,
     pub summary: String,
+    pub events: Vec<InteractionEvent>,
 }
 
 pub struct CustomerMemoryGraphService {
@@ -64,33 +74,64 @@ impl CustomerMemoryGraphService {
             .await?;
 
         let record = sqlx::query(
-            "SELECT profile_summary FROM customers WHERE id = $1"
+            "SELECT name, profile_summary FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_optional(&mut *tx)
         .await?;
 
-        let summary = if let Some(row) = record {
+        let mut summary = if let Some(row) = record {
+            let name_val: Option<String> = row.try_get("name").unwrap_or_default();
             if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
-                val.0
+                let mut summ = val.0;
+                summ.customer_name = name_val;
+                summ
             } else {
                 CustomerProfileSummary {
+                    customer_name: name_val,
                     total_interactions: 0,
                     last_interaction: None,
                     segments: vec![],
                     preferences: vec![],
                     summary: "No summary available.".to_string(),
+                    events: vec![],
                 }
             }
         } else {
             CustomerProfileSummary {
+                customer_name: None,
                 total_interactions: 0,
                 last_interaction: None,
                 segments: vec![],
                 preferences: vec![],
                 summary: "Customer not found.".to_string(),
+                events: vec![],
             }
         };
+
+        let event_records = sqlx::query(
+            "SELECT id, channel, raw_content, created_at FROM interaction_events WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 50"
+        )
+        .bind(customer_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        let mut events = Vec::new();
+        for er in event_records {
+            let id: Uuid = er.get("id");
+            let channel: String = er.get("channel");
+            let raw_content: String = er.get("raw_content");
+            let created_at: Option<DateTime<Utc>> = er.try_get("created_at").unwrap_or(None);
+
+            events.push(InteractionEvent {
+                id: id.to_string(),
+                channel,
+                raw_content,
+                created_at,
+            });
+        }
+
+        summary.events = events;
 
         tx.commit().await?;
         Ok(summary)
