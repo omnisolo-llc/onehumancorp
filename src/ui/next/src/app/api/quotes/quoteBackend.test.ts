@@ -1,15 +1,14 @@
 import { describe, expect, test } from "vitest";
-import { normalizeLegacyQuoteBody, quoteBackendPath } from "./quoteBackend";
+import { quoteBackendPath, validateLegacyQuoteBody } from "./quoteBackend";
 
 describe("legacy quote request bodies", () => {
-  test("canonically reserializes valid JSON", () => {
+  test("preserves valid JSON bytes without losing number precision", () => {
+    const source = ' { "amount": 9007199254740993 } ';
     expect(
       new TextDecoder().decode(
-        normalizeLegacyQuoteBody(
-          new TextEncoder().encode(' { "status": "SENT" } '),
-        ),
+        validateLegacyQuoteBody(new TextEncoder().encode(source)),
       ),
-    ).toBe('{"status":"SENT"}');
+    ).toBe(source);
   });
 
   test("falls back to an empty object for empty, malformed, and invalid UTF-8 bodies", () => {
@@ -18,7 +17,7 @@ describe("legacy quote request bodies", () => {
       new TextEncoder().encode("{"),
       Uint8Array.from([0xc3, 0x28]),
     ]) {
-      expect(new TextDecoder().decode(normalizeLegacyQuoteBody(body))).toBe("{}");
+      expect(new TextDecoder().decode(validateLegacyQuoteBody(body))).toBe("{}");
     }
   });
 });

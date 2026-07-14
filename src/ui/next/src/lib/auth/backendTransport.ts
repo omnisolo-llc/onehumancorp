@@ -20,7 +20,6 @@ const SAFE_RESPONSE_HEADERS = new Set([
 const SAFE_IDENTITY_VALUE = /^[\x21-\x7e]{1,2048}$/;
 const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;
 const FATAL_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
-const UTF8_ENCODER = new TextEncoder();
 
 export type BackendTransportDependencies = ServerSessionDependencies &
   Readonly<{
@@ -44,11 +43,11 @@ export type BackendRequestOptions = Readonly<{
 class BodyLimitError extends Error {}
 class WorkAbortedError extends Error {}
 
-export function normalizeJsonRequestBody(
+export function validateJsonRequestBody(
   body: Uint8Array<ArrayBuffer>,
 ): Uint8Array<ArrayBuffer> {
-  const value = JSON.parse(FATAL_UTF8_DECODER.decode(body));
-  return UTF8_ENCODER.encode(JSON.stringify(value));
+  JSON.parse(FATAL_UTF8_DECODER.decode(body));
+  return body;
 }
 
 function privateHeaders(contentType?: string): Headers {

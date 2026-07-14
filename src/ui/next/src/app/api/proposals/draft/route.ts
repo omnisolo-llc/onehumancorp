@@ -1,5 +1,5 @@
 import {
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyBackendRequest,
 } from "@/lib/auth/backendTransport";
 
@@ -9,6 +9,6 @@ export function POST(request: Request): Promise<Response> {
   return proxyBackendRequest(request, "/api/proposals/draft", {
     forwardQuery: false,
     requestContentType: "application/json",
-    transformRequestBody: normalizeJsonRequestBody,
+    transformRequestBody: validateJsonRequestBody,
   });
 }
