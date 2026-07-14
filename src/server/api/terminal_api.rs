@@ -275,7 +275,7 @@ pub async fn reserve_inventory_handler(
             let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             // WARNING: SECURITY FIX
             // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc.local/org/") && spiffe_id_str.contains("/agent/")) {
                 tenant_override.to_string()
             } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
@@ -703,7 +703,7 @@ pub async fn commit_inventory_handler(
             let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             // WARNING: SECURITY FIX
             // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc.local/org/") && spiffe_id_str.contains("/agent/")) {
                 tenant_override.to_string()
             } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id

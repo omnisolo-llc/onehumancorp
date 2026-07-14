@@ -537,7 +537,7 @@ mod tests {
 
         let state = State(pool.clone());
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://ohc.local/org/tenant-sync/agent/x".parse().unwrap());
 
         // Test 1: Successful Application (No existing version)
         let req1 = SyncEventsRequest {
