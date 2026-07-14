@@ -88,6 +88,8 @@ mod chaos_network_tests {
         assert!(res.is_ok(), "Operation should eventually succeed because execute_with_retry retries on failure. Result: {:?}", res);
         assert!(attempt_counter.load(Ordering::SeqCst) > 1, "It should take more than one attempt since 50% are dropped");
 
+        tokio::time::pause();
+
         // Now test explicitly simulating the 60 second ML-Resilience fallback timeout
         let res_timeout: Result<(), String> = db.execute_with_retry("network_timeout_test", || async {
             // Sleep longer than the 60s timeout
