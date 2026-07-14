@@ -1388,7 +1388,7 @@ impl Agent {
                                         tool_calls: vec![],
                                         tool_results: vec![error_result],
                                         response_id: None,
-                                        previous_response_id: None,
+                                        previous_response_id: msg.response_id.clone(),
                                     };
                                     messages.push(msg_to_push);
                                     continue;
@@ -1523,7 +1523,7 @@ impl Agent {
                                                 tool_calls: vec![],
                                                 tool_results: vec![error_result],
                                                 response_id: None,
-                                                previous_response_id: None,
+                                                previous_response_id: msg.response_id.clone(),
                                             };
                                             messages.push(msg_to_push);
                                             continue; // Note: this continue will skip to the next tool in batch, wait, we want to break or continue? Let's leave it as continue.
@@ -1791,7 +1791,7 @@ impl Agent {
                             tool_calls: final_tool_calls,
                             tool_results: vec![],
                             response_id: None,
-                            previous_response_id: None,
+                            previous_response_id: resp.response_id.clone(),
                         };
 
                         let update = AgentState {
@@ -2124,7 +2124,7 @@ impl Agent {
                         tool_calls: vec![],
                         tool_results,
                         response_id: None,
-                        previous_response_id: None,
+                        previous_response_id: state.last_message.as_ref().and_then(|m| m.response_id.clone()),
                     }],
                     has_tool_calls: false,
                     total_tokens: state.total_tokens,
