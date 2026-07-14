@@ -2044,6 +2044,7 @@
                 id="cap-draft"
                 data-testid="cap-draft"
                 checked
+                onchange="saveCurrentState()"
               />
               <span class="slider"></span>
             </div>
@@ -2061,6 +2062,7 @@
                 id="cap-schedule"
                 data-testid="cap-schedule"
                 checked
+                onchange="saveCurrentState()"
               />
               <span class="slider"></span>
             </div>
@@ -2077,6 +2079,7 @@
                 type="checkbox"
                 id="cap-inventory"
                 data-testid="cap-inventory"
+                onchange="saveCurrentState()"
               />
               <span class="slider"></span>
             </div>
@@ -3047,8 +3050,6 @@
         if (state.assistant_tone)
           inputs.assistant_tone.value = state.assistant_tone;
         if (state.admin_email) inputs.admin_email.value = state.admin_email;
-        if (state.admin_password)
-          inputs.admin_password.value = state.admin_password;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
         if (state.location) inputs.location.value = state.location;
         if (state.target_audience) inputs.target_audience.value = state.target_audience;
@@ -3432,6 +3433,7 @@
           if (inputEl) {
              inputEl.classList.remove("invalid-input");
           }
+          saveCurrentState();
         }
       }
 
@@ -4431,7 +4433,13 @@
         { inputId: 'business-tagline', errorId: null, stateKey: 'tagline' },
         { inputId: 'first-offer', errorId: 'offer-error', stateKey: 'first_offer' },
         { inputId: 'location-input', errorId: 'location-error', stateKey: 'location' },
-        { inputId: 'target-audience', errorId: 'target-audience-error', stateKey: 'target_audience' }
+        { inputId: 'target-audience', errorId: 'target-audience-error', stateKey: 'target_audience' },
+        { inputId: 'admin-name', errorId: 'admin-name-error', stateKey: 'admin_name' },
+        { inputId: 'admin-email', errorId: 'email-error', stateKey: 'admin_email' },
+        { inputId: 'assistant-tone', errorId: 'tone-error', stateKey: 'assistant_tone' },
+        { inputId: 'domain-name', errorId: 'domain-error', stateKey: 'domain' },
+        { inputId: 'instant-bio', errorId: 'instant-error', stateKey: 'instant_bio' },
+        { inputId: 'instant-image-url', errorId: null, stateKey: 'instant_image_url' }
       ];
 
       realTimeFields.forEach(field => {
