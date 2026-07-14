@@ -95,6 +95,10 @@
             margin-bottom: 16px;
             align-self: flex-start;
         }
+
+
+
+
         .loading {
             display: flex;
             align-items: center;
@@ -102,7 +106,23 @@
             height: 100%;
             color: #666;
             font-weight: 600;
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            backdrop-filter: blur(40px);
         }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @media (prefers-color-scheme: dark) {
+            .loading {
+                background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+                color: #aaa;
+            }
+        }
+
+
     </style>
 </head>
 <body>
