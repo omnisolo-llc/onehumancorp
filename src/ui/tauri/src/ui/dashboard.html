@@ -1800,8 +1800,6 @@
           console.error("Failed to fetch abandoned carts count", e);
         }
       }
-      checkAbandonedCarts();
-
       async function checkWrapped() {
         try {
           const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
@@ -2935,6 +2933,7 @@ window.handleTriageAction = async function(id, state) {
         checkMilestones(),
         loadReferralTierWidget(),
         checkWrapped(),
+        checkAbandonedCarts(),
         loadUnifiedFeed()
       ]).catch(e => console.error("Parallel loading failed", e));
 
