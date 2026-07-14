@@ -744,7 +744,7 @@ html.dark .glass-card {
 }
 
 .glass-control {
-  border-radius: 8px !important;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -752,7 +752,7 @@ html.dark .glass-card {
 
 @media (prefers-color-scheme: dark) {
   .glass-control {
-    border-radius: 8px !important;
+    border-radius: 8px;
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -760,7 +760,7 @@ html.dark .glass-card {
 }
 
 html.dark .glass-control {
-  border-radius: 8px !important;
+  border-radius: 8px;
   background: rgba(22, 22, 26, 0.7);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -771,7 +771,7 @@ html.dark .glass-control {
 .app-shell .app-panel,
 .app-shell .glassmorphism,
 .app-shell .glass-card {
-  border-radius: 8px !important;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -836,13 +836,13 @@ input[type="url"],
 input[type="search"],
 textarea,
 select {
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 button,
 .app-button,
 .charge-btn {
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 
@@ -916,7 +916,7 @@ button,
   min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
-  border-radius: 8px !important;
+  border-radius: 8px;
   background: #f7f9fb !important;
   color: #526070;
   box-shadow: none;
@@ -1034,7 +1034,7 @@ button,
 
 .setup-page #setup-screen button {
   min-height: 44px;
-  border-radius: 8px !important;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -1088,7 +1088,7 @@ button,
   min-height: 44px;
   padding: 12px 14px;
   border: 1px solid #cfd8e3;
-  border-radius: 8px !important;
+  border-radius: 8px;
   background: #ffffff;
   color: #18212f;
   font: inherit;
@@ -1193,7 +1193,7 @@ a.glass-control,
 input.glass-control,
 select.glass-control,
 textarea.glass-control {
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 button.glass-control,
@@ -1270,7 +1270,7 @@ html.dark .glass-panel {
   border-radius: 16px !important;
 }
 .glass-control {
-  border-radius: 8px !important;
+  border-radius: 8px;
 }
 
 /* Apple / Ubiquiti UniFi Network Application design standards */

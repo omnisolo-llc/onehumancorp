@@ -107,16 +107,16 @@ common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
-# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_cache_compression
+common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 # common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --experimental_remote_downloader_local_fallback
-# common:buildbuddy --jobs=50
-# common:buildbuddy --remote_timeout=10m
+common:buildbuddy --jobs=50
+common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
-# common:buildbuddy-readonly --remote_upload_local_results=false
+common:buildbuddy-readonly --remote_upload_local_results=false
 
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
