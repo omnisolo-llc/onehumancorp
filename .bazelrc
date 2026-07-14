@@ -2,8 +2,8 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
-# build --config=remote-cache
-# build --config=bes
+build --config=remote-cache
+build --config=bes
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -101,35 +101,35 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-# common:bes --bes_timeout=600s
-# common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-# common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:bes --bes_timeout=600s
+common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
+common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
-# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-# # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_cache_compression
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-# # common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# # common:buildbuddy --experimental_remote_downloader_local_fallback
-# common:buildbuddy --jobs=50
-# common:buildbuddy --remote_timeout=10m
+# common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --experimental_remote_downloader_local_fallback
+common:buildbuddy --jobs=50
+common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
-# common:buildbuddy-readonly --remote_upload_local_results=false
+common:buildbuddy-readonly --remote_upload_local_results=false
 
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
-# common:nativelink --experimental_build_event_upload_strategy=local
-# common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
-# common:nativelink --remote_instance_name=main
-# # common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
-# common:nativelink --remote_local_fallback
+common:nativelink --experimental_build_event_upload_strategy=local
+common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_instance_name=main
+# common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_local_fallback
 # Nativelink doesn't support cache compression
-# common:nativelink --remote_cache_compression=false
-# common:nativelink --jobs=50
+common:nativelink --remote_cache_compression=false
+common:nativelink --jobs=50
 # Read only Bazel cache
-# common:nativelink --remote_upload_local_results=false
+common:nativelink --remote_upload_local_results=false
 
 common:remote-cache --config=nativelink
 common:remote-cache --remote_download_minimal

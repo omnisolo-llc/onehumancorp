@@ -148,14 +148,14 @@ impl TaskQueue for MemoryTaskQueue {
 
     async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
         let stale_threshold = Utc::now() - chrono::Duration::hours(1);
-        let stagnant_threshold = Utc::now() - chrono::Duration::hours(24);
+        let Stagnant_threshold = Utc::now() - chrono::Duration::hours(24);
         let mut count = 0;
         let mut to_update = Vec::new();
 
         for job in self.jobs.iter() {
             if job.status == "RUNNING" && job.updated_at < stale_threshold {
                 to_update.push(job.id.clone());
-            } else if job.status == "QUEUED" && job.created_at < stagnant_threshold {
+            } else if job.status == "QUEUED" && job.created_at < Stagnant_threshold {
                 to_update.push(job.id.clone());
             }
         }
@@ -163,7 +163,7 @@ impl TaskQueue for MemoryTaskQueue {
         for id in to_update {
             if let Some(mut job) = self.jobs.get_mut(&id) {
                 if (job.status == "RUNNING" && job.updated_at < stale_threshold) ||
-                   (job.status == "QUEUED" && job.created_at < stagnant_threshold) {
+                   (job.status == "QUEUED" && job.created_at < Stagnant_threshold) {
                     job.status = "FAILED".to_string();
                     job.updated_at = Utc::now();
                     count += 1;
@@ -422,10 +422,10 @@ impl TaskQueue for PostgresTaskQueue {
         .await
         .map_err(|e| e.to_string())?;
 
-        // Clean up stagnant backlog items: QUEUED jobs stuck for > 24 hours
+        // Clean up Stagnant backlog items: QUEUED jobs stuck for > 24 hours
         sqlx::query(
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id::text, tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload::text, '{}'), '[cleanup] stagnant backlog item stuck in QUEUED for > 24 hours'
+             SELECT id::text, tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
              FROM sub_agent_queue
              WHERE status = 'QUEUED' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )
@@ -433,7 +433,7 @@ impl TaskQueue for PostgresTaskQueue {
         .await
         .map_err(|e| e.to_string())?;
 
-        let stagnant_result = sqlx::query(
+        let Stagnant_result = sqlx::query(
             "UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'QUEUED' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )
@@ -442,7 +442,7 @@ impl TaskQueue for PostgresTaskQueue {
         .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
-        Ok(result.rows_affected() + stagnant_result.rows_affected())
+        Ok(result.rows_affected() + Stagnant_result.rows_affected())
     }
 }
 
@@ -1146,24 +1146,24 @@ impl TaskQueue for SqliteTaskQueue {
         .execute(&self.pool)
         .await;
 
-        // Clean up stagnant backlog items: QUEUED jobs stuck for > 24 hours
+        // Clean up Stagnant backlog items: QUEUED jobs stuck for > 24 hours
         let _ = sqlx::query(
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id, tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload, '{}'), '[cleanup] stagnant backlog item stuck in QUEUED for > 24 hours'
+             SELECT id, tenant_id, 'job_failed', 'sub_agent_queue', COALESCE(payload, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours'
              FROM sub_agent_queue
              WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')"
         )
         .execute(&self.pool)
         .await;
 
-        let stagnant_result = sqlx::query(
+        let Stagnant_result = sqlx::query(
             "UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
              WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')"
         )
         .execute(&self.pool)
         .await;
 
-        match (result, stagnant_result) {
+        match (result, Stagnant_result) {
             (Ok(r), Ok(sr)) => Ok(r.rows_affected() + sr.rows_affected()),
             (Ok(r), Err(_)) => Ok(r.rows_affected()),
             (Err(_), Ok(sr)) => Ok(sr.rows_affected()),
@@ -1386,16 +1386,16 @@ impl TaskQueue for RedisTaskQueue {
             }
         }
 
-        // Clean up stagnant backlog items: QUEUED jobs stuck for > 24 hours
+        // Clean up Stagnant backlog items: QUEUED jobs stuck for > 24 hours
         let list_len: isize = redis::cmd("LLEN").arg(&self.queue_name).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if list_len > 0 {
             let items: Vec<Vec<u8>> = redis::cmd("LRANGE").arg(&self.queue_name).arg(0).arg(list_len - 1).query_async(&mut conn).await.map_err(|e| e.to_string())?;
-            let stagnant_threshold_ms = (Utc::now() - chrono::Duration::hours(24)).timestamp_millis();
+            let Stagnant_threshold_ms = (Utc::now() - chrono::Duration::hours(24)).timestamp_millis();
 
             for item in items {
                 if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&item[..]) {
-                    if queue_job.status == "QUEUED" && queue_job.created_at_ms < stagnant_threshold_ms {
-                        // Use LREM to safely remove just this specific stagnant item payload.
+                    if queue_job.status == "QUEUED" && queue_job.created_at_ms < Stagnant_threshold_ms {
+                        // Use LREM to safely remove just this specific Stagnant item payload.
                         // LREM key 1 value removes the first occurrence of the exact value.
                         let mut pipe = redis::pipe();
                         pipe.atomic();
