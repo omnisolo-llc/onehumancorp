@@ -29,6 +29,7 @@ export type BackendTransportDependencies = ServerSessionDependencies &
   }>;
 
 export type BackendRequestOptions = Readonly<{
+  backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   resolveBackendPath?: (body: Uint8Array<ArrayBuffer>) => string | Promise<string>;
   transformRequestBody?: (
     body: Uint8Array<ArrayBuffer>,
@@ -212,6 +213,8 @@ export async function proxyAuthenticatedRequest(
   }
   const method = request.method.toUpperCase();
   if (!ALLOWED_METHODS.has(method)) return error(405, "method not allowed");
+  const backendMethod = options.backendMethod ?? method;
+  if (!ALLOWED_METHODS.has(backendMethod)) return error(405, "method not allowed");
   let target =
     options.resolveBackendPath === undefined
       ? validatedBackendUrl(dependencies.config.backendOrigin, backendPath)
@@ -261,9 +264,12 @@ export async function proxyAuthenticatedRequest(
         return error(413, "request too large");
       }
     }
-    const hasBody = encodedRequest.byteLength > 0 && method !== "GET" && method !== "HEAD";
+    const hasBody =
+      encodedRequest.byteLength > 0 &&
+      backendMethod !== "GET" &&
+      backendMethod !== "HEAD";
     const backend = await dependencies.fetchImpl(target, {
-      method,
+      method: backendMethod,
       headers,
       body: hasBody ? encodedRequest : undefined,
       redirect: "manual",

@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -421,16 +421,14 @@ pub struct SocialPostProposal {
     pub updated_at_unix: i64,
 }
 
-#[derive(Deserialize)]
-pub struct ListSocialPostProposalsQuery {
-    pub tenant_id: String,
-}
-
 pub async fn list_social_post_proposals(
     State(pool): State<PgPool>,
-    axum::extract::Query(query): axum::extract::Query<ListSocialPostProposalsQuery>,
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = query.tenant_id;
+    let tenant_id = match claims.organization_id {
+        Some(organization_id) => organization_id,
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    };
     let proposals_res = sqlx::query_as::<_, SocialPostProposal>(
         "SELECT * FROM social_post_proposals WHERE tenant_id = $1 ORDER BY created_at_unix DESC LIMIT 50"
     )
