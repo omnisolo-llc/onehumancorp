@@ -23,6 +23,10 @@ export default function ProductsPage() {
   }, []);
   const [selectedProduct, setSelectedProduct] = useState<{ name: string; price: string; status: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [subscribeFrequency, setSubscribeFrequency] = useState("Monthly");
+  const [subscribeDiscount, setSubscribeDiscount] = useState("10");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleGenerateQR = (product: { name: string; price: string; status: string }) => {
     setSelectedProduct(product);
@@ -32,6 +36,43 @@ export default function ProductsPage() {
   const closeQRModal = () => {
     setIsQRModalOpen(false);
     setSelectedProduct(null);
+  };
+
+  const handleSubscribeToggle = (product: { name: string; price: string; status: string }) => {
+    setSelectedProduct(product);
+    setIsSubscribeModalOpen(true);
+  };
+
+  const closeSubscribeModal = () => {
+    setIsSubscribeModalOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const saveSubscriptionSettings = async () => {
+    if (!selectedProduct) return;
+    setIsSaving(true);
+    try {
+        const response = await fetch('/api/v1/catalog/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                productName: selectedProduct.name,
+                subscribeFrequency,
+                subscribeDiscount
+            })
+        });
+        if (response.ok) {
+            closeSubscribeModal();
+        } else {
+            console.error("Failed to save subscription settings");
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const downloadQR = () => {
@@ -71,6 +112,13 @@ export default function ProductsPage() {
                 <div className="app-list-subtitle">{product.price}</div>
               </div>
               <div className="flex items-center gap-4">
+                <button
+                  onClick={() => handleSubscribeToggle(product)}
+                  className="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-lg hover:bg-green-100 transition-colors flex items-center gap-1 border border-green-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  Enable Subscribe & Save
+                </button>
                 <button
                   onClick={() => handleGenerateQR(product)}
                   className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1 border border-indigo-200"
@@ -120,6 +168,71 @@ export default function ProductsPage() {
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                   Save / Print
+                </button>
+              </div>
+              <div className="mt-6 pt-4 border-t border-gray-200/50 w-full">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OHC</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscribe & Save Modal */}
+      {isSubscribeModalOpen && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[30px] saturate-[210%]">
+          <div className="relative w-full max-w-md p-8 bg-white/80 rounded-[24px] shadow-2xl border border-white/40 overflow-hidden" style={{ backdropFilter: 'blur(40px) saturate(200%)' }}>
+            <button
+              onClick={closeSubscribeModal}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100/50 hover:bg-gray-200/50 text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center mb-4 shadow-inner border border-white">
+                <span className="text-3xl">🔄</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 font-outfit mb-2">Subscribe & Save</h2>
+              <p className="text-sm text-gray-600 mb-6 px-4">
+                Enable recurring subscriptions for <strong className="text-gray-900">{selectedProduct.name}</strong>.
+              </p>
+
+              <div className="w-full space-y-4 text-left">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Frequency</label>
+                  <select
+                    value={subscribeFrequency}
+                    onChange={(e) => setSubscribeFrequency(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="Weekly">Weekly</option>
+                    <option value="Bi-Weekly">Bi-Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Discount %</label>
+                  <input
+                    type="number"
+                    value={subscribeDiscount}
+                    onChange={(e) => setSubscribeDiscount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. 10"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+              </div>
+
+              <div className="w-full flex gap-3 mt-8">
+                <button
+                  onClick={saveSubscriptionSettings}
+                  disabled={isSaving}
+                  className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-md flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                  {isSaving ? "Saving..." : "Save Subscription"}
                 </button>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-200/50 w-full">
