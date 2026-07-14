@@ -2,9 +2,9 @@ use crate::hub::Hub;
 use axum::http::StatusCode;
 use axum::{
     Router,
-    extract::{Extension, Json},
+    extract::{Extension, Json, Path},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 
 use serde::{Deserialize, Serialize};
@@ -168,6 +168,201 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
     }
+}
+
+#[derive(Deserialize)]
+pub struct UpdateProductRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub price: Option<String>,
+    pub inventory_count: Option<i32>,
+}
+
+async fn handle_get_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(product_id): Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let row = match sqlx::query("SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1 AND id = $2")
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .fetch_optional(&mut *conn)
+        .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => return (StatusCode::NOT_FOUND, Json(ErrorResponse { error: "NOT_FOUND".to_string(), message: "Product not found".to_string() })).into_response(),
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "DB_ERROR".to_string(), message: e.to_string() })).into_response(),
+    };
+
+    let mut variants = Vec::new();
+    if let Ok(v_rows) = sqlx::query("SELECT name, price_modifier FROM product_variants WHERE product_id = $1")
+        .bind(&product_id)
+        .fetch_all(&mut *conn)
+        .await
+    {
+        for v_row in v_rows {
+            let modifier: i64 = v_row.try_get("price_modifier").unwrap_or(0);
+            let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
+            variants.push(ProductVariantRequest {
+                name: v_row.try_get("name").unwrap_or_default(),
+                price_modifier: modifier_str,
+            });
+        }
+    }
+
+    let product = Product {
+        id: product_id,
+        title: row.try_get("title").unwrap_or_default(),
+        description: row.try_get("description").ok(),
+        item_type: row.try_get("item_type").ok(),
+        price_cents: row.try_get("price_cents").ok(),
+        inventory_count: row.try_get("inventory_count").ok(),
+        variants: if variants.is_empty() { None } else { Some(variants) },
+    };
+
+    (StatusCode::OK, Json(product)).into_response()
+}
+
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(product_id): Path<String>,
+    Json(payload): Json<UpdateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let mut q = "UPDATE products SET ".to_string();
+    let mut binds: Vec<String> = vec![];
+    let mut param_idx = 1;
+
+    let mut price_cents_opt: Option<i64> = None;
+
+    if let Some(name) = &payload.name {
+        q.push_str(&format!("title = ${}, ", param_idx));
+        param_idx += 1;
+        binds.push(name.clone());
+    }
+    if let Some(desc) = &payload.description {
+        q.push_str(&format!("description = ${}, ", param_idx));
+        param_idx += 1;
+        binds.push(desc.clone());
+    }
+    if let Some(price) = &payload.price {
+        q.push_str(&format!("price_cents = ${}, ", param_idx));
+        param_idx += 1;
+        let price_cents = (price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+        binds.push(price_cents.to_string());
+        price_cents_opt = Some(price_cents);
+    }
+    if let Some(inv) = &payload.inventory_count {
+        q.push_str(&format!("inventory_count = ${}, ", param_idx));
+        param_idx += 1;
+        binds.push(inv.to_string());
+    }
+
+    if param_idx == 1 {
+        return (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response();
+    }
+
+    q.pop(); // space
+    q.pop(); // comma
+    q.push_str(&format!(" WHERE tenant_id = ${} AND id = ${}", param_idx, param_idx + 1));
+
+    let mut query = sqlx::query(&q);
+    for b in &binds {
+        query = query.bind(b);
+    }
+    query = query.bind(&tenant_id);
+    query = query.bind(&product_id);
+
+    if let Err(e) = query.execute(&mut *conn).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse { error: "DB_ERROR".to_string(), message: e.to_string() })).into_response();
+    }
+
+    // Invalidate cache locally
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    cache.invalidate(&tenant_id).await;
+
+    // Edge Cache Invalidation
+    let edge_cache = crate::builder::edge::get_edge_cache();
+    edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    edge_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+    cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
+    // Publish ProductUpdated
+    let event_payload = serde_json::json!({
+        "product_id": product_id,
+        "name": payload.name.unwrap_or_default(),
+        "description": payload.description.unwrap_or_default(),
+        "price": payload.price.unwrap_or_default().parse::<f64>().unwrap_or(0.0),
+        "organization_id": tenant_id,
+    });
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".to_string(),
+        action: "ProductUpdated".to_string(),
+        status: "success".to_string(),
+        payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+
+    // Publish InventoryUpdated if inventory was included (or always)
+    if let Some(inv) = payload.inventory_count {
+        let inv_payload = serde_json::json!({
+            "product_id": product_id,
+            "quantity": inv,
+            "organization_id": tenant_id,
+        });
+        let inv_event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "InventoryUpdated".to_string(),
+            status: "success".to_string(),
+            payload: serde_json::to_vec(&inv_payload).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        let _ = hub.publish_teammate_event("products_inbox".to_string(), inv_event);
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({ "success": true, "message": "Product updated" })),
+    ).into_response()
 }
 
 async fn handle_create_product(
@@ -452,6 +647,8 @@ async fn handle_generate_offering(
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/products", get(handle_get_products))
+        .route("/product/{product_id}", get(handle_get_product))
+        .route("/product/{product_id}", put(handle_update_product))
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
