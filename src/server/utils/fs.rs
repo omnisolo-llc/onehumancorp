@@ -104,7 +104,7 @@ pub fn cleanup_stale_temp_files() {
                 should_delete = true;
             } else if file_name.ends_with(".tmp") {
                 should_delete = true;
-            } else if file_name.ends_with(".log") && file_name.starts_with("test_") {
+            } else if file_name.ends_with(".log") {
                  should_delete = true;
             }
 
@@ -190,13 +190,18 @@ mod tests {
         let fresh_rs = tmp_dir.join("fresh.tmp.rs");
         std::fs::write(&fresh_rs, b"fresh_rs").unwrap();
 
+        let fresh_log = tmp_dir.join("fresh.log");
+        std::fs::write(&fresh_log, b"fresh_log").unwrap();
+
         super::cleanup_stale_temp_files();
 
         assert!(fresh_atomic.exists(), "fresh atomic file should be kept");
         assert!(fresh_rs.exists(), "fresh rs file should be kept");
+        assert!(fresh_log.exists(), "fresh log file should be kept");
 
         // Clean up
         let _ = std::fs::remove_file(fresh_atomic);
         let _ = std::fs::remove_file(fresh_rs);
+        let _ = std::fs::remove_file(fresh_log);
     }
 }
