@@ -210,11 +210,13 @@ impl CustomerMemoryGraphService {
 
             // Update customer profile summary
             let summary = CustomerProfileSummary {
+                customer_name: None,
                 total_interactions: 1, // simplified
                 last_interaction: Some(Utc::now()),
                 segments: vec!["Returning".to_string()],
                 preferences: vec![extracted_value.to_string()],
                 summary: format!("Customer recently asked about: {}", category),
+                events: vec![],
             };
 
             sqlx::query(
