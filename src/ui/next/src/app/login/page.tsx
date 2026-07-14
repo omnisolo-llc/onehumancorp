@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { Suspense, type FormEvent, useState } from "react";
 import { safeReturnPath } from "@/lib/auth/url";
 
 const GENERIC_ERROR = "We couldn't sign you in. Check your details and try again.";
 
-export default function Login() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState("");
@@ -134,5 +134,21 @@ export default function Login() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6 font-outfit dark:bg-gray-900">
+          <p className="text-sm text-gray-600 dark:text-gray-300" role="status">
+            Loading sign in…
+          </p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

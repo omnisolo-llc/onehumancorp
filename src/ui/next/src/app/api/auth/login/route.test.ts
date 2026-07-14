@@ -3,7 +3,7 @@ import { openSession } from "@/lib/auth/sessionCodec";
 import { parseSessionKeyRing } from "@/lib/auth/sessionKeys";
 import { sessionCodecContext } from "@/lib/auth/sessionCookie";
 import type { AuthRuntimeConfig } from "@/lib/auth/runtimeConfig";
-import { handleLogin, type LoginDependencies } from "./route";
+import { handleLogin, type LoginDependencies } from "./handler";
 
 const NOW = 1_800_000_000;
 const config: AuthRuntimeConfig = {

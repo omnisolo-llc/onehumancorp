@@ -4,7 +4,7 @@ import { parseSessionKeyRing } from "@/lib/auth/sessionKeys";
 import { cookieForSession, serializeSessionCookie, sessionCodecContext } from "@/lib/auth/sessionCookie";
 import type { AuthRuntimeConfig } from "@/lib/auth/runtimeConfig";
 import type { WebSession } from "@/lib/auth/sessionTypes";
-import { handleLogout, type LogoutDependencies } from "./route";
+import { handleLogout, type LogoutDependencies } from "./handler";
 
 const NOW = 1_800_000_000;
 const config: AuthRuntimeConfig = {
