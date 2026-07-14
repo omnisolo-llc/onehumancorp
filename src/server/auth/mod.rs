@@ -9,6 +9,7 @@ pub mod postgres_store;
 pub mod sqlite_store;
 pub mod user_repository;
 pub mod grpc;
+pub mod http;
 
 use std::collections::HashMap;
 
@@ -78,6 +79,15 @@ pub const ROLE_ADMIN: &str = "ADMIN";
 pub const ROLE_OPERATOR: &str = "OPERATOR";
 pub const ROLE_VIEWER: &str = "VIEWER";
 pub const DEFAULT_COST: u32 = 10;
+pub const MAX_ACCESS_TOKEN_BYTES: usize = 2048;
+pub const MAX_AUTH_USER_ID_BYTES: usize = 128;
+pub const MAX_AUTH_USERNAME_BYTES: usize = 128;
+pub const MAX_AUTH_EMAIL_BYTES: usize = 254;
+pub const MAX_AUTH_ORGANIZATION_BYTES: usize = 128;
+pub const MAX_AUTH_ROLES: usize = 32;
+pub const MAX_AUTH_ROLE_BYTES: usize = 64;
+const MAX_ACCESS_TOKEN_CLAIMS_BYTES: usize = 1400;
+const MAX_PASSWORD_HASH_CONCURRENCY: usize = 16;
 const DUMMY_PASSWORD_HASH: &str =
     "$2b$10$dVqpE7hfDSB6wqVCcDvUGuLwuaGMsiC.FznSYrakLDs.8jQXm2wMC";
 
@@ -93,6 +103,34 @@ fn verify(password: &str, hash: &str) -> Result<bool, String> {
 pub enum AuthenticationError {
     InvalidCredentials,
     Unavailable(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LogoutError {
+    InvalidToken,
+    ValidationUnavailable,
+    RevocationUnavailable,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TokenValidationError {
+    Invalid(String),
+    Unavailable,
+}
+
+impl TokenValidationError {
+    fn invalid(message: impl Into<String>) -> Self {
+        Self::Invalid(message.into())
+    }
+}
+
+impl std::fmt::Display for TokenValidationError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Invalid(message) => formatter.write_str(message),
+            Self::Unavailable => formatter.write_str("token validation unavailable"),
+        }
+    }
 }
 
 impl std::fmt::Display for AuthenticationError {
@@ -205,11 +243,59 @@ pub struct Store {
     redis_client: Option<redis::Client>,
     redis_configuration_error: Option<String>,
     secret: Vec<u8>,
+    password_slots: Arc<tokio::sync::Semaphore>,
     oidc_cfg: RwLock<OIDCConfig>,
     repo: Option<std::sync::Arc<dyn crate::user_repository::UserRepository>>,
 }
 
 impl Store {
+    fn access_token_claims(user: &User, issued_at: i64, expires_at: i64, jti: String) -> Claims {
+        Claims {
+            sub: user.id.clone(),
+            username: user.username.clone(),
+            email: user.email.clone(),
+            roles: user.roles.clone(),
+            organization_id: user.organization_id.clone(),
+            session_id: None,
+            iat: issued_at,
+            exp: expires_at,
+            jti,
+        }
+    }
+
+    fn access_token_claims_fit(claims: &Claims) -> bool {
+        serde_json::to_vec(claims)
+            .is_ok_and(|payload| payload.len() <= MAX_ACCESS_TOKEN_CLAIMS_BYTES)
+    }
+
+    pub fn user_access_token_fits(user: &User) -> bool {
+        if user.id.is_empty()
+            || user.id.len() > MAX_AUTH_USER_ID_BYTES
+            || user.username.is_empty()
+            || user.username.len() > MAX_AUTH_USERNAME_BYTES
+            || user.email.is_empty()
+            || user.email.len() > MAX_AUTH_EMAIL_BYTES
+            || user
+                .organization_id
+                .as_deref()
+                .is_some_and(|organization| organization.len() > MAX_AUTH_ORGANIZATION_BYTES)
+            || user.roles.len() > MAX_AUTH_ROLES
+            || user
+                .roles
+                .iter()
+                .any(|role| role.is_empty() || role.len() > MAX_AUTH_ROLE_BYTES)
+        {
+            return false;
+        }
+        let issued_at = chrono::Utc::now().timestamp();
+        Self::access_token_claims_fit(&Self::access_token_claims(
+            user,
+            issued_at,
+            issued_at.saturating_add(24 * 60 * 60),
+            "0".repeat(32),
+        ))
+    }
+
     pub fn new() -> Self {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
@@ -386,6 +472,9 @@ impl Store {
             redis_client,
             redis_configuration_error,
             secret,
+            password_slots: Arc::new(tokio::sync::Semaphore::new(
+                MAX_PASSWORD_HASH_CONCURRENCY,
+            )),
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,
@@ -474,6 +563,10 @@ impl Store {
             oidc_subject: None,
         };
 
+        if !Self::user_access_token_fits(&user) {
+            return Err("user claims exceed the access token size limit".to_string());
+        }
+
         users.insert(id.clone(), user.clone());
         by_name.insert(name_key, id.clone());
         by_email.insert(email_key, id);
@@ -487,6 +580,11 @@ impl Store {
         password: &str,
         org_id: &str,
     ) -> Result<User, AuthenticationError> {
+        let _password_slot = self
+            .password_slots
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| AuthenticationError::Unavailable("credential verifier busy".into()))?;
         if self.validate_org_id(org_id).is_err() {
             let password = password.to_string();
             let org_id = org_id.to_string();
@@ -521,6 +619,23 @@ impl Store {
             return Err(AuthenticationError::Unavailable(error));
         }
         decision
+    }
+
+    pub async fn authenticate_dummy(
+        &self,
+        password: &str,
+    ) -> Result<User, AuthenticationError> {
+        let _password_slot = self
+            .password_slots
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| AuthenticationError::Unavailable("credential verifier busy".into()))?;
+        let password = password.to_string();
+        tokio::task::spawn_blocking(move || {
+            decide_credentials_with(None, &password, "", verify)
+        })
+        .await
+        .map_err(|_| AuthenticationError::Unavailable("credential verifier unavailable".into()))?
     }
 
     fn find_memory_user_with<F>(
@@ -615,6 +730,9 @@ impl Store {
             if let Some(email) = email_ptr { u.email = email; }
             if let Some(r) = roles { u.roles = r; }
             if let Some(active) = active_ptr { u.active = active; }
+            if !Self::user_access_token_fits(&u) {
+                return Err("user claims exceed the access token size limit".to_string());
+            }
             u.updated_at = chrono::Utc::now();
             repo.update_user(u.clone(), org_id).await?;
             return Ok(u);
@@ -631,6 +749,20 @@ impl Store {
             }
         } else if !org_id.is_empty() {
             return Err("user not found".to_string());
+        }
+
+        let mut candidate = u.clone();
+        if let Some(email) = email_ptr.as_ref() {
+            candidate.email = email.clone();
+        }
+        if let Some(roles) = roles.as_ref() {
+            candidate.roles = roles.clone();
+        }
+        if let Some(active) = active_ptr {
+            candidate.active = active;
+        }
+        if !Self::user_access_token_fits(&candidate) {
+            return Err("user claims exceed the access token size limit".to_string());
         }
 
         if let Some(email) = email_ptr {
@@ -765,36 +897,66 @@ impl Store {
         Ok(false)
     }
 
-    pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-            let now = chrono::Utc::now();
-            let claims = Claims {
-                sub: _user.id.clone(),
-                username: _user.username.clone(),
-                email: _user.email.clone(),
-                roles: _user.roles.clone(),
-                organization_id: _user.organization_id.clone(),
-                session_id: None,
-                iat: now.timestamp(),
-                exp: (now + chrono::Duration::hours(24)).timestamp(),
-                jti: hex::encode(random_bytes(16)), // Use 16 bytes for better entropy
-            };
+    pub fn issue_token_with_expiry(&self, _user: &User) -> Result<(String, i64), String> {
+        let now = chrono::Utc::now();
+        let expires_at = (now + chrono::Duration::hours(24)).timestamp();
+        let claims = Self::access_token_claims(
+            _user,
+            now.timestamp(),
+            expires_at,
+            hex::encode(random_bytes(16)),
+        );
+        if !Self::access_token_claims_fit(&claims) {
+            return Err("access token claims exceed the configured size limit".to_string());
+        }
 
-            let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
-                .map_err(|e| e.to_string())?;
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+        let token = jsonwebtoken::encode(
+            &header,
+            &claims,
+            &jsonwebtoken::EncodingKey::from_secret(&self.secret),
+        )
+        .map_err(|e| e.to_string())?;
+        if token.len() > MAX_ACCESS_TOKEN_BYTES {
+            return Err("access token exceeds the configured size limit".to_string());
+        }
 
-            Ok(token)
+        Ok((token, expires_at))
+    }
+
+    pub fn issue_token(&self, user: &User) -> Result<String, String> {
+        self.issue_token_with_expiry(user).map(|(token, _)| token)
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        self.validate_token_claims(_token, true).await
+        self.validate_token_claims(_token, true)
+            .await
+            .map_err(|error| error.to_string())
+    }
+
+    /// Validate signed claims without rejecting a prior revocation, then revoke
+    /// the token in the tenant named by those claims. This makes logout
+    /// idempotent without trusting transport-supplied tenant data.
+    pub async fn logout_token(&self, token: &str) -> Result<(), LogoutError> {
+        let claims = self.validate_token_claims(token, false).await.map_err(
+            |error| match error {
+                TokenValidationError::Invalid(_) => LogoutError::InvalidToken,
+                TokenValidationError::Unavailable => LogoutError::ValidationUnavailable,
+            },
+        )?;
+        let exp =
+            chrono::DateTime::from_timestamp(claims.exp, 0).ok_or(LogoutError::InvalidToken)?;
+        let org_id = claims.organization_id.unwrap_or_default();
+        self.revoke_token(claims.jti, exp, &org_id)
+            .await
+            .map_err(|_| LogoutError::RevocationUnavailable)
     }
 
     async fn validate_token_claims(
         &self,
         _token: &str,
         check_revocation: bool,
-    ) -> Result<Claims, String> {
+    ) -> Result<Claims, TokenValidationError> {
         if let Ok(header) = jsonwebtoken::decode_header(_token) {
             if header.alg == jsonwebtoken::Algorithm::RS256 {
                 let oidc_cfg_internal = self
@@ -808,7 +970,16 @@ impl Store {
                     enabled: oidc_cfg_internal.enabled,
                 };
                 if oidc_cfg.enabled {
-                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
+                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg)
+                        .await
+                        .map_err(|error| match error {
+                            crate::oidc::OidcValidationError::InvalidToken => {
+                                TokenValidationError::invalid("Invalid token")
+                            }
+                            crate::oidc::OidcValidationError::Unavailable => {
+                                TokenValidationError::Unavailable
+                            }
+                        })?;
                     if ::server_config::get().multitenant
                         && claims
                             .organization_id
@@ -817,9 +988,9 @@ impl Store {
                             .trim()
                             .is_empty()
                     {
-                        return Err(
-                            "Invalid token: organization_id is required in cloud mode".to_string()
-                        );
+                        return Err(TokenValidationError::invalid(
+                            "Invalid token: organization_id is required in cloud mode",
+                        ));
                     }
                     if ::server_config::get().multitenant
                         && claims
@@ -828,7 +999,9 @@ impl Store {
                             .map(|s| s.eq_ignore_ascii_case("system"))
                             .unwrap_or(false)
                     {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                        return Err(TokenValidationError::invalid(
+                            "Invalid token: 'system' organization cannot be used in multitenant mode",
+                        ));
                     }
                     if check_revocation
                         && self
@@ -837,9 +1010,9 @@ impl Store {
                                 &claims.organization_id.clone().unwrap_or_default(),
                             )
                             .await
-                            .map_err(|_| "token validation unavailable".to_string())?
+                            .map_err(|_| TokenValidationError::Unavailable)?
                     {
-                        return Err("token revoked".to_string());
+                        return Err(TokenValidationError::invalid("token revoked"));
                     }
                     return Ok(claims);
                 }
@@ -856,7 +1029,7 @@ impl Store {
         match token_data {
             Ok(data) => {
                 if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                    return Err("Invalid token: empty claims".to_string());
+                    return Err(TokenValidationError::invalid("Invalid token: empty claims"));
                 }
                 if ::server_config::get().multitenant
                     && data
@@ -867,9 +1040,9 @@ impl Store {
                         .trim()
                         .is_empty()
                 {
-                    return Err(
-                        "Invalid token: organization_id is required in cloud mode".to_string()
-                    );
+                    return Err(TokenValidationError::invalid(
+                        "Invalid token: organization_id is required in cloud mode",
+                    ));
                 }
                 if ::server_config::get().multitenant
                     && data
@@ -879,10 +1052,9 @@ impl Store {
                         .map(|s| s.eq_ignore_ascii_case("system"))
                         .unwrap_or(false)
                 {
-                    return Err(
-                        "Invalid token: 'system' organization cannot be used in multitenant mode"
-                            .to_string(),
-                    );
+                    return Err(TokenValidationError::invalid(
+                        "Invalid token: 'system' organization cannot be used in multitenant mode",
+                    ));
                 }
                 if check_revocation
                     && self
@@ -891,12 +1063,12 @@ impl Store {
                             &data.claims.organization_id.clone().unwrap_or_default(),
                         )
                         .await
-                        .map_err(|_| "token validation unavailable".to_string())?
+                        .map_err(|_| TokenValidationError::Unavailable)?
                 {
-                    return Err("token revoked".to_string());
+                    return Err(TokenValidationError::invalid("token revoked"));
                 }
                 if data.claims.sub.trim().is_empty() || data.claims.jti.trim().is_empty() {
-                    return Err("Invalid token claims".to_string());
+                    return Err(TokenValidationError::invalid("Invalid token claims"));
                 }
                 Ok(data.claims)
             }
@@ -909,42 +1081,50 @@ impl Store {
                         enabled: c.enabled,
                     }
                 };
-                if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                    if ::server_config::get().multitenant
-                        && claims
-                            .organization_id
-                            .clone()
-                            .unwrap_or_default()
-                            .trim()
-                            .is_empty()
-                    {
-                        return Err(
-                            "Invalid token: organization_id is required in cloud mode".to_string()
-                        );
+                match crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                    Ok(claims) => {
+                        if ::server_config::get().multitenant
+                            && claims
+                                .organization_id
+                                .clone()
+                                .unwrap_or_default()
+                                .trim()
+                                .is_empty()
+                        {
+                            return Err(TokenValidationError::invalid(
+                                "Invalid token: organization_id is required in cloud mode",
+                            ));
+                        }
+                        if ::server_config::get().multitenant
+                            && claims
+                                .organization_id
+                                .as_deref()
+                                .map(|s| s.eq_ignore_ascii_case("system"))
+                                .unwrap_or(false)
+                        {
+                            return Err(TokenValidationError::invalid(
+                                "Invalid token: 'system' organization cannot be used in multitenant mode",
+                            ));
+                        }
+                        if check_revocation
+                            && self
+                                .is_revoked(
+                                    &claims.jti,
+                                    &claims.organization_id.clone().unwrap_or_default(),
+                                )
+                                .await
+                                .map_err(|_| TokenValidationError::Unavailable)?
+                        {
+                            return Err(TokenValidationError::invalid("token revoked"));
+                        }
+                        return Ok(claims);
                     }
-                    if ::server_config::get().multitenant
-                        && claims
-                            .organization_id
-                            .as_deref()
-                            .map(|s| s.eq_ignore_ascii_case("system"))
-                            .unwrap_or(false)
-                    {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
+                    Err(crate::oidc::OidcValidationError::Unavailable) if oidc_cfg.enabled => {
+                        return Err(TokenValidationError::Unavailable);
                     }
-                    if check_revocation
-                        && self
-                            .is_revoked(
-                                &claims.jti,
-                                &claims.organization_id.clone().unwrap_or_default(),
-                            )
-                            .await
-                            .map_err(|_| "token validation unavailable".to_string())?
-                    {
-                        return Err("token revoked".to_string());
-                    }
-                    return Ok(claims);
+                    Err(_) => {}
                 }
-                Err("Invalid token".to_string())
+                Err(TokenValidationError::invalid("Invalid token"))
             }
         }
     }
@@ -1011,9 +1191,8 @@ impl AuthService for AuthServiceServerImpl {
             .await
         {
             Ok(user) => {
-                match self.store.issue_token(&user) {
-                    Ok(token) => {
-                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                match self.store.issue_token_with_expiry(&user) {
+                    Ok((token, expires_at)) => {
                          Ok(Response::new(LoginResponse {
                              token,
                              expires_at,
@@ -1026,7 +1205,8 @@ impl AuthService for AuthServiceServerImpl {
                 Err(Status::unauthenticated("invalid credentials"))
             }
             Err(AuthenticationError::Unavailable(error)) => {
-                tracing::error!(error = %error, "authentication backend unavailable");
+                let _ = error;
+                tracing::error!(event = "auth.grpc.login.unavailable");
                 Err(Status::unavailable("authentication unavailable"))
             }
         }
@@ -1059,11 +1239,11 @@ impl AuthService for AuthServiceServerImpl {
             final_org_id,
         ).await.map_err(|e| Status::internal(e))?;
 
-        let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
+        let (token, expires_at) = self.store.issue_token_with_expiry(&user).map_err(Status::internal)?;
 
         Ok(Response::new(LoginResponse {
              token,
-             expires_at: (Utc::now() + chrono::Duration::hours(24)).timestamp(),
+             expires_at,
         }))
     }
 
@@ -1086,27 +1266,15 @@ impl AuthService for AuthServiceServerImpl {
             .strip_prefix("Bearer ")
             .or_else(|| auth_str.strip_prefix("bearer "))
             .unwrap_or(auth_str);
-        let claims = self
-            .store
-            .validate_token_claims(token, false)
-            .await
-            .map_err(|error| {
-                if error == "token validation unavailable" {
-                    Status::unavailable(error)
-                } else {
-                    Status::unauthenticated("invalid token")
-                }
-            })?;
-        let exp = chrono::DateTime::from_timestamp(claims.exp, 0)
-            .ok_or_else(|| Status::unauthenticated("invalid token"))?;
-        let org_id = claims.organization_id.clone().unwrap_or_default();
-        self.store
-            .revoke_token(claims.jti, exp, &org_id)
-            .await
-            .map_err(|error| {
-                tracing::error!(error = %error, "token revocation unavailable");
+        self.store.logout_token(token).await.map_err(|error| match error {
+            LogoutError::InvalidToken => Status::unauthenticated("invalid token"),
+            LogoutError::ValidationUnavailable => {
+                Status::unavailable("token validation unavailable")
+            }
+            LogoutError::RevocationUnavailable => {
                 Status::unavailable("token revocation unavailable")
-            })?;
+            }
+        })?;
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -1358,6 +1526,9 @@ mod store_tests {
             redis_client: None,
             redis_configuration_error: None,
             secret: b"test-secret-with-at-least-32-bytes".to_vec(),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(
+                MAX_PASSWORD_HASH_CONCURRENCY,
+            )),
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url: String::new(),
                 client_id: String::new(),
@@ -1559,6 +1730,32 @@ mod store_tests {
             AuthService::logout(&service, logout_request(&token))
                 .await
                 .is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn logout_distinguishes_forged_oidc_tokens_from_oidc_outages() {
+        let store = test_store_with_memory_user(true);
+        *store.oidc_cfg.write().unwrap() = OIDCConfig {
+            issuer_url: "ftp://invalid.example".to_string(),
+            client_id: "client".to_string(),
+            enabled: true,
+        };
+
+        let missing_kid = "eyJhbGciOiJSUzI1NiJ9.e30.AA";
+        assert_eq!(
+            store.logout_token(missing_kid).await,
+            Err(LogoutError::InvalidToken)
+        );
+        let wrong_algorithm_with_kid = "eyJhbGciOiJIUzI1NiIsImtpZCI6ImsifQ.e30.AA";
+        assert_eq!(
+            store.logout_token(wrong_algorithm_with_kid).await,
+            Err(LogoutError::InvalidToken)
+        );
+        let authority_unavailable = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsifQ.e30.AA";
+        assert_eq!(
+            store.logout_token(authority_unavailable).await,
+            Err(LogoutError::ValidationUnavailable)
         );
     }
 

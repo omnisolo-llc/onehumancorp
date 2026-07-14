@@ -1,10 +1,11 @@
 import { CompactEncrypt, compactDecrypt, decodeProtectedHeader } from "jose";
+import authLimits from "./authLimits.json";
 import type { SessionKeyRing } from "./sessionKeys";
 import type { SessionCodecContext, WebSession } from "./sessionTypes";
 
 const MAX_PLAINTEXT_BYTES = 2800;
 const MAX_COMPACT_BYTES = 3800;
-const MAX_ACCESS_TOKEN_BYTES = 2048;
+const MAX_ACCESS_TOKEN_BYTES = authLimits.maxAccessTokenBytes;
 const MAX_SESSION_SECONDS = 86400;
 const CLOCK_SKEW_SECONDS = 30;
 const encoder = new TextEncoder();

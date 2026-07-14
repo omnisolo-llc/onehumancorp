@@ -8482,6 +8482,7 @@ dependencies = [
  "temp-env",
  "tokio",
  "tonic",
+ "tower 0.5.3",
  "tracing",
  "x509-parser",
 ]
