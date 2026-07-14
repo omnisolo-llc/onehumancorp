@@ -38,7 +38,6 @@ export default function RootLayout({
           <TooltipProvider>
                     <WalkthroughProvider>
               <ProductShellGuard>{children}</ProductShellGuard>
-              <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />

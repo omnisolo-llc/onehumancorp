@@ -237,32 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 box-sizing: border-box;
             }
         }
-        #ohc-floating-help-header {
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #ohc-floating-help-header h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #0f172a;
-        }
-        #ohc-floating-help-close {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #64748b;
-            padding: 4px;
-        }
-        #ohc-floating-help-tabs {
-            display: flex;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
-        }
         .ohc-help-tab {
             flex: 1;
             padding: 12px;
@@ -415,84 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
 
-    // Create the widget
-    const widget = document.createElement('div');
-    widget.id = 'ai-chat-interface';
-    widget.innerHTML = `
-        <div id="ohc-floating-help-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>
-        <div id="ohc-floating-help-tabs">
-            <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
-            <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
-            <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
-            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
-        </div>
-
-        <div id="tab-articles" class="ohc-help-content active">
-            <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
-            </div>
-            <h4>Popular Articles</h4>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
-            </ul>
-            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <div style="margin-bottom: 8px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
-                    <input type="checkbox" onchange="document.getElementById('help-widget-advanced-links').style.display = this.checked ? 'block' : 'none';" />
-                    Advanced Settings
-                  </label>
-                </div>
-                <div id="help-widget-advanced-links" style="display: none;">
-                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
-                    <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
-                <h4>Set up your store</h4>
-                <p>Learn how to add products and customize your storefront.</p>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
-                <h4>Accept your first payment</h4>
-                <p>Connect your account to start receiving money.</p>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
-                <h4>Activate your AI Support Agent</h4>
-                <p>Let AI handle customer queries for you.</p>
-            </div>
-        </div>
-
-                <div id="tab-videos" class="ohc-help-content">
-            <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
-        </div>
-
-        <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
-            <div id="ohc-help-chat-messages">
-                <div class="ohc-chat-msg agent">
-                    Need help setting up your store? I am your AI Help Agent! How can I assist you today?
-                </div>
-            </div>
-            <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
-                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
-            </div>
-        </div>
-    `;
-
-    window.addEventListener('open-help-chat', () => {
-        widget.style.display = 'flex';
-    });
-
-    document.body.appendChild(widget);
 
 
 
