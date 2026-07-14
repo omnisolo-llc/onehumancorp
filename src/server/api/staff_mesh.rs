@@ -122,8 +122,7 @@ pub async fn create_staff_handler(
     let invite_token = format!("invite_{}", Uuid::new_v4());
 
     match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let res = sqlx::query(
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let res = sqlx::query(
                 "INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role) VALUES (?, ?, ?, ?, ?)",
             )
             .bind(&staff_id)
@@ -131,8 +130,7 @@ pub async fn create_staff_handler(
             .bind(&payload.name)
             .bind(&payload.phone_number)
             .bind(&payload.role)
-            .execute(sqlite_pool)
-            .await;
+            .execute(sqlite_pool)            .await;
             if res.is_err() {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -197,15 +195,13 @@ pub async fn set_staff_pin_handler(
     let pin_hash = format!("hashed_{}", payload.pin);
 
     match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let res = sqlx::query(
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let res = sqlx::query(
                 "UPDATE ohc_staff_member SET pin_hash = ? WHERE id = ? AND tenant_id = ?",
             )
             .bind(&pin_hash)
             .bind(&id)
             .bind(&tenant_id)
-            .execute(sqlite_pool)
-            .await;
+            .execute(sqlite_pool)            .await;
             if res.is_err() {
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -263,13 +259,11 @@ pub async fn get_staff_handler(
     };
 
     let staff: Vec<StaffMember> = match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let rows: Result<Vec<(String, String, String, String)>, _> = sqlx::query_as(
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let rows: Result<Vec<(String, String, String, String)>, _> = sqlx::query_as(
                 "SELECT id, name, phone_number, role FROM ohc_staff_member WHERE tenant_id = ?",
             )
             .bind(&tenant_id)
-            .fetch_all(sqlite_pool)
-            .await;
+            .fetch_all(sqlite_pool)            .await;
 
             rows.unwrap_or_default().into_iter().map(|(id, name, phone_number, role)| {
                 StaffMember { id, name, phone_number, role }
@@ -322,8 +316,7 @@ pub async fn sync_timecard_handler(
 
     for event in payload.events {
         match &db.store {
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                let _ = sqlx::query(
+            crate::db::DbStore::Sqlite(sqlite_pool) => {                let _ = sqlx::query(
                     "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES (?, ?, ?, ?, ?)",
                 )
                 .bind(&event.id)
@@ -331,8 +324,7 @@ pub async fn sync_timecard_handler(
                 .bind(&event.staff_id)
                 .bind(&event.event_type)
                 .bind(&event.offline_timestamp)
-                .execute(sqlite_pool)
-                .await;
+                .execute(sqlite_pool)                .await;
             }
             crate::db::DbStore::Postgres => {
                 let mut tx = match db.pool.begin().await {
@@ -387,13 +379,11 @@ pub async fn get_timecard_handler(
     };
 
     let events = match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let rows = sqlx::query(
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let rows = sqlx::query(
                 "SELECT id, staff_id, event_type, CAST(event_time AS TEXT) AS offline_timestamp, CAST(created_at AS TEXT) AS created_at FROM ohc_timecard_event WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 100",
             )
             .bind(&tenant_id)
-            .fetch_all(sqlite_pool)
-            .await;
+            .fetch_all(sqlite_pool)            .await;
             rows.map(|rows| rows.into_iter().map(|row| {
                 use sqlx::Row;
                 serde_json::json!({
@@ -459,8 +449,7 @@ pub async fn create_task_handler(
     let task_id = format!("task_{}", Uuid::new_v4());
 
     match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let res = sqlx::query(
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let res = sqlx::query(
                 "INSERT INTO staff_tasks (id, tenant_id, staff_id, title, description, priority) VALUES (?, ?, ?, ?, ?, ?)",
             )
             .bind(&task_id)
@@ -469,8 +458,7 @@ pub async fn create_task_handler(
             .bind(&payload.title)
             .bind(&payload.description.clone().unwrap_or_default())
             .bind(&payload.priority.clone().unwrap_or_else(|| "normal".to_string()))
-            .execute(sqlite_pool)
-            .await;
+            .execute(sqlite_pool)            .await;
             if res.is_err() {
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
             }
@@ -515,8 +503,7 @@ pub async fn get_tasks_handler(
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC")
                 .bind(&tenant_id)
-                .fetch_all(sqlite_pool)
-                .await;
+                .fetch_all(sqlite_pool)                .await;
             rows.map(|rows| rows.into_iter().map(|row| {
                 use sqlx::Row;
                 serde_json::json!({
@@ -571,8 +558,7 @@ pub async fn update_task_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
     match &db.store {
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let mut query = String::from("UPDATE staff_tasks SET updated_at = CURRENT_TIMESTAMP");
+        crate::db::DbStore::Sqlite(sqlite_pool) => {            let mut query = String::from("UPDATE staff_tasks SET updated_at = CURRENT_TIMESTAMP");
             if payload.status.is_some() { query.push_str(", status = ?"); }
             if payload.title.is_some() { query.push_str(", title = ?"); }
             query.push_str(" WHERE id = ? AND tenant_id = ?");
@@ -582,8 +568,7 @@ pub async fn update_task_handler(
             if let Some(t) = &payload.title { builder = builder.bind(t); }
             builder = builder.bind(&task_id).bind(&tenant_id);
 
-            let res = builder.execute(sqlite_pool).await;
-            if res.is_err() {
+            let res = builder.execute(sqlite_pool).await;            if res.is_err() {
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
             }
         }
@@ -631,8 +616,7 @@ pub async fn delete_task_handler(
             let res = sqlx::query("DELETE FROM staff_tasks WHERE id = ? AND tenant_id = ?")
                 .bind(&task_id)
                 .bind(&tenant_id)
-                .execute(sqlite_pool)
-                .await;
+                .execute(sqlite_pool)                .await;
             if res.is_err() {
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
             }
@@ -672,8 +656,7 @@ pub async fn get_summaries_handler(
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let rows = sqlx::query("SELECT id, summary_text, escalations, CAST(created_at AS TEXT) AS created_at FROM shift_summaries WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 10")
                 .bind(&tenant_id)
-                .fetch_all(sqlite_pool)
-                .await;
+                .fetch_all(sqlite_pool)                .await;
             rows.map(|rows| rows.into_iter().map(|row| {
                 use sqlx::Row;
                 serde_json::json!({
@@ -1030,8 +1013,7 @@ pub struct StaffEscalationResponse {
 
 pub async fn escalate_issue_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
-    Json(payload): Json<StaffEscalationRequest>,
+    State(db): State<Arc<DB>>,    Json(payload): Json<StaffEscalationRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -1069,8 +1051,7 @@ pub async fn escalate_issue_handler(
 pub async fn get_staff_tasks_handler(
     headers: HeaderMap,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
-    State(db): State<Arc<DB>>,
-) -> impl IntoResponse {
+    State(db): State<Arc<DB>>,) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
@@ -1116,8 +1097,7 @@ pub async fn get_staff_tasks_handler(
 pub async fn get_shift_summaries_handler(
     headers: HeaderMap,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
-    State(db): State<Arc<DB>>,
-) -> impl IntoResponse {
+    State(db): State<Arc<DB>>,) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
