@@ -231,6 +231,54 @@ impl CustomerMemoryGraphService {
                         .execute(&mut *tx)
                         .await;
 
+                    let _ = sqlx::query("UPDATE subscriptions SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE projects SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE bookings SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE orders SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE ai_memories SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE appointments SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE interactions SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE customer_timeline SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
                     // Remove old
                     let _ = sqlx::query("DELETE FROM customers WHERE id = $1")
                         .bind(&customer_id)
