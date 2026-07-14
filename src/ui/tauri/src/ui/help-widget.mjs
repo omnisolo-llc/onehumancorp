@@ -182,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-
         #ai-chat-interface {
             position: fixed;
             bottom: 96px;
@@ -414,11 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
-
-    // Create the button
-
-
-
 
 
 

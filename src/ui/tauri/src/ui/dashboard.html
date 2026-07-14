@@ -1298,6 +1298,7 @@
           const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
           if (res.ok) {
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             const milestoneContainer = document.getElementById('dynamic-milestones-container');
             const tenthOrderMilestone = data.milestones.find(m => m.id === '10th_order' && m.reached);
 
@@ -1608,6 +1609,7 @@
           });
           if (res.ok) {
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             document.getElementById('referral-tier-section').style.display = 'block';
             document.getElementById('referral-tier-text').innerHTML = `You are on the <strong>${data.current_tier} Tier</strong>!`;
 
@@ -1635,6 +1637,7 @@
           const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
             document.getElementById('viral-loop-active-referrals').innerText = data.metrics?.active_referrals || '0';
             document.getElementById('viral-loop-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
@@ -1664,6 +1667,7 @@
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             const reachedMilestone = data.milestones && data.milestones.find(m => m.reached);
             if (reachedMilestone) {
               document.getElementById('milestone-title').innerText = reachedMilestone.title;
@@ -1744,6 +1748,7 @@
               if (!res.ok) return;
 
               const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
               document.getElementById('referral-tier-widget').style.display = 'block';
 
               let statusText = `You are on the <strong>${data.current_tier}</strong> Tier.`;
@@ -1803,6 +1808,7 @@
           const res = await fetch('/api/v1/growth/wrapped', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             if (data.total_sales > 0 || data.total_orders > 0) {
               document.getElementById('wrapped-widget').style.display = 'block';
               document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
@@ -1870,6 +1876,7 @@
                 body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
             });
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
             referralLink.value = data.invite_link || "";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
@@ -2972,6 +2979,7 @@ window.handleTriageAction = async function(id, state) {
             let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
             const res = await fetch(url);
             const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
 
             if (data.success && data.results && data.results.length > 0) {
               omniboxResults.innerHTML = data.results.map(item => `
@@ -3165,6 +3173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       body: JSON.stringify({ team_id: tenantId, inviter_id: "current-user", invitee_id: email })
                   });
                   const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
 
                   cloudBridgeStatus.style.display = 'block';
                   if (res.ok && data.invite_link) {
@@ -3219,6 +3228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                   });
                   const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                   linkInput.value = data.referral_link || "";
               } catch(e) {
                   console.error(e);
@@ -3361,7 +3371,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-
         #ai-chat-interface {
             position: fixed;
             bottom: 96px;
@@ -3555,6 +3564,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+
+
+
+
+
 
     // --- Global Tooltip & Walkthrough Logic ---
 
@@ -3971,6 +3985,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     allOk = false;
                 } else {
                     const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                     if (data.pending_reconciliation && data.pending_reconciliation.length > 0) {
                         showConflictModal(data.pending_reconciliation[0]);
                     }
@@ -3991,6 +4006,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     allOk = false;
                 } else {
                     const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                     if (data.pending_reconciliation && data.pending_reconciliation.length > 0) {
                         showConflictModal(data.pending_reconciliation[0]);
                     }
@@ -4109,6 +4125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
                     if (res.ok) {
                         const data = await res.json();
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
                         const results = data.results || [];
 
                         if (results.length > 0) {
