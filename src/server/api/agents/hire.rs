@@ -45,9 +45,25 @@ async fn hire_handler(
     State(hub): State<Arc<Hub>>,
     req: axum::extract::Request,
 ) -> impl IntoResponse {
-    let tenant_id = match req.extensions().get::<::server_common::Claims>() {
-        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant()),
-        None => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match req
+        .extensions()
+        .get::<::server_common::Claims>()
+        .and_then(|claims| claims.organization_id.clone())
+    {
+        Some(organization_id) => organization_id,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(HireAgentResponse {
+                    id: "".to_string(),
+                    status: "error".to_string(),
+                    agent_id: "".to_string(),
+                    workflow_id: "".to_string(),
+                    message: "Authentication required".to_string(),
+                }),
+            )
+                .into_response()
+        }
     };
 
     let (parts, body) = req.into_parts();

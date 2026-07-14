@@ -1,67 +1,21 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { expect, test, vi } from "vitest";
 
-describe('/api/agents/hire', () => {
-  const originalBackend = process.env.BACKEND_URL;
-  const originalOhcApi = process.env.OHC_API_URL;
+const proxyBackendRequest = vi.hoisted(() =>
+  vi.fn(async () => Response.json({ status: "running" }, { status: 201 })),
+);
 
-  beforeEach(() => {
-    vi.resetModules();
-    delete process.env.BACKEND_URL;
-    delete process.env.OHC_API_URL;
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+
+import { POST } from "./route";
+
+test("uses the authenticated backend transport for agent hiring", async () => {
+  const request = new Request("http://localhost/api/agents/hire", {
+    method: "POST",
+    body: '{"name":"Growth Strategist","role":"Operator"}',
   });
 
-  afterEach(() => {
-    if (originalBackend === undefined) delete process.env.BACKEND_URL;
-    else process.env.BACKEND_URL = originalBackend;
-    if (originalOhcApi === undefined) delete process.env.OHC_API_URL;
-    else process.env.OHC_API_URL = originalOhcApi;
-  });
+  const response = await POST(request);
 
-  it('returns a 503 error when no backend is configured', async () => {
-    const { POST } = await import('./route');
-    const response = await POST(
-      new Request('http://localhost/api/api/agents/hire', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: 'Growth Strategist',
-          role: 'Business growth operator',
-          model: 'MiniMax-M3',
-          mode: 'Plan',
-          workspace: 'Marketing sprint',
-          task: 'Plan a launch',
-          skills: ['Web Research'],
-          connectors: ['Tencent Docs'],
-          contextReferences: '@orders @inventory',
-          attachments: 'launch.png, revenue.csv',
-          customProvider: 'https://llm.example.com/v1',
-          workDirectory: '/workspace/launch',
-          outputFormat: 'Spreadsheet',
-          taskConstraints: 'Budget under $500',
-        }),
-      }) as any,
-    );
-
-    expect(response.status).toBe(503);
-    const body = await response.json();
-    expect(body).toMatchObject({
-      status: 'error',
-      message: 'Backend hire service unavailable',
-    });
-  });
-
-  it('rejects invalid hire requests', async () => {
-    const { POST } = await import('./route');
-    const response = await POST(
-      new Request('http://localhost/api/agents/hire', {
-        method: 'POST',
-        body: JSON.stringify({ name: '', role: '' }),
-      }) as any,
-    );
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      status: 'error',
-      message: 'Expert name and role are required',
-    });
-  });
+  expect(response.status).toBe(201);
+  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/agents/hire");
 });
