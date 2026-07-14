@@ -10,7 +10,7 @@ import { GET } from "./route";
 
 beforeEach(() => proxyBackendRequest.mockClear());
 
-test("delegates the unchanged GET query to the authenticated fulfillment path", async () => {
+test("delegates GET without forwarding inbound queries", async () => {
   const request = new Request(
     "http://localhost/api/fulfillment?status=preparing&tenant_id=untrusted",
   );
@@ -18,9 +18,9 @@ test("delegates the unchanged GET query to the authenticated fulfillment path", 
   const response = await GET(request);
 
   expect(response.status).toBe(200);
-  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/fulfillment");
-  expect(request.method).toBe("GET");
-  expect(new URL(request.url).search).toBe(
-    "?status=preparing&tenant_id=untrusted",
+  expect(proxyBackendRequest).toHaveBeenCalledWith(
+    request,
+    "/api/fulfillment",
+    { forwardQuery: false },
   );
 });

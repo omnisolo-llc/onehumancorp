@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const proxyBackendRequest = vi.hoisted(() =>
-  vi.fn(async () => Response.json({ success: true })),
-);
+const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+  proxyBackendRequest: vi.fn(async () => Response.json({ success: true })),
+}));
 
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+vi.mock("@/lib/auth/backendTransport", () => ({
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+}));
 
 import { POST } from "./route";
 
@@ -13,7 +17,7 @@ const context = (id: string) => ({ params: Promise.resolve({ id }) });
 describe("POST /api/fulfillment/execute/[id]", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  it("delegates the unchanged POST body and query to a confined fulfillment path", async () => {
+  it("preserves legacy JSON normalization without forwarding inbound queries", async () => {
     const body = JSON.stringify({ action: "mark_ready" });
     const request = new Request(
       "http://localhost/api/fulfillment/execute/ord-42?notify=true",
@@ -26,10 +30,8 @@ describe("POST /api/fulfillment/execute/[id]", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/fulfillment/execute/ord-42",
+      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
     );
-    expect(request.method).toBe("POST");
-    expect(new URL(request.url).search).toBe("?notify=true");
-    await expect(request.text()).resolves.toBe(body);
   });
 
   it.each([".", "..", "../admin", "order/next", "", "a".repeat(129)])(

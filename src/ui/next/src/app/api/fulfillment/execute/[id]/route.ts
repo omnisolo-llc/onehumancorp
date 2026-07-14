@@ -1,4 +1,7 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import {
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+} from "@/lib/auth/backendTransport";
 
 const FULFILLMENT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -24,5 +27,8 @@ export async function POST(
   if (id === "." || id === ".." || !FULFILLMENT_ID.test(id)) {
     return invalidFulfillmentId();
   }
-  return proxyBackendRequest(request, `/api/fulfillment/execute/${id}`);
+  return proxyBackendRequest(request, `/api/fulfillment/execute/${id}`, {
+    forwardQuery: false,
+    transformRequestBody: normalizeJsonRequestBody,
+  });
 }

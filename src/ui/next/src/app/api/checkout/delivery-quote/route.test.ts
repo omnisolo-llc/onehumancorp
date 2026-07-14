@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const proxyBackendRequest = vi.hoisted(() =>
-  vi.fn(async () => Response.json({ success: true, fee: 8.5 })),
-);
+const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+  proxyBackendRequest: vi.fn(async () =>
+    Response.json({ success: true, fee: 8.5 }),
+  ),
+}));
 
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+vi.mock("@/lib/auth/backendTransport", () => ({
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+}));
 
 import { POST } from "./route";
 
 describe("POST /api/checkout/delivery-quote", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  it("delegates the unchanged POST body and query to the authenticated backend path", async () => {
+  it("preserves legacy JSON normalization without forwarding inbound queries", async () => {
     const body = JSON.stringify({
       deliveryAddress: "123 Market St",
       coordinates: { lat: 37.77, lng: -122.41 },
@@ -27,9 +33,7 @@ describe("POST /api/checkout/delivery-quote", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/checkout/delivery-quote",
+      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
     );
-    expect(request.method).toBe("POST");
-    expect(new URL(request.url).search).toBe("?currency=USD");
-    await expect(request.text()).resolves.toBe(body);
   });
 });

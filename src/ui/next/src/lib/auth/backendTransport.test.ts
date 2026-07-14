@@ -5,6 +5,7 @@ import { parseSessionKeyRing } from "./sessionKeys";
 import { cookieForSession, serializeSessionCookie, sessionCodecContext } from "./sessionCookie";
 import type { WebSession } from "./sessionTypes";
 import {
+  normalizeJsonRequestBody,
   proxyAuthenticatedRequest,
   type BackendTransportDependencies,
 } from "./backendTransport";
@@ -261,6 +262,77 @@ describe("server-only authenticated backend transport", () => {
 
     expect(response.status).toBe(200);
     expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("allows a trusted route to suppress inbound query forwarding", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      expect(String(input)).toBe("https://api.example.com/api/fulfillment");
+      return Response.json({ ok: true });
+    });
+    const deps = await dependencies(fetchImpl);
+    const input = await request(
+      deps,
+      "/api/fulfillment?status=preparing&tenant_id=attacker",
+    );
+
+    const response = await proxyAuthenticatedRequest(
+      input,
+      "/api/fulfillment",
+      deps,
+      { forwardQuery: false },
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("strictly parses and canonically reserializes JSON request bodies", () => {
+    const normalized = normalizeJsonRequestBody(
+      new TextEncoder().encode(' { "nested": { "ok": true }, "items": [1, 2] } '),
+    );
+
+    expect(new TextDecoder().decode(normalized)).toBe(
+      '{"nested":{"ok":true},"items":[1,2]}',
+    );
+  });
+
+  it("rejects malformed JSON and invalid UTF-8 request bodies", () => {
+    expect(() => normalizeJsonRequestBody(new TextEncoder().encode("{"))).toThrow();
+    expect(() => normalizeJsonRequestBody(Uint8Array.from([0xc3, 0x28]))).toThrow();
+  });
+
+  it("authenticates and bounds the request before transforming its body", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const deps = await dependencies(fetchImpl, { requestLimitBytes: 8 });
+    const transformRequestBody = vi.fn(normalizeJsonRequestBody);
+    const unauthenticated = new Request("https://app.example.com/api/orders", {
+      method: "POST",
+      body: "{}",
+    });
+    const oversized = await request(deps, "/api/orders", {
+      method: "POST",
+      body: '{"x":123}',
+    });
+
+    expect(
+      (
+        await proxyAuthenticatedRequest(
+          unauthenticated,
+          "/api/orders",
+          deps,
+          { transformRequestBody },
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await proxyAuthenticatedRequest(oversized, "/api/orders", deps, {
+          transformRequestBody,
+        })
+      ).status,
+    ).toBe(413);
+    expect(transformRequestBody).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("rejects backend redirects and oversized responses", async () => {
