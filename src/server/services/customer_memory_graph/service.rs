@@ -329,6 +329,8 @@ impl CustomerMemoryGraphService {
                 segments: vec!["Returning".to_string()],
                 preferences: vec![extracted_value.to_string()],
                 summary: format!("Customer recently asked about: {}", category),
+                customer_name: "Unknown Customer".to_string(),
+                interactions: vec![],
             };
 
             sqlx::query(
