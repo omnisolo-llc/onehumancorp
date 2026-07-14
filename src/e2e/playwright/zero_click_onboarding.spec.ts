@@ -5,7 +5,7 @@ test.describe('Zero-Click Onboarding Flow', () => {
 
   test('should complete the zero-click onboarding flow on mobile', async ({ page }) => {
     // Navigate to the real local server
-    await page.goto('http://127.0.0.1:18789/setup.html');
+    await page.goto('/setup.html');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
@@ -20,15 +20,7 @@ test.describe('Zero-Click Onboarding Flow', () => {
     // Click the submit button
     await page.locator('#generate-storefront-btn').click();
 
-    // Wait for the approval details screen
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#approval-details')).toBeVisible();
-
-    // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn-chat');
-    await approveBtn.click();
-
-    // The flow goes to the success/dashboard screen.
-    await expect(page).toHaveURL(/.*dashboard\.html.*/, { timeout: 30000 });
+    // The flow goes directly to the success/dashboard screen (Zero-Click, no approval).
+    await expect(page).toHaveURL(/.*dashboard\.html.*/, { timeout: 60000 });
   });
 });

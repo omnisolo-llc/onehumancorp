@@ -23,7 +23,21 @@ export default function ZeroClickBuilderPage() {
   };
 
   const handleChatComplete = (data: any) => {
-    setGeneratedStore(data);
+    if (data && data.organization_id) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('tenant_id', data.organization_id);
+        localStorage.setItem('tenant', data.organization_id);
+      }
+    }
+    if (data && data.user_id) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('user_id', data.user_id);
+      }
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('has_onboarded', 'true');
+    }
+    router.push('/dashboard');
   };
 
   return (

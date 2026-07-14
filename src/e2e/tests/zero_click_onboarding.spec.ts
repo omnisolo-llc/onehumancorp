@@ -25,19 +25,11 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' });
     const successHeading = page.getByRole('heading', { name: /You're Live!/ });
 
-    // In chat flow we may skip straight or show approval, wait for one
-    await expect(async () => {
-      const isApproval = await approvalHeading.isVisible();
-      const isSuccess = await successHeading.isVisible();
-      expect(isApproval || isSuccess).toBeTruthy();
-    }).toPass({ timeout: 45000 });
-
-    if (await approvalHeading.isVisible()) {
-        await page.locator('#approve-publish-btn').click();
-    }
-
     // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
+    await expect(async () => {
+      // It should go directly to dashboard
+      await expect(page).toHaveURL(/.*dashboard.*/);
+    }).toPass({ timeout: 60000 });
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {

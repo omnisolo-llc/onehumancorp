@@ -51,7 +51,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     });
 
     // Navigate to the real setup page
-    await page.goto('http://mock/onboarding/zero-click');
+    await page.goto('/onboarding/zero-click');
 
     // Verify Initial Screen
     await expect(page.locator("h1").filter({ hasText: "Tell us about your business" })).toBeAttached();
@@ -67,18 +67,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     // 4. Click generate
     await generateBtn.click();
 
-    // 5. Wait for the approval screen to appear
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 15000 });
-
-    // Verify preview and deposit policy text
-    await expect(page.locator('#approval-details')).toBeVisible();
-    await expect(page.locator('#approval-details')).toContainText('Suggested Deposit Policy');
-
-    // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn');
-    await approveBtn.click();
-
-    // 6. Wait for generation to complete and the success message to appear
-    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
+    // 5. Wait for generation to complete and go directly to dashboard
+    await expect(page).toHaveURL(/.*dashboard.*/, { timeout: 15000 });
   });
 });

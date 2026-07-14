@@ -677,7 +677,7 @@ export default function OnboardingWizard() {
           typeof window !== "undefined" &&
           window.location.href.includes("setup.html")
         ) {
-          window.location.href = "/success.html";
+          router.push("/dashboard");
         }
       }
     } catch (err: any) {
@@ -780,7 +780,7 @@ export default function OnboardingWizard() {
         typeof window !== "undefined" &&
         window.location.href.includes("setup.html")
       ) {
-        window.location.href = "/success.html";
+        router.push("/dashboard");
       }
     } catch (err: any) {
       console.error(err);
