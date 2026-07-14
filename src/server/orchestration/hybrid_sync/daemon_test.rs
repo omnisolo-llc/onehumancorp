@@ -698,13 +698,25 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         assert_eq!(row_running.get::<String, _>("status"), "FAILED");
 
         // Verify dead letters were created for running jobs
-        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_running_sqlite'")
+        let dl_sqlite = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_running_sqlite'")
             .fetch_one(&sqlite_pool).await.unwrap();
-        assert_eq!(dl_sqlite.0, 1);
+        assert_eq!(dl_sqlite.get::<String, _>("event_type"), "job_stuck");
+        assert_eq!(dl_sqlite.get::<String, _>("error_message"), "[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour");
 
-        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_running_pg'")
+        let dl_pg = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_running_pg'")
             .fetch_one(&pg_pool).await.unwrap();
-        assert_eq!(dl_pg.0, 1);
+        assert_eq!(dl_pg.get::<String, _>("event_type"), "job_stuck");
+        assert_eq!(dl_pg.get::<String, _>("error_message"), "[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour");
+
+        let dl_sqlite_queued = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_queued_sqlite'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_sqlite_queued.get::<String, _>("event_type"), "job_failed");
+        assert_eq!(dl_sqlite_queued.get::<String, _>("error_message"), "[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours");
+
+        let dl_pg_queued = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_queued_pg'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_pg_queued.get::<String, _>("event_type"), "job_failed");
+        assert_eq!(dl_pg_queued.get::<String, _>("error_message"), "[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours");
     }
 
     #[tokio::test]
@@ -768,12 +780,15 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
 
         // Verify SQLite mission failure category
-        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'")
+        let row_sqlite = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'")
             .fetch_one(&sqlite_pool).await.unwrap();
-        assert_eq!(dl_sqlite.0, 1);
+        use sqlx::Row;
+        assert_eq!(row_sqlite.get::<String, _>("event_type"), "mission_stuck");
+        assert_eq!(row_sqlite.get::<String, _>("error_message"), "[cleanup] Mission became stuck");
 
         // Verify PG mission failure category
-        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
+        let row_pg = sqlx::query("SELECT event_type, error_message FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
             .fetch_one(&pg_pool).await.unwrap();
-        assert_eq!(dl_pg.0, 1);
+        assert_eq!(row_pg.get::<String, _>("event_type"), "mission_stuck");
+        assert_eq!(row_pg.get::<String, _>("error_message"), "[cleanup] Mission became stuck");
     }
