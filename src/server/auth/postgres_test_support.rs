@@ -118,14 +118,14 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SELECT set_config('role', 'none', false), set_config('app.current_tenant', '', false)").await?;
+                conn.execute("DISCARD ALL").await?;
                 Ok(true)
             })
         })
         .after_release(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SELECT set_config('role', 'none', false), set_config('app.current_tenant', '', false)").await?;
+                conn.execute("DISCARD ALL").await?;
                 Ok(true)
             })
         })
