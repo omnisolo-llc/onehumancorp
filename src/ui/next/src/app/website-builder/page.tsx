@@ -411,6 +411,10 @@ export default function WebsiteBuilderPage() {
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
+                      autoCapitalize="words"
+                      autoComplete="organization"
+                      inputMode="text"
+                      enterKeyHint="next"
                     />
                     <input
                       type="text"
@@ -418,6 +422,9 @@ export default function WebsiteBuilderPage() {
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
+                      autoCapitalize="sentences"
+                      inputMode="text"
+                      enterKeyHint="done"
                     />
                     <button
                       disabled={!businessName.trim()}
@@ -434,7 +441,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div id="step-4" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    <label className="flex items-center gap-3 p-4 glass-control cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 min-h-[54px] glass-control cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0066FF]"
@@ -443,7 +450,7 @@ export default function WebsiteBuilderPage() {
                       />
                       <span className="font-semibold text-gray-800">Physical Products</span>
                     </label>
-                    <label className="flex items-center gap-3 p-4 glass-control cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 min-h-[54px] glass-control cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0066FF]"
@@ -472,6 +479,9 @@ export default function WebsiteBuilderPage() {
                       placeholder="What is the name of this product?"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
+                      autoCapitalize="words"
+                      inputMode="text"
+                      enterKeyHint="next"
                     />
                     <input
                       type="text"
@@ -479,6 +489,8 @@ export default function WebsiteBuilderPage() {
                       placeholder="0.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
+                      inputMode="decimal"
+                      enterKeyHint="done"
                     />
                     <button
                       disabled={!productName.trim() || !productPrice.trim()}
@@ -521,6 +533,10 @@ export default function WebsiteBuilderPage() {
                       placeholder="e.g. Maya Smith"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
+                      autoComplete="name"
+                      autoCapitalize="words"
+                      inputMode="text"
+                      enterKeyHint="next"
                     />
                     <input
                       type="email"
@@ -528,6 +544,10 @@ export default function WebsiteBuilderPage() {
                       placeholder="you@email.com"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
+                      autoComplete="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      enterKeyHint="next"
                     />
                     <input
                       type="password"
@@ -535,6 +555,8 @@ export default function WebsiteBuilderPage() {
                       placeholder="Password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
+                      autoComplete="new-password"
+                      enterKeyHint="done"
                     />
                     <button
                       disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim() || !userEmail.includes('@') || userPassword.length < 8}
