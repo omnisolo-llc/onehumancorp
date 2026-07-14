@@ -3437,15 +3437,6 @@
 
       function updateStepper(stepId) {
         const stepperIndicator = document.getElementById("stepper-indicator");
-        if (
-          stepId === "step-initial" ||
-          stepId === "step-chat" ||
-          stepId === "step-approval"
-        ) {
-          if (stepperIndicator) stepperIndicator.style.display = "none";
-        } else {
-          if (stepperIndicator) stepperIndicator.style.display = "flex";
-        }
 
         const steps = [
           "step-context",
@@ -3459,29 +3450,36 @@
           "step-domain",
           "step-template",
         ];
+
         const currentIndex = steps.indexOf(stepId);
-        if (stepperIndicator)
-          stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
 
-        const stepperProgress = document.getElementById("stepper-progress");
-        if (stepperProgress) {
-          stepperProgress.style.width = (currentIndex / (steps.length - 1)) * 100 + "%";
+        if (currentIndex === -1) {
+          if (stepperIndicator) stepperIndicator.style.display = "none";
+        } else {
+          if (stepperIndicator) stepperIndicator.style.display = "flex";
+          if (stepperIndicator)
+            stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
+
+          const stepperProgress = document.getElementById("stepper-progress");
+          if (stepperProgress) {
+            stepperProgress.style.width = (currentIndex / (steps.length - 1)) * 100 + "%";
+          }
+
+          document
+            .querySelectorAll(".step-indicator")
+            .forEach((indicator, index) => {
+              if (index < currentIndex) {
+                indicator.classList.add("completed");
+                indicator.classList.remove("active");
+              } else if (index === currentIndex) {
+                indicator.classList.add("active");
+                indicator.classList.remove("completed");
+              } else {
+                indicator.classList.remove("active");
+                indicator.classList.remove("completed");
+              }
+            });
         }
-
-        document
-          .querySelectorAll(".step-indicator")
-          .forEach((indicator, index) => {
-            if (index < currentIndex) {
-              indicator.classList.add("completed");
-              indicator.classList.remove("active");
-            } else if (index === currentIndex) {
-              indicator.classList.add("active");
-              indicator.classList.remove("completed");
-            } else {
-              indicator.classList.remove("active");
-              indicator.classList.remove("completed");
-            }
-          });
       }
 
       const categoriesMap = {
