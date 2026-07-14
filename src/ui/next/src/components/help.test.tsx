@@ -19,7 +19,7 @@ describe('HelpWidget', () => {
       if (url.includes('/api/walkthrough/store-setup')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([{ targetId: 'bio-input-tooltip', title: 'Test', content: 'Test Content' }])
+          json: () => Promise.resolve([{ targetId: 'bio-input-tooltip', title: 'Welcome', content: 'Learn how to easily set up your store and accept your first payment.' }])
         });
       }
       if (url.includes('/api/walkthrough/pos')) {

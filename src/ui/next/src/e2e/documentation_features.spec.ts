@@ -38,6 +38,6 @@ test.describe('Documentation Features', () => {
     await helpButton.click({ force: true });
 
     // Check if the walkthrough start button is there
-    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
+    const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(tourButton).toBeVisible();
   });
