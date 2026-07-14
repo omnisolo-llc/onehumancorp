@@ -433,6 +433,20 @@ pub async fn sync_events_handler(
                                 .bind(&tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            if is_sold_out {
+                                let payload = serde_json::json!({
+                                    "product_id": event.entity_id,
+                                    "is_sold_out": true,
+                                    "offline_timestamp": event.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                                });
+                                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&tenant_id)
+                                    .bind(payload)
+                                    .execute(&mut *tx)
+                                    .await;
+                            }
                         }
                             if let Some(client) = crate::get_redis_client() {
                                 if let Ok(mut conn) = client.get_multiplexed_async_connection().await {

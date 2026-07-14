@@ -463,8 +463,58 @@ impl Department for OperationsAgent {
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
                 } else {
-                    let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str());
                     let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let offline_timestamp = event.payload.get("offline_timestamp").and_then(|v| v.as_str());
+
+                    if let Some(offline_ts) = offline_timestamp {
+                        // This is from offline sync toggle
+                        // Let's query if any orders have been made for this product_id after offline_timestamp
+                        let pool = crate::db::get_pool();
+                        let rows = sqlx::query(
+                            "SELECT o.id, o.customer_id FROM orders o JOIN order_items oi ON o.id = oi.order_id WHERE o.tenant_id = $1 AND oi.product_id = $2 AND o.created_at >= $3::timestamptz"
+                        )
+                        .bind(&event.tenant_id)
+                        .bind(product_id)
+                        .bind(offline_ts)
+                        .fetch_all(&pool)
+                        .await;
+
+                        if let Ok(rows) = rows {
+                            for row in rows {
+                                use sqlx::Row;
+                                let order_id: String = row.get("id");
+                                let customer_id: Option<String> = row.try_get("customer_id").unwrap_or(None);
+
+                                // 1. Automatically refund the deposit/order
+                                let _ = sqlx::query("UPDATE orders SET status = 'refunded' WHERE id = $1")
+                                    .bind(&order_id)
+                                    .execute(&pool)
+                                    .await;
+
+                                // 2. Draft an apologetic multilingual SMS via Ambassador Agent
+                                let prompt = format!("Draft an apologetic SMS for the customer of order {} regarding product {}. The item was sold out offline but the order went through. The deposit has been refunded.", order_id, product_id);
+                                let draft_req = serde_json::json!({
+                                    "action": "draft_sms",
+                                    "order_id": order_id,
+                                    "customer_id": customer_id,
+                                    "prompt": prompt
+                                });
+
+                                let _ = self.orchestrator.execute_action(
+                                    DepartmentType::CustomerSuccess,
+                                    format!("Draft out of stock apology for {} (tx: {})", product_id, order_id),
+                                    event.tenant_id.clone(),
+                                    ActionRisk::AutoExecute, // Could be DraftForReview
+                                    draft_req,
+                                ).await;
+                            }
+                        }
+
+                        return Ok(());
+                    }
+
+                    let transaction_id = transaction_id.unwrap_or("unknown");
                     let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let deficit = expected - actual; // e.g. quantity_deducted if offline stock was 0, but actually pos_sync_worker passes quantity_deducted as expected_stock

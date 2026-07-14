@@ -47,6 +47,25 @@ test.describe('Kitchen Command Center Offline Sync', () => {
     // Expect the Pending Sync indicator to show up
     await expect(page.locator('text=Pending Sync')).toBeVisible();
 
+    // While offline, let's create a conflicting order via database (simulating a pre-order arriving from online while this device is offline)
+    const product_id = await toggleButton.getAttribute('id');
+    if (product_id) {
+        const pId = product_id.replace('sold-out-toggle-', '');
+        // Just call a backend API that works. Since we are testing offline sync logic, this preorder would be done via another client online.
+        // We will make a raw fetch call via the Playwright API context directly.
+        await page.request.post('/api/ecommerce/orders', {
+            headers: {
+                'x-tenant-id': 'e2e-tenant',
+            },
+            data: {
+                // A payload that simulates a conflicting order
+                customer_name: 'Offline Pre-order',
+                items: [{ product_id: pId, quantity: 1 }],
+                status: 'new'
+            }
+        }).catch(() => {}); // fire and forget
+    }
+
     // Restore network
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
