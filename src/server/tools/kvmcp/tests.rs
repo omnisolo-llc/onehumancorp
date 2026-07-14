@@ -114,7 +114,7 @@ async fn test_redis_unconfigured() {
         });
 
         let server = KvMcpServer::new(db, None);
-        let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent".to_string();
+        let spiffe_id = "spiffe://onehumancorp.io/org/test_org/agent/test_agent".to_string();
 
         let req = McpInvokeRequest {
             action: "".to_string(),

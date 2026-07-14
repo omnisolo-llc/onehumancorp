@@ -435,7 +435,7 @@ mod tests {
         }]).to_string();
 
         let mut push_req = Request::new(PowerSyncPushRequest { payload: payload_json });
-        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/system".parse().unwrap());
+        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/system".parse().unwrap());
 
         let push_resp = service.power_sync_push(push_req).await.unwrap();
         assert_eq!(push_resp.get_ref().status, "ok");
