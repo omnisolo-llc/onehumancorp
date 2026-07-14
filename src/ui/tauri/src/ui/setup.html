@@ -80,7 +80,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px;
+        border-radius: 8px !important;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -120,7 +120,7 @@
       input,
       select,
       textarea {
-        border-radius: 8px;
+        border-radius: 8px !important;
         min-height: 44px;
         min-width: 44px;
         box-sizing: border-box;
@@ -154,7 +154,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 8px !important;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -174,7 +174,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid #FF3B30;
-        border-radius: 8px;
+        border-radius: 8px !important;
         padding: 12px;
         margin-top: 8px;
         margin-bottom: 16px;
@@ -296,7 +296,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
       .slider:before {
         position: absolute;
@@ -429,7 +429,7 @@
         width: 100%;
         font-size: 16px;
         font-weight: 600;
-        border-radius: 8px;
+        border-radius: 8px !important;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -593,7 +593,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
       .slider:before {
         position: absolute;
@@ -686,7 +686,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px;
+        border-radius: 8px !important;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -785,7 +785,7 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 8px !important;
         cursor: pointer;
         transition:
           border-color 0.2s,
@@ -849,7 +849,7 @@
         min-height: 44px;
         display: flex;
         align-items: center;
-        border-radius: 8px;
+        border-radius: 8px !important;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
         font-size: 13px;
@@ -933,7 +933,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
       .slider:before {
         position: absolute;
@@ -1048,7 +1048,7 @@
           min-width: 44px;
           box-sizing: border-box;
           min-height: 44px;
-          border-radius: 8px;
+          border-radius: 8px !important;
           min-height: 44px;
         }
         .persona-row, #step-context {
@@ -1102,7 +1102,7 @@
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
+        border-radius: 8px !important;
         border: 2px solid transparent;
         background-clip: padding-box;
       }
@@ -1130,7 +1130,7 @@
       button,
       textarea {
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
 
       .context-card {
@@ -1141,7 +1141,7 @@
       .glassmorphism.card,
       .glassmorphism.panel {
       }
-      #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px; }
+      #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px !important; }
       .context-card { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; }
 
       /* --- OHC Premium Dark Mode & Animations --- */
@@ -1218,6 +1218,118 @@
         100% { opacity: 1; transform: translateY(0); }
       }
 
+
+      .ohc-walkthrough-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 99998;
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+      .ohc-walkthrough-highlight {
+        position: relative;
+        z-index: 99999 !important;
+        background: white;
+        pointer-events: none;
+        border-radius: 8px !important;
+        box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.3);
+      }
+      .ohc-walkthrough-bubble {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 16px !important;
+        padding: 20px;
+        box-shadow:
+          0 10px 30px rgba(0, 0, 0, 0.15),
+          0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 99999;
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .ohc-walkthrough-bubble.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .ohc-walkthrough-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #1d1d1f;
+      }
+      .ohc-walkthrough-text {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #555;
+      }
+      .ohc-walkthrough-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+      }
+      .ohc-walkthrough-btn {
+        background: #0066ff;
+        color: white;
+        border: none;
+        border-radius: 8px !important;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        min-height: 44px;
+      }
+      .ohc-walkthrough-btn-secondary {
+        background: transparent;
+        color: #555;
+        border: 1px solid #ddd;
+        border-radius: 8px !important;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        min-height: 44px;
+      }
+      .ohc-walkthrough-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #888;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px;
+        min-height: 44px;
+        min-width: 44px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ohc-walkthrough-bubble {
+          background: rgba(30, 30, 30, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .ohc-walkthrough-title {
+          color: #f5f5f7;
+        }
+        .ohc-walkthrough-text {
+          color: #bbb;
+        }
+        .ohc-walkthrough-btn-secondary {
+          color: #bbb;
+          border-color: #444;
+        }
+      }
+
     </style>
 
     <style>
@@ -1275,7 +1387,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
       .slider:before {
         position: absolute;
@@ -1389,7 +1501,7 @@
             margin-bottom: 20px;
             width: 100%;
             min-height: 44px;
-            border-radius: 8px;
+            border-radius: 8px !important;
           "
         />
 
@@ -1609,7 +1721,7 @@
                 margin-bottom: 0;
                 width: 100%;
                 min-height: 44px;
-                border-radius: 8px;
+                border-radius: 8px !important;
               "
             />
           </div>
@@ -1663,7 +1775,7 @@
                 margin-bottom: 0;
                 flex-grow: 1;
                 min-height: 44px;
-                border-radius: 8px;
+                border-radius: 8px !important;
               "
              enterkeyhint="next" />
             <button
@@ -1676,7 +1788,7 @@
                 width: 44px;
                 min-height: 44px;
                 min-width: 44px;
-                border-radius: 8px;
+                border-radius: 8px !important;
                 padding: 0;
                 display: flex;
                 align-items: center;
@@ -2265,7 +2377,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 8px !important;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2295,7 +2407,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 8px !important;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2325,7 +2437,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 8px;
+                border-radius: 8px !important;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -4607,7 +4719,7 @@
         bottom: 0;
         background-color: rgba(0,0,0,0.1);
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 8px;
+        border-radius: 8px !important;
       }
       .slider:before {
         position: absolute;
@@ -4965,14 +5077,12 @@
               document.querySelector(step.targetId);
 
             bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                <h4 class="ohc-walkthrough-title" style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
+                <p class="ohc-walkthrough-text" style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div class="ohc-walkthrough-controls" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" class="ohc-walkthrough-btn-secondary prev-btn" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : "<div></div>"}
+                    <button id="wt-next" aria-label="Next Step" title="Next Step" class="ohc-walkthrough-btn next-btn" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 
