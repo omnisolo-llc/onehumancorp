@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
+use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Proposal {
@@ -59,6 +59,16 @@ pub struct LineItemRequest {
     pub is_optional: bool,
 }
 
+#[derive(Deserialize)]
+struct NarrativeDraftRequest {
+    topic: String,
+}
+
+#[derive(Serialize)]
+struct NarrativeDraftResponse {
+    proposal: String,
+}
+
 struct AdapterLlm {}
 
 #[async_trait::async_trait]
@@ -73,12 +83,15 @@ impl ResearcherLlmClient for AdapterLlm {
             prompt.push_str(&msg.content);
         }
 
-        let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
+        let is_test_mode =
+            cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
         let response_text = if is_test_mode {
             r#"[{"description": "AI Proposal Design", "unit_price_cents": 25000, "quantity": 1, "is_optional": false}]"#.to_string()
         } else {
-            crate::minimax::LocalLLMClient::new().reason(&prompt).await?
+            crate::minimax::LocalLLMClient::new()
+                .reason(&prompt)
+                .await?
         };
 
         Ok(ChatResponse {
@@ -95,11 +108,80 @@ where
     S: Clone + Send + Sync + 'static,
     PgPool: axum::extract::FromRef<S>,
 {
+    router_with_narrative_llm(Arc::new(AdapterLlm {}))
+}
+
+fn router_with_narrative_llm<S>(llm: Arc<dyn ResearcherLlmClient>) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    PgPool: axum::extract::FromRef<S>,
+{
     Router::new()
+        .route("/draft", post(draft_narrative))
         .route("/draft_agent", post(draft_agent))
         .route("/{id}", get(get_proposal))
         .route("/{id}/approve", post(approve_proposal))
         .route("/social/list", get(list_social_post_proposals))
+        .layer(Extension(llm))
+}
+
+async fn draft_narrative(
+    Extension(llm): Extension<Arc<dyn ResearcherLlmClient>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<NarrativeDraftRequest>,
+) -> axum::response::Response {
+    draft_narrative_with_llm(llm.as_ref(), &claims, payload).await
+}
+
+async fn draft_narrative_with_llm(
+    llm: &dyn ResearcherLlmClient,
+    claims: &::server_common::Claims,
+    payload: NarrativeDraftRequest,
+) -> axum::response::Response {
+    if claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|organization_id| !organization_id.is_empty())
+        .is_none()
+    {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    let topic = payload.topic.trim();
+    if topic.is_empty() || topic.chars().count() > 4_000 {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    let request = ChatRequest {
+        model: "default-model".to_string(),
+        system: "You draft concise, client-ready business proposals. Use these sections: Executive Summary, Scope, Milestones, Investment, and Next Steps. Be concrete, professional, and do not invent pricing or commitments not supplied by the user.".to_string(),
+        messages: vec![Message::user(topic)],
+        temperature: 0.2,
+        max_tokens: 900,
+        tools: vec![],
+    };
+
+    let response = match llm.chat(request).await {
+        Ok(response) => response,
+        Err(_) => {
+            tracing::error!("Narrative proposal model request failed");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    };
+    let proposal = response.message.content.trim();
+    if proposal.is_empty() {
+        tracing::error!("Narrative proposal model returned an empty response");
+        return StatusCode::BAD_GATEWAY.into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(NarrativeDraftResponse {
+            proposal: proposal.to_string(),
+        }),
+    )
+        .into_response()
 }
 
 async fn draft_agent(
@@ -133,12 +215,19 @@ async fn draft_agent(
     let line_items: Vec<LineItemRequest> = match serde_json::from_str(json_str) {
         Ok(items) => items,
         Err(e) => {
-            tracing::error!("Failed to parse LLM JSON output: {}. Output was: {}", e, json_str);
+            tracing::error!(
+                "Failed to parse LLM JSON output: {}. Output was: {}",
+                e,
+                json_str
+            );
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
 
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let total_amount_cents = line_items
+        .iter()
+        .map(|li| li.unit_price_cents * li.quantity as i64)
+        .sum::<i64>();
     let required_deposit_cents = total_amount_cents / 3;
 
     let proposal_id = Uuid::new_v4().to_string();
@@ -194,17 +283,16 @@ async fn draft_agent(
     (StatusCode::OK, Json(serde_json::json!({"id": proposal_id}))).into_response()
 }
 
-async fn get_proposal(
-    State(pool): State<PgPool>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
+async fn get_proposal(State(pool): State<PgPool>, Path(id): Path<String>) -> impl IntoResponse {
     let (proposal_res, items_res) = tokio::join!(
         sqlx::query_as::<_, Proposal>("SELECT * FROM proposals WHERE id = $1")
             .bind(&id)
             .fetch_optional(&pool),
-        sqlx::query_as::<_, ProposalLineItem>("SELECT * FROM proposal_line_items WHERE proposal_id = $1")
-            .bind(&id)
-            .fetch_all(&pool)
+        sqlx::query_as::<_, ProposalLineItem>(
+            "SELECT * FROM proposal_line_items WHERE proposal_id = $1"
+        )
+        .bind(&id)
+        .fetch_all(&pool)
     );
 
     let proposal = match proposal_res {
@@ -224,13 +312,17 @@ async fn get_proposal(
         }
     };
 
-    (StatusCode::OK, Json(ProposalResponse { proposal, line_items })).into_response()
+    (
+        StatusCode::OK,
+        Json(ProposalResponse {
+            proposal,
+            line_items,
+        }),
+    )
+        .into_response()
 }
 
-async fn approve_proposal(
-    State(pool): State<PgPool>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
+async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) -> impl IntoResponse {
     let mut tx = match pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
@@ -240,7 +332,7 @@ async fn approve_proposal(
     };
 
     let proposal = match sqlx::query_as::<_, Proposal>(
-        "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *"
+        "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *",
     )
     .bind(&id)
     .fetch_optional(&mut *tx)
@@ -255,7 +347,7 @@ async fn approve_proposal(
     };
 
     let line_items = match sqlx::query_as::<_, ProposalLineItem>(
-        "SELECT * FROM proposal_line_items WHERE proposal_id = $1"
+        "SELECT * FROM proposal_line_items WHERE proposal_id = $1",
     )
     .bind(&id)
     .fetch_all(&mut *tx)
@@ -272,13 +364,16 @@ async fn approve_proposal(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
     let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
-    let checkout_url = match stripe_client.create_checkout_session(
-        &format!("Proposal #{}", proposal.id),
-        &proposal.customer_id,
-        amount_usd,
-        None,
-        None
-    ).await {
+    let checkout_url = match stripe_client
+        .create_checkout_session(
+            &format!("Proposal #{}", proposal.id),
+            &proposal.customer_id,
+            amount_usd,
+            None,
+            None,
+        )
+        .await
+    {
         Ok(url) => url,
         Err(e) => {
             tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
@@ -345,7 +440,14 @@ async fn approve_proposal(
     let mut p = proposal;
     p.checkout_url = Some(checkout_url);
 
-    (StatusCode::OK, Json(ProposalResponse { proposal: p, line_items })).into_response()
+    (
+        StatusCode::OK,
+        Json(ProposalResponse {
+            proposal: p,
+            line_items,
+        }),
+    )
+        .into_response()
 }
 
 #[cfg(test)]
@@ -354,9 +456,168 @@ mod tests {
     use axum::{body::Body, http::Request};
     use tower::ServiceExt;
 
+    struct NarrativeTestLlm;
+
+    #[async_trait::async_trait]
+    impl ResearcherLlmClient for NarrativeTestLlm {
+        async fn chat(
+            &self,
+            request: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            assert_eq!(request.max_tokens, 900);
+            assert!(request.tools.is_empty());
+            for section in [
+                "Executive Summary",
+                "Scope",
+                "Milestones",
+                "Investment",
+                "Next Steps",
+            ] {
+                assert!(request.system.contains(section));
+            }
+            let topic = request.messages.last().unwrap().content.as_str();
+            assert_eq!(topic, topic.trim());
+            Ok(ChatResponse {
+                message: Message::assistant(format!("Proposal for {topic}")),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: None,
+            })
+        }
+    }
+
+    struct FailingNarrativeLlm;
+
+    #[async_trait::async_trait]
+    impl ResearcherLlmClient for FailingNarrativeLlm {
+        async fn chat(
+            &self,
+            _request: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Err(std::io::Error::other("provider-secret-detail").into())
+        }
+    }
+
+    fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "proposal-user".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: organization_id.map(str::to_string),
+            username: "proposal-user".to_string(),
+            email: "proposal@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "proposal-test".to_string(),
+        }
+    }
+
+    fn narrative_app(organization_id: Option<&str>) -> Router {
+        narrative_app_with_llm(organization_id, Arc::new(NarrativeTestLlm))
+    }
+
+    fn narrative_app_with_llm(
+        organization_id: Option<&str>,
+        llm: Arc<dyn ResearcherLlmClient>,
+    ) -> Router {
+        let pool = PgPool::connect_lazy("postgres://localhost/unused").unwrap();
+        router_with_narrative_llm(llm)
+            .with_state(pool)
+            .layer(Extension(claims(organization_id)))
+    }
+
+    #[tokio::test]
+    async fn narrative_draft_returns_a_bounded_proposal_contract() {
+        let response = narrative_app(Some("tenant-a"))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/draft")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"topic":"  Bakery website  "}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert!(
+            body["proposal"]
+                .as_str()
+                .unwrap()
+                .contains("Bakery website")
+        );
+    }
+
+    #[tokio::test]
+    async fn narrative_draft_requires_a_non_blank_organization() {
+        for organization_id in [None, Some("  ")] {
+            let response = narrative_app(organization_id)
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/draft")
+                        .header("content-type", "application/json")
+                        .body(Body::from(r#"{"topic":"Bakery website"}"#))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    #[tokio::test]
+    async fn narrative_draft_rejects_empty_and_overlong_topics() {
+        for topic in ["  ".to_string(), "x".repeat(4_001)] {
+            let response = narrative_app(Some("tenant-a"))
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/draft")
+                        .header("content-type", "application/json")
+                        .body(Body::from(
+                            serde_json::json!({ "topic": topic }).to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        }
+    }
+
+    #[tokio::test]
+    async fn narrative_draft_maps_model_failures_to_a_private_bad_gateway() {
+        let response = narrative_app_with_llm(Some("tenant-a"), Arc::new(FailingNarrativeLlm))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/draft")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"topic":"Bakery website"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+        let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        assert!(!String::from_utf8_lossy(&body).contains("provider-secret-detail"));
+    }
+
     #[tokio::test]
     async fn test_draft_agent_route_exists() {
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
+        let pool =
+            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
         if pool.is_err() {
             return;
         }
@@ -366,7 +627,9 @@ mod tests {
             .method("POST")
             .uri("/draft_agent")
             .header("Content-Type", "application/json")
-            .body(Body::from(r#"{"inquiry": "test", "customer_id": "cust1", "tenant_id": "tenant1"}"#))
+            .body(Body::from(
+                r#"{"inquiry": "test", "customer_id": "cust1", "tenant_id": "tenant1"}"#,
+            ))
             .unwrap();
 
         let _res = app.oneshot(req).await.unwrap();
@@ -374,7 +637,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_proposal_route_exists() {
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
+        let pool =
+            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
         if pool.is_err() {
             return;
         }
@@ -391,7 +655,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_approve_proposal_route_exists() {
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
+        let pool =
+            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
         if pool.is_err() {
             return;
         }
@@ -437,10 +702,18 @@ pub async fn list_social_post_proposals(
     .await;
 
     match proposals_res {
-        Ok(proposals) => (StatusCode::OK, Json(serde_json::json!({ "proposals": proposals }))).into_response(),
+        Ok(proposals) => (
+            StatusCode::OK,
+            Json(serde_json::json!({ "proposals": proposals })),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to fetch social post proposals: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Internal error" }))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Internal error" })),
+            )
+                .into_response()
         }
     }
 }
@@ -453,7 +726,8 @@ mod social_tests {
 
     #[tokio::test]
     async fn test_list_social_post_proposals_route_exists() {
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
+        let pool =
+            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
         if pool.is_err() {
             return;
         }
