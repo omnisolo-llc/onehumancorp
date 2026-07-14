@@ -126,15 +126,19 @@ impl RedisLocker {
 impl InventoryLocker for RedisLocker {
     async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            redis::cmd("SET")
+            let res: Result<redis::Value, _> = redis::cmd("SET")
                 .arg(lock_key)
                 .arg(lock_id)
                 .arg("EX")
                 .arg(ttl)
                 .arg("NX")
                 .query_async(&mut conn)
-                .await
-                .unwrap_or(false)
+                .await;
+
+            match res {
+                Ok(redis::Value::Okay) => true,
+                _ => false,
+            }
         } else {
             false
         }
