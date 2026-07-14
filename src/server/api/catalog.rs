@@ -37,6 +37,25 @@ pub struct ProductVariantRequest {
     pub price_modifier: String,
 }
 
+
+#[derive(Deserialize)]
+pub struct UpdateProductRequest {
+    pub name: String,
+    pub description: String,
+    pub price: String,
+    pub inventory_count: Option<i32>,
+}
+
+#[derive(Serialize)]
+pub struct GetProductResponse {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub price: String,
+    pub inventory_count: i32,
+}
+
+
 #[derive(Deserialize)]
 pub struct CreateProductRequest {
     pub name: String,
@@ -452,6 +471,7 @@ async fn handle_generate_offering(
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/products", get(handle_get_products))
+        .route("/product/:id", get(handle_get_product).put(handle_update_product))
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
@@ -471,4 +491,170 @@ mod tests {
         assert!(!optimized.contains(" a "));
         assert!(!optimized.contains(" with "));
     }
+}
+
+
+
+async fn handle_get_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let row = sqlx::query("SELECT id, title, description, price_cents, inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+        .bind(&id)
+        .bind(&tenant_id)
+        .fetch_optional(&mut *conn)
+        .await;
+
+    match row {
+        Ok(Some(r)) => {
+            let price_cents: i64 = sqlx::Row::get(&r, "price_cents");
+            (
+                StatusCode::OK,
+                Json(GetProductResponse {
+                    id: sqlx::Row::get(&r, "id"),
+                    name: sqlx::Row::get(&r, "title"),
+                    description: sqlx::Row::get(&r, "description"),
+                    price: format!("{:.2}", (price_cents as f64) / 100.0),
+                    inventory_count: sqlx::Row::try_get(&r, "inventory_count").unwrap_or(0),
+                }),
+            )
+                .into_response()
+        }
+        _ => (StatusCode::NOT_FOUND, Json(ErrorResponse { error: "NOT_FOUND".to_string(), message: "Product not found".to_string() })).into_response()
+    }
+}
+
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(payload): Json<UpdateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let price_cents = (payload.price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+    let inventory_count = payload.inventory_count.unwrap_or(0);
+
+    let res = sqlx::query(
+        "UPDATE products SET title = $1, description = $2, price_cents = $3, inventory_count = $4 WHERE id = $5 AND tenant_id = $6"
+    )
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(price_cents)
+    .bind(inventory_count)
+    .bind(&id)
+    .bind(&tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    if res.is_err() {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "DATABASE_ERROR".to_string(),
+                message: "Failed to update product".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    // Invalidate cache
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    cache.invalidate(&tenant_id).await;
+
+    // Edge Cache Invalidation
+    let edge_cache = crate::builder::edge::get_edge_cache();
+    edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    edge_cache.invalidate_by_tag(&format!("entity:product:{}", id)).await;
+    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+    cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", id)).await;
+
+    // Publish events
+    let product_updated_event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".to_string(),
+        action: "ProductUpdated".to_string(),
+        status: "success".to_string(),
+        payload: serde_json::to_vec(&serde_json::json!({
+            "product_id": id,
+            "name": payload.name,
+            "description": payload.description,
+            "price": payload.price.parse::<f64>().unwrap_or(0.0),
+            "organization_id": tenant_id,
+        })).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), product_updated_event);
+
+    let dept_event = crate::ohc::orchestration::DepartmentEvent {
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.product.updated".to_string(),
+        payload: serde_json::json!({
+            "product_id": id,
+            "name": payload.name,
+            "description": payload.description,
+            "price": payload.price.parse::<f64>().unwrap_or(0.0),
+            "organization_id": tenant_id,
+        }),
+        timestamp: chrono::Utc::now(),
+    };
+    let _ = crate::ohc::orchestration::get_orchestrator().unwrap().dispatch_event(dept_event).await;
+
+    let inventory_event = crate::ohc::orchestration::DepartmentEvent {
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.inventory.updated".to_string(),
+        payload: serde_json::json!({
+            "product_id": id,
+            "name": payload.name,
+            "description": payload.description,
+            "price": payload.price.parse::<f64>().unwrap_or(0.0),
+            "organization_id": tenant_id,
+        }),
+        timestamp: chrono::Utc::now(),
+    };
+    let _ = crate::ohc::orchestration::get_orchestrator().unwrap().dispatch_event(inventory_event).await;
+
+    (
+        StatusCode::OK,
+        Json(CreateProductResponse {
+            success: true,
+            message: Some(format!("Updated {}", payload.name)),
+        }),
+    )
+        .into_response()
 }
