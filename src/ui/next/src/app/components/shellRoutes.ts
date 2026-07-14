@@ -7,7 +7,6 @@ export type ShellRoute = {
 const standardSubtitle = "Use this workspace from the dashboard navigation.";
 
 const pageOwnedExactRoutes = new Set([
-  "/action-center",
   "/agent-activity",
   "/ai-usage-paywall",
   "/analytics",
@@ -53,7 +52,6 @@ const guardOwnedExactRoutes = new Set([
 const pageOwnedDynamicPrefixes = ["/proposals", "/quotes"] as const;
 
 const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
-  "/abandoned-cart": { title: "Abandoned Cart" },
   "/actor-model": { title: "Actor Model" },
   "/affiliate-badge-builder": { title: "Affiliate Badge Builder" },
   "/agent-marketplace": { title: "Agent Marketplace" },

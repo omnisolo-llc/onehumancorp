@@ -13,7 +13,6 @@ describe("resolveShellRoute", () => {
   });
 
   test.each([
-    "/action-center",
     "/agent-activity",
     "/ai-usage-paywall",
     "/analytics",
