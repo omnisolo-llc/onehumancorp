@@ -5142,6 +5142,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     if mobile_optimized {
                         let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type, source, context FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type, t.source, t.context FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type, t.channel AS source, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                         if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
+                            legacy_rows_json.reserve(rows.len());
                             for row in rows {
                                 use sqlx::Row;
                                 let item = serde_json::json!({
@@ -5617,14 +5618,21 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
+    let metrics_cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let orders_cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let inbox_cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let triage_cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let priority_tasks_cache = UI_PRIORITY_TASKS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let approvals_cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let agent_feed_cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+
     let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, invoices_res) = tokio::join!(
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
             let m_key_clone = m_key.clone();
             async move {
-                let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&m_key_clone, std::time::Duration::from_secs(60), move || async move {
+                metrics_cache.get_or_fetch_with_swr(&m_key_clone, std::time::Duration::from_secs(60), move || async move {
                     load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).ok()
                 }).await.unwrap_or_default()
             }
@@ -5634,8 +5642,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let o_key_clone = o_key.clone();
             async move {
-                let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&o_key_clone, std::time::Duration::from_secs(5), move || async move {
+                orders_cache.get_or_fetch_with_swr(&o_key_clone, std::time::Duration::from_secs(5), move || async move {
                     load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5645,8 +5652,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let i_key_clone = i_key.clone();
             async move {
-                let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&i_key_clone, std::time::Duration::from_secs(5), move || async move {
+                inbox_cache.get_or_fetch_with_swr(&i_key_clone, std::time::Duration::from_secs(5), move || async move {
                     load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5656,8 +5662,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let t_key_clone = t_key.clone();
             async move {
-                let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&t_key_clone, std::time::Duration::from_secs(10), move || async move {
+                triage_cache.get_or_fetch_with_swr(&t_key_clone, std::time::Duration::from_secs(10), move || async move {
                     load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5667,8 +5672,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let p_key_clone = p_key.clone();
             async move {
-                let cache = UI_PRIORITY_TASKS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&p_key_clone, std::time::Duration::from_secs(10), move || async move {
+                priority_tasks_cache.get_or_fetch_with_swr(&p_key_clone, std::time::Duration::from_secs(10), move || async move {
                     load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5678,8 +5682,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let a_key_clone = a_key.clone();
             async move {
-                let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
+                approvals_cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
                     let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()?;
                     for approval in &mut res {
                         if let Some(obj) = approval.as_object_mut() {
@@ -5699,8 +5702,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let f_key_clone = f_key.clone();
             async move {
-                let cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
+                agent_feed_cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
                     load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5766,14 +5768,17 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
+    let approvals_cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let ledger_cache = UI_LEDGER_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+    let agent_feed_cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client())).clone();
+
     let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
             let a_key_clone = a_key.clone();
             async move {
-                let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
+                approvals_cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
                     let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()?;
                     for approval in &mut res {
                         if let Some(obj) = approval.as_object_mut() {
@@ -5793,8 +5798,7 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
             let t_clone = tenant_id.to_string();
             let l_key = format!("ui_ledger:{}:mobile:{}", tenant_id, mobile_optimized);
             async move {
-                let cache = UI_LEDGER_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&l_key, std::time::Duration::from_secs(10), move || async move {
+                ledger_cache.get_or_fetch_with_swr(&l_key, std::time::Duration::from_secs(10), move || async move {
                     load_ui_ledger_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
@@ -5804,8 +5808,7 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
             let t_clone = tenant_id.to_string();
             let f_key_clone = f_key.clone();
             async move {
-                let cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
+                agent_feed_cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
                     load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
                 }).await.unwrap_or_default()
             }
