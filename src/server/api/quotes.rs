@@ -14,6 +14,9 @@ use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 use std::sync::Arc;
 
+const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
+const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
+
 #[derive(Deserialize)]
 pub struct DraftAgentRequest {
     pub inquiry: String,
@@ -22,6 +25,19 @@ pub struct DraftAgentRequest {
 
 // Production-ready adapter that wraps the real LLM provider logic
 struct AdapterLlm {}
+
+#[cfg(test)]
+fn forced_test_service_item_response(prompt: &str) -> Option<String> {
+    let candidate = prompt
+        .split_once("test-service-item:")?
+        .1
+        .split_whitespace()
+        .next()?;
+    let service_item_id = Uuid::parse_str(candidate).ok()?;
+    Some(format!(
+        r#"[{{"description":"Test service item","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{service_item_id}"}}]"#,
+    ))
+}
 
 #[async_trait::async_trait]
 impl ResearcherLlmClient for AdapterLlm {
@@ -37,7 +53,14 @@ impl ResearcherLlmClient for AdapterLlm {
 
         let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
-        let response_text = if is_test_mode {
+        #[cfg(test)]
+        let forced_response = forced_test_service_item_response(&prompt);
+        #[cfg(not(test))]
+        let forced_response: Option<String> = None;
+
+        let response_text = if let Some(response) = forced_response {
+            response
+        } else if is_test_mode {
             r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
         } else {
             crate::minimax::LocalLLMClient::new().reason(&prompt).await?
@@ -126,6 +149,95 @@ impl TenantAuthority {
     }
 }
 
+async fn validate_line_item_references(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    authority: &TenantAuthority,
+    line_items: &[QuoteLineItemRequest],
+) -> Result<(), StatusCode> {
+    let mut service_item_ids: Vec<Uuid> = line_items
+        .iter()
+        .filter_map(|item| item.service_item_id)
+        .collect();
+    service_item_ids.sort_unstable();
+    service_item_ids.dedup();
+    if service_item_ids.is_empty() {
+        return Ok(());
+    }
+
+    let owned: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::BIGINT FROM service_items WHERE tenant_id = $1 AND id = ANY($2)",
+    )
+    .bind(authority.tenant_id())
+    .bind(&service_item_ids)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(|error| {
+        tracing::error!("Failed to validate quote service items: {}", error);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    if owned != service_item_ids.len() as i64 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(())
+}
+
+async fn validate_create_references(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    authority: &TenantAuthority,
+    payload: &CreateQuoteRequest,
+) -> Result<(), StatusCode> {
+    let customer_owned: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM customers WHERE id::text = $1 AND tenant_id = $2)",
+    )
+    .bind(&payload.customer_id)
+    .bind(authority.tenant_id())
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(|error| {
+        tracing::error!("Failed to validate quote customer: {}", error);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    if !customer_owned {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    if let Some(service_id) = payload.service_id.as_deref() {
+        let service_owned: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM services WHERE id = $1 AND tenant_id = $2)",
+        )
+        .bind(service_id)
+        .bind(authority.tenant_id())
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to validate quote service: {}", error);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        if !service_owned {
+            return Err(StatusCode::NOT_FOUND);
+        }
+    }
+
+    if let Some(slot_id) = payload.proposed_slot_id.as_deref() {
+        let slot_owned: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM booking_slots WHERE id = $1 AND tenant_id = $2)",
+        )
+        .bind(slot_id)
+        .bind(authority.tenant_id())
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to validate quote booking slot: {}", error);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        if !slot_owned {
+            return Err(StatusCode::NOT_FOUND);
+        }
+    }
+
+    validate_line_item_references(tx, authority, &payload.line_items).await
+}
+
 async fn create_quote(
     State(pool): State<PgPool>,
     Extension(claims): Extension<::server_common::Claims>,
@@ -144,6 +256,10 @@ async fn create_quote(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    if let Err(status) = validate_create_references(&mut tx, &authority, &payload).await {
+        return status.into_response();
+    }
 
     let mut line_items = payload.line_items;
 
@@ -182,7 +298,7 @@ async fn create_quote(
     let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
 
     let quote_res = sqlx::query(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW())"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at) SELECT $1, $2, customer.id, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW() FROM customers AS customer WHERE customer.id::text = $3 AND customer.tenant_id = $2"
     )
     .bind(quote_id)
     .bind(authority.tenant_id())
@@ -329,11 +445,17 @@ async fn update_quote(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+    if let Err(status) =
+        validate_line_item_references(&mut tx, &authority, &payload.line_items).await
+    {
+        return status.into_response();
+    }
 
-    let current_quote = match sqlx::query_as::<_, Quote>(
-        "SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2",
-    )
-        .bind(quote_id)
+    let current_quote_query = format!(
+        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",
+    );
+    let current_quote = match sqlx::query_as::<_, Quote>(&current_quote_query)
+        .bind(quote_id.to_string())
         .bind(authority.tenant_id())
         .fetch_optional(&mut *tx)
         .await
@@ -383,13 +505,13 @@ async fn update_quote(
     // we can't easily bind dynamic number of parameters in simple query string building
     // so we'll do it securely:
     let update_res = sqlx::query(
-        "UPDATE quotes SET updated_at = NOW(), total_amount_cents = COALESCE($1, total_amount_cents), required_deposit_cents = COALESCE($2, required_deposit_cents), status = COALESCE($3, status), stripe_payment_link = COALESCE($4, stripe_payment_link) WHERE id = $5 AND tenant_id = $6"
+        "UPDATE quotes SET updated_at = NOW(), total_amount_cents = COALESCE($1, total_amount_cents), required_deposit_cents = COALESCE($2, required_deposit_cents), status = COALESCE($3, status), stripe_payment_link = COALESCE($4, stripe_payment_link) WHERE id::text = $5 AND tenant_id = $6"
     )
     .bind(payload.total_amount_cents)
     .bind(payload.required_deposit_cents)
     .bind(&payload.status)
     .bind(&new_stripe_link)
-    .bind(quote_id)
+    .bind(quote_id.to_string())
     .bind(authority.tenant_id())
     .execute(&mut *tx)
     .await;
@@ -400,9 +522,9 @@ async fn update_quote(
     }
 
     let delete_res = sqlx::query(
-        "DELETE FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2",
+        "DELETE FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
     )
-        .bind(quote_id)
+        .bind(quote_id.to_string())
         .bind(authority.tenant_id())
         .execute(&mut *tx)
         .await;
@@ -458,15 +580,19 @@ async fn get_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let quote_query = format!(
+        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",
+    );
+    let line_items_query = format!(
+        "SELECT {QUOTE_LINE_ITEM_COLUMNS} FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
+    );
     let (quote_res, items_res) = tokio::join!(
-        sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2")
-            .bind(quote_id)
+        sqlx::query_as::<_, Quote>(&quote_query)
+            .bind(quote_id.to_string())
             .bind(authority.tenant_id())
             .fetch_optional(&pool),
-        sqlx::query_as::<_, QuoteLineItem>(
-            "SELECT * FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2",
-        )
-            .bind(quote_id)
+        sqlx::query_as::<_, QuoteLineItem>(&line_items_query)
+            .bind(quote_id.to_string())
             .bind(authority.tenant_id())
             .fetch_all(&pool)
     );
@@ -697,9 +823,12 @@ mod tests {
             .expect("connect tenant-scoped quote test pool");
 
         for statement in [
-            "CREATE TABLE quotes (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, status TEXT NOT NULL, valid_until TIMESTAMPTZ, total_amount_cents BIGINT, required_deposit_cents BIGINT, stripe_payment_link TEXT, proposed_slot_id TEXT, service_id TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
+            "CREATE TABLE quotes (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID NOT NULL, status TEXT NOT NULL, valid_until TIMESTAMPTZ, total_amount_cents BIGINT, required_deposit_cents BIGINT, stripe_payment_link TEXT, proposed_slot_id TEXT, service_id TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE quote_line_items (id UUID PRIMARY KEY, quote_id UUID NOT NULL, tenant_id TEXT NOT NULL, description TEXT NOT NULL, unit_price_cents BIGINT NOT NULL, quantity INTEGER NOT NULL, is_optional BOOLEAN NOT NULL, service_item_id UUID, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE integrations (tenant_id TEXT NOT NULL, provider_id TEXT NOT NULL, api_token TEXT NOT NULL)",
+            "CREATE TABLE customers (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL)",
+            "CREATE TABLE services (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
+            "CREATE TABLE booking_slots (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
             "CREATE TABLE service_items (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, base_price_cents BIGINT NOT NULL)",
         ] {
             sqlx::query(statement)
@@ -710,8 +839,13 @@ mod tests {
 
         let foreign_quote_id = Uuid::new_v4();
         let foreign_line_item_id = Uuid::new_v4();
-        sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, created_at, updated_at) VALUES ($1, 'tenant-b', 'customer-b', 'DRAFT', 700, NOW(), NOW())")
+        let owned_customer_id = Uuid::new_v4();
+        let foreign_customer_id = Uuid::new_v4();
+        let owned_service_item_id = Uuid::new_v4();
+        let foreign_service_item_id = Uuid::new_v4();
+        sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, created_at, updated_at) VALUES ($1, 'tenant-b', $2, 'DRAFT', 700, NOW(), NOW())")
             .bind(foreign_quote_id)
+            .bind(foreign_customer_id)
             .execute(&pool)
             .await
             .expect("insert foreign quote");
@@ -725,6 +859,27 @@ mod tests {
             .execute(&pool)
             .await
             .expect("disable TaxJar in quote integration test");
+        sqlx::query("INSERT INTO customers (id, tenant_id) VALUES ($1, 'tenant-a'), ($2, 'tenant-b')")
+            .bind(owned_customer_id)
+            .bind(foreign_customer_id)
+            .execute(&pool)
+            .await
+            .expect("seed quote integration customers");
+        for statement in [
+            "INSERT INTO services (id, tenant_id) VALUES ('service-a', 'tenant-a'), ('service-b', 'tenant-b')",
+            "INSERT INTO booking_slots (id, tenant_id) VALUES ('slot-a', 'tenant-a'), ('slot-b', 'tenant-b')",
+        ] {
+            sqlx::query(statement)
+                .execute(&pool)
+                .await
+                .expect("seed quote integration references");
+        }
+        sqlx::query("INSERT INTO service_items (id, tenant_id, name, base_price_cents) VALUES ($1, 'tenant-a', 'Owned service item', 500), ($2, 'tenant-b', 'Foreign service item', 900)")
+            .bind(owned_service_item_id)
+            .bind(foreign_service_item_id)
+            .execute(&pool)
+            .await
+            .expect("seed quote integration service items");
 
         let app = router()
             .with_state(pool.clone())
@@ -757,9 +912,99 @@ mod tests {
             assert_eq!(response.status(), StatusCode::NOT_FOUND);
         }
 
+        let foreign_reference_bodies = [
+            format!(r#"{{"customer_id":"{foreign_customer_id}","line_items":[]}}"#),
+            format!(r#"{{"customer_id":"{owned_customer_id}","service_id":"service-b","line_items":[]}}"#),
+            format!(r#"{{"customer_id":"{owned_customer_id}","proposed_slot_id":"slot-b","line_items":[]}}"#),
+            format!(
+                r#"{{"customer_id":"{owned_customer_id}","line_items":[{{"description":"Foreign","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{foreign_service_item_id}"}}]}}"#,
+            ),
+        ];
+        for body in foreign_reference_bodies {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        }
+
+        let owned_create = format!(
+            r#"{{"tenant_id":"tenant-b","customer_id":"{owned_customer_id}","service_id":"service-a","proposed_slot_id":"slot-a","line_items":[{{"description":"Owned","unit_price_cents":500,"quantity":1,"is_optional":false,"service_item_id":"{owned_service_item_id}"}}]}}"#,
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("content-type", "application/json")
+                    .body(Body::from(owned_create))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let owned_quote_id: Uuid = sqlx::query_scalar(
+            "SELECT id FROM quotes WHERE tenant_id = 'tenant-a' AND service_id = 'service-a'",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("load claims-owned quote");
+        let foreign_update = format!(
+            r#"{{"line_items":[{{"description":"Foreign update","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{foreign_service_item_id}"}}]}}"#,
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri(format!("/{owned_quote_id}"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(foreign_update))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let owned_items: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM quote_line_items WHERE quote_id = $1 AND tenant_id = 'tenant-a' AND service_item_id = $2",
+        )
+        .bind(owned_quote_id)
+        .bind(owned_service_item_id)
+        .fetch_one(&pool)
+        .await
+        .expect("verify owned line item survived rejected update");
+        assert_eq!(owned_items, 1);
+
+        let owned_update = format!(
+            r#"{{"line_items":[{{"description":"Owned update","unit_price_cents":600,"quantity":1,"is_optional":false,"service_item_id":"{owned_service_item_id}"}}]}}"#,
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri(format!("/{owned_quote_id}"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(owned_update))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
         for body in [
-            r#"{"tenant_id":"tenant-b","customer_id":"customer-a","line_items":[]}"#,
-            r#"{"tenant_id":"tenant-b","inquiry":"Need a quote","customer_id":"customer-a"}"#,
+            format!(r#"{{"tenant_id":"tenant-b","customer_id":"{owned_customer_id}","line_items":[]}}"#),
+            format!(r#"{{"tenant_id":"tenant-b","inquiry":"Need a quote","customer_id":"{owned_customer_id}"}}"#),
         ] {
             let uri = if body.contains("inquiry") {
                 "/draft_agent"
@@ -780,6 +1025,22 @@ mod tests {
                 .unwrap();
             assert_eq!(response.status(), StatusCode::CREATED);
         }
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/draft_agent")
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"inquiry":"test-service-item:{foreign_service_item_id}","customer_id":"{owned_customer_id}"}}"#,
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         let foreign_quote: (String, i64) = sqlx::query_as(
             "SELECT status, total_amount_cents FROM quotes WHERE id = $1",
@@ -802,7 +1063,7 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .expect("count claims-owned quotes");
-        assert_eq!(tenant_a_quotes, 2);
+        assert_eq!(tenant_a_quotes, 3);
 
         pool.close().await;
         sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
@@ -826,10 +1087,11 @@ async fn accept_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let quote = match sqlx::query_as::<_, Quote>(
-        "SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2",
-    )
-        .bind(quote_id)
+    let quote_query = format!(
+        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",
+    );
+    let quote = match sqlx::query_as::<_, Quote>(&quote_query)
+        .bind(quote_id.to_string())
         .bind(authority.tenant_id())
         .fetch_optional(&pool)
         .await
@@ -846,9 +1108,9 @@ async fn accept_quote(
     }
 
     let update_res = sqlx::query(
-        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2",
+        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2",
     )
-        .bind(quote_id)
+        .bind(quote_id.to_string())
         .bind(authority.tenant_id())
         .execute(&pool)
         .await;
@@ -897,10 +1159,11 @@ async fn accept_quote(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
     }
 
-    let line_items = sqlx::query_as::<_, QuoteLineItem>(
-        "SELECT * FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2",
-    )
-        .bind(quote_id)
+    let line_items_query = format!(
+        "SELECT {QUOTE_LINE_ITEM_COLUMNS} FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
+    );
+    let line_items = sqlx::query_as::<_, QuoteLineItem>(&line_items_query)
+        .bind(quote_id.to_string())
         .bind(authority.tenant_id())
         .fetch_all(&pool)
         .await
@@ -945,10 +1208,11 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *"
-    )
-    .bind(quote_id)
+    let approve_query = format!(
+        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
+    );
+    let quote = match sqlx::query_as::<_, Quote>(&approve_query)
+    .bind(quote_id.to_string())
     .bind(authority.tenant_id())
     .fetch_optional(&pool)
     .await
