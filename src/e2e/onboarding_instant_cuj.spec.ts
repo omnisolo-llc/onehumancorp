@@ -84,10 +84,6 @@ test.describe('Instant Setup CUJ', () => {
     // Check if the text changes to the next one
     await expect(generateBtn).toContainText('Designing storefront...', { timeout: 8000 });
 
-    const approveBtn = page.locator('#approve-publish-btn');
-    await expect(approveBtn).toBeVisible({ timeout: 10000 });
-    await approveBtn.click();
-
     await expect(page).toHaveURL(/.*dashboard.html#unified-agent-feed-section/, { timeout: 60000 });
   });
 });

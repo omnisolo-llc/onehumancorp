@@ -22,19 +22,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.press('Enter');
 
     // The app should automatically transition to provisioning state or approval
-    const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' });
     const successHeading = page.getByRole('heading', { name: /You're Live!/ });
-
-    // In chat flow we may skip straight or show approval, wait for one
-    await expect(async () => {
-      const isApproval = await approvalHeading.isVisible();
-      const isSuccess = await successHeading.isVisible();
-      expect(isApproval || isSuccess).toBeTruthy();
-    }).toPass({ timeout: 45000 });
-
-    if (await approvalHeading.isVisible()) {
-        await page.locator('#approve-publish-btn').click();
-    }
 
     // Since this uses the real backend, the UI will eventually redirect to /dashboard
     await expect(successHeading).toBeVisible({ timeout: 60000 });
