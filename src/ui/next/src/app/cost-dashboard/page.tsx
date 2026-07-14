@@ -52,6 +52,61 @@ interface DepartmentTierUsageRow {
   soft_limit_reached: boolean;
 }
 
+const AdvisorySummary = () => {
+  return (
+    <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40">
+            <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Advisory Summary</h2>
+        </div>
+        <div className="app-panel-body p-6">
+            <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+              Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
+            </p>
+        </div>
+    </section>
+  );
+}
+
+const CostTransparencyOverview = ({ data, formatCurrency, onDownloadInvoice }: { data: CostDashboardData | null, formatCurrency: (cents: number | undefined) => string, onDownloadInvoice: () => void }) => {
+  return (
+    <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
+        <div className="app-panel-header glass-panel px-6 py-4">
+           <div className="flex justify-between items-center">
+               <div>
+                   <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Transparency Dashboard</h1>
+                   <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
+               </div>
+               <button id="download-invoice-btn" onClick={onDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
+                   Download Invoice
+               </button>
+           </div>
+        </div>
+
+        <div className="app-panel-body p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
+                    <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 ">{formatCurrency(data?.total_costs || 0)}</p>
+                </div>
+                <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
+                    <p id="cost-dashboard-projected" className="text-3xl font-bold font-outfit text-[#0f766e] dark:text-[#6ac5bd]">{formatCurrency(data?.projected_monthly_cost || 0)}</p>
+                </div>
+                <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
+                    <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
+                </div>
+                <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
+                    <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
+                    <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">-{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                    <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
+                </div>
+            </div>
+        </div>
+    </section>
+  );
+}
+
 export default function CostDashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<CostDashboardData | null>(null);
@@ -193,16 +248,7 @@ export default function CostDashboardPage() {
       actions={[{ label: "Back to My Plan", href: "/plan" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
-        <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40">
-                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Advisory Summary</h2>
-            </div>
-            <div className="app-panel-body p-6">
-                <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
-                  Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
-                </p>
-            </div>
-        </section>
+        <AdvisorySummary />
 
         {/* My Plan Section */}
         <section id="my-plan-section" className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg">
@@ -283,41 +329,11 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header glass-panel px-6 py-4">
-               <div className="flex justify-between items-center">
-                   <div>
-                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Transparency Dashboard</h1>
-                       <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
-                   </div>
-                   <button id="download-invoice-btn" onClick={handleDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
-                       Download Invoice
-                   </button>
-               </div>
-            </div>
-
-            <div className="app-panel-body p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
-                        <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
-                        <p id="cost-dashboard-total-costs" className="text-3xl font-bold font-outfit text-gray-900 ">{formatCurrency(data?.total_costs || 0)}</p>
-                    </div>
-                    <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
-                        <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
-                        <p id="cost-dashboard-projected" className="text-3xl font-bold font-outfit text-[#0f766e] dark:text-[#6ac5bd]">{formatCurrency(data?.projected_monthly_cost || 0)}</p>
-                    </div>
-                    <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
-                        <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
-                        <p id="cost-dashboard-revenue" className="text-3xl font-bold font-outfit text-green-600">{formatCurrency(data?.total_revenue || 0)}</p>
-                    </div>
-                    <div className="app-card ohc-growth-card glass-card shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
-                        <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">-{formatCurrency((data?.bandwidth_savings || 0))}</p>
-                        <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <CostTransparencyOverview
+          data={data}
+          formatCurrency={formatCurrency}
+          onDownloadInvoice={handleDownloadInvoice}
+        />
 
         {/* Budget Health Alert */}
         {data && (data.budget_health_alert || (data.department_tier_usage?.departments?.some((d: any) => d.soft_limit_reached))) && (

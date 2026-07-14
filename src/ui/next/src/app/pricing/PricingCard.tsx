@@ -16,6 +16,65 @@ export interface PricingCardProps {
   onUpgrade: (tier: string, isAnnual?: boolean) => void;
 }
 
+const PricingCardAction = ({
+  loading,
+  currentPlan,
+  tierName,
+  onManageBilling,
+  isRecommended,
+  onUpgrade,
+  isAnnual
+}: {
+  loading: boolean;
+  currentPlan: string | null;
+  tierName: string;
+  onManageBilling: () => void;
+  isRecommended?: boolean;
+  onUpgrade: (tier: string, isAnnual?: boolean) => void;
+  isAnnual?: boolean;
+}) => {
+  if (loading) {
+    return (
+      <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+        Loading...
+      </button>
+    );
+  }
+  if (currentPlan === tierName || (!currentPlan && tierName === 'Free')) {
+    if (tierName === 'Free') {
+      return (
+        <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+          Current Plan
+        </button>
+      );
+    }
+    return (
+      <button onClick={onManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
+        Manage Plan
+      </button>
+    );
+  }
+  if (tierName === 'Free') {
+    return (
+      <button onClick={onManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-300 transition-colors">
+        Downgrade to Free
+      </button>
+    );
+  }
+  if (isRecommended) {
+    return (
+      <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+        Upgrade to {tierName} via Stripe
+      </button>
+    );
+  }
+  return (
+    <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
+      Upgrade to {tierName} via Stripe
+    </button>
+  );
+};
+
 export const PricingCard: React.FC<PricingCardProps> = ({
   basePrice,
   isAnnual,
@@ -54,33 +113,15 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         </ul>
       </div>
 
-      {loading ? (
-        <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-500 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-          Loading...
-        </button>
-      ) : currentPlan === tierName || (!currentPlan && tierName === 'Free') ? (
-        tierName === 'Free' ? (
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-                Current Plan
-            </button>
-        ) : (
-            <button onClick={onManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-xl font-medium flex items-center justify-center transition-colors">
-                Manage Plan
-            </button>
-        )
-      ) : tierName === 'Free' ? (
-        <button onClick={onManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-300 transition-colors">
-          Downgrade to Free
-        </button>
-      ) : isRecommended ? (
-        <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
-          Upgrade to {tierName} via Stripe
-        </button>
-      ) : (
-        <button onClick={() => onUpgrade(tierName, isAnnual)} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white hover:bg-black rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center">
-          Upgrade to {tierName} via Stripe
-        </button>
-      )}
+      <PricingCardAction
+        tierName={tierName}
+        isAnnual={isAnnual}
+        isRecommended={isRecommended}
+        currentPlan={currentPlan}
+        loading={loading}
+        onManageBilling={onManageBilling}
+        onUpgrade={onUpgrade}
+      />
 
       {tierName === 'Free' && (!loading && (currentPlan === 'Free' || !currentPlan)) && (
         <ViralTrialExtensionWidget />
