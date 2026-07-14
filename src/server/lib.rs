@@ -7066,13 +7066,13 @@ async fn create_ui_bom_item_handler(
         }))
                 .route("/api/chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-            headers: axum::http::HeaderMap,
+            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
             axum::Json(req): axum::Json<ChatRequest>
         | async move {
-            let tenant_id = headers
-                .get("x-tenant-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("default");
+            let tenant_id = match claims.organization_id {
+                Some(organization_id) => organization_id,
+                None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
+            };
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
@@ -7082,7 +7082,7 @@ async fn create_ui_bom_item_handler(
             let articles: Vec<crate::api::docs::HelpArticle> = match &db.store {
                 crate::db::DbStore::Postgres => {
                     match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
-                        .bind(tenant_id.to_string())
+                        .bind(&tenant_id)
                         .fetch_all(&db.pool)
                         .await
                     {
@@ -7102,7 +7102,7 @@ async fn create_ui_bom_item_handler(
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ?")
-                        .bind(tenant_id.to_string())
+                        .bind(&tenant_id)
                         .fetch_all(pool)
                         .await
                     {
@@ -7164,10 +7164,10 @@ async fn create_ui_bom_item_handler(
                 }
             }
 
-            axum::Json(serde_json::json!({
+            axum::response::IntoResponse::into_response(axum::Json(serde_json::json!({
                 "reply": reply,
                 "link": { "url": link_url, "title": link_title }
-            }))
+            })))
         }))
         .merge(webhook_router)
         .merge(relay_webhook_router)

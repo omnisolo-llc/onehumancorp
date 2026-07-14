@@ -2,10 +2,7 @@
 
 exports[`protected backend transport source contract > keeps backend origin and browser identity forwarding out of route handlers 1`] = `
 [
-  "src/app/api/api-docs-spec/route.ts: direct backend configuration",
   "src/app/api/auto-catalog/route.ts: browser identity forwarding",
-  "src/app/api/changelog/route.ts: direct backend configuration",
-  "src/app/api/chat/route.ts: direct backend configuration",
   "src/app/api/checkout/delivery-quote/route.ts: direct backend configuration",
   "src/app/api/checkout/delivery-quote/route.ts: browser identity forwarding",
   "src/app/api/checkout/mercadopago/route.ts: direct backend configuration",
@@ -17,9 +14,6 @@ exports[`protected backend transport source contract > keeps backend origin and 
   "src/app/api/fulfillment/route.ts: browser identity forwarding",
   "src/app/api/generate-offering/route.ts: direct backend configuration",
   "src/app/api/generate-offering/route.ts: browser identity forwarding",
-  "src/app/api/help/[articleId]/route.ts: direct backend configuration",
-  "src/app/api/help/route.ts: direct backend configuration",
-  "src/app/api/help/search/route.ts: direct backend configuration",
   "src/app/api/inbox/webhook/route.ts: direct backend configuration",
   "src/app/api/inbox/webhook/route.ts: browser identity forwarding",
   "src/app/api/integrations/[id]/connect/route.ts: direct backend configuration",
