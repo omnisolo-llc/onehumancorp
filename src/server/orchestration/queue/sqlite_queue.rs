@@ -267,8 +267,9 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = ?, failed_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
+                    .bind(_reason)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await
