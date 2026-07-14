@@ -237,6 +237,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 box-sizing: border-box;
             }
         }
+        #ohc-floating-help-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        #ohc-floating-help-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+        }
+        #ohc-floating-help-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+        }
         .ohc-help-tab {
             flex: 1;
             padding: 12px;
