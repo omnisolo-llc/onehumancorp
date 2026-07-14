@@ -140,12 +140,12 @@ impl OHCJobQueue {
         // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
         let query_str = if is_standalone {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id, tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT id, tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
         } else {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT id::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
@@ -169,7 +169,7 @@ impl OHCJobQueue {
         .map_err(|e| e.to_string())?;
 
         if stagnant_result.rows_affected() > 0 {
-            ::server_telemetry::record_error_signal("[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours");
+            ::server_telemetry::record_error_signal("[cleanup] stagnant backlog item stuck in PENDING for > 24 hours");
         }
 
         tx.commit().await.map_err(|e| e.to_string())?;

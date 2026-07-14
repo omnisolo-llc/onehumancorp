@@ -243,7 +243,7 @@ impl DepartmentOrchestrator {
                                     .await;
                                     if let Err(err) = res {
                                         ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter into DB");
-                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                        tracing::error!("Failed to insert dead letter into DB: {}", err.to_string()); // pii-safe
                                     }
 
                                     let _ = sqlx::query(
@@ -270,7 +270,7 @@ impl DepartmentOrchestrator {
                                     .await;
                                     if let Err(err) = res {
                                         ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter into DB");
-                                        tracing::error!("Failed to insert dead letter into DB: {}", err);
+                                        tracing::error!("Failed to insert dead letter into DB: {}", err.to_string()); // pii-safe
                                     }
 
                                     let _ = sqlx::query(
