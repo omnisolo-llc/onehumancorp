@@ -41,6 +41,7 @@ rust_library(
         "@crates//:dashmap",
         "@crates//:tracing",
         "@crates//:urlencoding",
+        "@crates//:sha2",
     ],
 )
 
