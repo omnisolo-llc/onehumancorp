@@ -42,7 +42,7 @@ export default function ApiDocsPage() {
         @media (min-width: 640px) { .swagger-ui { padding: 24px; } }
         .swagger-ui .wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; padding: 0 10px; box-sizing: border-box; }
         .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
-        .swagger-ui table { display: block; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
+        .swagger-ui table { display: block; overflow-x: auto; max-width: 100%; box-sizing: border-box; width: 100%; word-break: break-word; }
         .swagger-ui .markdown p { word-break: break-word; box-sizing: border-box; }
         .swagger-ui .info { margin: 20px 0; box-sizing: border-box; }
         .swagger-ui .scheme-container { background: transparent; padding: 10px 0; margin-bottom: 20px; border-radius: 12px; box-shadow: none; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.3); box-sizing: border-box; width: 100%; }
