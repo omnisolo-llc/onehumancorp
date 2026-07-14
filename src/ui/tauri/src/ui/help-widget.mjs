@@ -423,3 +423,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Help widget logic globally initialized.
+// Legacy Floating Help removed per help_widget_removal_signoff.md
