@@ -4,11 +4,11 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use crate::domain::inbox::models::IncomingMessage;
+use server_domain_inbox::models::IncomingMessage as ExtIncomingMessage;
 
 pub async fn handle_incoming_message(
     State(_state): State<()>, // Placeholder for app state
-    Json(_payload): Json<IncomingMessage>,
+    Json(_payload): Json<ExtIncomingMessage>,
 ) -> impl IntoResponse {
     // 1. Resolve Identity
     // 2. Publish to Event Mesh for Ambassador Agent

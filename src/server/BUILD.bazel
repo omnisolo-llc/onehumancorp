@@ -390,6 +390,7 @@ rust_library(
     edition = "2021",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "//src/server/pricing:server_pricing",
@@ -418,6 +419,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         ":minimax",
@@ -538,6 +540,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:serde_json",
@@ -554,6 +557,7 @@ rust_binary(
     edition = "2021",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         ":server_lib",
@@ -676,6 +680,7 @@ SERVER_LIB_SPLIT_TESTS = [
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
             "@crates//:serde_json",
@@ -712,6 +717,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:serde_json",
@@ -768,6 +774,7 @@ test_suite(
             "//conditions:default": ["@platforms//:incompatible"],
         }),
         deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
             "@crates//:tempfile",
@@ -810,6 +817,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         ":server_lib",
@@ -831,6 +839,7 @@ rust_test(
         "@crates//:async-trait",
     ],
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "//src/server/common:server_common",
@@ -859,6 +868,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         ":server_lib",
@@ -895,6 +905,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:tempfile",
@@ -913,6 +924,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "//src/proto:mcp_proxy_prost",
@@ -955,6 +967,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:temp-env",
@@ -984,6 +997,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:tempfile",
@@ -1014,6 +1028,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:serde_json",
@@ -1047,6 +1062,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "@crates//:libc",
 
         "@crates//:tempfile",

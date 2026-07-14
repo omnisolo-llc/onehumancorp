@@ -153,6 +153,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
         "//src/server:server_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
