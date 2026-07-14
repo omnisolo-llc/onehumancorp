@@ -30,7 +30,11 @@ describe("POST /api/fulfillment/execute/[id]", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/fulfillment/execute/ord-42",
-      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
+      {
+        forwardQuery: false,
+        requestContentType: "application/json",
+        transformRequestBody: normalizeJsonRequestBody,
+      },
     );
   });
 

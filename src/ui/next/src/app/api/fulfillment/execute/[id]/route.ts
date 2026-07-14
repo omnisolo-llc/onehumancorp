@@ -29,6 +29,7 @@ export async function POST(
   }
   return proxyBackendRequest(request, `/api/fulfillment/execute/${id}`, {
     forwardQuery: false,
+    requestContentType: "application/json",
     transformRequestBody: normalizeJsonRequestBody,
   });
 }
