@@ -35,7 +35,11 @@ describe("POST /api/checkout/mercadopago", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/checkout/mercadopago",
-      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
+      {
+        forwardQuery: false,
+        requestContentType: "application/json",
+        transformRequestBody: normalizeJsonRequestBody,
+      },
     );
   });
 });

@@ -335,6 +335,65 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["missing", undefined],
+    ["text/plain", "text/plain"],
+  ])(
+    "allows a trusted JSON route to override a %s caller content type",
+    async (_case, callerContentType) => {
+      const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+        expect(new Headers(init?.headers).get("content-type")).toBe(
+          "application/json",
+        );
+        await expect(new Response(init?.body).text()).resolves.toBe('{"ok":true}');
+        return Response.json({ ok: true });
+      });
+      const deps = await dependencies(fetchImpl);
+      const input = await request(deps, "/api/checkout", {
+        method: "POST",
+        body: new TextEncoder().encode(' { "ok": true } '),
+        headers:
+          callerContentType === undefined
+            ? undefined
+            : { "content-type": callerContentType },
+      });
+
+      const response = await proxyAuthenticatedRequest(
+        input,
+        "/api/checkout",
+        deps,
+        {
+          requestContentType: "application/json",
+          transformRequestBody: normalizeJsonRequestBody,
+        },
+      );
+
+      expect(response.status).toBe(200);
+      expect(fetchImpl).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("preserves the caller content type when no override is configured", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(new Headers(init?.headers).get("content-type")).toBe("text/plain");
+      return Response.json({ ok: true });
+    });
+    const deps = await dependencies(fetchImpl);
+    const input = await request(deps, "/api/orders", {
+      method: "POST",
+      body: "plain text",
+      headers: { "content-type": "text/plain" },
+    });
+
+    const response = await proxyAuthenticatedRequest(
+      input,
+      "/api/orders",
+      deps,
+    );
+
+    expect(response.status).toBe(200);
+  });
+
   it("rejects backend redirects and oversized responses", async () => {
     const redirectBody = new ReadableStream<Uint8Array>({
       start(controller) {

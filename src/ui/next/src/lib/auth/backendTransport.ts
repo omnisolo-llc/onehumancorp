@@ -33,6 +33,7 @@ export type BackendTransportDependencies = ServerSessionDependencies &
 export type BackendRequestOptions = Readonly<{
   backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   forwardQuery?: boolean;
+  requestContentType?: "application/json";
   resolveBackendPath?: (body: Uint8Array<ArrayBuffer>) => string | Promise<string>;
   transformRequestBody?: (
     body: Uint8Array<ArrayBuffer>,
@@ -236,6 +237,9 @@ export async function proxyAuthenticatedRequest(
   const session = await readServerSession(request, dependencies);
   const headers = requestHeaders(request, session);
   if (headers === null) return error(401, "authentication required");
+  if (options.requestContentType !== undefined) {
+    headers.set("content-type", options.requestContentType);
+  }
   if (!declaredLengthWithinLimit(request.headers, dependencies.requestLimitBytes)) {
     return error(413, "request too large");
   }

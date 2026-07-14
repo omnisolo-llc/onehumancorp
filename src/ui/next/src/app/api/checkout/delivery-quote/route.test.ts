@@ -33,7 +33,11 @@ describe("POST /api/checkout/delivery-quote", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/checkout/delivery-quote",
-      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
+      {
+        forwardQuery: false,
+        requestContentType: "application/json",
+        transformRequestBody: normalizeJsonRequestBody,
+      },
     );
   });
 });
