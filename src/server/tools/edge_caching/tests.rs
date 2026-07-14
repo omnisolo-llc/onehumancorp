@@ -16,7 +16,7 @@ mod tests {
                     "description": "Delicious vegan chocolate cake."
                 }
             }).to_string(),
-            spiffe_id: "spiffe://ohc.local/tenant_123".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/org/tenant_123/agent/agent_1".to_string(),
             action: "".to_string(),
             agent_id: "".to_string(),
         };
@@ -39,7 +39,7 @@ mod tests {
                 "product_id": "prod_456",
                 "inventory_count": 10
             }).to_string(),
-            spiffe_id: "spiffe://ohc.local/tenant_123".to_string(),
+            spiffe_id: "spiffe://onehumancorp.io/org/tenant_123/agent/agent_1".to_string(),
             action: "".to_string(),
             agent_id: "".to_string(),
         };
