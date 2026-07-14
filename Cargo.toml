@@ -47,7 +47,7 @@ tree-sitter-bash = "0.25.1"
 tonic-build = "0.12"
 
 [workspace]
-members = [ "src/server/integrations/twilio", "src/server/integrations/mcp_config_sync", "src/server/integrations/shippo", "src/server/integrations/shipday", "src/server/oidc", "src/server/config", "src/ui/tauri", "src/server/telemetry", "src/server/integrations/buffer", "src/server/auth", "src/server/integrations/cal_com", "src/server/integrations/nats", "src/server/integrations/resend", "src/server/harness", "src/server/integrations/stripe", "src/server/integrations/task_scheduler", "src/server/integrations/shipengine", "src/server/ohc", "src/server/integrations/zoom", "src/server/integrations/acuity", "src/server/integrations/google_calendar", "src/server/integrations/messagebird", "src/server/utils", "src/server/integrations/easypost", "src/server/integrations/restic", "src/server/integrations/sendgrid", "src/server/integrations/teams", "src/server/integrations/convertkit", "src/server/pricing", "src/server/integrations/nylas", "src/server/integrations/calendly", "src/server/integrations/pubsub", "src/server/integrations/meta", "src/server/integrations/jitsi", "src/server/integrations/alipay", "src/server/integrations/mercadopago", "src/server/integrations/core", "src/server/common", "src/server/integrations/daily", "src/server/integrations/razorpay", "src/server/integrations/mailchimp", "src/server/integrations/ayrshare", "src/server/integrations/chromadb", "src/server/integrations/doordash", "src/agents/builtin/core", "src/agents/builtin/llm", "src/agents/builtin/tools", "src/agents/builtin", "src/server/integrations/listmonk", "src/server/integrations/manychat",]
+members = [ "src/server/integrations/twilio", "src/server/integrations/mcp_config_sync", "src/server/integrations/shippo", "src/server/integrations/shipday", "src/server/oidc", "src/server/config", "src/ui/tauri", "src/server/telemetry", "src/server/integrations/buffer", "src/server/auth", "src/server/integrations/cal_com", "src/server/integrations/nats", "src/server/integrations/resend", "src/server/harness", "src/server/integrations/stripe", "src/server/integrations/task_scheduler", "src/server/integrations/shipengine", "src/server/ohc", "src/server/integrations/zoom", "src/server/integrations/acuity", "src/server/integrations/google_calendar", "src/server/integrations/messagebird", "src/server/utils", "src/server/integrations/easypost", "src/server/integrations/restic", "src/server/integrations/sendgrid", "src/server/integrations/teams", "src/server/integrations/convertkit", "src/server/pricing", "src/server/integrations/nylas", "src/server/integrations/calendly", "src/server/integrations/pubsub", "src/server/integrations/meta", "src/server/integrations/jitsi", "src/server/integrations/alipay", "src/server/integrations/mercadopago", "src/server/integrations/core", "src/server/common", "src/server/integrations/daily", "src/server/integrations/razorpay", "src/server/integrations/mailchimp", "src/server/integrations/ayrshare", "src/server/integrations/chromadb", "src/server/integrations/chatwoot", "src/server/integrations/doordash", "src/agents/builtin/core", "src/agents/builtin/llm", "src/agents/builtin/tools", "src/agents/builtin", "src/server/integrations/listmonk", "src/server/integrations/manychat",]
 
 [dev-dependencies]
 temp-env = "0.3.6"
@@ -193,6 +193,9 @@ path = "src/server/integrations/shippo"
 
 [dependencies.server_integrations_shipday]
 path = "src/server/integrations/shipday"
+
+[dependencies.server_integrations_chatwoot]
+path = "src/server/integrations/chatwoot"
 
 [dependencies.server_integrations_doordash]
 path = "src/server/integrations/doordash"

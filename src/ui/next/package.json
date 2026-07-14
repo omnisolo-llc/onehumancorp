@@ -6,8 +6,6 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "test:auth-policy": "vitest run src/lib/auth/url.test.ts src/lib/auth/publicRoutes.test.ts",
-    "test:session-keys": "vitest run src/lib/auth/sessionKeys.test.ts",
     "test:ui": "vitest --ui",
     "test:tailwind-config": "node scripts/assert-tailwind-pipeline.mjs"
   },

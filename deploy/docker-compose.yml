@@ -63,6 +63,10 @@ services:
       REDIS_ADDR: valkey:6379
       REDIS_URL: redis://valkey:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
+      CHATWOOT_URL: http://chatwoot:3000
+      CHATWOOT_ADMIN_EMAIL: admin@ohc.local
+      CHATWOOT_ADMIN_PASSWORD: changeme
+      CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
       OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
       OHC_LLM_MODEL: ${OHC_LLM_MODEL:-MiniMax-M3}
@@ -151,7 +155,7 @@ services:
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
       POSTGRES_DB: ohc
-      POSTGRES_MULTIPLE_DATABASES: ohc
+      POSTGRES_MULTIPLE_DATABASES: ohc,chatwoot
     volumes:
       - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
     ports:
@@ -186,6 +190,84 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
+  chatwoot-migrate:
+    profiles: ["chatwoot"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: chatwoot/chatwoot:latest
+    command: bundle exec rails db:chatwoot_prepare
+    environment:
+      LOG_LEVEL: "info"
+      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
+      REDIS_URL: redis://valkey:6379
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      DEFAULT_LOCALE: en
+      FORCE_SSL: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
+  chatwoot:
+    profiles: ["chatwoot"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: chatwoot/chatwoot:latest
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    environment:
+      LOG_LEVEL: "info"
+      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
+      REDIS_URL: redis://valkey:6379
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      DEFAULT_LOCALE: en
+      FORCE_SSL: "false"
+    ports:
+      - "3002:3000"
+    depends_on:
+      - chatwoot-migrate
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
+  chatwoot-worker:
+    profiles: ["chatwoot"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    image: chatwoot/chatwoot:latest
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      LOG_LEVEL: "info"
+      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
+      REDIS_URL: redis://valkey:6379
+      RAILS_ENV: production
+      INSTALLATION_ENV: docker
+      DEFAULT_LOCALE: en
+      FORCE_SSL: "false"
+    depends_on:
+      - chatwoot
     deploy:
       resources:
         limits:

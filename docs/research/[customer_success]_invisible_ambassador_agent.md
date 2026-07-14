@@ -7,7 +7,7 @@ Business owners like Maya are overwhelmed by repetitive customer inquiries via I
 A deep dive into Zendesk and Intercom reviews shows they are too expensive and complex for solopreneurs. Competitors like Shopify offer basic chat, but it's restricted to the website. SMBs need an omnichannel auto-responder that learns from their business data.
 
 ## Design Doc
-- **Architecture**: The native omnichannel domain connects directly to channel providers. The `Customer Success` agent acts as middleware, intercepting messages before notifying the owner.
+- **Architecture**: Integration with Chatwoot or a similar headless omnichannel inbox. The `Customer Success` agent acts as a middleware, intercepting messages before notifying the owner.
 - **Data Model**: Embedded knowledge base (pgvector) populated from the user's business description, FAQs, and product catalog.
 - **UI/UX**:
   - Unified Inbox view in the OHC app.
