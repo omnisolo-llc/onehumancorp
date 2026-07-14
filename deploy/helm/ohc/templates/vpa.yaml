@@ -1,0 +1,47 @@
+{{- if and .Values.backend.autoscaling.enabled .Values.backend.autoscaling.vpaEnabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-backend-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-backend
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled .Values.ohcCore.autoscaling.vpaEnabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-core-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-core
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}
+---
+{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled .Values.powersync.autoscaling.vpaEnabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-powersync
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}

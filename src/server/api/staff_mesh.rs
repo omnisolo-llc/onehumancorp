@@ -109,7 +109,7 @@ fn get_tenant_id(headers: &HeaderMap) -> Option<String> {
 
 pub async fn create_staff_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<CreateStaffRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -185,7 +185,7 @@ pub async fn create_staff_handler(
 pub async fn set_staff_pin_handler(
     headers: HeaderMap,
     Path(id): Path<String>,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<SetPinRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -255,7 +255,7 @@ pub async fn set_staff_pin_handler(
 
 pub async fn get_staff_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -312,7 +312,7 @@ pub async fn get_staff_handler(
 
 pub async fn sync_timecard_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<SyncTimecardRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -379,7 +379,7 @@ pub async fn sync_timecard_handler(
 
 pub async fn get_timecard_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -449,7 +449,7 @@ pub async fn get_timecard_handler(
 
 pub async fn create_task_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<CreateTaskRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -504,7 +504,7 @@ pub async fn create_task_handler(
 
 pub async fn get_tasks_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -563,7 +563,7 @@ pub async fn get_tasks_handler(
 pub async fn update_task_handler(
     headers: HeaderMap,
     axum::extract::Path(task_id): axum::extract::Path<String>,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<UpdateTaskRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
@@ -620,7 +620,7 @@ pub async fn update_task_handler(
 pub async fn delete_task_handler(
     headers: HeaderMap,
     axum::extract::Path(task_id): axum::extract::Path<String>,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -661,7 +661,7 @@ pub async fn delete_task_handler(
 
 pub async fn get_summaries_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -721,7 +721,7 @@ pub struct GetShiftsResponse {
 
 pub async fn get_shifts_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -751,7 +751,7 @@ pub async fn get_shifts_handler(
 
 pub async fn get_escalations_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -778,7 +778,7 @@ pub async fn get_escalations_handler(
 
 pub async fn simulate_event_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,
@@ -809,7 +809,7 @@ pub async fn simulate_event_handler(
 
 pub async fn generate_summary_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
         Some(id) => id,

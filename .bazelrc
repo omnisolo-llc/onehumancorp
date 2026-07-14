@@ -102,8 +102,8 @@ build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
 common:bes --bes_timeout=600s
-common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
+# common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
