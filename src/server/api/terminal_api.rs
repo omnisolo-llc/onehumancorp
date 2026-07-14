@@ -218,6 +218,13 @@ pub async fn end_terminal_session_handler(
     };
 
     let pool = crate::db::get_pool();
+    let mut db_tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Json(EndTerminalSessionResponse { success: false, error_message: "Database error".to_string() })
+    };
+    if let Err(_) = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
+        return Json(EndTerminalSessionResponse { success: false, error_message: "Auth error".to_string() });
+    }
 
     let res = sqlx::query(
         "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
@@ -821,8 +828,13 @@ pub async fn create_payment_intent_handler(
 
     let pool = crate::db::get_pool();
 
-    let mut db_tx = pool.begin().await.unwrap();
-    let _ = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await;
+    let mut db_tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Json(Err("Database error".to_string()))
+    };
+    if let Err(_) = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
+        return Json(Err("Auth error".to_string()));
+    }
     // Check for existing intent with the same idempotency key
     let existing: Option<(String,)> = sqlx::query_as(
         "SELECT stripe_payment_intent_id FROM payment_intents WHERE tenant_id = $1 AND idempotency_key = $2"
