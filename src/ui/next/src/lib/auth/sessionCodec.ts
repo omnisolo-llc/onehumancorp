@@ -1,4 +1,3 @@
-import { CompactEncrypt, compactDecrypt, decodeProtectedHeader } from "jose";
 import authLimits from "./authLimits.json";
 import type { SessionKeyRing } from "./sessionKeys";
 import type { SessionCodecContext, WebSession } from "./sessionTypes";
@@ -8,6 +7,8 @@ const MAX_COMPACT_BYTES = 3800;
 const MAX_ACCESS_TOKEN_BYTES = authLimits.maxAccessTokenBytes;
 const MAX_SESSION_SECONDS = 86400;
 const CLOCK_SKEW_SECONDS = 30;
+const IV_BYTES = 12;
+const TAG_BYTES = 16;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
@@ -50,6 +51,23 @@ function isCanonicalSegment(segment: string, allowEmpty = false): boolean {
   } catch {
     return false;
   }
+}
+
+function encodeBase64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function decodeBase64url(segment: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (segment.length % 4)) % 4);
+  const binary = atob(`${segment.replace(/-/g, "+").replace(/_/g, "/")}${padding}`);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }
 
 function isBoundedString(value: unknown, maximum: number): value is string {
@@ -132,7 +150,8 @@ export async function sealSession(
   context: SessionCodecContext,
   options: Readonly<{ now: number; backendExpiresAt: number }>,
 ): Promise<string> {
-  let plaintext: Uint8Array | undefined;
+  let plaintext: Uint8Array<ArrayBuffer> | undefined;
+  let encrypted: Uint8Array<ArrayBuffer> | undefined;
   try {
     validateContext(context);
     if (!Number.isSafeInteger(options.now) || !Number.isSafeInteger(options.backendExpiresAt)) {
@@ -145,23 +164,42 @@ export async function sealSession(
     );
     if ((payload.exp as number) > options.backendExpiresAt) invalid();
 
-    const encoded = encoder.encode(JSON.stringify(payload));
-    plaintext = encoded instanceof Uint8Array ? encoded : Uint8Array.from(encoded);
+    plaintext = new Uint8Array(encoder.encode(JSON.stringify(payload)));
     if (plaintext.byteLength > MAX_PLAINTEXT_BYTES) invalid();
-    const token = await new CompactEncrypt(plaintext)
-      .setProtectedHeader({
-        alg: "dir",
-        enc: "A256GCM",
-        typ: "ohc-session+jwe",
-        kid: ring.active.id,
-      })
-      .encrypt(ring.active.key);
+    const protectedSegment = encodeBase64url(
+      encoder.encode(
+        JSON.stringify({
+          alg: "dir",
+          enc: "A256GCM",
+          typ: "ohc-session+jwe",
+          kid: ring.active.id,
+        }),
+      ),
+    );
+    const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+    encrypted = new Uint8Array(
+      await crypto.subtle.encrypt(
+        {
+          name: "AES-GCM",
+          iv,
+          additionalData: encoder.encode(protectedSegment),
+          tagLength: TAG_BYTES * 8,
+        },
+        ring.active.key,
+        plaintext,
+      ),
+    );
+    if (encrypted.byteLength <= TAG_BYTES) invalid();
+    const ciphertext = encrypted.subarray(0, encrypted.byteLength - TAG_BYTES);
+    const tag = encrypted.subarray(encrypted.byteLength - TAG_BYTES);
+    const token = `${protectedSegment}..${encodeBase64url(iv)}.${encodeBase64url(ciphertext)}.${encodeBase64url(tag)}`;
     if (byteLength(token) > MAX_COMPACT_BYTES) invalid();
     return token;
   } catch {
     return invalid();
   } finally {
     plaintext?.fill(0);
+    encrypted?.fill(0);
   }
 }
 
@@ -171,7 +209,8 @@ export async function openSession(
   context: SessionCodecContext,
   now: number,
 ): Promise<WebSession> {
-  let decryptedPlaintext: Uint8Array | undefined;
+  let decryptedPlaintext: Uint8Array<ArrayBuffer> | undefined;
+  let encrypted: Uint8Array<ArrayBuffer> | undefined;
   try {
     if (!Number.isSafeInteger(now)) invalid();
     if (
@@ -193,7 +232,7 @@ export async function openSession(
     ) invalid();
     validateContext(context);
 
-    const untrustedHeader = decodeProtectedHeader(token);
+    const untrustedHeader = JSON.parse(decoder.decode(decodeBase64url(segments[0])));
     validateHeader(untrustedHeader);
     const selected =
       untrustedHeader.kid === ring.active.id
@@ -203,15 +242,33 @@ export async function openSession(
           : undefined;
     if (selected === undefined) invalid();
 
-    const result = await compactDecrypt(token, selected.key, {
-      keyManagementAlgorithms: ["dir"],
-      contentEncryptionAlgorithms: ["A256GCM"],
-      maxDecompressedLength: 0,
-    });
-    decryptedPlaintext = result.plaintext;
-    validateHeader(result.protectedHeader);
-    if (result.plaintext.byteLength > MAX_PLAINTEXT_BYTES) invalid();
-    const payload = validatePayload(JSON.parse(decoder.decode(result.plaintext)), context, now);
+    const iv = decodeBase64url(segments[2]);
+    const ciphertext = decodeBase64url(segments[3]);
+    const tag = decodeBase64url(segments[4]);
+    if (iv.byteLength !== IV_BYTES || ciphertext.byteLength === 0 || tag.byteLength !== TAG_BYTES) {
+      invalid();
+    }
+    encrypted = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+    encrypted.set(ciphertext);
+    encrypted.set(tag, ciphertext.byteLength);
+    decryptedPlaintext = new Uint8Array(
+      await crypto.subtle.decrypt(
+        {
+          name: "AES-GCM",
+          iv,
+          additionalData: encoder.encode(segments[0]),
+          tagLength: TAG_BYTES * 8,
+        },
+        selected.key,
+        encrypted,
+      ),
+    );
+    if (decryptedPlaintext.byteLength > MAX_PLAINTEXT_BYTES) invalid();
+    const payload = validatePayload(
+      JSON.parse(decoder.decode(decryptedPlaintext)),
+      context,
+      now,
+    );
     const user = payload.user as PlainObject;
     return {
       version: 1,
@@ -229,5 +286,6 @@ export async function openSession(
     return invalid();
   } finally {
     decryptedPlaintext?.fill(0);
+    encrypted?.fill(0);
   }
 }
