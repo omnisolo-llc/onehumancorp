@@ -127,10 +127,8 @@ impl ProactiveAnalysisWorker {
             }
             Err(_) => {
                 tracing::error!("Agent execution exceeded 60-second ML-Resilience timeout rule for job {}", job_id);
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', failed_reason = 'Agent execution exceeded 60-second ML-Resilience timeout rule.', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                    .bind(&job_id)
-                    .execute(&db.pool)
-                    .await?;
+                let queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(db.pool.clone().into());
+                let _ = queue.fail(&job_id, 3, "Agent execution exceeded 60-second ML-Resilience timeout rule.").await;
                 return Ok(()); // fail safe, return ok to stop processing it this time
             }
         }
