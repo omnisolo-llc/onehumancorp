@@ -41,7 +41,7 @@ export default function EdgeStorefrontSetupPage() {
             <button
               id="start-setup-btn"
               onClick={handleStartSetup}
-              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 text-white glass-control transition-colors font-medium min-h-[44px]"
             >
               Start Setup
             </button>
@@ -61,9 +61,9 @@ export default function EdgeStorefrontSetupPage() {
               <button
                 id="select-custom-cakes-btn"
                 onClick={() => setSelectedOption('custom-cakes')}
-                className={`w-full text-left px-4 py-3 rounded-lg border ${
+                className={`w-full text-left px-4 py-3 glass-control border min-h-[44px] ${
                   selectedOption === 'custom-cakes'
-                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
+                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30 text-[#0066FF]'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }`}
               >
@@ -72,9 +72,9 @@ export default function EdgeStorefrontSetupPage() {
 
               <button
                 onClick={() => setSelectedOption('ready-to-buy')}
-                className={`w-full text-left px-4 py-3 rounded-lg border ${
+                className={`w-full text-left px-4 py-3 glass-control border min-h-[44px] ${
                   selectedOption === 'ready-to-buy'
-                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
+                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30 text-[#0066FF]'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }`}
               >
@@ -86,7 +86,7 @@ export default function EdgeStorefrontSetupPage() {
               id="generate-storefront-btn"
               onClick={handleGenerate}
               disabled={!selectedOption}
-              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white glass-control transition-colors font-medium min-h-[44px]"
             >
               Generate & Publish
             </button>
@@ -109,7 +109,7 @@ export default function EdgeStorefrontSetupPage() {
               </span>
               <button
                 id="copy-link-btn"
-                className="ml-2 px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="ml-2 px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 glass-control text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
                 onClick={() => {}}
               >
                 Copy
@@ -118,7 +118,7 @@ export default function EdgeStorefrontSetupPage() {
 
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white glass-control transition-colors font-medium min-h-[44px]"
             >
               Back to Dashboard
             </button>

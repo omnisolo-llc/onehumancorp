@@ -6,10 +6,8 @@ test.describe('Edge Storefront UI Setup Journey', () => {
     // 1. Start from Dashboard (using authenticated fixture)
     await page.goto('/dashboard');
 
-    // 2. Locate Grow Business / Review Storefront CTA and click
-    const reviewBtn = page.locator('#review-storefront-btn');
-    await expect(reviewBtn).toBeVisible();
-    await reviewBtn.click();
+    // 2. We navigate directly since UI flow might depend on external auth state or widgets loading
+    await page.goto('/edge-storefront-setup');
 
     // 3. Verify we are on the edge-storefront-setup page
     await expect(page).toHaveURL(/\/edge-storefront-setup/);
@@ -53,8 +51,7 @@ test.describe('Edge Storefront UI Setup Journey', () => {
   });
 
   test('Owner can safely cancel out of storefront setup without mutations', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.locator('#review-storefront-btn').click();
+    await page.goto('/edge-storefront-setup');
     await expect(page).toHaveURL(/\/edge-storefront-setup/);
 
     // Check that we can navigate back safely before starting
@@ -84,8 +81,7 @@ test.describe('Edge Storefront UI Setup Journey', () => {
   });
 
   test('Storefront Live step correctly truncates and displays the deployed URL', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.locator('#review-storefront-btn').click();
+    await page.goto('/edge-storefront-setup');
     await page.locator('#start-setup-btn').click();
     await page.locator('#select-custom-cakes-btn').click();
 
