@@ -56,6 +56,12 @@ pub struct SubscriptionOverviewResponse {
     pub batches: Vec<FulfillmentBatchResponse>,
 }
 
+#[derive(Clone, Debug)]
+struct SubscriptionTenantPolicy {
+    multitenant: bool,
+    configured_default: String,
+}
+
 fn resolve_subscription_tenant(
     claims: &::server_common::Claims,
     multitenant: bool,
@@ -75,12 +81,11 @@ fn resolve_subscription_tenant(
     }
 }
 
-fn subscription_tenant(claims: &::server_common::Claims) -> Result<String, StatusCode> {
-    resolve_subscription_tenant(
-        claims,
-        ::server_config::get().multitenant,
-        &::server_common::auth_utils::get_default_tenant(),
-    )
+fn subscription_tenant(
+    claims: &::server_common::Claims,
+    policy: &SubscriptionTenantPolicy,
+) -> Result<String, StatusCode> {
+    resolve_subscription_tenant(claims, policy.multitenant, &policy.configured_default)
 }
 
 async fn fetch_subscription_plans(
@@ -164,9 +169,10 @@ async fn fetch_subscription_overview(
 
 async fn get_subscription_overview(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -183,10 +189,10 @@ async fn get_subscription_overview(
 
 async fn get_plans(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -203,10 +209,10 @@ async fn get_plans(
 
 async fn get_subscribers(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -223,10 +229,10 @@ async fn get_subscribers(
 
 async fn get_fulfillment_batches(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -243,12 +249,12 @@ async fn get_fulfillment_batches(
 
 async fn create_fulfillment_batch(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
     Json(payload): Json<CreateFulfillmentBatchRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -436,10 +442,11 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 
 async fn get_subscription_by_id(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     axum::extract::Path(id): axum::extract::Path<String>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -507,10 +514,11 @@ pub struct SubscriptionActionRequest {
 async fn subscription_action(
     axum::extract::Path(id): axum::extract::Path<String>,
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<SubscriptionActionRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match subscription_tenant(&claims) {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
         Ok(tenant_id) => tenant_id,
         Err(status) => return (status, "Organization is required").into_response(),
     };
@@ -543,6 +551,21 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
     hub: Arc<Hub>,
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
 ) -> Router<S> {
+    router_with_policy(
+        hub,
+        orchestrator,
+        SubscriptionTenantPolicy {
+            multitenant: ::server_config::get().multitenant,
+            configured_default: ::server_common::auth_utils::get_default_tenant(),
+        },
+    )
+}
+
+fn router_with_policy<S: Clone + Send + Sync + 'static>(
+    hub: Arc<Hub>,
+    orchestrator: Option<Arc<DepartmentOrchestrator>>,
+    tenant_policy: SubscriptionTenantPolicy,
+) -> Router<S> {
     Router::new()
         .route("/", get(get_subscription_overview))
         .route("/plans", get(get_plans))
@@ -554,6 +577,7 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         .route("/magic-link", post(handle_magic_link))
         .route("/{id}", get(get_subscription_by_id))
         .route("/{id}/action", post(subscription_action))
+        .layer(Extension(tenant_policy))
         .layer(Extension(orchestrator))
         .layer(Extension(hub))
 }
@@ -561,6 +585,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
 
     fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
         ::server_common::Claims {
@@ -643,22 +669,74 @@ mod tests {
                 .expect("prepare subscription integration data");
         }
 
-        let overview = fetch_subscription_overview(&pool, "tenant-a")
-            .await
-            .expect("fetch tenant subscription overview");
+        let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(Hub::new(event_log_tx, pool.clone()));
+        let app = router_with_policy(
+            hub,
+            None,
+            SubscriptionTenantPolicy {
+                multitenant: true,
+                configured_default: "system".to_string(),
+            },
+        )
+        .layer(Extension(claims(Some("tenant-a"))));
 
-        assert_eq!(overview.plans.len(), 1);
-        assert_eq!(overview.plans[0].id, "plan-a");
-        assert_eq!(overview.subscribers.len(), 1);
-        assert_eq!(overview.subscribers[0].id, "subscriber-a");
-        assert_eq!(overview.batches.len(), 1);
-        assert_eq!(overview.batches[0].id, "batch-a");
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        let overview: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(overview["plans"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["plans"][0]["id"], "plan-a");
+        assert_eq!(overview["subscribers"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["subscribers"][0]["id"], "subscriber-a");
+        assert_eq!(overview["batches"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["batches"][0]["id"], "batch-a");
 
         pool.close().await;
         sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
             .execute(&admin)
             .await
             .expect("drop isolated subscription schema");
+    }
+
+    #[tokio::test]
+    async fn subscription_overview_route_rejects_missing_organization_in_multitenant_mode() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/unused").unwrap();
+        let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(Hub::new(event_log_tx, pool));
+        let app = router_with_policy(
+            hub,
+            None,
+            SubscriptionTenantPolicy {
+                multitenant: true,
+                configured_default: "system".to_string(),
+            },
+        )
+        .layer(Extension(claims(None)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[test]

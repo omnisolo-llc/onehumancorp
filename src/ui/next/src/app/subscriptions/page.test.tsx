@@ -44,7 +44,7 @@ describe("SubscriptionsPage", () => {
 
     render(<SubscriptionsPage />);
 
-    expect(await screen.findByText("$25.00/month")).toBeInTheDocument();
+    expect(await screen.findByText("$25.00 / month")).toBeInTheDocument();
     expect(screen.getByText("Customer #custom")).toBeInTheDocument();
     expect(screen.getByText("Ship on 2026-08-01")).toBeInTheDocument();
     expect(screen.getByText("3 boxes")).toBeInTheDocument();

@@ -150,7 +150,7 @@ export default function SubscriptionsPage() {
                 >
                   <h3 className="font-bold text-gray-900">{plan.name}</h3>
                   <p className="text-sm text-gray-600">
-                    {formatAmount(plan.amount)}/{plan.interval}
+                    {formatAmount(plan.amount)} / {plan.interval}
                   </p>
                 </li>
               ))}
