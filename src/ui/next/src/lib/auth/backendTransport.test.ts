@@ -240,6 +240,29 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("allows a trusted route to override the backend method", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(init?.method).toBe("PUT");
+      return Response.json({ ok: true });
+    });
+    const deps = await dependencies(fetchImpl);
+    const input = await request(deps, "/api/quotes?id=quote-7", {
+      method: "POST",
+      body: '{"status":"SENT"}',
+      headers: { "content-type": "application/json" },
+    });
+
+    const response = await proxyAuthenticatedRequest(
+      input,
+      "/api/v1/quotes/quote-7",
+      deps,
+      { backendMethod: "PUT" },
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("rejects backend redirects and oversized responses", async () => {
     const redirectBody = new ReadableStream<Uint8Array>({
       start(controller) {

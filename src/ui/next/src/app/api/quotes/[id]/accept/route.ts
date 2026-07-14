@@ -1,30 +1,15 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { invalidQuoteId, quoteBackendPath } from "../../quoteBackend";
 
-export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = req.headers.get('x-tenant-id') || 'default';
-  const userId = req.headers.get('x-user-id') || 'default';
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-  };
-
-  const params = await context.params;
-    const id = params.id;
-
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  let path: string;
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${id}/accept`, {
-      method: 'POST',
-      headers,
-    });
-
-    if (res.ok) {
-      return NextResponse.json(await res.json());
-    }
-
-    return NextResponse.json({ error: 'Failed to accept quote' }, { status: res.status });
+    path = quoteBackendPath((await context.params).id, "/accept");
   } catch {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+    return invalidQuoteId();
   }
+  return proxyBackendRequest(request, path);
 }
