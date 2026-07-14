@@ -16,7 +16,7 @@ test.describe('Documentation full suite', () => {
     await searchInput.fill('Products');
 
     // Wait for the articles to filter
-    await expect(page.getByText('Adding Products')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Adding products and services')).toBeVisible({ timeout: 10000 });
 
     // Chat widget open interaction
     const chatBtn = page.getByRole('button', { name: 'Ask anything' });

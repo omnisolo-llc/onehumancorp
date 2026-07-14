@@ -823,7 +823,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
-            "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
+            "description": "OHC Advanced API Reference integrating with OneHumanCorp."
         },
         "servers": [
             {
