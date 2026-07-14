@@ -181,7 +181,7 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(sync_latency_ms_bucket[5m])) by (le, mode))",
-          "legendFormat": "{{mode}}",
+          "legendFormat": "{{mode}} P95 Latency",
           "refId": "A"
         }
       ],
@@ -236,8 +236,8 @@
       "id": 1002,
       "targets": [
         {
-          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
-          "legendFormat": "{{mode}} Batch Depth",
+          "expr": "sum(sync_daemon_batch_size) by (mode)",
+          "legendFormat": "{{mode}} Batch Size",
           "refId": "A"
         },
         {
@@ -631,7 +631,7 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(sync_latency_ms_bucket[5m])) by (le, mode))",
-          "legendFormat": "{{mode}}",
+          "legendFormat": "{{mode}} P95 Latency",
           "refId": "A"
         }
       ],
@@ -658,8 +658,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
-          "legendFormat": "{{mode}} Batch Depth",
+          "expr": "sum(sync_daemon_batch_size) by (mode)",
+          "legendFormat": "{{mode}} Batch Size",
           "refId": "A"
         },
         {
