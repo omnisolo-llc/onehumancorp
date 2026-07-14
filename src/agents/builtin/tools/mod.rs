@@ -147,6 +147,7 @@ pub fn all_tools(
         booking::booking_reschedule_tool(booking_store.clone(), tenant.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
+        agent_protocol::agent_protocol_tool(),
         task::task_create_tool(task_store.clone()),
         task::task_get_tool(task_store.clone()),
         task::task_list_tool(task_store.clone()),
