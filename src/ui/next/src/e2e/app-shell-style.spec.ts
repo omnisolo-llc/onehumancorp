@@ -266,6 +266,7 @@ test.describe('Mobile global controls', () => {
         await page.goto(route, { waitUntil: 'domcontentloaded' });
 
         const controlSelector = [
+          '#ohc-floating-help-btn',
           '#ai-chat-trigger-btn',
           '[data-voice-assistant-surface="trigger"]',
         ].join(',');

@@ -182,6 +182,36 @@ document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
+        #ohc-floating-help-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            z-index: 99990;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        #ohc-floating-help-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+        }
+        #ohc-floating-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: currentColor;
+        }
         #ai-chat-interface {
             position: fixed;
             bottom: 96px;
@@ -236,6 +266,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 0;
                 box-sizing: border-box;
             }
+        }
+        #ohc-floating-help-header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         #ohc-floating-help-header h3 {
             margin: 0;
@@ -406,9 +444,132 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
+    // Create the button
+    const btn = document.createElement('button');
+    btn.id = 'ohc-floating-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.setAttribute('data-tooltip-id', 'ohc-floating-help-btn');
+    btn.setAttribute('data-tooltip', 'Open Help Center');
+    btn.title = 'Help';
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
+    document.body.appendChild(btn);
 
+    // Create the widget
+    const widget = document.createElement('div');
+    widget.id = 'ai-chat-interface';
+    widget.innerHTML = `
+        <div id="ohc-floating-help-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div id="ohc-floating-help-tabs">
+            <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
+            <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
+            <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
+            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
+        </div>
 
+        <div id="tab-articles" class="ohc-help-content active">
+            <div style="margin-bottom: 16px;">
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
+            </div>
+            <h4>Popular Articles</h4>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
+                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+            </ul>
+            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
+                    <input type="checkbox" onchange="document.getElementById('help-widget-advanced-links').style.display = this.checked ? 'block' : 'none';" />
+                    Advanced Settings
+                  </label>
+                </div>
+                <div id="help-widget-advanced-links" style="display: none;">
+                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
+                    <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                </div>
+            </div>
+        </div>
 
+        <div id="tab-tours" class="ohc-help-content">
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+                <h4>Set up your store</h4>
+                <p>Learn how to add products and customize your storefront.</p>
+            </div>
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
+                <h4>Accept your first payment</h4>
+                <p>Connect your account to start receiving money.</p>
+            </div>
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
+                <h4>Activate your AI Support Agent</h4>
+                <p>Let AI handle customer queries for you.</p>
+            </div>
+        </div>
+
+                <div id="tab-videos" class="ohc-help-content">
+            <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
+        </div>
+
+        <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
+            <div id="ohc-help-chat-messages">
+                <div class="ohc-chat-msg agent">
+                    Need help setting up your store? I am your AI Help Agent! How can I assist you today?
+                </div>
+            </div>
+            <div id="ohc-help-chat-input-container">
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
+            </div>
+        </div>
+    `;
+
+    window.addEventListener('open-help-chat', () => {
+        widget.style.display = 'flex';
+    });
+
+    document.body.appendChild(widget);
+
+    // Logic
+    btn.addEventListener('click', () => {
+        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
+        widget.style.display = 'none';
+    });
+
+    const tabs = widget.querySelectorAll('.ohc-help-tab');
+    const contents = widget.querySelectorAll('.ohc-help-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.getAttribute("data-target")).classList.add("active");
+
+            if (tab.getAttribute("data-target") === "tab-videos") {
+                fetch("/api/videos").then(r => r.json()).then(data => {
+                    const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
+                    vl.innerHTML = "";
+                    data.forEach(v => {
+                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
+                            `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
+                            `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
+                            `</div>`;
+                    });
+                }).catch(e => {
+                    const errVl = widget.querySelector("#video-list") || document.getElementById("video-list");
+                    if (errVl) errVl.innerHTML = "Error loading videos.";
+                });
+            }
+        });
+    });
 
 
 

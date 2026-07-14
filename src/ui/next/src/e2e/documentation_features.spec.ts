@@ -14,5 +14,30 @@ test.describe('Documentation Features', () => {
     await expect(page.getByText('Advanced:')).toBeVisible();
   });
 
+  test('Help Center and Chat opens', async ({ page }) => {
+    await page.goto('/');
+    const helpButton = page.locator('#ohc-floating-help-btn');
+    await expect(helpButton).toBeVisible();
+    await helpButton.click({ force: true });
+
+    // Help Widget appears
+    const askAnythingTab = page.getByText('Ask anything');
+    await expect(askAnythingTab).toBeVisible();
+    await askAnythingTab.click({ force: true });
+
+    // Help chat widget
+    await expect(page.locator('#ohc-floating-help-widget')).toBeVisible();
+  });
 
 });
+
+  test('Walkthroughs can be triggered', async ({ page }) => {
+    await page.goto('/');
+    const helpButton = page.locator('#ohc-floating-help-btn');
+    await expect(helpButton).toBeVisible();
+    await helpButton.click({ force: true });
+
+    // Check if the walkthrough start button is there
+    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
+    await expect(tourButton).toBeVisible();
+  });
