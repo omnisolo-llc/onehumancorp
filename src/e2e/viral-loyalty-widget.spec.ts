@@ -35,5 +35,10 @@ test.describe('Viral Loyalty Widget', () => {
     // Check share link generated correctly
     const shareLink = page.locator('#share-link');
     await expect(shareLink).toHaveValue(/loyalty\/join\?ref=[a-zA-Z0-9_-]+/);
+
+    // Verify powered by OHC footer widget exists
+    const poweredByFooter = page.locator('#ohc-powered-footer');
+    await expect(poweredByFooter).toBeVisible();
+    await expect(poweredByFooter).toContainText('Powered by OHC');
   });
 });
