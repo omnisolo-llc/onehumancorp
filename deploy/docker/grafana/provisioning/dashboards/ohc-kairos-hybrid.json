@@ -236,13 +236,13 @@
       "id": 1002,
       "targets": [
         {
-          "expr": "sum(rate(sync_payload_size_bytes_sum[5m])) by (mode)",
-          "legendFormat": "Payload Size ({{mode}})",
+          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
+          "legendFormat": "{{mode}} Batch Depth",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
-          "legendFormat": "Batch Depth ({{mode}})",
+          "expr": "sum(rate(sync_payload_size_bytes_sum[5m])) by (mode) / sum(rate(sync_payload_size_bytes_count[5m])) by (mode)",
+          "legendFormat": "{{mode}} Avg Payload (Bytes)",
           "refId": "B"
         }
       ],
@@ -295,7 +295,7 @@
       "id": 986407,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
+        "content": "<div style=\"backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 16px;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry\n</div>"
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
@@ -312,7 +312,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >KAIROS HYBRID ORCHESTRATION</h1>\n  <p >Full-Spectrum Observability for Cloud & Standalone Modes</p>"
+        "content": "<div style=\"backdrop-filter: blur(30px) saturate(210%); background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 16px;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >KAIROS HYBRID ORCHESTRATION</h1>\n  <p >Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
       },
       "transparent": true
     },
@@ -602,8 +602,8 @@
       },
       "targets": [
         {
-          "expr": "rate(sync_daemon_error_total[5m])",
-          "legendFormat": "{{mode}} - {{error}}",
+          "expr": "sum(rate(sync_daemon_error_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
           "refId": "A"
         }
       ],
@@ -631,7 +631,7 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(sync_latency_ms_bucket[5m])) by (le, mode))",
-          "legendFormat": "{{mode}} P95 Latency",
+          "legendFormat": "{{mode}}",
           "refId": "A"
         }
       ],
@@ -658,8 +658,8 @@
       },
       "targets": [
         {
-          "expr": "sum(sync_daemon_batch_size) by (mode)",
-          "legendFormat": "{{mode}} Batch Size",
+          "expr": "sum(rate(sync_daemon_batch_size_sum[5m])) by (mode)",
+          "legendFormat": "{{mode}} Batch Depth",
           "refId": "A"
         },
         {
