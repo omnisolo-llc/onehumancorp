@@ -1,14 +1,18 @@
 use sqlx::{Executor, Postgres, query};
 
-pub async fn set_system_context(executor: &mut sqlx::Transaction<'_, Postgres>) -> Result<(), sqlx::Error>
+pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
+where
+    E: Executor<'a, Database = Postgres>,
 {
     query("SET LOCAL ROLE ohc_bypassrls")
-        .execute(&mut **executor)
+        .execute(executor)
         .await?;
     Ok(())
 }
 
-pub async fn set_org_context(executor: &mut sqlx::Transaction<'_, Postgres>, org_id: &str) -> Result<(), sqlx::Error>
+pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sqlx::Error>
+where
+    E: Executor<'a, Database = Postgres>,
 {
     if ::server_config::get().multitenant {
         if org_id.trim().eq_ignore_ascii_case("system") {
@@ -28,7 +32,7 @@ pub async fn set_org_context(executor: &mut sqlx::Transaction<'_, Postgres>, org
         // But DO blocks can't be used with extended query protocol either? Actually they can!
         // Another option: "SET LOCAL ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
         query("SET LOCAL ROLE ohc_bypassrls")
-            .execute(&mut **executor)
+            .execute(executor)
             .await?;
     } else {
         // We MUST use transaction scope (true) to prevent tenant leakage across queries on the same connection.
@@ -36,7 +40,7 @@ pub async fn set_org_context(executor: &mut sqlx::Transaction<'_, Postgres>, org
         // the tenant context is safely dropped, preventing IDOR and connection pooling leaks inside sequential flows.
         query("SELECT set_config('role', 'none', true), set_config('app.current_tenant', $1, true);")
             .bind(org_id)
-            .execute(&mut **executor)
+            .execute(executor)
             .await?;
     }
     Ok(())
