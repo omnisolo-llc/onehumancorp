@@ -5,8 +5,7 @@ use axum::{
     middleware::Next,
     response::IntoResponse,
 };
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
+use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 use crate::cache::HybridCache;
 use serde::{Serialize, Deserialize};
@@ -82,9 +81,10 @@ pub async fn edge_caching_middleware(
     };
 
     if !bytes.is_empty() && !parts.headers.contains_key(header::ETAG) {
-        let mut hasher = DefaultHasher::new();
-        bytes.hash(&mut hasher);
-        let etag = format!("W/\"{:x}\"", hasher.finish());
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let result = hasher.finalize();
+        let etag = format!("W/\"{:x}\"", result);
         if let Ok(etag_val) = etag.parse() {
             parts.headers.insert(header::ETAG, etag_val);
         }
