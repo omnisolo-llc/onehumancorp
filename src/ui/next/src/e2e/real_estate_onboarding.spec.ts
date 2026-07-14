@@ -1,10 +1,10 @@
 import { test, expect } from '../../../../e2e/fixtures';
-import { e2eUrl } from './fixtures';
+
 
 test.describe('Real Estate Onboarding CUJ', () => {
     test('Elena can select Real Estate in the wizard and launch her workspace', async ({ page }) => {
         // Step 1: Start wizard
-        await page.goto(e2eUrl('/website-builder'));
+        await page.goto('/website-builder');
         await page.waitForLoadState('networkidle');
 
         await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -52,7 +52,7 @@ test.describe('Real Estate Onboarding CUJ', () => {
     });
 
     test('Elena can use the zero-click chat onboarding to create a Real Estate workspace', async ({ page }) => {
-        await page.goto(e2eUrl('/onboarding/zero-click'));
+        await page.goto('/onboarding/zero-click');
         await page.waitForLoadState('networkidle');
 
         // Check if the chat interface loaded
