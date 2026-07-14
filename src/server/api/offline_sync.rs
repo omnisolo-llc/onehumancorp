@@ -718,8 +718,51 @@ pub async fn sync_events_handler(
                         .execute(&mut *tx)
                         .await;
                 }
+                if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
+                    if let Some(is_sold_out) = event.payload.get("is_sold_out").and_then(|v| v.as_bool()) {
+                        res2 = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
+                            .bind(is_sold_out)
+                            .bind(&event.entity_id)
+                            .bind(&tenant_id_clone)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+                }
+                if event.entity_type == "order" && event.action_type == "UpdateStatus" {
+                    if let Some(status) = event.payload.get("status").and_then(|v| v.as_str()) {
+                        res2 = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                            .bind(status)
+                            .bind(&event.entity_id)
+                            .bind(&tenant_id_clone)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+                }
 
                 if res1.is_ok() && res2.is_ok() {
+                        if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
+                            if let Some(client) = crate::get_redis_client() {
+                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                    let invalidation_topic = "cache_invalidation_events";
+                                    let invalidation_payload = serde_json::json!({
+                                        "event": "product.updated",
+                                        "tags": [
+                                            format!("tenant-id:{}", tenant_id_clone),
+                                            format!("entity:product:{}", event.entity_id)
+                                        ]
+                                    }).to_string();
+                                    let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                                }
+                            }
+
+                            let edge_cache = crate::builder::edge::get_edge_cache();
+                            let _ = edge_cache.invalidate_by_tag(&format!("entity:product:{}", event.entity_id)).await;
+                            let _ = edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_clone)).await;
+
+                            let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                            let _ = cdn.invalidate_by_tag(&format!("entity:product:{}", event.entity_id)).await;
+                            let _ = cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_clone)).await;
+                        }
                     if tx.commit().await.is_ok() {
                         return ("applied", 1);
                     }

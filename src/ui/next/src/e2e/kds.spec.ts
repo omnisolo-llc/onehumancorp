@@ -59,7 +59,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await expect(page.getByTestId('toggle-soldout-inv_1')).toHaveText('Sold Out');
 
     // Verify localStorage queued events
-    const events = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'));
+    const events: any[] = await page.evaluate(() => { return new Promise((resolve) => { const request = window.indexedDB.open('OHC_Offline_Queue', 1); request.onsuccess = () => { const db = request.result; const tx = db.transaction('actions', 'readonly'); const store = tx.objectStore('actions'); const getReq = store.getAll(); getReq.onsuccess = () => resolve(getReq.result); }; }); }) as any[];
     expect(events.length).toBe(2);
     expect(events[0].type).toBe('UPDATE_ORDER_STATUS');
     expect(events[1].type).toBe('TOGGLE_SOLD_OUT');
@@ -73,7 +73,7 @@ test.describe('KDS Offline & Multilingual', () => {
 
     // Wait for background sync to trigger (interval is 5s) and clear events
     await expect(async () => {
-      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'));
+      const remainingEvents: any[] = await page.evaluate(() => { return new Promise((resolve) => { const request = window.indexedDB.open('OHC_Offline_Queue', 1); request.onsuccess = () => { const db = request.result; const tx = db.transaction('actions', 'readonly'); const store = tx.objectStore('actions'); const getReq = store.getAll(); getReq.onsuccess = () => resolve(getReq.result); }; }); }) as any[];
       expect(remainingEvents.length).toBe(0);
     }).toPass({ timeout: 10000 });
   });
