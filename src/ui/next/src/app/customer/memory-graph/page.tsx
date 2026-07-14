@@ -97,11 +97,11 @@ function CustomerMemoryGraphContent() {
            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 dark:before:via-gray-700 before:to-transparent">
 
              {interactions.length === 0 ? <div className="text-center p-4">No interaction history found.</div> : interactions.map((interaction: any, idx: number) => (
-               <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-800 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+               <div key={idx} className="relative flex flex-col md:flex-row md:items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active pl-12 md:pl-0 mb-6 md:mb-0">
+                  <div className="absolute md:relative left-0 md:left-auto flex items-center justify-center w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-800 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 mt-2 md:mt-0 ml-1 md:ml-0">
                      {getIcon(interaction.channel || interaction.type)}
                   </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 shadow-sm">
+                  <div className="w-full md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 rounded-xl shadow-sm">
                      <div className="flex items-center justify-between mb-1">
                         <span className="font-bold text-sm">{interaction.channel || (interaction.type === 'agent_reply' ? 'OHC Agent' : 'Customer')}</span>
                         <time className="text-xs text-gray-500">{interaction.date || (interaction.created_at ? new Date(interaction.created_at).toLocaleString() : '')}</time>
@@ -113,9 +113,9 @@ function CustomerMemoryGraphContent() {
 
            </div>
 
-           <div className="mt-8 flex justify-center gap-4">
-               <button className="px-4 py-2 bg-blue-600 text-white rounded-md">Draft Reply</button>
-               <button className="px-4 py-2 bg-red-600 text-white rounded-md">Issue Refund</button>
+           <div className="mt-8 flex justify-center gap-4 px-2">
+               <button className="flex items-center justify-center min-h-[44px] min-w-[44px] px-4 bg-blue-600 text-white rounded-md w-full sm:w-auto">Draft Reply</button>
+               <button className="flex items-center justify-center min-h-[44px] min-w-[44px] px-4 bg-red-600 text-white rounded-md w-full sm:w-auto">Issue Refund</button>
            </div>
         </div>
 

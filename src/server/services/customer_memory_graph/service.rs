@@ -4,12 +4,24 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InteractionEvent {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub channel: String,
+    pub raw_content: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CustomerProfileSummary {
     pub total_interactions: i64,
     pub last_interaction: Option<DateTime<Utc>>,
     pub segments: Vec<String>,
     pub preferences: Vec<String>,
     pub summary: String,
+    #[serde(default)]
+    pub events: Vec<InteractionEvent>,
 }
 
 pub struct CustomerMemoryGraphService {
@@ -21,7 +33,80 @@ impl CustomerMemoryGraphService {
         Self { pool }
     }
 
-    pub async fn ingest_interaction(&self, tenant_id: &str, customer_id: &str, channel: &str, raw_content: &str) -> Result<Uuid, sqlx::Error> {
+    pub async fn resolve_customer(&self, tenant_id: &str, channel: &str, identifier: &str) -> Result<String, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // Check if alias exists
+        let record = sqlx::query(
+            "SELECT customer_id FROM customer_aliases WHERE tenant_id = $1 AND channel_type = $2 AND identifier = $3"
+        )
+        .bind(tenant_id)
+        .bind(channel)
+        .bind(identifier)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        if let Some(row) = record {
+            let customer_id: String = row.get("customer_id");
+            tx.commit().await?;
+            return Ok(customer_id);
+        }
+
+        // Try probabilistic matching: match by email or phone (if identifier looks like it)
+        let customer_record = if identifier.contains("@") {
+            sqlx::query("SELECT id FROM customers WHERE tenant_id = $1 AND email = $2")
+                .bind(tenant_id)
+                .bind(identifier)
+                .fetch_optional(&mut *tx)
+                .await?
+        } else {
+            sqlx::query("SELECT id FROM customers WHERE tenant_id = $1 AND phone = $2")
+                .bind(tenant_id)
+                .bind(identifier)
+                .fetch_optional(&mut *tx)
+                .await?
+        };
+
+        let customer_id = if let Some(row) = customer_record {
+            row.get::<String, _>("id")
+        } else {
+            // Create new customer
+            let new_customer_id = format!("c_{}", Uuid::new_v4().simple());
+            sqlx::query(
+                "INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5)"
+            )
+            .bind(&new_customer_id)
+            .bind(tenant_id)
+            .bind(format!("Unknown {}", identifier))
+            .bind(if identifier.contains("@") { Some(identifier) } else { None })
+            .bind(if !identifier.contains("@") { Some(identifier) } else { None })
+            .execute(&mut *tx)
+            .await?;
+            new_customer_id
+        };
+
+        // Create alias
+        sqlx::query(
+            "INSERT INTO customer_aliases (id, tenant_id, customer_id, channel_type, identifier) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(&customer_id)
+        .bind(channel)
+        .bind(identifier)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(customer_id)
+    }
+
+    pub async fn ingest_interaction(&self, tenant_id: &str, customer_id_or_identifier: &str, channel: &str, raw_content: &str) -> Result<Uuid, sqlx::Error> {
+        let customer_id = self.resolve_customer(tenant_id, channel, customer_id_or_identifier).await?;
         let event_id = Uuid::new_v4();
 
         let mut tx = self.pool.begin().await?;
@@ -35,7 +120,7 @@ impl CustomerMemoryGraphService {
         )
         .bind(event_id)
         .bind(tenant_id)
-        .bind(customer_id)
+        .bind(&customer_id)
         .bind(channel)
         .bind(raw_content)
         .execute(&mut *tx)
@@ -70,9 +155,28 @@ impl CustomerMemoryGraphService {
         .fetch_optional(&mut *tx)
         .await?;
 
+        let events_records = sqlx::query(
+            "SELECT id, tenant_id, customer_id, channel, raw_content, created_at FROM interaction_events WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC"
+        )
+        .bind(tenant_id)
+        .bind(customer_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        let events: Vec<InteractionEvent> = events_records.into_iter().map(|row| InteractionEvent {
+            id: row.get("id"),
+            tenant_id: row.get("tenant_id"),
+            customer_id: row.get("customer_id"),
+            channel: row.get("channel"),
+            raw_content: row.get("raw_content"),
+            created_at: row.get("created_at"),
+        }).collect();
+
         let summary = if let Some(row) = record {
             if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
-                val.0
+                let mut s = val.0;
+                s.events = events.clone();
+                s
             } else {
                 CustomerProfileSummary {
                     total_interactions: 0,
@@ -80,6 +184,7 @@ impl CustomerMemoryGraphService {
                     segments: vec![],
                     preferences: vec![],
                     summary: "No summary available.".to_string(),
+                    events: events.clone(),
                 }
             }
         } else {
@@ -89,6 +194,7 @@ impl CustomerMemoryGraphService {
                 segments: vec![],
                 preferences: vec![],
                 summary: "Customer not found.".to_string(),
+                events: events.clone(),
             }
         };
 

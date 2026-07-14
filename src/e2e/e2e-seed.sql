@@ -237,6 +237,34 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO customer_aliases (id, tenant_id, customer_id, channel_type, identifier)
+VALUES
+  ('30d9a650-f1c5-43a9-a9a3-5a0248455823', 'e2e-tenant', 'e2e-customer-ava', 'instagram', 'ava_bakes'),
+  ('b735dcae-0e97-4c3d-9d41-e40702c2e0b1', 'e2e-tenant', 'e2e-customer-ava', 'whatsapp', '+15550101010')
+ON CONFLICT (id) DO UPDATE
+SET identifier = EXCLUDED.identifier,
+    updated_at = CURRENT_TIMESTAMP;
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    preferences = EXCLUDED.preferences,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO customer_aliases (id, tenant_id, customer_id, channel_type, identifier)
+VALUES
+  ('30d9a650-f1c5-43a9-a9a3-5a0248455823', 'e2e-tenant', 'e2e-customer-ava', 'instagram', 'ava_bakes'),
+  ('b735dcae-0e97-4c3d-9d41-e40702c2e0b1', 'e2e-tenant', 'e2e-customer-ava', 'whatsapp', '+15550101010')
+ON CONFLICT (id) DO UPDATE
+SET identifier = EXCLUDED.identifier,
+    updated_at = CURRENT_TIMESTAMP;
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    preferences = EXCLUDED.preferences,
+    updated_at = CURRENT_TIMESTAMP;
+
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, available_quantity, metadata, is_subscribable, subscription_frequency, subscription_discount_percent)
 VALUES
   ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, 12, '{"seeded_by":"e2e"}'::jsonb, true, 'monthly', 10),

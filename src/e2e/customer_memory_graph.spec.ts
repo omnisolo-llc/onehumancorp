@@ -5,7 +5,37 @@ test.describe('AI-Native Omnichannel Customer Context & Memory Graph', () => {
   const tenantId = `tenant_${uuidv4().substring(0, 8)}`;
   const customerId = uuidv4();
 
-  test('should ingest interaction, process job, and retrieve context summary', async ({ request }) => {
+  test('should ingest interaction, resolve alias, process job, and retrieve context summary with timeline', async ({ request }) => {
+    const aliasIdentifier = "ava@example.com";
+    const channel = "instagram";
+
+    // Ingest with an alias (email) rather than a direct customer ID
+    // The system should probabilistically match this to "e2e-customer-ava" created in the seed.sql
+    const ingestResAlias = await request.post('/api/inbox/ingest', {
+      data: {
+        tenant_id: 'e2e-tenant',
+        customer_id: aliasIdentifier,
+        channel: channel,
+        raw_content: 'Do you have vegan cakes?',
+      }
+    });
+
+    expect(ingestResAlias.ok()).toBeTruthy();
+
+    const processRes = await request.post('/api/inbox/process');
+    expect(processRes.ok()).toBeTruthy();
+
+    const summaryRes = await request.get(`/api/inbox/summary/e2e-tenant/e2e-customer-ava`);
+    expect(summaryRes.ok()).toBeTruthy();
+    const summary = await summaryRes.json();
+
+    expect(summary).toHaveProperty('events');
+    expect(summary.events.length).toBeGreaterThan(0);
+    expect(summary.events[0].channel).toBe(channel);
+    expect(summary.events[0].raw_content).toBe('Do you have vegan cakes?');
+  });
+
+  test('should fallback correctly for old test', async ({ request }) => {
     // 1. Manually setup customer first (bypassing full flow for the sake of isolated testing)
     // We would ideally call a real customer creation endpoint here.
     // Assuming the database requires a customer to exist before ingest (due to FK constraint).
