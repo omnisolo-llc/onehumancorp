@@ -916,7 +916,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         title TEXT NOT NULL,
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
@@ -950,14 +950,14 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS shared_task_dependencies (
                         task_id TEXT NOT NULL,
                         depends_on_task_id TEXT NOT NULL,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         PRIMARY KEY (task_id, depends_on_task_id)
                     );
 
                     DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         title TEXT NOT NULL,
                         description TEXT,
@@ -1002,7 +1002,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
-                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
 
                     CREATE TABLE IF NOT EXISTS triage_items (
@@ -1893,7 +1893,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
                     CREATE TABLE IF NOT EXISTS delivery_tasks (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         order_id TEXT NOT NULL,
                         driver_id TEXT,
                         route_plan_id TEXT ,
@@ -1906,7 +1906,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
                     CREATE TABLE IF NOT EXISTS delivery_zones (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         polygon TEXT,
                         flat_fee_cents INTEGER NOT NULL DEFAULT 0,
                         min_order_value_cents INTEGER NOT NULL DEFAULT 0,
@@ -2448,7 +2448,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
                     CREATE TABLE IF NOT EXISTS route_plans (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         delivery_date DATE NOT NULL,
                         waypoint_sequence TEXT NOT NULL DEFAULT '[]',
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
