@@ -52,7 +52,7 @@ async fn test_standalone_mode_allows_system_org_id() {
         assert_eq!(session_user, "ohc_security_test");
         assert_eq!(current_user, "ohc_bypassrls");
         assert!(bypasses_rls, "system context must explicitly enter BYPASSRLS role");
-        eprintln!(
+        eprintln!( // pii-safe
             "postgres security system context: session_user={session_user} current_user={current_user} rolbypassrls={bypasses_rls}"
         );
         role_tx.rollback().await.unwrap();
