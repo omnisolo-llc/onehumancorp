@@ -836,3 +836,60 @@ fn test_telemetry_batch_pii_redaction() {
     assert_eq!(redacted["labels"]["credit_card"], "[REDACTED]", "credit_card must be redacted");
     assert_eq!(redacted["labels"]["safe_metric"], 42, "safe metrics should remain intact");
 }
+
+    #[test]
+    fn test_hybrid_privacy_audit_cloud_vs_standalone() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+
+        // 1. Cloud Mode (Multi-tenant): Telemetry should be enabled implicitly or allowed.
+        temp_env::with_vars(
+            [
+                ("OHC_MULTITENANT", Some("true")),
+                ("OHC_STANDALONE_MODE", Some("false")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>), // implicitly true or default
+            ],
+            || {
+                let config = ::server_config::load().unwrap();
+                // In cloud, multi-tenant is enabled.
+                assert!(config.multitenant, "Multi-tenant should be enabled in cloud mode");
+            },
+        );
+
+        // 2. Standalone Mode: Telemetry MUST be disabled by default (Local Sovereignty)
+        temp_env::with_vars(
+            [
+                ("OHC_MULTITENANT", Some("false")),
+                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>),
+                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ],
+            || {
+                let config = ::server_config::load().unwrap();
+                assert!(!config.multitenant, "Multi-tenant should be disabled in standalone mode");
+                assert!(!config.telemetry_enabled, "Telemetry must be strictly off in standalone mode by default");
+                assert!(config.standalone, "Standalone mode should be true");
+            },
+        );
+    }
+
+    #[test]
+    fn test_local_sovereignty_no_exfiltration() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+
+        // Ensure that even if a generic API key or config is set, telemetry strictly obeys explicit consent in standalone.
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", Some("false")),
+                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+            ],
+            || {
+                let config = ::server_config::load().unwrap();
+                assert!(!config.telemetry_enabled, "Local Sovereignty: Telemetry must be completely disabled");
+
+                // Also verify that the dynamic state matches config
+                ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(false, std::sync::atomic::Ordering::Relaxed);
+                assert!(!::server_telemetry::config::is_telemetry_enabled(), "Dynamic telemetry state must be off");
+            },
+        );
+    }

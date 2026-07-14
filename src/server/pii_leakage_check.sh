@@ -14,6 +14,8 @@ import re
 import sys
 
 def check_file(filepath):
+    # 'tenant' removed from pii regex since tenant itself is not PII, but tenant_id is often logged.
+    # Actually let's keep the regex mostly the same but ensure we don't flag if it's ONLY tenant_id/organization_id.
     pii = r'\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude|tenant)\b'
 
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -25,10 +27,12 @@ def check_file(filepath):
             if re.search(r'redacted_', line, re.IGNORECASE):
                 continue
 
+            line_to_check = re.sub(r'\b(tenant_id|organization_id|tenant)\b', '', line, flags=re.IGNORECASE)
+
             has_pii = False
-            if re.search(r'\{.*?\}', line) and re.search(pii, line, re.IGNORECASE):
+            if re.search(r'\{.*?\}', line) and re.search(pii, line_to_check, re.IGNORECASE):
                 has_pii = True
-            elif re.search(pii + r'\s*=', line, re.IGNORECASE):
+            elif re.search(pii + r'\s*=', line_to_check, re.IGNORECASE):
                 has_pii = True
 
             if has_pii and '// pii-safe' not in line:
