@@ -3,6 +3,7 @@ import {
   cookieDeletion,
   cookieForSession,
   parseSessionCookieHeader,
+  serializeSessionCookie,
   sessionCodecContext,
 } from "./sessionCookie";
 import type { AuthRuntimeConfig } from "./runtimeConfig";
@@ -53,6 +54,15 @@ describe("web session cookie policy", () => {
         expires: new Date(0),
       },
     });
+  });
+
+  it("serializes issuance and deletion without a Domain attribute", () => {
+    expect(serializeSessionCookie(cookieForSession(production, "ciphertext", 1_000, 1_500))).toBe(
+      "__Host-ohc_session=ciphertext; Path=/; Max-Age=500; HttpOnly; Secure; SameSite=Lax",
+    );
+    expect(serializeSessionCookie(cookieDeletion(production))).toBe(
+      "__Host-ohc_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax",
+    );
   });
 
   it("binds encryption to the deployment origin and cookie purpose", () => {

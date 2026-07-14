@@ -69,6 +69,21 @@ export function cookieDeletion(config: AuthRuntimeConfig): SessionCookieMutation
   };
 }
 
+export function serializeSessionCookie(cookie: SessionCookieMutation): string {
+  const parts = [
+    `${cookie.name}=${cookie.value}`,
+    "Path=/",
+    `Max-Age=${cookie.options.maxAge}`,
+  ];
+  if (cookie.options.expires !== undefined) {
+    parts.push(`Expires=${cookie.options.expires.toUTCString()}`);
+  }
+  parts.push("HttpOnly");
+  if (cookie.options.secure) parts.push("Secure");
+  parts.push("SameSite=Lax");
+  return parts.join("; ");
+}
+
 export function sessionCodecContext(config: AuthRuntimeConfig): SessionCodecContext {
   return { audience: config.sessionAudience, purpose: config.cookieName };
 }
