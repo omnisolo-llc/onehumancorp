@@ -193,6 +193,53 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("resolves a body-derived backend path only after bounded parsing", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      expect(String(input)).toBe(
+        "https://api.example.com/api/assistant/tasks/task-7/artifacts",
+      );
+      return Response.json({ ok: true });
+    });
+    const deps = await dependencies(fetchImpl);
+    const input = await request(deps, "/api/assistant/artifacts", {
+      method: "POST",
+      body: '{"taskId":"task-7"}',
+      headers: { "content-type": "application/json" },
+    });
+
+    const response = await proxyAuthenticatedRequest(
+      input,
+      "/unused",
+      deps,
+      {
+        resolveBackendPath: (body) => {
+          const value = JSON.parse(new TextDecoder().decode(body));
+          return `/api/assistant/tasks/${value.taskId}/artifacts`;
+        },
+      },
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("does not resolve a body-derived path for an oversized request", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const deps = { ...(await dependencies(fetchImpl)), requestLimitBytes: 8 };
+    const input = await request(deps, "/api/assistant/artifacts", {
+      method: "POST",
+      body: '{"taskId":"task-7"}',
+    });
+    const resolveBackendPath = vi.fn(() => "/api/assistant/tasks/task-7/artifacts");
+
+    const response = await proxyAuthenticatedRequest(input, "/unused", deps, {
+      resolveBackendPath,
+    });
+
+    expect(response.status).toBe(413);
+    expect(resolveBackendPath).not.toHaveBeenCalled();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("rejects backend redirects and oversized responses", async () => {
     const redirectBody = new ReadableStream<Uint8Array>({
       start(controller) {

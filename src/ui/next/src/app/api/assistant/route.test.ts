@@ -47,6 +47,10 @@ function patchRequest(url: string, body: unknown) {
   });
 }
 
+function getRequest(path: string) {
+  return new Request(`http://localhost${path}`);
+}
+
 function taskContext(id: string) {
   return { params: Promise.resolve({ id }) };
 }
@@ -146,7 +150,7 @@ describe('assistant API contract', () => {
   });
 
   test('lists seeded Agent tasks with artifacts and changes', async () => {
-    const response = await getTasks();
+    const response = await getTasks(getRequest('/api/assistant/tasks'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -379,7 +383,7 @@ describe('assistant API contract', () => {
   });
 
   test('edits, imports, and forgets visible assistant memory', async () => {
-    const initial = await (await getMemory()).json();
+    const initial = await (await getMemory(getRequest('/api/assistant/memory'))).json();
     expect(initial.memories.map((item: any) => item.content)).toContain('Prefer concise technical summaries with citations.');
 
     const importResponse = await patchMemory(jsonRequest('http://localhost/api/assistant/memory', {
@@ -420,33 +424,33 @@ describe('assistant API contract', () => {
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'approve_changes' }),
       taskContext('task-weekly-brief'),
     );
-    let body = await (await getTasks()).json();
+    let body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').changes[0].approvalStatus).toBe('approved');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'stop' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks()).json();
+    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('blocked');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'resume' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks()).json();
+    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('running');
 
     await patchTaskAction(
       patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks()).json();
+    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('archived');
   });
 
   test('manages skills connector status and data cleanup queues', async () => {
-    let skills = await (await getSkills()).json();
+    let skills = await (await getSkills(getRequest('/api/assistant/skills'))).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Web Research', status: 'installed' })]));
     expect(skills.skills).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Expert Ranking', category: 'Expert Center', status: 'available' }),
@@ -496,7 +500,7 @@ describe('assistant API contract', () => {
       status: 'generated',
     });
 
-    let connectors = await (await getConnectors()).json();
+    let connectors = await (await getConnectors(getRequest('/api/assistant/connectors'))).json();
     expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'MCP Endpoint' })]));
     expect(connectors.connectors).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'GitHub', kind: 'repository', status: 'available' }),
@@ -542,14 +546,8 @@ describe('assistant API contract', () => {
     );
   });
 
-  test('generates Agent-style office export artifacts', async () => {
-    for (const [format, mimeType] of [
-      ['Document', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-      ['Spreadsheet', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-      ['Presentation', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-      ['PDF', 'application/pdf'],
-      ['ZIP', 'application/zip'],
-    ]) {
+  test('does not fabricate office export artifacts without the backend', async () => {
+    for (const format of ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'ZIP']) {
       const response = await postArtifact(jsonRequest('http://localhost/api/assistant/artifacts', {
         taskId: 'task-weekly-brief',
         outputFormat: format,
@@ -557,13 +555,9 @@ describe('assistant API contract', () => {
       }));
       const body = await response.json();
 
-      expect(response.status).toBe(502);
-//       expect(body.artifact).toMatchObject({
-//         mimeType,
-//         filename: expect.any(String),
-//       });
+      expect(response.status).toBe(503);
+      expect(body).toEqual({ error: 'backend unavailable' });
     }
-//     }
   });
 
   test('grants and revokes guarded folder permissions', async () => {
@@ -584,7 +578,7 @@ describe('assistant API contract', () => {
     expect(body.authorizedFolders).not.toContain('/Users/me/Downloads');
   });
 
-  test('plans guarded local file operations before execution', async () => {
+  test('does not fabricate local file operations without the backend', async () => {
     const response = await postFileOperation(jsonRequest('http://localhost/api/assistant/files', {
       operation: 'batch_convert',
       folder: '/Users/me/Downloads',
@@ -593,19 +587,8 @@ describe('assistant API contract', () => {
     }));
     const body = await response.json();
 
-    expect(response.status).toBe(400);
-//     expect(body.operation).toMatchObject({
-//       operation: 'batch_convert',
-//       folder: '/Users/me/Downloads',
-//       status: 'needs_permission',
-//       approvalRequired: true,
-//     });
-//     expect(body.operation.plan).toEqual(
-//       expect.arrayContaining([
-//         expect.stringContaining('Read matching files'),
-//         expect.stringContaining('Write converted files'),
-//       ]),
-//     );
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ error: 'backend unavailable' });
   });
 
   test('manages custom model UI settings and runtime detection', async () => {
@@ -751,7 +734,7 @@ describe('assistant API contract', () => {
   });
 
   test('manages workspaces collapse pin archive filter sort and hard delete', async () => {
-    let body = await (await getWorkspaces()).json();
+    let body = await (await getWorkspaces(getRequest('/api/assistant/workspaces'))).json();
     expect(body.workspaces).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Personal OS', memoryFile: 'MEMORY.md' }),
     ]));
@@ -1442,7 +1425,7 @@ describe('assistant API contract', () => {
   });
 
   test('billing route returns billing state', async () => {
-    const body = await (await getBilling()).json();
+    const body = await (await getBilling(getRequest('/api/assistant/billing'))).json();
     expect(body.plan).toBe('Growth');
     expect(body.aiActionsUsed).toBe(145);
     expect(body.storageUsedGB).toBe(12.4);

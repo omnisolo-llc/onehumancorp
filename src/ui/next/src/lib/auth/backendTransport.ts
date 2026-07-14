@@ -29,6 +29,7 @@ export type BackendTransportDependencies = ServerSessionDependencies &
   }>;
 
 export type BackendRequestOptions = Readonly<{
+  resolveBackendPath?: (body: Uint8Array<ArrayBuffer>) => string | Promise<string>;
   transformRequestBody?: (
     body: Uint8Array<ArrayBuffer>,
   ) => Uint8Array<ArrayBuffer> | Promise<Uint8Array<ArrayBuffer>>;
@@ -211,16 +212,17 @@ export async function proxyAuthenticatedRequest(
   }
   const method = request.method.toUpperCase();
   if (!ALLOWED_METHODS.has(method)) return error(405, "method not allowed");
-  const target = validatedBackendUrl(
-    dependencies.config.backendOrigin,
-    backendPath,
-  );
-  if (target === null) return error(400, "invalid backend path");
+  let target =
+    options.resolveBackendPath === undefined
+      ? validatedBackendUrl(dependencies.config.backendOrigin, backendPath)
+      : null;
+  if (options.resolveBackendPath === undefined && target === null) {
+    return error(400, "invalid backend path");
+  }
 
   const session = await readServerSession(request, dependencies);
   const headers = requestHeaders(request, session);
   if (headers === null) return error(401, "authentication required");
-  applyVerifiedIdentityQuery(target, request.url, session);
   if (!declaredLengthWithinLimit(request.headers, dependencies.requestLimitBytes)) {
     return error(413, "request too large");
   }
@@ -238,6 +240,17 @@ export async function proxyAuthenticatedRequest(
       if (cause instanceof BodyLimitError) return error(413, "request too large");
       throw cause;
     }
+    if (options.resolveBackendPath !== undefined) {
+      try {
+        const resolvedPath = await options.resolveBackendPath(encodedRequest);
+        target = validatedBackendUrl(dependencies.config.backendOrigin, resolvedPath);
+      } catch {
+        return error(400, "invalid request");
+      }
+      if (target === null) return error(400, "invalid backend path");
+    }
+    if (target === null) return error(400, "invalid backend path");
+    applyVerifiedIdentityQuery(target, request.url, session);
     if (options.transformRequestBody !== undefined) {
       try {
         encodedRequest = await options.transformRequestBody(encodedRequest);
