@@ -1,7 +1,6 @@
 filegroup(
     name = "srcs",
     srcs = [
-        "handlers.rs",
         "identity.rs",
         "mod.rs",
         "webhook.rs",

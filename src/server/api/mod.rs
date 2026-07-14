@@ -42,6 +42,7 @@ pub mod incidents;
 pub mod cart;
 
 pub mod quotes;
+pub mod inbox;
 pub mod sync_gateway;
 pub mod assistant;
 pub mod payment_ledger;
@@ -56,4 +57,3 @@ mod walkup;
 pub mod tool_integrations;
 pub mod ohc_job_queue;
 pub mod checkout_api;
-pub mod inbox;
