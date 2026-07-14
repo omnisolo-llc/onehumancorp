@@ -24,7 +24,7 @@ async fn test_kv_get_set_list_delete_standalone() {
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(DB {
-            pool: pool.clone(),
+            pool: crate::db::get_pool(), // dummy pg pool
             store: DbStore::Sqlite(pool),
         });
 

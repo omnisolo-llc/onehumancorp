@@ -137,21 +137,21 @@ impl OHCJobQueue {
         .await
         .map_err(|e| e.to_string())?;
 
-        // Clean up Stagnant backlog items: PENDING jobs stuck for > 24 hours
+        // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
         let query_str = if is_standalone {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id, tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT id, tenant_id, 'job_failed', 'job_queue', COALESCE(CAST(payload AS TEXT), '{}'), '[cleanup] stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
         } else {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
-             SELECT id::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             SELECT id::text, tenant_id, 'job_failed', 'job_queue', COALESCE(payload::text, '{}'), '[cleanup] stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
         if let Err(e) = sqlx::query(query_str).execute(&mut *tx).await {
-            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for Stagnant backlog items");
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for stagnant backlog items");
             return Err(e.to_string());
         }
 
@@ -163,17 +163,17 @@ impl OHCJobQueue {
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         };
 
-        let Stagnant_result = sqlx::query(query_str)
+        let stagnant_result = sqlx::query(query_str)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
-        if Stagnant_result.rows_affected() > 0 {
-            ::server_telemetry::record_error_signal("[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours");
+        if stagnant_result.rows_affected() > 0 {
+            ::server_telemetry::record_error_signal("[cleanup] stagnant backlog item stuck in PENDING for > 24 hours");
         }
 
         tx.commit().await.map_err(|e| e.to_string())?;
-        Ok(result.rows_affected() + Stagnant_result.rows_affected())
+        Ok(result.rows_affected() + stagnant_result.rows_affected())
     }
 
     pub async fn fail(&self, job_id: &str, max_retries: i32, reason: &str) -> Result<(), String> {
