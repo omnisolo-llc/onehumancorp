@@ -176,3 +176,7 @@ build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
 GOTOOLCHAIN=local
+build --remote_cache=
+build --remote_executor=
+build --remote_upload_local_results=false
+build --bes_backend=

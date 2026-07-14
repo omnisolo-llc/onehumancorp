@@ -224,7 +224,7 @@ pub async fn end_terminal_session_handler(
     )
     .bind(&req_data.session_id)
     .bind(&tenant_id)
-    .execute(&pool)
+    .execute(&mut *db_tx)
     .await;
 
     match res {
@@ -389,6 +389,8 @@ pub async fn sync_offline_transactions_handler(
 
     // Update pos_terminal_sessions
     let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let mut pre_tx = pool.begin().await.unwrap();
+    let _ = crate::common::auth_utils::set_org_context(&mut *pre_tx, &tenant_id).await;
     let _ = sqlx::query(
         "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
@@ -398,8 +400,9 @@ pub async fn sync_offline_transactions_handler(
     .bind(&tenant_id)
     .bind(&client_id)
     .bind(req_data.transactions.len() as i32)
-    .execute(&pool)
+    .execute(&mut *pre_tx)
     .await;
+    let _ = pre_tx.commit().await;
 
     if !req_data.transactions.is_empty() {
         let mut db_tx = match pool.begin().await {
@@ -556,13 +559,7 @@ pub async fn sync_offline_transactions_handler(
                         }
                         let _ = db_tx.rollback().await;
                     } else {
-                        if let Err(e) = db_tx.commit().await {
-                            tracing::error!("Failed to commit transaction: {}", e);
-                            for tx in &req_data.transactions {
-                                failed_ids.push(tx.id.clone().unwrap_or_default());
-                            }
-                        } else {
-                            // Update pos_terminal_sessions with conflicts_pending if needed
+                            // Update pos_terminal_sessions with conflicts_pending if needed BEFORE commit
                             if !pending_reconciliation_items.is_empty() {
                                 let conflict_payload = serde_json::json!(pending_reconciliation_items.clone());
                                 let _ = sqlx::query(
@@ -575,9 +572,16 @@ pub async fn sync_offline_transactions_handler(
                                 .bind(conflict_payload)
                                 .bind(&tenant_id)
                                 .bind(&client_id)
-                                .execute(&pool)
+                                .execute(&mut *db_tx)
                                 .await;
                             }
+
+                        if let Err(e) = db_tx.commit().await {
+                            tracing::error!("Failed to commit transaction: {}", e);
+                            for tx in &req_data.transactions {
+                                failed_ids.push(tx.id.clone().unwrap_or_default());
+                            }
+                        } else {
                             synced_count = req_data.transactions.len() as i32;
                         }
                     }
@@ -661,10 +665,12 @@ pub async fn sync_offline_transactions_handler(
 
     let mut pending_reconciliation = None;
     if let Some(session_id) = &req_data.session_id {
+        let mut db_tx = pool.begin().await.unwrap();
+        let _ = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await;
         if let Ok(row) = sqlx::query("SELECT pending_reconciliation FROM pos_terminal_sessions WHERE id = $1 AND tenant_id = $2")
             .bind(session_id)
             .bind(&tenant_id)
-            .fetch_optional(&pool)
+            .fetch_optional(&mut *db_tx)
             .await
         {
             if let Some(r) = row {
@@ -815,13 +821,15 @@ pub async fn create_payment_intent_handler(
 
     let pool = crate::db::get_pool();
 
+    let mut db_tx = pool.begin().await.unwrap();
+    let _ = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await;
     // Check for existing intent with the same idempotency key
     let existing: Option<(String,)> = sqlx::query_as(
         "SELECT stripe_payment_intent_id FROM payment_intents WHERE tenant_id = $1 AND idempotency_key = $2"
     )
     .bind(&tenant_id)
     .bind(&idempotency_key)
-    .fetch_optional(&pool)
+    .fetch_optional(&mut *db_tx)
     .await.unwrap_or(None);
 
     if let Some((_stripe_id,)) = existing {
