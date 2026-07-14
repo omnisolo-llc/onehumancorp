@@ -74,7 +74,7 @@ export type RemoteTask = {
 export type BillingRecord = {
   plan: string;
   aiActionsUsed: number;
-  aiActionsLimit: number;
+  aiActionsLimit: number | null;
   storageUsedGB: number;
   storageLimitGB: number;
   estimatedNextBill: number;
@@ -763,7 +763,7 @@ let approvals: ApprovalRecord[] = [];
 let billing: BillingRecord = {
   plan: 'Growth',
   aiActionsUsed: 145,
-  aiActionsLimit: 500,
+  aiActionsLimit: null,
   storageUsedGB: 12.4,
   storageLimitGB: 50,
   estimatedNextBill: 29.00,

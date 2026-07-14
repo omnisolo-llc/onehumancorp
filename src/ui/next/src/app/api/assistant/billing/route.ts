@@ -25,7 +25,7 @@ export async function GET(request?: Request) {
       return NextResponse.json({
         plan: data.current_plan,
         aiActionsUsed: data.ai_actions_used,
-        aiActionsLimit: data.ai_actions_limit || 0,
+        aiActionsLimit: data.ai_actions_limit || null,
         storageUsedGB: parseFloat((data.storage_used_bytes / (1024 * 1024 * 1024)).toFixed(2)),
         storageLimitGB: data.storage_limit_bytes ? parseFloat((data.storage_limit_bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0,
         estimatedNextBill: data.next_bill_estimated / 100,
