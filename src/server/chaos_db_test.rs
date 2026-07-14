@@ -396,7 +396,7 @@ mod chaos_db_tests {
         }
 
         let sqlite_db = Arc::new(DB {
-            pool: crate::db::create_sqlite_pool_for_test().await, // mock dummy
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
