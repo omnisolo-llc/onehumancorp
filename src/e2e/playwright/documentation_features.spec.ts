@@ -63,7 +63,7 @@ test.describe('Documentation Features CUJ', () => {
   });
 
   test('User can navigate to Advanced API Docs and see tooltip on header', async ({ page }) => {
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
 
     // Check title
     await expect(page.locator('h1')).toContainText('OHC Advanced API Reference');

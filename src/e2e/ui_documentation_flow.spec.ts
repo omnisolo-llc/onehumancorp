@@ -21,7 +21,7 @@ test.describe("Documentation Features Flow", () => {
     // Since mock dummy data is removed, the link might not exist if the backend is empty.
     // If there is an article, we click it. Otherwise, we just verify the empty state.
     const articleLink = page
-      .locator('a[href="/help/getting-started-1"]')
+      .locator('a[href="/help_article.html?id=getting-started-1"]')
       .first();
     const emptyState = page.locator(
       "text=No help articles available right now.",
@@ -45,7 +45,7 @@ test.describe("Documentation Features Flow", () => {
     await articleLink.click({ force: true });
 
     // Help Article Page
-    await expect(page).toHaveURL(/\/help\/getting-started-1/, {
+    await expect(page).toHaveURL(/\/help_article\.html\?id=getting-started-1/, {
       timeout: 15000,
     });
   });
@@ -109,7 +109,7 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("Advanced User can access API Documentation", async ({ page }) => {
-    await page.goto("/api-docs");
+    await page.goto("/api-docs.html");
     await page.waitForLoadState("networkidle");
 
     // Verify the advanced disclaimer

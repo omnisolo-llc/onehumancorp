@@ -74,7 +74,7 @@ test.describe('Tooltip functionality', () => {
   test('should display tooltip on hover', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     // Wait until tooltips load dynamically or are preloaded on Help page
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
 
     // The component wrapper has class inline-block relative cursor-help
     const tooltipTrigger = page.locator('.cursor-help').first();
@@ -113,7 +113,7 @@ test.describe('Changelog UX', () => {
 
 test.describe('API Documentation', () => {
   test('should navigate to API Documentation and load Swagger UI', async ({ page }) => {
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
 
     // Check for advanced warning badge
     await expect(page.getByText('Advanced:')).toBeVisible();

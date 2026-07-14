@@ -771,13 +771,13 @@ ON CONFLICT DO NOTHING;
 
 -- Seed help_articles
 INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
-('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help/getting-started-1'),
-('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help/add-products'),
-('e2e-tenant', 'Payments', 'Accepting Payments', 'Learn how to accept credit cards and manage your payouts.', '/help/accept-payments'),
-('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help/ai-support'),
-('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help/marketing-tools'),
-('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help/billing-settings'),
-('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs')
+('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help_article.html?id=getting-started-1'),
+('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help_article.html?id=add-products'),
+('e2e-tenant', 'Payments', 'Accepting Payments', 'Learn how to accept credit cards and manage your payouts.', '/help_article.html?id=accept-payments'),
+('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help_article.html?id=ai-support'),
+('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help_article.html?id=marketing-tools'),
+('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help_article.html?id=billing-settings'),
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', 'api-docs.html')
 ON CONFLICT DO NOTHING;
 
 -- Seed video_tutorials
@@ -802,13 +802,13 @@ ON CONFLICT DO NOTHING;
 
 -- Seed help_articles
 INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
-('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help/getting-started-1'),
-('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help/add-products'),
-('e2e-tenant', 'Payments', 'Accepting Payments', 'Learn how to accept credit cards and manage your payouts.', '/help/accept-payments'),
-('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help/ai-support'),
-('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help/marketing-tools'),
-('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help/billing-settings'),
-('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs')
+('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help_article.html?id=getting-started-1'),
+('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help_article.html?id=add-products'),
+('e2e-tenant', 'Payments', 'Accepting Payments', 'Learn how to accept credit cards and manage your payouts.', '/help_article.html?id=accept-payments'),
+('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help_article.html?id=ai-support'),
+('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help_article.html?id=marketing-tools'),
+('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help_article.html?id=billing-settings'),
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', 'api-docs.html')
 ON CONFLICT DO NOTHING;
 
 -- Seed video_tutorials
