@@ -3,7 +3,7 @@ import { PUBLIC_ROUTE_ENTRIES, classifyRequest } from "./publicRoutes";
 import type { PublicRouteEntry } from "./types";
 
 const TEST_API_CONTRACT = {
-  bodyLimitBytes: 8192,
+  bodyLimitBytes: 4096,
   rateLimitPolicy: "next-source-and-rust-account",
   tenantSource: "validated-organization-field",
   replayPolicy: "non-idempotent-credential-exchange",
@@ -39,7 +39,7 @@ describe("bootstrap public contracts", () => {
         reason: "exchange bounded credentials for an encrypted web session",
         owner: "authentication",
         api: {
-          bodyLimitBytes: 8192,
+          bodyLimitBytes: 4096,
           rateLimitPolicy: "next-source-and-rust-account",
           tenantSource: "validated-organization-field",
           replayPolicy: "non-idempotent-credential-exchange",
