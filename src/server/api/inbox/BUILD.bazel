@@ -1,12 +1,14 @@
-filegroup(
-    name = "srcs",
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_api_inbox",
     srcs = [
-        "identity.rs",
-        "mod.rs",
-        "webhook.rs",
-        "customer_memory.rs",
-        "action_required.rs",
-        "action_required_test.rs",
+        "handlers.rs",
+        "lib.rs",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
+        "@crates//:axum",
+    ],
 )

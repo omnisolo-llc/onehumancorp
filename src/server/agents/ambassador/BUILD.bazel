@@ -1,0 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_agents_ambassador",
+    srcs = [
+        "agent.rs",
+        "lib.rs",
+        "tests.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/domain/inbox:server_domain_inbox",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_agents_ambassador_test",
+    crate = ":server_agents_ambassador",
+)
