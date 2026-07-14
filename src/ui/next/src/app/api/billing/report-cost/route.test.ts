@@ -1,62 +1,21 @@
-import { POST } from './route';
-import { NextRequest } from 'next/server';
+import { expect, test, vi } from "vitest";
 
-describe('POST /api/billing/report-cost', () => {
-    let originalFetch: typeof global.fetch;
+const proxyCurrentBackendPath = vi.hoisted(() =>
+  vi.fn(async () => Response.json({ success: true })),
+);
 
-    beforeAll(() => {
-        originalFetch = global.fetch;
-    });
+vi.mock("@/app/api/backendCatchAll", () => ({ proxyCurrentBackendPath }));
 
-    afterAll(() => {
-        global.fetch = originalFetch;
-    });
+import { POST } from "./route";
 
-    it('successfully forwards the request and returns JSON', async () => {
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            status: 200,
-            headers: new Headers({ 'content-type': 'application/json' }),
-            json: async () => ({ success: true }),
-        } as any);
+test("uses the authenticated billing transport", async () => {
+  const request = new Request("http://localhost/api/billing/report-cost", {
+    method: "POST",
+    body: '{"value":100}',
+  });
 
-        const request = new NextRequest('http://localhost/api/billing/report-cost', {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer test_token',
-                'x-tenant-id': 'test_tenant',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ value: 100 }),
-        });
+  const response = await POST(request);
 
-        const response = await POST(request);
-        const data = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(data).toEqual({ success: true });
-    });
-
-    it('returns an error when the backend fails', async () => {
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 400,
-        } as any);
-
-        const request = new NextRequest('http://localhost/api/billing/report-cost', {
-            method: 'POST',
-            body: JSON.stringify({ value: 100 }),
-        });
-
-        const originalConsoleError = console.error;
-        console.error = vi.fn();
-
-        const response = await POST(request);
-        const data = await response.json();
-
-        console.error = originalConsoleError;
-
-        expect(response.status).toBe(502);
-        expect(data).toEqual({ error: 'Failed to report cost to backend' });
-    });
+  expect(await response.json()).toEqual({ success: true });
+  expect(proxyCurrentBackendPath).toHaveBeenCalledWith(request);
 });
