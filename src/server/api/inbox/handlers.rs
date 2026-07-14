@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use server_domain_inbox::models::IncomingMessage;
+use crate::domain::inbox::models::IncomingMessage;
 
 pub async fn handle_incoming_message(
     State(_state): State<()>, // Placeholder for app state

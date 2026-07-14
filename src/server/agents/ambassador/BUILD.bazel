@@ -4,9 +4,10 @@ rust_library(
     name = "server_agents_ambassador",
     srcs = [
         "agent.rs",
-        "lib.rs",
+        "mod.rs",
         "tests.rs",
     ],
+    crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/domain/inbox:server_domain_inbox",

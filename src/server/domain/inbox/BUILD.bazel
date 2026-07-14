@@ -3,10 +3,11 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "server_domain_inbox",
     srcs = [
-        "lib.rs",
+        "mod.rs",
         "models.rs",
         "tests.rs",
     ],
+    crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:serde",

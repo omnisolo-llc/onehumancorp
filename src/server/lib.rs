@@ -2985,11 +2985,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
-    let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
+    let inbox_webhook_state = crate::api::inbox::webhook::OmnichannelWebhookState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
     };
-    let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
+    let inbox_webhook_router = crate::api::inbox::webhook::router(inbox_webhook_state);
 
         // Create Twilio Voice engines
     let twilio_voice_engine = std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new());
@@ -7386,8 +7386,8 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
-        .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
-        .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
+        .nest("/api/memory", crate::api::inbox::customer_memory::router(db.clone()))
+        .nest("/api/inbox/action_required", crate::api::inbox::action_required::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
