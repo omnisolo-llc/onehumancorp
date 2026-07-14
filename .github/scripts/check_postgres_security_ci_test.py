@@ -103,8 +103,8 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
-            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
-            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  BASH_ENV: /tmp/skip-security.sh',
+            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  NODE_DISABLE_COMPILE_CACHE: "1"',
+            '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  NODE_DISABLE_COMPILE_CACHE: "1"\n  BASH_ENV: /tmp/skip-security.sh',
             "workflow BASH_ENV override",
         ),
         ("pgvector/pgvector:pg16", "postgres:16", "pgvector service"),
@@ -424,7 +424,7 @@ def main() -> None:
         expect_rejected(workflow, old, new, label)
     duplicate_documents = (
         (
-            '\nenv:\n  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  BASH_ENV: /tmp/skip-security.sh\n',
+            '\nenv:\n  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  NODE_DISABLE_COMPILE_CACHE: "1"\n  BASH_ENV: /tmp/skip-security.sh\n',
             "duplicate top-level env",
         ),
         (
