@@ -6,6 +6,9 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
   const customerId = uuidv4();
 
   test('should show error when customerId is missing from query parameters', async ({ page }) => {
+    await page.route('**/api/inbox/summary/**', async route => {
+      await route.fulfill({ status: 404, body: 'Not found' });
+    });
     await page.goto(`/customer/memory-graph?tenantId=${tenantId}`);
     await expect(page.getByText('Customer not found.').or(page.getByText('Missing customer ID'))).toBeVisible();
   });
@@ -41,15 +44,32 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
   });
 
   test('should display the memory graph correctly for an existing customer', async ({ page, request }) => {
+    // We mock the API to return a successful 200 response with timeline data to test the happy path UI
+    await page.route('**/api/inbox/summary/**', async route => {
+      await route.fulfill({
+        status: 200,
+        json: {
+          customer_name: "John Doe",
+          summary: "This is a great customer.",
+          interactions: [
+             { channel: "email", description: "Sent an inquiry about cakes", created_at: "2026-07-14T10:00:00Z" },
+             { channel: "ig_dm", description: "Followed up via Instagram", created_at: "2026-07-15T11:30:00Z" }
+          ],
+          total_interactions: 2,
+          segments: ["Returning"],
+          preferences: ["Vegan"]
+        }
+      });
+    });
+
     // Navigate to the memory graph page
     await page.goto(`/customer/memory-graph?tenantId=${tenantId}&customerId=${customerId}`);
 
-    // Expect loading state initially or fallback immediately
-    await expect(page.locator('text=Failed to fetch customer history.').or(page.locator('text=Loading customer history...'))).toBeVisible();
-
-    // In our E2E environment without DB seeds matching this specific ID exactly, we will see the error state
-    // Let's test that the UI handles this error correctly
-    await expect(page.getByText('Customer not found.')).toBeVisible();
-    await expect(page.getByText('Make sure the customer ID is correct.')).toBeVisible();
+    // Expect the data to be rendered correctly
+    await expect(page.getByText('Customer Context')).toBeVisible();
+    await expect(page.getByText('This is a great customer.')).toBeVisible();
+    await expect(page.getByText('Sent an inquiry about cakes')).toBeVisible();
+    await expect(page.getByText('Followed up via Instagram')).toBeVisible();
+    await expect(page.getByText('2 total interactions recorded.')).toBeVisible();
   });
 });

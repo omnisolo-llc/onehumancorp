@@ -10,6 +10,10 @@ pub struct CustomerProfileSummary {
     pub segments: Vec<String>,
     pub preferences: Vec<String>,
     pub summary: String,
+    #[serde(default)]
+    pub customer_name: String,
+    #[serde(default)]
+    pub interactions: Vec<serde_json::Value>,
 }
 
 pub struct CustomerMemoryGraphService {
@@ -64,14 +68,14 @@ impl CustomerMemoryGraphService {
             .await?;
 
         let record = sqlx::query(
-            "SELECT profile_summary FROM customers WHERE id = $1"
+            "SELECT profile_summary, name FROM customers WHERE id = $1"
         )
         .bind(customer_id)
         .fetch_optional(&mut *tx)
         .await?;
 
-        let summary = if let Some(row) = record {
-            if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
+        let mut summary = if let Some(row) = record {
+            let mut s = if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
                 val.0
             } else {
                 CustomerProfileSummary {
@@ -80,8 +84,14 @@ impl CustomerMemoryGraphService {
                     segments: vec![],
                     preferences: vec![],
                     summary: "No summary available.".to_string(),
+                    customer_name: "Unknown Customer".to_string(),
+                    interactions: vec![],
                 }
+            };
+            if let Ok(name) = row.try_get::<String, _>("name") {
+                s.customer_name = name;
             }
+            s
         } else {
             CustomerProfileSummary {
                 total_interactions: 0,
@@ -89,8 +99,35 @@ impl CustomerMemoryGraphService {
                 segments: vec![],
                 preferences: vec![],
                 summary: "Customer not found.".to_string(),
+                customer_name: "Unknown Customer".to_string(),
+                interactions: vec![],
             }
         };
+
+        let interaction_records = sqlx::query(
+            "SELECT channel, raw_content, created_at FROM interaction_events WHERE customer_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(customer_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        for record in interaction_records {
+            let channel: String = record.try_get("channel").unwrap_or_default();
+            let raw_content: String = record.try_get("raw_content").unwrap_or_default();
+            let created_at: Option<DateTime<Utc>> = record.try_get("created_at").ok();
+
+            summary.interactions.push(serde_json::json!({
+                "channel": channel,
+                "description": raw_content,
+                "created_at": created_at,
+            }));
+        }
+
+        summary.total_interactions = summary.interactions.len() as i64;
+
+        if summary.last_interaction.is_none() && !summary.interactions.is_empty() {
+            summary.last_interaction = summary.interactions[0].get("created_at").and_then(|v| serde_json::from_value(v.clone()).ok());
+        }
 
         tx.commit().await?;
         Ok(summary)
@@ -119,27 +156,97 @@ impl CustomerMemoryGraphService {
             let tenant_id: String = job.get("tenant_id");
             let event_id: Uuid = job.get("interaction_event_id");
 
-            // Mocking the AI extraction part:
-            // 1. Fetch event content
-            // 2. Call LLM (mocked here)
-            // 3. Extract context snippet
-            // 4. Update customer profile summary
-
-            // Set tenant for the rest of processing
             sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
                 .bind(&tenant_id)
                 .execute(&mut *tx)
                 .await?;
 
             let event = sqlx::query(
-                "SELECT customer_id, raw_content FROM interaction_events WHERE id = $1"
+                "SELECT customer_id, channel, raw_content FROM interaction_events WHERE id = $1"
             )
             .bind(event_id)
             .fetch_one(&mut *tx)
             .await?;
 
-            let customer_id: String = event.get("customer_id");
+            let mut customer_id: String = event.get("customer_id");
+            let channel: String = event.get("channel");
             let content: String = event.get("raw_content");
+
+            // Omnichannel Identity Graph: Merge logic
+            // 1. Try to extract identifiers from content (e.g. email or phone)
+            // In a real agent we would ask LLM, here we do deterministic regex matching for emails or assume the channel itself provides identity.
+            // If we have an existing customer with this channel/content as identity, we merge.
+            // For now, if the content contains an email, we match the email.
+            let mut extracted_email = None;
+            if content.contains('@') && content.contains('.') {
+                let parts: Vec<&str> = content.split_whitespace().collect();
+                for p in parts {
+                    if p.contains('@') && p.contains('.') {
+                        extracted_email = Some(p.to_string());
+                        break;
+                    }
+                }
+            }
+
+            if let Some(email) = extracted_email {
+                let existing_id: Option<String> = sqlx::query_scalar(
+                    "SELECT id FROM customers WHERE email = $1 AND id != $2"
+                )
+                .bind(&email)
+                .bind(&customer_id)
+                .fetch_optional(&mut *tx)
+                .await?;
+
+                if let Some(target_id) = existing_id {
+                    // Merge! Update interactions
+                    let _ = sqlx::query("UPDATE interaction_events SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    // Update identities
+                    let _ = sqlx::query("UPDATE customer_identities SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE context_snippets SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE work_item SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    // Update customer_timeline
+                    let _ = sqlx::query("UPDATE customer_timeline SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    // Remove old
+                    let _ = sqlx::query("DELETE FROM customers WHERE id = $1")
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    customer_id = target_id;
+                } else {
+                    // Update email if not present
+                    sqlx::query("UPDATE customers SET email = $1 WHERE id = $2 AND email IS NULL")
+                        .bind(&email)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await?;
+                }
+            }
 
             // Add a mock snippet based on content
             let snippet_id = Uuid::new_v4();
@@ -184,8 +291,6 @@ impl CustomerMemoryGraphService {
             .execute(&mut *tx)
             .await?;
 
-            // Mark job as completed
-            // Restore no-tenant bypass for job updates if needed, or leave tenant bound
             sqlx::query(
                 "UPDATE interaction_event_jobs SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE job_id = $1"
             )
