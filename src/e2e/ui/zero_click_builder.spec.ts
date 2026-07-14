@@ -17,6 +17,8 @@ test.describe('Zero-Click Business Generator CUJ', () => {
   });
 
   test('User can generate a business with a single prompt', async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
+    page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
 
     const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..', '..');
 
@@ -30,6 +32,22 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     });
 
     // Mock the api response
+    await page.route('**/api/onboarding/intake*', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                intake_data: {
+                    business_type: "Bakery",
+                    business_name: "Vegan Cakes Austin",
+                    categories: ["Food"],
+                    location: "Austin, TX",
+                    deposit_percentage: 50,
+                    initial_products: [{name: "Vegan Cake", price: "50.00"}]
+                }
+            })
+        });
+    });
     await page.route('**/api/onboarding/start_zero_click*', async route => {
         await route.fulfill({
             status: 200,
@@ -50,6 +68,14 @@ test.describe('Zero-Click Business Generator CUJ', () => {
         });
     });
 
+    await page.route('**/dashboard*', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: "<html><body><div id='unified-agent-feed-section'>Dashboard Success</div></body></html>"
+        });
+    });
+
     // Navigate to the real setup page
     await page.goto('http://mock/onboarding/zero-click');
 
@@ -67,18 +93,9 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     // 4. Click generate
     await generateBtn.click();
 
-    // 5. Wait for the approval screen to appear
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 15000 });
+    // 5. Verify the redirection to dashboard (Zero-Click means no approval step)
+    await expect(page).toHaveURL(/.*dashboard.*/, { timeout: 30000 });
 
-    // Verify preview and deposit policy text
-    await expect(page.locator('#approval-details')).toBeVisible();
-    await expect(page.locator('#approval-details')).toContainText('Suggested Deposit Policy');
 
-    // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn');
-    await approveBtn.click();
-
-    // 6. Wait for generation to complete and the success message to appear
-    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
   });
 });

@@ -3843,7 +3843,7 @@
                 ? "http://127.0.0.1:18789"
                 : "";
 
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start_zero_click`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -3973,7 +3973,7 @@
             const userIdStr =
               localStorage.getItem("user_id") || "e2e-admin-user";
 
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start_zero_click`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -4153,7 +4153,7 @@
               return;
             }
 
-            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start_zero_click`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(startReq),
@@ -4357,7 +4357,7 @@
                 ["1420", "3000", "8081"].includes(window.location.port)
                   ? "http://127.0.0.1:18789"
                   : "";
-              fetch(`${backendUrl}/api/onboarding/start`, {
+              fetch(`${backendUrl}/api/onboarding/start_zero_click`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
