@@ -150,3 +150,24 @@ pub struct TaskEnvelope {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub description: String,
+    pub action_type: String,
+    pub status: String,
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionContext {
+    pub id: String,
+    pub tenant_id: String,
+    pub action_item_id: String,
+    pub customer_id: Option<String>,
+    pub order_id: Option<String>,
+    pub context_data: serde_json::Value,
+}

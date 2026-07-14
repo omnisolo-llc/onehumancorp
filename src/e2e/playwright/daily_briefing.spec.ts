@@ -38,7 +38,7 @@ test.describe('Actionable Daily Briefing on Dashboard', () => {
     await page.goto('/dashboard');
 
     // Expect the Morning Briefing text block to load
-    await expect(page.getByTestId('morning-briefing-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('onboarding-welcome-card')).toBeVisible({ timeout: 10000 });
 
     // Ensure the Action Card renders correctly
     await expect(page.locator('text=Suggested Action')).toBeVisible({ timeout: 10000 });

@@ -6,6 +6,37 @@ pub struct OperationsAgent {
 }
 
 impl OperationsAgent {
+    pub async fn queue_daily_briefing_action(&self, tenant_id: &str, description: &str, action_type: &str, metadata: Option<serde_json::Value>) -> Result<crate::orchestration::departments::types::ActionItem, Box<dyn std::error::Error + Send + Sync>> {
+        let action_item = crate::orchestration::departments::types::ActionItem {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            description: description.to_string(),
+            action_type: action_type.to_string(),
+            status: "pending".to_string(),
+            metadata: metadata.clone(),
+            created_at: Some(chrono::Utc::now()),
+        };
+
+        let db = self.orchestrator.db();
+        sqlx::query(
+            r#"
+            INSERT INTO approval_requests (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            "#
+        )
+        .bind(&action_item.id)
+        .bind(&action_item.tenant_id)
+        .bind("operations")
+        .bind(&action_item.description)
+        .bind("pending")
+        .bind("HIGH")
+        .bind(action_item.metadata.clone())
+        .execute(&db.pool)
+        .await?;
+
+        Ok(action_item)
+    }
+
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self { orchestrator }
     }
