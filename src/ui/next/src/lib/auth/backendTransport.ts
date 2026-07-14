@@ -19,6 +19,8 @@ const SAFE_RESPONSE_HEADERS = new Set([
 ]);
 const SAFE_IDENTITY_VALUE = /^[\x21-\x7e]{1,2048}$/;
 const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;
+const FATAL_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const UTF8_ENCODER = new TextEncoder();
 
 export type BackendTransportDependencies = ServerSessionDependencies &
   Readonly<{
@@ -30,6 +32,7 @@ export type BackendTransportDependencies = ServerSessionDependencies &
 
 export type BackendRequestOptions = Readonly<{
   backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
+  forwardQuery?: boolean;
   resolveBackendPath?: (body: Uint8Array<ArrayBuffer>) => string | Promise<string>;
   transformRequestBody?: (
     body: Uint8Array<ArrayBuffer>,
@@ -38,6 +41,13 @@ export type BackendRequestOptions = Readonly<{
 
 class BodyLimitError extends Error {}
 class WorkAbortedError extends Error {}
+
+export function normalizeJsonRequestBody(
+  body: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> {
+  const value = JSON.parse(FATAL_UTF8_DECODER.decode(body));
+  return UTF8_ENCODER.encode(JSON.stringify(value));
+}
 
 function privateHeaders(contentType?: string): Headers {
   const headers = new Headers({
@@ -253,7 +263,9 @@ export async function proxyAuthenticatedRequest(
       if (target === null) return error(400, "invalid backend path");
     }
     if (target === null) return error(400, "invalid backend path");
-    applyVerifiedIdentityQuery(target, request.url, session);
+    if (options.forwardQuery !== false) {
+      applyVerifiedIdentityQuery(target, request.url, session);
+    }
     if (options.transformRequestBody !== undefined) {
       try {
         encodedRequest = await options.transformRequestBody(encodedRequest);

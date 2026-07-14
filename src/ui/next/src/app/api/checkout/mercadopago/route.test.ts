@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const proxyBackendRequest = vi.hoisted(() =>
-  vi.fn(async () => Response.json({ checkout_url: "https://checkout.example" })),
-);
+const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+  proxyBackendRequest: vi.fn(async () =>
+    Response.json({ checkout_url: "https://checkout.example" }),
+  ),
+}));
 
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+vi.mock("@/lib/auth/backendTransport", () => ({
+  normalizeJsonRequestBody,
+  proxyBackendRequest,
+}));
 
 import { POST } from "./route";
 
 describe("POST /api/checkout/mercadopago", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  it("delegates the unchanged POST body and query to the authenticated backend path", async () => {
+  it("preserves legacy JSON normalization without forwarding inbound queries", async () => {
     const body = JSON.stringify({
       tenant_id: "browser-controlled",
       product_id: "cake-12",
@@ -29,9 +35,7 @@ describe("POST /api/checkout/mercadopago", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/checkout/mercadopago",
+      { forwardQuery: false, transformRequestBody: normalizeJsonRequestBody },
     );
-    expect(request.method).toBe("POST");
-    expect(new URL(request.url).search).toBe("?locale=es-MX");
-    await expect(request.text()).resolves.toBe(body);
   });
 });
