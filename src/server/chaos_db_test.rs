@@ -356,9 +356,9 @@ mod chaos_db_tests {
 
         // 1. Create parity schema in SQLite (Postgres schema is handled by migrations)
         // Simulate migrations for SQLite parity.
-        sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
+        sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
             .execute(&sqlite_pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
+        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, organization_id TEXT, payload TEXT, status TEXT, auto_dreamed INTEGER DEFAULT 0)")
             .execute(&sqlite_pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS knowledge_embeddings (id TEXT PRIMARY KEY, tenant_id TEXT, agent_id TEXT, task_id TEXT, content TEXT, embedding TEXT, source_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
             .execute(&sqlite_pool).await.unwrap();
@@ -380,18 +380,18 @@ mod chaos_db_tests {
         let task_id_swarm = uuid::Uuid::new_v4().to_string();
 
         // Insert into SQLite
-        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
             .bind(&task_id_shared).bind(tenant_id).bind("payload_shared")
             .execute(&sqlite_pool).await.unwrap();
-        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
+        sqlx::query("INSERT INTO swarm_tasks (id, organization_id, payload, status, auto_dreamed) VALUES (?, ?, ?, 'COMPLETED', 0)")
             .bind(&task_id_swarm).bind(tenant_id).bind("payload_swarm")
             .execute(&sqlite_pool).await.unwrap();
 
         // Insert into Postgres
-        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES ($1, $2, $3, 'COMPLETED', FALSE)")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, payload, status, auto_dreamed) VALUES ($1, $2, $3, 'COMPLETED', FALSE)")
             .bind(&task_id_shared).bind(tenant_id).bind("payload_shared")
             .execute(&pg_pool).await.unwrap();
-        sqlx::query("INSERT INTO swarm_tasks (id, tenant_id, payload, status, auto_dreamed) VALUES ($1::uuid, $2, $3, 'COMPLETED', FALSE)")
+        sqlx::query("INSERT INTO swarm_tasks (id, organization_id, payload, status, auto_dreamed) VALUES ($1::uuid, $2, $3, 'COMPLETED', FALSE)")
             .bind(&task_id_swarm).bind(tenant_id).bind("payload_swarm")
             .execute(&pg_pool).await.unwrap();
 
