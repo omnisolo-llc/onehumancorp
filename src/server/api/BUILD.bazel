@@ -195,7 +195,6 @@ rust_library(
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
-        "//src/server/services/localization:server_services_localization",
         "//src/server/telemetry:server_telemetry",
         "//src/server/utils:server_utils",
         "//src/server/orchestration/queue:server_orchestration_queue",

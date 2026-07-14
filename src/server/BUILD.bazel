@@ -251,6 +251,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/statemachine:mod.rs",
     "//src/server/services:booking.rs",
     "//src/server/services:omnichannel_service.rs",
+    "//src/server/services:fx_cache.rs",
     "//src/server/services:mod.rs",
     "//src/server/services:quoting/mod.rs",
     "//src/server/services:inventory_sync.rs",

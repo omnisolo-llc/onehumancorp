@@ -113,7 +113,7 @@ async fn handle_get_products(
     let mut rate_multiplier = 1.0;
     if let Some(target_curr) = query.target_currency {
         let base_currency = "USD";
-        let fx_service = crate::services::localization::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
+        let fx_service = crate::services::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
         if let Ok(rate) = fx_service.get_rate(base_currency, &target_curr).await {
             rate_multiplier = rate;
         }

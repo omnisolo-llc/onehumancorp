@@ -336,6 +336,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+    pub mod fx_cache;
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -344,11 +345,19 @@ pub mod services {
     pub mod sync;
     pub mod chat;
 
-    #[cfg(ohc_bazel)]
+
     pub use ::server_services_b2b as b2b;
-    #[cfg(not(ohc_bazel))]
-    pub mod b2b;
+
+
+
+
     pub mod integration;
+
+
+
+
+
+
     pub mod ops;
     pub mod mcp;
     pub mod org;

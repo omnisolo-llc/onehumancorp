@@ -9,6 +9,7 @@ exports_files(
 
         "cache_invalidator.rs",
         "wizard.rs",
+        "fx_cache.rs",
         "quoting/mod.rs",
                 "inventory_sync.rs",
         "inventory/mod.rs",
@@ -29,6 +30,7 @@ rust_library(
 
         "cache_invalidator.rs",
         "wizard.rs",
+        "fx_cache.rs",
         "quoting/mod.rs",
                 "inventory_sync.rs",
         "inventory/mod.rs",
@@ -55,8 +57,6 @@ rust_library(
         "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
         "//src/server/services/dashboard:service.rs",
-        "//src/server/services/localization:mod.rs",
-        "//src/server/services/localization:fx_cache.rs",
         "//src/server/services/docs:mod.rs",
         "//src/server/services/docs:service.rs",
         "//src/server/services/docs:service_tests.rs",

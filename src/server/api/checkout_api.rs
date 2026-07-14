@@ -135,7 +135,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(target_curr) = &req_data.target_currency {
         let base_currency = "USD";
-        let fx_service = crate::services::localization::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
+        let fx_service = crate::services::fx_cache::FxCacheService::new(hub.redis_client.clone(), hub.pool.clone());
         if let Ok(rate) = fx_service.get_rate(base_currency, target_curr).await {
             rate_multiplier = rate;
             applied_currency = target_curr.clone();
