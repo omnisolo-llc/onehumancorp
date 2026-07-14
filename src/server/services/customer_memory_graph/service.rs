@@ -279,6 +279,24 @@ impl CustomerMemoryGraphService {
                         .execute(&mut *tx)
                         .await;
 
+                    let _ = sqlx::query("UPDATE service_leads SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE quotes SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("UPDATE staff_tasks SET customer_id = $1 WHERE customer_id = $2")
+                        .bind(&target_id)
+                        .bind(&customer_id)
+                        .execute(&mut *tx)
+                        .await;
+
                     // Remove old
                     let _ = sqlx::query("DELETE FROM customers WHERE id = $1")
                         .bind(&customer_id)
