@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { BackendRequestOptions } from "@/lib/auth/backendTransport";
 
-const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
-  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+const { validateJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  validateJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
   proxyBackendRequest: vi.fn<
     (request: Request, path: string, options?: BackendRequestOptions) => Promise<Response>
   >(async () => Response.json({ ok: true })),
 }));
 vi.mock("@/lib/auth/backendTransport", () => ({
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyBackendRequest,
 }));
 
 import { POST as accept } from "./[id]/accept/route";
-import { POST as approve } from "./[id]/approve/route";
+import { PATCH as approve } from "./[id]/approve/route";
 import { GET as getByPath } from "./[id]/route";
 import { GET, POST } from "./route";
 import * as quoteBackend from "./quoteBackend";
@@ -31,11 +31,11 @@ describe("authenticated quote routes", () => {
       new Request("http://localhost/api/quotes?id=quote-7", { method: "POST", body: "{}" }),
     );
 
-    const normalizeLegacyQuoteBody = (
+    const validateLegacyQuoteBody = (
       quoteBackend as typeof quoteBackend & {
-        normalizeLegacyQuoteBody: (body: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>;
+        validateLegacyQuoteBody: (body: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>;
       }
-    ).normalizeLegacyQuoteBody;
+    ).validateLegacyQuoteBody;
     expect(proxyBackendRequest.mock.calls).toEqual([
       [expect.any(Request), "/api/v1/quotes", {
         forwardQuery: false,
@@ -45,7 +45,7 @@ describe("authenticated quote routes", () => {
         backendMethod: "POST",
         forwardQuery: false,
         requestContentType: "application/json",
-        transformRequestBody: normalizeLegacyQuoteBody,
+        transformRequestBody: validateLegacyQuoteBody,
       }],
       [expect.any(Request), "/api/v1/quotes/quote-7", {
         forwardQuery: false,
@@ -55,7 +55,7 @@ describe("authenticated quote routes", () => {
         backendMethod: "PUT",
         forwardQuery: false,
         requestContentType: "application/json",
-        transformRequestBody: normalizeLegacyQuoteBody,
+        transformRequestBody: validateLegacyQuoteBody,
       }],
     ]);
   });
@@ -63,7 +63,13 @@ describe("authenticated quote routes", () => {
   test("maps dynamic quote actions with confined IDs", async () => {
     await getByPath(new Request("http://localhost/api/quotes/quote-7"), context("quote-7"));
     await accept(new Request("http://localhost/api/quotes/quote-7/accept", { method: "POST" }), context("quote-7"));
-    await approve(new Request("http://localhost/api/quotes/quote-7/approve", { method: "POST" }), context("quote-7"));
+    await approve(
+      new Request("http://localhost/api/quotes/quote-7/approve", {
+        method: "PATCH",
+        body: '{"attacker":"payload"}',
+      }),
+      context("quote-7"),
+    );
 
     expect(proxyBackendRequest.mock.calls).toEqual([
       [expect.any(Request), "/api/v1/quotes/quote-7", {

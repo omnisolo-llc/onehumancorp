@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
-  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+const { validateJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  validateJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
   proxyBackendRequest: vi.fn(async () => Response.json({ success: true })),
 }));
 
 vi.mock("@/lib/auth/backendTransport", () => ({
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyBackendRequest,
 }));
 
@@ -17,7 +17,7 @@ const context = (id: string) => ({ params: Promise.resolve({ id }) });
 describe("POST /api/fulfillment/execute/[id]", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  it("preserves legacy JSON normalization without forwarding inbound queries", async () => {
+  it("preserves legacy JSON validation without forwarding inbound queries", async () => {
     const body = JSON.stringify({ action: "mark_ready" });
     const request = new Request(
       "http://localhost/api/fulfillment/execute/ord-42?notify=true",
@@ -33,7 +33,7 @@ describe("POST /api/fulfillment/execute/[id]", () => {
       {
         forwardQuery: false,
         requestContentType: "application/json",
-        transformRequestBody: normalizeJsonRequestBody,
+        transformRequestBody: validateJsonRequestBody,
       },
     );
   });

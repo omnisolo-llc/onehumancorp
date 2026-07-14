@@ -5,7 +5,7 @@ import { parseSessionKeyRing } from "./sessionKeys";
 import { cookieForSession, serializeSessionCookie, sessionCodecContext } from "./sessionCookie";
 import type { WebSession } from "./sessionTypes";
 import {
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyAuthenticatedRequest,
   type BackendTransportDependencies,
 } from "./backendTransport";
@@ -310,25 +310,25 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
-  it("strictly parses and canonically reserializes JSON request bodies", () => {
-    const normalized = normalizeJsonRequestBody(
-      new TextEncoder().encode(' { "nested": { "ok": true }, "items": [1, 2] } '),
+  it("validates JSON without changing bytes or large integer precision", () => {
+    const source = ' { "id": 9007199254740993, "nested": { "ok": true } } ';
+
+    const validated = validateJsonRequestBody(
+      new TextEncoder().encode(source),
     );
 
-    expect(new TextDecoder().decode(normalized)).toBe(
-      '{"nested":{"ok":true},"items":[1,2]}',
-    );
+    expect(new TextDecoder().decode(validated)).toBe(source);
   });
 
   it("rejects malformed JSON and invalid UTF-8 request bodies", () => {
-    expect(() => normalizeJsonRequestBody(new TextEncoder().encode("{"))).toThrow();
-    expect(() => normalizeJsonRequestBody(Uint8Array.from([0xc3, 0x28]))).toThrow();
+    expect(() => validateJsonRequestBody(new TextEncoder().encode("{"))).toThrow();
+    expect(() => validateJsonRequestBody(Uint8Array.from([0xc3, 0x28]))).toThrow();
   });
 
   it("authenticates and bounds the request before transforming its body", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = await dependencies(fetchImpl, { requestLimitBytes: 8 });
-    const transformRequestBody = vi.fn(normalizeJsonRequestBody);
+    const transformRequestBody = vi.fn(validateJsonRequestBody);
     const unauthenticated = new Request("https://app.example.com/api/orders", {
       method: "POST",
       body: "{}",
@@ -369,7 +369,9 @@ describe("server-only authenticated backend transport", () => {
         expect(new Headers(init?.headers).get("content-type")).toBe(
           "application/json",
         );
-        await expect(new Response(init?.body).text()).resolves.toBe('{"ok":true}');
+        await expect(new Response(init?.body).text()).resolves.toBe(
+          ' { "ok": true } ',
+        );
         return Response.json({ ok: true });
       });
       const deps = await dependencies(fetchImpl);
@@ -388,7 +390,7 @@ describe("server-only authenticated backend transport", () => {
         deps,
         {
           requestContentType: "application/json",
-          transformRequestBody: normalizeJsonRequestBody,
+          transformRequestBody: validateJsonRequestBody,
         },
       );
 

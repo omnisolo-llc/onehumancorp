@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
-  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+const { validateJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  validateJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
   proxyBackendRequest: vi.fn(async () =>
     Response.json({ checkout_url: "https://checkout.example" }),
   ),
 }));
 
 vi.mock("@/lib/auth/backendTransport", () => ({
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyBackendRequest,
 }));
 
@@ -17,7 +17,7 @@ import { POST } from "./route";
 describe("POST /api/checkout/mercadopago", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  it("preserves legacy JSON normalization without forwarding inbound queries", async () => {
+  it("preserves legacy JSON validation without forwarding inbound queries", async () => {
     const body = JSON.stringify({
       tenant_id: "browser-controlled",
       product_id: "cake-12",
@@ -38,7 +38,7 @@ describe("POST /api/checkout/mercadopago", () => {
       {
         forwardQuery: false,
         requestContentType: "application/json",
-        transformRequestBody: normalizeJsonRequestBody,
+        transformRequestBody: validateJsonRequestBody,
       },
     );
   });

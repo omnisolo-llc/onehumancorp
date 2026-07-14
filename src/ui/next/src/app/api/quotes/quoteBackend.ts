@@ -1,13 +1,13 @@
-import { normalizeJsonRequestBody } from "@/lib/auth/backendTransport";
+import { validateJsonRequestBody } from "@/lib/auth/backendTransport";
 
 const QUOTE_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const EMPTY_QUOTE_BODY = new TextEncoder().encode("{}");
 
-export function normalizeLegacyQuoteBody(
+export function validateLegacyQuoteBody(
   body: Uint8Array<ArrayBuffer>,
 ): Uint8Array<ArrayBuffer> {
   try {
-    return normalizeJsonRequestBody(body);
+    return validateJsonRequestBody(body);
   } catch {
     return EMPTY_QUOTE_BODY;
   }

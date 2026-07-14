@@ -1,7 +1,7 @@
 import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 import {
   invalidQuoteId,
-  normalizeLegacyQuoteBody,
+  validateLegacyQuoteBody,
   quoteBackendPath,
   quoteIdFromUrl,
 } from "./quoteBackend";
@@ -33,6 +33,6 @@ export function POST(request: Request): Promise<Response> | Response {
     backendMethod: updating ? "PUT" : "POST",
     forwardQuery: false,
     requestContentType: "application/json",
-    transformRequestBody: normalizeLegacyQuoteBody,
+    transformRequestBody: validateLegacyQuoteBody,
   });
 }

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { BackendRequestOptions } from "@/lib/auth/backendTransport";
 
-const { normalizeJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
-  normalizeJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
+const { validateJsonRequestBody, proxyBackendRequest } = vi.hoisted(() => ({
+  validateJsonRequestBody: vi.fn((body: Uint8Array<ArrayBuffer>) => body),
   proxyBackendRequest: vi.fn<
     (request: Request, path: string, options?: BackendRequestOptions) => Promise<Response>
   >(async () => Response.json({ plans: [] })),
 }));
 vi.mock("@/lib/auth/backendTransport", () => ({
-  normalizeJsonRequestBody,
+  validateJsonRequestBody,
   proxyBackendRequest,
 }));
 
@@ -38,7 +38,7 @@ describe("authenticated subscription routes", () => {
     ]);
   });
 
-  test("preserves action JSON normalization without inbound queries", async () => {
+  test("preserves action JSON validation without inbound queries", async () => {
     const request = new Request(
       "http://localhost/api/subscriptions/sub-7/action?dry_run=true",
       { method: "POST", body: ' { "action": "pause" } ' },
@@ -52,7 +52,7 @@ describe("authenticated subscription routes", () => {
       {
         forwardQuery: false,
         requestContentType: "application/json",
-        transformRequestBody: normalizeJsonRequestBody,
+        transformRequestBody: validateJsonRequestBody,
       },
     );
   });
