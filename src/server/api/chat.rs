@@ -27,7 +27,7 @@ User Question: {}\
 ", query));
 
     // Default fallback URL and Title
-    let mut link_url = "/help/getting-started-1".to_string();
+    let mut link_url = "/help_article.html?id=getting-started-1".to_string();
     let link_title = "Read the full article →".to_string();
 
     // Guess the best link in case LLM doesn't output it
@@ -81,6 +81,6 @@ mod tests {
         let response = help_chat_handler(Json(req)).await.0;
 
         assert!(response["reply"].as_str().unwrap().contains("Welcome to OneHumanCorp"));
-        assert_eq!(response["link"]["url"].as_str().unwrap(), "/help/getting-started-1");
+        assert_eq!(response["link"]["url"].as_str().unwrap(), "/help_article.html?id=getting-started-1");
     }
 }
