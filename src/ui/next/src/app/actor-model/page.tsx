@@ -60,7 +60,7 @@ export default function ActorModelPage() {
       <button
         onClick={handleExecute}
         disabled={loading || !message}
-        className="px-6 py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+        className="px-6 py-3 bg-gradient-to-b from-[#0071E3] to-[#005bb5] text-white rounded-xl hover:from-[#005bb5] hover:to-[#004488] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-[0_2px_8px_rgba(0,113,227,0.3)]"
       >
         {loading ? 'Actors are executing...' : 'Send Message to Swarm'}
       </button>

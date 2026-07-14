@@ -105,14 +105,14 @@ export default function AnthropicGuardrailsPage() {
         <button
           onClick={handleValidate}
           disabled={loading || !toolName.trim()}
-          className="w-full py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+          className="w-full py-3 bg-gradient-to-b from-[#0071E3] to-[#005bb5] text-white rounded-xl hover:from-[#005bb5] hover:to-[#004488] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-[0_2px_8px_rgba(0,113,227,0.3)]"
         >
           {loading ? 'Validating guardrails...' : 'Check Tool Guardrails'}
         </button>
       </div>
 
       {error && (
-        <div className="mt-8 p-6 rounded-xl border bg-red-50 border-red-200 text-red-800" data-testid="error-message">
+        <div className="mt-8 p-6 bg-red-50/70 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-xl border border-red-200 shadow-sm" data-testid="error-message">
           <h3 className="text-lg font-bold">Guardrail Tripped</h3>
           <div className="bg-white/50 p-4 rounded-lg font-mono text-sm whitespace-pre-wrap mt-2">
             {error}
@@ -121,7 +121,7 @@ export default function AnthropicGuardrailsPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl text-green-800" data-testid="success-message">
+        <div className="mt-8 p-6 glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-xl" data-testid="success-message">
           <h2 className="text-lg font-bold">Guardrails Passed</h2>
           <p className="bg-white/50 p-4 rounded-lg text-sm mt-2">{result}</p>
         </div>

@@ -98,7 +98,7 @@ export default function PydanticValidationPage() {
       </div>
 
       {error && (
-        <div className={`mt-8 p-6 rounded-xl border shadow-sm ${isRecoverable ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-red-50 border-red-200 text-red-800'}`} data-testid="error-message">
+        <div className={`mt-8 p-6 rounded-xl border shadow-sm backdrop-blur-[30px] saturate-[210%] ${isRecoverable ? 'bg-yellow-50/70 border-yellow-200 text-yellow-800' : 'bg-red-50/70 border-red-200 text-red-800'}`} data-testid="error-message">
           <div className="flex items-center gap-2 mb-3">
             {isRecoverable ? (
               <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +125,7 @@ export default function PydanticValidationPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl shadow-sm text-green-800" data-testid="success-message">
+        <div className="mt-8 p-6 glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-xl text-green-800" data-testid="success-message">
           <div className="flex items-center gap-2 mb-3">
             <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

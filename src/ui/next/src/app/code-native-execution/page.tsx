@@ -39,24 +39,24 @@ export default function CodeNativeExecutionPage() {
         SOTA Harness Patterns (2025-2026): 2. Code-native execution - preserving execution state and rich data structures.
       </p>
 
-      <div className="space-y-6 bg-white p-8 shadow rounded-2xl">
+      <div className="space-y-6 translucent-glass-light p-8 shadow-sm">
         <button
           onClick={handleExecute}
           disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
+          className="w-full py-3 bg-gradient-to-b from-[#0071E3] to-[#005bb5] text-white rounded-xl hover:from-[#005bb5] hover:to-[#004488] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-[0_2px_8px_rgba(0,113,227,0.3)]"
         >
           {loading ? 'Executing pipeline...' : 'Run Pipeline'}
         </button>
       </div>
 
       {error && (
-        <div className="mt-8 p-6 bg-red-50 text-red-800 rounded-xl" data-testid="error-message">
+        <div className="mt-8 p-6 bg-red-50/70 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-xl border border-red-200 shadow-sm" data-testid="error-message">
           {error}
         </div>
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50 text-green-800 rounded-xl" data-testid="success-message">
+        <div className="mt-8 p-6 translucent-glass-light shadow-sm rounded-xl" data-testid="success-message">
           <pre className="whitespace-pre-wrap font-mono text-sm">{result}</pre>
         </div>
       )}
