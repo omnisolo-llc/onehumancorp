@@ -595,29 +595,6 @@ impl MyHubService {
     }
 }
 
-#[derive(serde::Deserialize)]
-struct HttpLoginRequest {
-    username: String,
-    password: String,
-    organization_id: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct HttpLoginUser {
-    id: String,
-    username: String,
-    email: String,
-    roles: Vec<String>,
-    organization_id: String,
-}
-
-#[derive(serde::Serialize)]
-struct HttpLoginResponse {
-    token: String,
-    expires_at: i64,
-    user: HttpLoginUser,
-}
-
 #[derive(serde::Serialize)]
 struct HttpErrorResponse {
     error: String,
@@ -740,186 +717,6 @@ async fn http_metrics_handler(
     (
         StatusCode::OK,
         axum::Json(metrics),
-    )
-        .into_response()
-}
-
-async fn http_login_handler(
-    db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
-    payload: HttpLoginRequest,
-) -> axum::response::Response {
-    use axum::http::StatusCode;
-    use axum::response::IntoResponse;
-
-    let username = payload.username.trim();
-    if username.is_empty() || payload.password.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(HttpErrorResponse { error: "username and password are required".to_string() }),
-        )
-            .into_response();
-    }
-
-    let tenant_id = payload
-        .organization_id
-        .filter(|id| !id.trim().is_empty())
-        .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
-        .unwrap_or_else(|| "e2e-tenant".to_string());
-
-    let mut tx = match db.pool.begin().await {
-        Ok(tx) => tx,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to start login transaction");
-            tracing::error!("failed to start login transaction: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        ::server_telemetry::record_error_signal("[bug] failed to set tenant context for login");
-        tracing::error!("failed to set tenant context for login: {}", e); // pii-safe
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-        )
-            .into_response();
-    }
-
-    let row = match sqlx::query(
-        r#"
-        SELECT id, username, email, password_hash, roles, tenant_id
-        FROM users
-        WHERE tenant_id = $1 AND (username = $2 OR email = $2) AND active = TRUE
-        LIMIT 1
-        "#,
-    )
-    .bind(&tenant_id)
-    .bind(username)
-    .fetch_optional(&mut *tx)
-    .await
-    {
-        Ok(row) => row,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to query login user");
-            tracing::error!("failed to query login user: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    let Some(row) = row else {
-        return (
-            StatusCode::UNAUTHORIZED,
-            axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
-        )
-            .into_response();
-    };
-
-    let password_hash: String = row.get("password_hash");
-
-    let is_valid = {
-        let password = payload.password.clone();
-        let hash = password_hash.clone();
-        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
-            Ok(res) => res,
-            Err(e) => {
-                ::server_telemetry::record_error_signal("[bug] spawn_blocking failed for bcrypt");
-                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-                )
-                    .into_response();
-            }
-        }
-    };
-
-    match is_valid {
-        Ok(true) => {}
-        Ok(false) => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[security] failed to verify auth credential");
-            tracing::error!("failed to verify auth credential: {}", e); // pii-safe
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    }
-
-    let id: String = row.get("id");
-    let email: String = row.get("email");
-    let username: String = row.get("username");
-    let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
-    let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
-    let issued_at = chrono::Utc::now().timestamp();
-    let user = ::server_auth::User {
-        id: id.clone(),
-        username: username.clone(),
-        email: email.clone(),
-        password_hash: "".to_string(),
-        roles: roles.clone(),
-        active: true,
-        organization_id: Some(tenant_id.clone()),
-        created_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        updated_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        oidc_subject: None,
-    };
-
-    let token = match store.issue_token(&user) {
-        Ok(t) => t,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to issue login token");
-            tracing::error!("failed to issue login token: {}", e); // pii-safe
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    let _claims = ::server_common::Claims {
-        sub: id.clone(),
-        exp: expires_at,
-        iat: issued_at,
-        organization_id: Some(tenant_id.clone()),
-        username: username.clone(),
-        email: email.clone(),
-        roles: roles.clone(),
-        session_id: None,
-        jti: uuid::Uuid::new_v4().to_string(),
-    };
-    // token issued above via store
-
-    (
-        StatusCode::OK,
-        axum::Json(HttpLoginResponse {
-            token,
-            expires_at,
-            user: HttpLoginUser {
-                id,
-                username,
-                email,
-                roles,
-                organization_id: tenant_id,
-            },
-        }),
     )
         .into_response()
 }
@@ -3032,7 +2829,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
-    let db_for_login = db.clone();
+    let auth_repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> =
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(
+                crate::auth::postgres_store::PgUserRepository::new(db.pool.clone()),
+            ),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(
+                crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone()),
+            ),
+        };
+    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_repo(auth_repo));
+    let http_auth_router = crate::auth::http::router(http_auth_store.clone()).map_err(|error| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, error)
+    })?;
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
     (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
@@ -6676,17 +6485,12 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
-            let db_for_auth = db.clone();
+            let store = http_auth_store.clone();
             axum::middleware::from_fn(
                 move |req: axum::extract::Request, next: axum::middleware::Next| {
-                    let db = db_for_auth.clone();
+                    let store = store.clone();
                     async move {
                         use axum::response::IntoResponse;
-                        let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                        };
-                        let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                         let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
                         let token = match auth_header {
                             Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
@@ -7026,31 +6830,14 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
-            "/api/v1/auth/login",
-            axum::routing::post({
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
-                    let db = db_for_login.clone();
-                    let store = store.clone();
-                    async move { http_login_handler(db, store, payload).await }
-                }
-            }),
-        )
-        .route(
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                    draft_reply_handler(db, store, headers, payload).await
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| {
+                    let db = db.clone();
+                    let store = store.clone();
+                    async move { draft_reply_handler(db, store, headers, payload).await }
                 }
             }),
         )
@@ -7059,12 +6846,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| {
+                    let db = db.clone(); let store = store.clone();
+                    async move { http_metrics_handler(db, store, headers, payload).await }
+                }
             }),
         )
         .route("/api/v1/sync/events", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
@@ -7083,12 +6869,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/advisory/insights",
             axum::routing::get({
                 let db = db.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap| {
+                    let db = db.clone(); let store = store.clone();
+                    async move { advisory_insights_handler(db, store, headers).await }
+                }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
@@ -7401,6 +7186,7 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
         .merge(health_router)
+        .merge(http_auth_router)
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")
@@ -7411,7 +7197,12 @@ async fn create_ui_bom_item_handler(
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
-        if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+        if let Err(e) = axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .await
+        {
             ::server_telemetry::record_error_signal("[bug] Mesh server error");
             tracing::trace!("Mesh server error: {}", e);
         }
@@ -7430,11 +7221,7 @@ async fn create_ui_bom_item_handler(
     let viral_loop_tracker = std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
+    let store = http_auth_store.clone();
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::is_telemetry_enabled() {
