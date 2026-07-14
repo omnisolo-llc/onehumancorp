@@ -13,7 +13,4 @@ test.describe('Documentation Features', () => {
     await expect(page.getByTestId('api-docs-title')).toBeVisible();
     await expect(page.getByText('Advanced:')).toBeVisible();
   });
-
-
 });
-
