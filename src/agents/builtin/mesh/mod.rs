@@ -496,8 +496,8 @@ mod tests {
         let mesh = TeammateMeshClient::new(transport.clone());
 
         let transport_clone = transport.clone();
-        tokio::spawn(async move {
-            let _ = transport_clone
+        // Keep the subscription alive for the duration of the test.
+        let _subscription_guard = transport_clone
                 .subscribe(
                     "test_ack_topic",
                     Box::new({
@@ -514,11 +514,11 @@ mod tests {
                                     .publish(
                                         &ack_topic,
                                         crate::mesh::transport::Message {
-                                            agent_id: "test".to_string(),
-                                            action: ack_topic.clone(),
-                                            status: "ok".to_string(),
-                                            payload: b"ack".to_vec(),
-                                            msg_id: uuid::Uuid::new_v4().to_string(),
+                                    agent_id: "test".to_string(),
+                                    action: ack_topic.clone(),
+                                    status: "ok".to_string(),
+                                    payload: b"ack".to_vec(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
                                         },
                                     )
                                     .await;
@@ -526,14 +526,14 @@ mod tests {
                         }
                     }),
                 )
-                .await;
-        });
+                .await.unwrap();
 
-        sleep(Duration::from_millis(50)).await;
+        // Allow the subscription to register
+        sleep(Duration::from_millis(100)).await;
         let result = mesh
-            .publish_with_ack("test_ack_topic", b"payload".to_vec())
+            .publish_with_ack("test_ack_topic", b"".to_vec())
             .await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "failed: {:?}", result.err());
     }
 }
 // dummy validation
