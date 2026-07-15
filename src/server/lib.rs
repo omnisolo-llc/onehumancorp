@@ -3244,11 +3244,13 @@ pub struct TriageActionPayload {
 
 pub async fn create_ui_triage_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<CreateTriageItemPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -3369,10 +3371,13 @@ pub async fn create_ui_triage_item_handler(
 
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -3499,10 +3504,12 @@ pub struct MockOmniInboxPayload {
 
 pub async fn simulate_ui_triage_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let item_id = format!("triage-{}", uuid::Uuid::new_v4());
     let action_id = format!("act-{}", uuid::Uuid::new_v4());
 
@@ -3638,13 +3645,16 @@ pub async fn simulate_invoice_followup_handler(
 
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
 
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+
 
 ) -> axum::response::Response {
 
     use axum::response::IntoResponse;
 
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
 
     let item_id = format!("inv-fup-{}", uuid::Uuid::new_v4());
 
@@ -3792,10 +3802,12 @@ pub async fn simulate_invoice_followup_handler(
 
 pub async fn simulate_agent_feed_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
 
     match &db.store {
@@ -3937,11 +3949,13 @@ pub async fn simulate_agent_feed_item_handler(
 
 pub async fn mock_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<MockOmniInboxPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let id = format!("mock-{}", uuid::Uuid::new_v4());
 
     // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
@@ -3965,11 +3979,13 @@ pub async fn mock_omni_inbox_handler(
 
 pub async fn update_ui_triage_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<TriageActionPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -4677,10 +4693,13 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
 async fn ui_dashboard_analytics_briefing_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_analytics_briefing:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -4729,6 +4748,7 @@ struct AnalyticsChatRequest {
 
 async fn ui_dashboard_analytics_chat_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     axum::Json(payload): axum::Json<AnalyticsChatRequest>,
 ) -> axum::response::Response {
@@ -4736,7 +4756,9 @@ async fn ui_dashboard_analytics_chat_handler(
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let text = payload.message.to_lowercase();
 
@@ -5662,10 +5684,13 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
 
 async fn ui_dashboard_unified_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
@@ -5758,10 +5783,13 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
 
 async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
@@ -5786,10 +5814,13 @@ static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCac
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -5820,10 +5851,13 @@ pub async fn list_ui_priority_tasks_handler(
 
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6005,10 +6039,13 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
 
 async fn list_ui_bookings_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_bookings:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6041,10 +6078,13 @@ async fn list_ui_bookings_handler(
 
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6078,10 +6118,13 @@ async fn list_ui_inbox_handler(
 
 async fn ui_dashboard_metrics_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6132,10 +6175,13 @@ async fn ui_dashboard_metrics_handler(
 
 async fn list_ui_supply_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6168,11 +6214,13 @@ async fn list_ui_supply_handler(
 
 async fn create_ui_supply_vendor_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
     if name.is_empty() {
         return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "name is required"}))).into_response();
@@ -6195,11 +6243,13 @@ async fn create_ui_supply_vendor_handler(
 
 async fn create_ui_raw_material_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
     let current_quantity = payload.get("current_quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
     let reorder_threshold = payload.get("reorder_threshold").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
@@ -6223,11 +6273,13 @@ async fn create_ui_raw_material_handler(
 
 async fn create_ui_bom_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let finished_good_id = payload.get("finished_good_id").and_then(|v| v.as_str()).unwrap_or("").trim();
     let raw_material_id = payload.get("raw_material_id").and_then(|v| v.as_str()).unwrap_or("").trim();
     let quantity_required = payload.get("quantity_required").and_then(|v| v.as_i64()).unwrap_or(1) as i32;

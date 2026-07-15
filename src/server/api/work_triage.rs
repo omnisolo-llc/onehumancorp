@@ -7,8 +7,17 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::common::auth_utils::{UiTenantQuery, ui_tenant_id};
+use crate::common::auth_utils::UiTenantQuery;
 use crate::db::DB;
+
+fn signed_tenant_id(claims: &::server_common::Claims) -> Option<String> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system"))
+        .map(str::to_string)
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SimulateInboundSignalRequest {
@@ -17,16 +26,19 @@ pub struct SimulateInboundSignalRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ApproveDailyWorkRequest {
     pub action_status: String, // "APPROVED" or "DISMISSED"
 }
 
 pub async fn simulate_inbound_signal_handler(
     State(db): State<Arc<DB>>,
-    Query(query): Query<UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Json(payload): Json<SimulateInboundSignalRequest>,
 ) -> axum::response::Response {
-    let tenant_id = ui_tenant_id(&query);
+    let Some(tenant_id) = signed_tenant_id(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let signal_id = format!("sig-{}", Uuid::new_v4());
     let work_item_id = format!("wi-{}", Uuid::new_v4());
 
@@ -103,9 +115,12 @@ static DAILY_WORK_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<
 
 pub async fn get_daily_work_handler(
     State(db): State<Arc<DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Query(query): Query<UiTenantQuery>,
 ) -> axum::response::Response {
-    let tenant_id = ui_tenant_id(&query);
+    let Some(tenant_id) = signed_tenant_id(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let cache_key = format!("daily_work:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
@@ -125,7 +140,10 @@ pub async fn get_daily_work_handler(
                     let cache_t_bg = tenant_id.clone();
             let (work_res, orders_res, env_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
+                    let mut tx = pool1.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &t_bg1).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&mut *tx).await?;
+                    tx.commit().await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let mut map = serde_json::Map::new();
@@ -148,7 +166,10 @@ pub async fn get_daily_work_handler(
                     Ok::<Vec<serde_json::Value>, sqlx::Error>(items)
                 }),
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2).await?;
+                    let mut tx = pool2.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &t_bg2).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&mut *tx).await?;
+                    tx.commit().await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|o| {
                         serde_json::json!({
@@ -160,7 +181,10 @@ pub async fn get_daily_work_handler(
                     Ok::<Vec<serde_json::Value>, sqlx::Error>(items)
                 }),
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&pool_env).await?;
+                    let mut tx = pool_env.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &t_env).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&mut *tx).await?;
+                    tx.commit().await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|e| {
                         let mut map = serde_json::Map::new();
@@ -422,82 +446,142 @@ pub async fn get_daily_work_handler(
         Ok(items) => {
             (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
         },
-        Err(e) => {
+        Err(error) => {
             ::server_telemetry::record_error_signal("[bug] Failed to load daily work");
-            tracing::error!("Failed to load daily work: {:?}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            tracing::error!("Failed to load daily work: {error:?}");
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Daily work unavailable"}))).into_response()
         }
     }
 }
 
 pub async fn approve_daily_work_handler(
     State(db): State<Arc<DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Path(id): Path<String>,
-    Query(query): Query<UiTenantQuery>,
     Json(payload): Json<ApproveDailyWorkRequest>,
 ) -> axum::response::Response {
-    let tenant_id = ui_tenant_id(&query);
-
-
-    let target_status = if payload.action_status == "DISMISSED" {
-        "DISMISSED"
-    } else {
-        "APPROVED"
+    let Some(tenant_id) = signed_tenant_id(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if id.trim().is_empty() || id.len() > 200 {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let target_status = match payload.action_status.as_str() {
+        "DISMISSED" => "DISMISSED",
+        "APPROVED" => "APPROVED",
+        _ => return axum::http::StatusCode::BAD_REQUEST.into_response(),
     };
 
     match &db.store {
         crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
             let res = sqlx::query(
                 "UPDATE daily_work_items SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3"
             )
             .bind(target_status)
             .bind(&id)
             .bind(&tenant_id)
-            .execute(&db.pool).await;
+            .execute(&mut *tx).await;
 
             let res2 = sqlx::query(
                 "UPDATE task_envelopes SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2"
             )
             .bind(&id)
             .bind(&tenant_id)
-            .execute(&db.pool).await;
+            .execute(&mut *tx).await;
 
-            if res.is_ok() || res2.is_ok() {
+            let rows_affected = match (res, res2) {
+                (Ok(first), Ok(second)) => first.rows_affected() + second.rows_affected(),
+                _ => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
+            if tx.commit().await.is_err() {
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            if rows_affected > 0 {
                 if let Some(cache) = DAILY_WORK_CACHE.get() {
                     cache.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
                     cache.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
                 }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
-                (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+                axum::http::StatusCode::NOT_FOUND.into_response()
             }
         },
         crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
             let res = sqlx::query(
                 "UPDATE daily_work_items SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?"
             )
             .bind(target_status)
             .bind(&id)
             .bind(&tenant_id)
-            .execute(pool).await;
+            .execute(&mut *tx).await;
 
             let res2 = sqlx::query(
                 "UPDATE task_envelopes SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?"
             )
             .bind(&id)
             .bind(&tenant_id)
-            .execute(pool).await;
+            .execute(&mut *tx).await;
 
-            if res.is_ok() || res2.is_ok() {
+            let rows_affected = match (res, res2) {
+                (Ok(first), Ok(second)) => first.rows_affected() + second.rows_affected(),
+                _ => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
+            if tx.commit().await.is_err() {
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            if rows_affected > 0 {
                 if let Some(cache) = DAILY_WORK_CACHE.get() {
                     cache.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
                     cache.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
                 }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
-                (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
+                axum::http::StatusCode::NOT_FOUND.into_response()
             }
         }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn daily_work_authority_comes_only_from_signed_claims() {
+        let mut claims = ::server_common::Claims {
+            sub: "user-a".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: Some("tenant-a".to_string()),
+            username: "user-a".to_string(),
+            email: "user-a@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "daily-work-test".to_string(),
+        };
+        assert_eq!(signed_tenant_id(&claims).as_deref(), Some("tenant-a"));
+        claims.organization_id = Some("system".to_string());
+        assert_eq!(signed_tenant_id(&claims), None);
+        claims.organization_id = None;
+        assert_eq!(signed_tenant_id(&claims), None);
+        assert!(
+            serde_json::from_value::<ApproveDailyWorkRequest>(serde_json::json!({
+                "action_status": "APPROVED",
+                "tenant_id": "attacker"
+            }))
+            .is_err()
+        );
+    }
 }
