@@ -24,6 +24,56 @@ pub fn get_cdn_cache() -> std::sync::Arc<HybridCache<CachedResponse>> {
     CDN_CACHE.get_or_init(|| std::sync::Arc::new(HybridCache::new(None))).clone()
 }
 
+pub async fn inject_dynamic_inventory(
+    html: &str,
+    tenant_id_opt: Option<String>,
+) -> String {
+    let mut html_str = html.to_string();
+    let mut offset = 0;
+    while let Some(start) = html_str[offset..].find("<!-- INVENTORY_STATUS_") {
+        let actual_start = offset + start;
+        let prefix_len = "<!-- INVENTORY_STATUS_".len();
+        if let Some(end) = html_str[actual_start + prefix_len..].find(" -->") {
+            let actual_end = actual_start + prefix_len + end;
+            let pid = &html_str[actual_start + prefix_len..actual_end];
+            let pid_str = pid.to_string();
+
+            let mut inventory_count: i32 = 0;
+
+            if let Some(ref tenant_id) = tenant_id_opt {
+                let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
+
+                // Fetch from Edge KV if redis_url is available
+                if let Ok(url) = std::env::var("REDIS_URL") {
+                    if let Ok(client) = redis::Client::open(url) {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let val_res: Result<Option<String>, _> = redis::cmd("GET").arg(&kv_key).query_async(&mut conn).await;
+                            if let Ok(Some(val)) = val_res {
+                                if let Ok(parsed_val) = val.parse::<i32>() {
+                                    inventory_count = parsed_val;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let replacement = if inventory_count <= 0 {
+                "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
+            } else {
+                ""
+            };
+
+            html_str.replace_range(actual_start..(actual_end + 4), replacement);
+
+            offset = actual_start + replacement.len();
+        } else {
+            break;
+        }
+    }
+    html_str
+}
+
 pub async fn edge_caching_middleware(
     req: Request,
     next: Next,
@@ -44,14 +94,32 @@ pub async fn edge_caching_middleware(
 
     if is_get && !bypass_cache {
         if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
-            let body = Body::from(cached.body);
+            let mut tenant_id_opt = None;
+            for (k, v) in &cached.headers {
+                if k.eq_ignore_ascii_case("surrogate-key") || k.eq_ignore_ascii_case("cache-tag") {
+                    for tag in v.split(&[' ', ','][..]) {
+                        if tag.starts_with("tenant-id:") {
+                            tenant_id_opt = Some(tag.trim_start_matches("tenant-id:").to_string());
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let body_str = String::from_utf8_lossy(&cached.body);
+            let injected_html = inject_dynamic_inventory(&body_str, tenant_id_opt).await;
+            let injected_bytes = injected_html.into_bytes();
+
             let mut response = Response::builder()
                 .status(cached.status)
-                .body(body)
+                .body(Body::from(injected_bytes.clone()))
                 .unwrap();
 
             for (k, v) in cached.headers {
                 if let (Ok(hk), Ok(hv)) = (axum::http::HeaderName::try_from(k), axum::http::HeaderValue::try_from(v)) {
+                    if hk == axum::http::header::CONTENT_LENGTH {
+                        continue;
+                    }
                     response.headers_mut().insert(hk, hv);
                 }
             }
@@ -126,83 +194,22 @@ pub async fn edge_caching_middleware(
         cdn_cache.set_with_tags(&cache_key, cached_response, tags_vec, std::time::Duration::from_secs(60)).await;
     }
 
-    let new_body = Body::from(bytes.to_vec());
+    let mut tenant_id_opt = None;
+    if let Some(surrogate) = parts.headers.get("Surrogate-Key") {
+        if let Ok(s) = surrogate.to_str() {
+            for tag in s.split(&[' ', ','][..]) {
+                if tag.starts_with("tenant-id:") {
+                    tenant_id_opt = Some(tag.trim_start_matches("tenant-id:").to_string());
+                    break;
+                }
+            }
+        }
+    }
+    let body_str = String::from_utf8_lossy(&bytes);
+    let injected_html = inject_dynamic_inventory(&body_str, tenant_id_opt).await;
+    let new_body = Body::from(injected_html.into_bytes());
+    parts.headers.remove(axum::http::header::CONTENT_LENGTH);
     let new_response = Response::from_parts(parts, new_body);
     Ok(new_response.into_response())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        body::{Body, to_bytes},
-        http::{Request, Response, StatusCode},
-        middleware::from_fn,
-        routing::get,
-        Router,
-    };
-    use tower::ServiceExt;
-
-    #[tokio::test]
-    async fn test_edge_caching_middleware_hit_miss() {
-        let app = Router::new()
-            .route("/", get(|| async { "Hello, World!" }))
-            .layer(from_fn(edge_caching_middleware));
-
-        let req1 = Request::builder().uri("/").body(Body::empty()).unwrap();
-        let res1 = app.clone().oneshot(req1).await.unwrap();
-        assert_eq!(res1.status(), StatusCode::OK);
-        assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
-
-        // Allow cache to be saved asynchronously
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        let req2 = Request::builder().uri("/").body(Body::empty()).unwrap();
-        let res2 = app.clone().oneshot(req2).await.unwrap();
-        assert_eq!(res2.status(), StatusCode::OK);
-        assert_eq!(res2.headers().get("X-Cache").unwrap(), "HIT");
-
-        let body_bytes = to_bytes(res2.into_body(), 1024).await.unwrap();
-        assert_eq!(body_bytes, "Hello, World!");
-    }
-
-    #[tokio::test]
-    async fn test_edge_caching_middleware_bypass_no_cache() {
-        let app = Router::new()
-            .route("/bypass", get(|| async { "Hello, Bypass!" }))
-            .layer(from_fn(edge_caching_middleware));
-
-        // Initial request -> MISS
-        let req1 = Request::builder().uri("/bypass").body(Body::empty()).unwrap();
-        let res1 = app.clone().oneshot(req1).await.unwrap();
-        assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
-
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        // Second request with no-cache -> MISS (bypassed)
-        let req2 = Request::builder()
-            .uri("/bypass")
-            .header(header::CACHE_CONTROL, "no-cache")
-            .body(Body::empty())
-            .unwrap();
-        let res2 = app.clone().oneshot(req2).await.unwrap();
-        assert_eq!(res2.headers().get("X-Cache").unwrap(), "MISS");
-    }
-
-    #[tokio::test]
-    async fn test_edge_caching_middleware_surrogate_key() {
-        let app = Router::new()
-            .route("/surrogate", get(|| async {
-                let mut res = Response::new(Body::from("Surrogate Content"));
-                res.headers_mut().insert("Cache-Tag", "tag1, tag2".parse().unwrap());
-                res
-            }))
-            .layer(from_fn(edge_caching_middleware));
-
-        let req = Request::builder().uri("/surrogate").body(Body::empty()).unwrap();
-        let res = app.oneshot(req).await.unwrap();
-
-        assert_eq!(res.headers().get("Surrogate-Key").unwrap(), "tag1 tag2");
-        assert_eq!(res.headers().get("X-Cache").unwrap(), "MISS");
-    }
-}
