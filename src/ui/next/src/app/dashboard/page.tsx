@@ -152,7 +152,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetch("/api/walkthrough/dashboard")
+    fetch("/api/v1/walkthrough/dashboard")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {

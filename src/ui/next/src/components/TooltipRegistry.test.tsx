@@ -19,7 +19,7 @@ vi.mock("framer-motion", () => {
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockTooltipFetch = vi.fn((url) => {
-    if (url && (url === '/api/tooltips' || url.toString().includes('/api/tooltips'))) {
+    if (url && (url === '/api/v1/tooltips' || url.toString().includes('/api/v1/tooltips'))) {
         return Promise.resolve({ ok: true, json: async () => ({ "test-id": "Fetched tooltip text" }) });
     }
     return Promise.resolve({ ok: true, json: async () => ({}) });

@@ -13,7 +13,7 @@ export default function HelpArticlePage() {
   useEffect(() => {
     if (!articleId) return;
 
-    fetch(`/api/help/${articleId}`)
+    fetch(`/api/v1/help/${articleId}`)
       .then(async (res) => {
         if (!res.ok) {
            throw new Error("Article not found");

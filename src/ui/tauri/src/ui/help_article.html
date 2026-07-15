@@ -166,7 +166,7 @@
           if (window.__TAURI__ && window.__TAURI__.core) {
              article = await window.__TAURI__.core.invoke('get_help_article', { id: articleId });
           } else {
-             const res = await fetch(`/api/help/${articleId}`);
+             const res = await fetch(`/api/v1/help/${articleId}`);
              if (res.ok) {
                  article = await res.json();
              } else {

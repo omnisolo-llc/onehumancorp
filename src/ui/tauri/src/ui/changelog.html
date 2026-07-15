@@ -164,7 +164,7 @@
           if (window.__TAURI__ && window.__TAURI__.core) {
              data = await window.__TAURI__.core.invoke('get_changelog', {});
           } else {
-             const res = await fetch('/api/changelog');
+             const res = await fetch('/api/v1/changelog');
              if (res.ok) data = await res.json();
           }
 

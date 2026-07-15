@@ -387,7 +387,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
         const content = require('fs').readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 

@@ -20,7 +20,7 @@ describe('VideoTutorialList', () => {
 
   it('renders videos correctly', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/tooltips') {
+      if (url === '/api/v1/tooltips') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({})
@@ -130,7 +130,7 @@ describe('VideoTutorialList', () => {
 
   it('opens and closes the video modal', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/tooltips') {
+      if (url === '/api/v1/tooltips') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({})

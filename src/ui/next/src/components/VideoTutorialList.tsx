@@ -25,7 +25,7 @@ export function VideoTutorialList({
   useEffect(() => {
     if (initialVideos !== undefined) return;
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    const fetchUrl = isMobile ? '/api/videos?mobile_optimized=true' : '/api/videos';
+    const fetchUrl = isMobile ? '/api/v1/videos?mobile_optimized=true' : '/api/v1/videos';
     fetch(fetchUrl)
       .then(res => res.json())
       .then(data => {

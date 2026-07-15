@@ -10,7 +10,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.route('**/api/onboarding/draft', async route => {
@@ -46,7 +46,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await newPage.route('**/api/tooltips', async route => {
+    await newPage.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await newPage.route('**/api/onboarding/draft', async route => {
@@ -98,7 +98,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.route('**/api/onboarding/draft', async route => {
@@ -133,7 +133,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.route('**/api/onboarding/draft', async route => {
@@ -166,7 +166,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.route('**/api/onboarding/draft', async route => {
@@ -222,7 +222,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.route('**/api/onboarding/draft', async route => {

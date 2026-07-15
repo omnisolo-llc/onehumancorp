@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
 global.fetch = vi.fn((url: string) => {
-  if (url === '/api/walkthrough/dashboard') {
+  if (url === '/api/v1/walkthrough/dashboard') {
     return Promise.resolve({
       ok: true,
       json: () => Promise.resolve([
@@ -61,7 +61,7 @@ vi.mock('next/navigation', () => ({
 
 test('renders dashboard with actionable feed', async () => {
   global.fetch = vi.fn((url: string) => {
-    if (url === '/api/walkthrough/dashboard') {
+    if (url === '/api/v1/walkthrough/dashboard') {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve([
