@@ -373,8 +373,54 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        let src_dir = std::path::Path::new("src/server");
+        if !src_dir.exists() {
+            println!("src/server not found, skipping or finding correct path.");
+        }
+
+        let mut failed_files = Vec::new();
+        let pii_keywords = vec!["password", "email", "credit_card", "api_key", "token", "ssn", "dob", "cvv"];
+
+        fn find_rs_files(dir: &std::path::Path, rs_files: &mut Vec<std::path::PathBuf>) {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        find_rs_files(&path, rs_files);
+                    } else if path.extension().map_or(false, |e| e == "rs") {
+                        rs_files.push(path);
+                    }
+                }
+            }
+        }
+
+        let mut rs_files = Vec::new();
+        let workspace_dir = std::env::var("BUILD_WORKSPACE_DIRECTORY").unwrap_or_else(|_| ".".to_string());
+        let search_dir = std::path::Path::new(&workspace_dir).join("src/server");
+
+        find_rs_files(&search_dir, &mut rs_files);
+
+        if rs_files.is_empty() {
+             find_rs_files(std::path::Path::new("src/server"), &mut rs_files);
+        }
+
+        for file in rs_files {
+            let content = std::fs::read_to_string(&file).unwrap();
+            for (line_num, line) in content.lines().enumerate() {
+                if (line.contains("tracing::") || line.contains("log::")) && !line.contains("pii-safe") {
+                    let lower_line = line.to_lowercase();
+                    for keyword in &pii_keywords {
+                        if lower_line.contains(keyword) {
+                            failed_files.push(format!("{}:{}: {}", file.display(), line_num + 1, line.trim()));
+                        }
+                    }
+                }
+            }
+        }
+
+        if !failed_files.is_empty() {
+            panic!("Found potential PII leakage in logging statements:\n{}", failed_files.join("\n"));
+        }
     }
 
     #[test]
