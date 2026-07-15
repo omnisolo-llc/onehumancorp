@@ -452,6 +452,62 @@ pub async fn sync_offline_transactions_handler(
 
         match query_builder.build().fetch_all(&mut *db_tx).await {
             Ok(rows) => {
+                // Evaluate conflicts for pending reconciliation synchronously
+                for tx in &req_data.transactions {
+                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
+                        if let Some(items) = payload_val.as_array() {
+                            for item in items {
+                                if let (Some(product_id), Some(quantity)) = (
+                                    item.get("product_id").and_then(|v| v.as_str()),
+                                    item.get("quantity").and_then(|v| v.as_i64()),
+                                ) {
+                                    let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
+                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
+                                    )
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_one(&mut *db_tx)
+                                    .await;
+
+                                    if let Ok((stock,)) = current_stock_res {
+                                        let qty_i32 = quantity as i32;
+                                        if stock < qty_i32 {
+                                            let tx_id = tx.id.clone().unwrap_or_default();
+                                            pending_reconciliation_items.push(serde_json::json!({
+                                                "transaction_id": tx_id,
+                                                "product_id": product_id,
+                                                "shortage": qty_i32 - stock,
+                                                "timestamp": chrono::Utc::now().to_rfc3339()
+                                            }));
+                                        }
+
+                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                            .bind(qty_i32)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *db_tx)
+                                            .await;
+
+                                        if let Some(client) = crate::get_redis_client() {
+                                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                                let invalidation_topic = "cache_invalidation_events";
+                                                let invalidation_payload = serde_json::json!({
+                                                    "event": "inventory.updated",
+                                                    "tags": [
+                                                        format!("tenant-id:{}", tenant_id),
+                                                        format!("entity:product:{}", product_id)
+                                                    ]
+                                                }).to_string();
+                                                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if !rows.is_empty() {
                     let mut job_query_builder = sqlx::QueryBuilder::new(
                         "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) "
