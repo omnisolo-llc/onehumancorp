@@ -21,7 +21,7 @@ test.describe('Visual Workflow Builder E2E', () => {
     await expect(page.getByTestId('canvas-block-1')).toBeVisible();
 
     // Mock the API response to avoid actual execution if we don't have the backend
-    await page.route('/api/workflow/run', async route => {
+    await page.route('/api/v1/workflow/run', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

@@ -1322,7 +1322,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     try {
       const parsedTask = JSON.parse(task);
       if (parsedTask.nodes && parsedTask.version) {
-        const wfRes = await fetch('/api/workflow/run', {
+        const wfRes = await fetch('/api/v1/workflow/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(parsedTask),

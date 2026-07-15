@@ -441,7 +441,7 @@ impl AppServer {
 
         if req.method == "execute_visual_workflow" {
             let client = reqwest::Client::new();
-            let url = format!("http://localhost:18789/api/workflow/run");
+            let url = format!("http://localhost:18789/api/v1/workflow/run");
             if let Ok(res) = client.post(&url).json(&req.params.clone()).send().await {
                 let body = res.json::<serde_json::Value>().await.unwrap_or_default();
                 let resp = JsonRpcResponse {
