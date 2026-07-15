@@ -192,19 +192,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
-                        if parse_error_msg.contains("Validation Error")
-                            || parse_error_msg.contains("Semantic validation failed")
-                            || parse_error_msg.contains("Expected native tool_calls")
-                            || parse_error_msg.contains("Missing required 'data' parameter")
-                            || parse_error_msg.contains("Pydantic-first schema validation failed") || parse_error_msg.contains("Failed to parse arguments")
-                        {
-                            return Err(ToolError::LlmRecoverable(parse_error_msg));
-                        } else {
-                            return Err(ToolError::Unexpected(format!(
-                                "Output parsing failed after {} retries. Last error: {}",
-                                max_retries, parse_error_msg
-                            )));
-                        }
+                        return Err(ToolError::LlmRecoverable(parse_error_msg));
                     }
 
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
