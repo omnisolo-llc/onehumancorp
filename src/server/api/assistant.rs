@@ -32,6 +32,7 @@ where
         .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
         .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
         .route("/memory", get(list_memory).patch(mutate_memory))
+        .route("/memory/cross-session-search", axum::routing::post(search_cross_session_memory))
         .route("/memory/customer/{customer_id}", get(synthesize_customer_memory))
         .route("/skills", get(list_skills).patch(mutate_skill))
         .route("/connectors", get(list_connectors).patch(mutate_connector))
@@ -143,6 +144,7 @@ pub struct FeatureMutation {
     pub name: Option<String>,
     pub content: Option<String>,
     pub scope: Option<String>,
+    pub source: Option<String>,
     pub category: Option<String>,
     pub kind: Option<String>,
     pub version: Option<String>,
@@ -155,6 +157,25 @@ struct AssistantMemoryListResponse {
     memories: Vec<AssistantMemoryRecord>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CrossSessionSearchRequest {
+    query: String,
+    #[serde(default = "default_cross_session_limit")]
+    limit: usize,
+    #[serde(default)]
+    summarize: bool,
+}
+
+#[derive(Serialize)]
+struct CrossSessionSearchResponse {
+    results: Vec<String>,
+}
+
+fn default_cross_session_limit() -> usize {
+    5
+}
+
 #[derive(Serialize)]
 struct AssistantSkillListResponse {
     skills: Vec<AssistantSkillRecord>,
@@ -165,17 +186,50 @@ struct AssistantConnectorListResponse {
     connectors: Vec<AssistantConnectorRecord>,
 }
 
-fn tenant_id_from(claims: &Claims) -> String {
+fn tenant_id_from(claims: &Claims) -> Result<String, (StatusCode, String)> {
     claims
         .organization_id
-        .clone()
-        .unwrap_or_else(|| "default".to_string())
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| {
+            !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system")
+        })
+        .map(str::to_string)
+        .ok_or_else(|| (StatusCode::UNAUTHORIZED, "organization claim is required".to_string()))
 }
 
 fn require_text(value: Option<String>, field: &str) -> Result<String, (StatusCode, String)> {
     match value {
         Some(text) if !text.trim().is_empty() => Ok(text),
         _ => Err((StatusCode::BAD_REQUEST, format!("missing field: {field}"))),
+    }
+}
+
+fn require_bounded_text(
+    value: Option<String>,
+    field: &str,
+    max_chars: usize,
+) -> Result<String, (StatusCode, String)> {
+    let value = require_text(value, field)?;
+    if value.chars().count() > max_chars {
+        Err((
+            StatusCode::BAD_REQUEST,
+            format!("field exceeds {max_chars} characters: {field}"),
+        ))
+    } else {
+        Ok(value)
+    }
+}
+
+fn bounded_identifier(value: Option<String>, field: &str) -> Result<String, (StatusCode, String)> {
+    let value = require_bounded_text(value, field, 200)?;
+    if value
+        .chars()
+        .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+    {
+        Ok(value)
+    } else {
+        Err((StatusCode::BAD_REQUEST, format!("invalid field: {field}")))
     }
 }
 
@@ -1247,7 +1301,7 @@ async fn list_memory(
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantMemoryListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let memories = fetch_memory_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantMemoryListResponse { memories }))
@@ -1258,13 +1312,20 @@ async fn mutate_memory(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<FeatureMutation>,
 ) -> Result<Json<AssistantMemoryListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
 
     match payload.action.as_str() {
         "import" => {
             let id = Uuid::new_v4().to_string();
-            let content = require_text(payload.content, "content")?;
+            let content = require_bounded_text(payload.content, "content", 750_000)?;
             let scope = payload.scope.unwrap_or_else(|| "global".to_string());
+            if !matches!(scope.as_str(), "global" | "workspace") {
+                return Err((StatusCode::BAD_REQUEST, "invalid memory scope".to_string()));
+            }
+            let source = payload
+                .source
+                .map(|source| require_bounded_text(Some(source), "source", 255))
+                .transpose()?;
 
             match &db.store {
                 DbStore::Sqlite(pool) => {
@@ -1275,7 +1336,7 @@ async fn mutate_memory(
                     .bind(&tenant_id)
                     .bind(&content)
                     .bind(&scope)
-                    .bind(Option::<String>::None)
+                    .bind(&source)
                     .bind(1_i64)
                     .execute(pool)
                     .await
@@ -1294,7 +1355,7 @@ async fn mutate_memory(
                     .bind(&tenant_id)
                     .bind(&content)
                     .bind(&scope)
-                    .bind(Option::<String>::None)
+                    .bind(&source)
                     .bind(true)
                     .execute(&mut *tx)
                     .await
@@ -1304,8 +1365,8 @@ async fn mutate_memory(
             }
         }
         "edit" => {
-            let id = require_text(payload.id, "id")?;
-            let content = require_text(payload.content, "content")?;
+            let id = bounded_identifier(payload.id, "id")?;
+            let content = require_bounded_text(payload.content, "content", 750_000)?;
 
             match &db.store {
                 DbStore::Sqlite(pool) => {
@@ -1339,7 +1400,7 @@ async fn mutate_memory(
             }
         }
         "forget" => {
-            let id = require_text(payload.id, "id")?;
+            let id = bounded_identifier(payload.id, "id")?;
 
             match &db.store {
                 DbStore::Sqlite(pool) => {
@@ -1373,12 +1434,126 @@ async fn mutate_memory(
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
+fn literal_like_pattern(query: &str) -> String {
+    let escaped = query
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    format!("%{escaped}%")
+}
+
+fn truncate_memory_snippet(content: &str) -> String {
+    const MAX_SNIPPET_CHARS: usize = 1_000;
+    let mut chars = content.chars();
+    let snippet: String = chars.by_ref().take(MAX_SNIPPET_CHARS).collect();
+    if chars.next().is_some() {
+        format!("{snippet}…")
+    } else {
+        snippet
+    }
+}
+
+fn memory_search_failure(error: sqlx::Error) -> (StatusCode, String) {
+    tracing::error!("Cross-session memory search failed: {error:?}");
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "memory search is temporarily unavailable".to_string(),
+    )
+}
+
+async fn search_cross_session_memory(
+    Extension(db): Extension<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<CrossSessionSearchRequest>,
+) -> Result<Json<CrossSessionSearchResponse>, (StatusCode, String)> {
+    let tenant_id = tenant_id_from(&claims)?;
+    let query = payload.query.trim();
+    if query.is_empty() || query.chars().count() > 500 || !(1..=20).contains(&payload.limit) {
+        return Err((StatusCode::BAD_REQUEST, "invalid memory search request".to_string()));
+    }
+    let pattern = literal_like_pattern(query);
+
+    let snippets = match &db.store {
+        DbStore::Sqlite(pool) => {
+            let rows = sqlx::query(
+                "SELECT task_id, role, substr(content, 1, 1001) AS content FROM assistant_messages
+                 WHERE tenant_id = ? AND content LIKE ? ESCAPE '\\'
+                 ORDER BY created_at DESC, id ASC LIMIT ?",
+            )
+            .bind(&tenant_id)
+            .bind(&pattern)
+            .bind(payload.limit as i64)
+            .fetch_all(pool)
+            .await
+            .map_err(memory_search_failure)?;
+            rows.into_iter()
+                .map(|row| {
+                    format!(
+                        "[{} · {}] {}",
+                        row.get::<String, _>("task_id"),
+                        row.get::<String, _>("role"),
+                        truncate_memory_snippet(&row.get::<String, _>("content"))
+                    )
+                })
+                .collect::<Vec<_>>()
+        }
+        DbStore::Postgres => {
+            let mut tx = db
+                .pool
+                .begin()
+                .await
+                .map_err(memory_search_failure)?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .map_err(memory_search_failure)?;
+            let rows = sqlx::query(
+                "SELECT task_id, role, left(content, 1001) AS content FROM assistant_messages
+                 WHERE tenant_id = $1
+                   AND to_tsvector('simple', content) @@ plainto_tsquery('simple', $2)
+                 ORDER BY ts_rank_cd(to_tsvector('simple', content), plainto_tsquery('simple', $2)) DESC,
+                          created_at DESC, id ASC
+                 LIMIT $3",
+            )
+            .bind(&tenant_id)
+            .bind(query)
+            .bind(payload.limit as i64)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(memory_search_failure)?;
+            tx.commit()
+                .await
+                .map_err(memory_search_failure)?;
+            rows.into_iter()
+                .map(|row| {
+                    format!(
+                        "[{} · {}] {}",
+                        row.get::<String, _>("task_id"),
+                        row.get::<String, _>("role"),
+                        truncate_memory_snippet(&row.get::<String, _>("content"))
+                    )
+                })
+                .collect::<Vec<_>>()
+        }
+    };
+
+    let results = if payload.summarize && !snippets.is_empty() {
+        vec![format!(
+            "{} matching messages:\n{}",
+            snippets.len(),
+            snippets.join("\n")
+        )]
+    } else {
+        snippets
+    };
+    Ok(Json(CrossSessionSearchResponse { results }))
+}
+
 async fn list_skills(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantSkillListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let skills = fetch_skill_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantSkillListResponse { skills }))
@@ -1389,7 +1564,7 @@ async fn mutate_skill(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<FeatureMutation>,
 ) -> Result<Json<AssistantSkillListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
 
     match payload.action.as_str() {
         "install" => {
@@ -1535,7 +1710,7 @@ async fn list_connectors(
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantConnectorListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let connectors = fetch_connector_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantConnectorListResponse { connectors }))
@@ -1546,7 +1721,7 @@ async fn mutate_connector(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<FeatureMutation>,
 ) -> Result<Json<AssistantConnectorListResponse>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
 
     match payload.action.as_str() {
         "connect" => {
@@ -1717,15 +1892,18 @@ async fn fetch_memory_records(
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_memory_records
+                 WHERE tenant_id = $1
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
             } else {
                 "SELECT id, content, scope, source, enabled,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_memory_records
+                 WHERE tenant_id = $1
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
             };
             let rows = sqlx::query(query_str)
+            .bind(tenant_id)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1992,6 +2170,51 @@ mod real_feature_state_tests {
             .unwrap()
     }
 
+    async fn isolated_postgres_pool() -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
+        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+            .ok()
+            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+        if !database_url.starts_with("postgres") {
+            return None;
+        }
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+            .ok()?;
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let schema = format!("assistant_test_{suffix}");
+        let role = format!("assistant_role_{suffix}");
+        let password = format!("assistant_password_{suffix}");
+        sqlx::query(&format!("CREATE ROLE {role} LOGIN PASSWORD '{password}'"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        sqlx::query(&format!("CREATE SCHEMA {schema} AUTHORIZATION {role}"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        let search_path = format!("SET search_path TO {schema}, public");
+        let connection_options = database_url
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .ok()?
+            .username(&role)
+            .password(&password);
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(3)
+            .after_connect(move |connection, _| {
+                let search_path = search_path.clone();
+                Box::pin(async move {
+                    sqlx::query(&search_path).execute(connection).await?;
+                    Ok(())
+                })
+            })
+            .connect_with(connection_options)
+            .await
+            .ok()?;
+        Some((admin, pool, schema, role))
+    }
+
     async fn test_db() -> Arc<DB> {
         let pool = create_sqlite_pool_for_test().await;
         for statement in [
@@ -2044,9 +2267,11 @@ mod real_feature_state_tests {
         let (status, value) = request_json(db.clone(), "PATCH", "/memory", json!({
             "action": "import",
             "content": "Real persisted memory",
-            "scope": "global"
+            "scope": "global",
+            "source": "policy.md"
         })).await;
         assert_eq!(status, StatusCode::OK);
+        assert_eq!(value["memories"][0]["source"], "policy.md");
         let memory_id = value["memories"][0]["id"].as_str().unwrap().to_string();
 
         let (_, listed) = request_json(db.clone(), "GET", "/memory", json!({})).await;
@@ -2064,6 +2289,205 @@ mod real_feature_state_tests {
             "id": memory_id
         })).await;
         assert_eq!(forgotten["memories"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn memory_tenant_never_falls_back_to_a_shared_default() {
+        let mut invalid = claims();
+        invalid.organization_id = None;
+        assert_eq!(tenant_id_from(&invalid).unwrap_err().0, StatusCode::UNAUTHORIZED);
+        invalid.organization_id = Some("system".to_string());
+        assert_eq!(tenant_id_from(&invalid).unwrap_err().0, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn cross_session_search_is_bounded_and_tenant_scoped() {
+        let db = test_db().await;
+        let sqlite = match &db.store {
+            DbStore::Sqlite(pool) => pool,
+            DbStore::Postgres => unreachable!(),
+        };
+        for (id, tenant, content) in [
+            ("message-visible", "tenant-real", "Customer prefers vegan options"),
+            ("message-hidden", "tenant-other", "Private vegan account note"),
+        ] {
+            sqlx::query(
+                "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content) VALUES (?, ?, 'task-a', 'user', ?)",
+            )
+            .bind(id)
+            .bind(tenant)
+            .bind(content)
+            .execute(sqlite)
+            .await
+            .unwrap();
+        }
+
+        let (status, response) = request_json(
+            db,
+            "POST",
+            "/memory/cross-session-search",
+            json!({ "query": "vegan", "limit": 10, "summarize": false }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["results"].as_array().unwrap().len(), 1);
+        assert!(response["results"][0]
+            .as_str()
+            .unwrap()
+            .contains("Customer prefers vegan options"));
+        assert!(!response.to_string().contains("Private vegan account note"));
+    }
+
+    #[tokio::test]
+    async fn postgres_memory_mutations_and_search_are_tenant_scoped() {
+        let Some((admin, pool, schema, role)) = isolated_postgres_pool().await else {
+            return;
+        };
+        sqlx::query(
+            "CREATE TABLE assistant_memory_records (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                content TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                source TEXT,
+                enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE TABLE assistant_messages (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                task_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        for table in ["assistant_memory_records", "assistant_messages"] {
+            for statement in [
+                format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"),
+                format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"),
+                format!(
+                    "CREATE POLICY tenant_isolation ON {table}
+                     USING (tenant_id = current_setting('app.current_tenant', true))
+                     WITH CHECK (tenant_id = current_setting('app.current_tenant', true))"
+                ),
+            ] {
+                sqlx::query(&statement).execute(&pool).await.unwrap();
+            }
+        }
+        let mut tenant_other_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_other_tx, "tenant-other")
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO assistant_memory_records (id, tenant_id, content, scope, source)
+             VALUES ('hidden-memory', 'tenant-other', 'private memory', 'global', 'private.md')",
+        )
+        .execute(&mut *tenant_other_tx)
+        .await
+        .unwrap();
+        tenant_other_tx.commit().await.unwrap();
+        for (id, tenant, content) in [
+            ("visible-message", "tenant-real", "Customer prefers vegan options"),
+            ("hidden-message", "tenant-other", "Private vegan account note"),
+        ] {
+            let mut tx = pool.begin().await.unwrap();
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant)
+                .await
+                .unwrap();
+            sqlx::query(
+                "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content)
+                 VALUES ($1, $2, 'task-a', 'user', $3)",
+            )
+            .bind(id)
+            .bind(tenant)
+            .bind(content)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+            tx.commit().await.unwrap();
+        }
+
+        let db = Arc::new(DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+        let (status, imported) = request_json(
+            db.clone(),
+            "PATCH",
+            "/memory",
+            json!({
+                "action": "import",
+                "content": "tenant-real memory",
+                "scope": "global",
+                "source": "visible.md"
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(imported["memories"].as_array().unwrap().len(), 1);
+        assert_eq!(imported["memories"][0]["content"], "tenant-real memory");
+
+        let (status, _) = request_json(
+            db.clone(),
+            "PATCH",
+            "/memory",
+            json!({"action": "edit", "id": "hidden-memory", "content": "tampered"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = request_json(
+            db.clone(),
+            "PATCH",
+            "/memory",
+            json!({"action": "forget", "id": "hidden-memory"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let mut tenant_other_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_other_tx, "tenant-other")
+            .await
+            .unwrap();
+        let hidden: Option<String> = sqlx::query_scalar(
+            "SELECT content FROM assistant_memory_records WHERE id = 'hidden-memory' AND tenant_id = 'tenant-other'",
+        )
+        .fetch_optional(&mut *tenant_other_tx)
+        .await
+        .unwrap();
+        tenant_other_tx.commit().await.unwrap();
+        assert_eq!(hidden.as_deref(), Some("private memory"));
+
+        let (status, response) = request_json(
+            db,
+            "POST",
+            "/memory/cross-session-search",
+            json!({"query": "vegan", "limit": 10, "summarize": false}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["results"].as_array().unwrap().len(), 1);
+        assert!(response.to_string().contains("Customer prefers vegan options"));
+        assert!(!response.to_string().contains("Private vegan account note"));
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query(&format!("DROP ROLE {role}"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        admin.close().await;
     }
 
     #[tokio::test]
@@ -2176,7 +2600,7 @@ async fn synthesize_customer_memory(
     Extension(claims): Extension<Claims>,
     axum::extract::Path(customer_id): axum::extract::Path<String>,
 ) -> Result<Json<CustomerMemorySynthesis>, (StatusCode, String)> {
-    let tenant_id = tenant_id_from(&claims);
+    let tenant_id = tenant_id_from(&claims)?;
 
     let limit = 5;
     let mut history_items = Vec::new();
