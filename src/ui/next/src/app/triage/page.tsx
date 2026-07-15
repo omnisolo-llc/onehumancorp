@@ -100,7 +100,7 @@ export default function TriagePage() {
     setError("");
     try {
       const res = await fetch(
-        `/api/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
+        `/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
       );
       if (!res.ok)
         throw new Error("Failed to load triage items from the database");
@@ -142,7 +142,7 @@ export default function TriagePage() {
       setProcessingId(id);
       setActionStatus(approved ? "Approving..." : "Dismissing...");
       const res = await fetch(
-        `/api/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
+        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -206,7 +206,7 @@ export default function TriagePage() {
             onClick={async () => {
               setLoading(true);
               try {
-                await fetch(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId())}`, {
+                await fetch(`/api/v1/triage/create?tenant_id=${encodeURIComponent(tenantId())}`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

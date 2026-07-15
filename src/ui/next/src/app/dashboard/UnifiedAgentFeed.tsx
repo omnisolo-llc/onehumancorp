@@ -615,7 +615,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     ) {
       const tenant = tenantId();
       const res = await fetch(
-        `/api/triage/action?tenant_id=${encodeURIComponent(tenant)}`,
+        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenant)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

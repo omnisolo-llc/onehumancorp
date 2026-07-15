@@ -45,7 +45,7 @@ test.describe('Triage Action Feed UI', () => {
     ];
 
     for (const data of seedData) {
-      await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
+      await page.request.post(`/api/v1/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
         data
       });
     }
@@ -76,7 +76,7 @@ test.describe('Triage Action Feed UI', () => {
 
       // We will wait for the API response after clicking
       const responsePromise = page.waitForResponse(response =>
-        response.url().includes('/api/triage/action') && response.status() === 200
+        response.url().includes('/api/v1/triage/action') && response.status() === 200
       ).catch(() => console.log('Response not found or timed out in E2E'));
 
       try {

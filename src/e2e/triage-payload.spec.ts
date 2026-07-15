@@ -5,7 +5,7 @@ test.describe('Mobile Payload Optimization', () => {
 
   test('UI Triage request succeeds with mobile_optimized=true', async ({ request }) => {
      // Verify the actual endpoint returns 200 OK and valid JSON
-     const response = await request.get(`/api/triage/pending?mobile_optimized=true`);
+     const response = await request.get(`/api/v1/triage/pending?mobile_optimized=true`);
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -16,7 +16,7 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Triage request succeeds with mobile_optimized=false', async ({ request }) => {
-     const response = await request.get(`/api/triage/pending?mobile_optimized=false`);
+     const response = await request.get(`/api/v1/triage/pending?mobile_optimized=false`);
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();

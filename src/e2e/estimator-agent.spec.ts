@@ -33,7 +33,7 @@ test.describe('The Estimator Agent - Mobile Feed to Customer Deposit', () => {
         const quoteId = quoteData.id;
 
         // Add an agent feed item to trigger the UI
-        await request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
+        await request.post(`/api/v1/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
             data: {
                 customer_id: '00000000-0000-0000-0000-000000000001',
                 source: 'email',
