@@ -4289,24 +4289,33 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
-            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1 WHERE id = $2 AND tenant_id = $3")
+            if let Err(e) = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(lifecycle_state)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                tracing::error!("Failed to update agent feed item status: {:?}", e);
+            }
 
-            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                tracing::error!("Failed to update omni_inbox_message status: {:?}", e);
+            }
 
-            let _ = sqlx::query("UPDATE unified_triage_actions SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
-            let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2)")
-                .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
+            if let Err(e) = sqlx::query("UPDATE unified_triage_actions SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update unified_triage_actions status: {:?}", e);
+            }
+
+            if let Err(e) = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2)")
+                .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update unified_threads status: {:?}", e);
+            }
 
             if let Err(e) = sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 tracing::error!("Failed to update triage item: {:?}", e);
@@ -4558,24 +4567,33 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
-            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
+            if let Err(e) = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
                 .bind(lifecycle_state)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                tracing::error!("Failed to update agent feed item status (sqlite): {:?}", e);
+            }
 
-            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
                 .bind(status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                tracing::error!("Failed to update omni_inbox_message status (sqlite): {:?}", e);
+            }
 
-            let _ = sqlx::query("UPDATE unified_triage_actions SET status = ? WHERE id = ? AND tenant_id = ?")
-                .bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
-            let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = ? AND tenant_id = ?)")
-                .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
+            if let Err(e) = sqlx::query("UPDATE unified_triage_actions SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update unified_triage_actions status (sqlite): {:?}", e);
+            }
+
+            if let Err(e) = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = ? AND tenant_id = ?)")
+                .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update unified_threads status (sqlite): {:?}", e);
+            }
 
             if let Err(e) = sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 tracing::error!("Failed to update triage item (sqlite): {:?}", e);
