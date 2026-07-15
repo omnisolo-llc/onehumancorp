@@ -42,6 +42,7 @@ async-nats = "0.47.0"
 tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
+tower = "0.4"
 
 [build-dependencies]
 tonic-build = "0.12"
