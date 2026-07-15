@@ -36,6 +36,8 @@ export default function KitchenView() {
         if (menuRes.ok) {
            const data = await menuRes.json();
            setMenu(data.items || data || []);
+        } else {
+           setMenu([]);
         }
       } catch (err) {
         console.error("Failed to fetch kitchen data", err);
@@ -142,17 +144,21 @@ export default function KitchenView() {
                   <h3 className={`font-bold font-outfit text-lg ${soldOut ? "text-gray-400 line-through" : "text-[#1D1D1F]"}`}>
                     {item.name || item.title}
                   </h3>
-                  <button
-                    id={`sold-out-toggle-${item.id}`}
-                    onClick={() => handleToggleSoldOut(item.id, soldOut)}
-                    className={`min-h-[44px] min-w-[44px] h-[44px] px-4 font-bold text-sm transition-colors ${
-                      soldOut
-                        ? "bg-[#FF3B30]/10 text-[#FF3B30] border border-[#FF3B30]/20"
-                        : "bg-[#0071E3]/10 text-[#0071E3] border border-[#0071E3]/20 hover:bg-[#0071E3]/20"
-                    }`}
-                  >
-                    {soldOut ? "Sold Out" : "Mark Sold Out"}
-                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-[#1D1D1F]">{soldOut ? "Sold Out" : "Available"}</span>
+                    <label className="relative inline-flex items-center cursor-pointer min-h-[44px] min-w-[44px] h-[44px]">
+                      <input
+                        type="checkbox"
+                        id={`sold-out-toggle-${item.id}`}
+                        className="sr-only peer"
+                        checked={!soldOut}
+                        onChange={() => handleToggleSoldOut(item.id, soldOut)}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+
                 </div>
               )})}
             </div>
