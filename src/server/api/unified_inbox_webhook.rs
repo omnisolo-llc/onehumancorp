@@ -24,12 +24,25 @@ pub struct UnifiedWebhookPayload {
     pub message: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DraftedResponse {
-    pub customer_id: String,
-    pub context_summary: String,
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct TriageAgentResponse {
+    pub intent: String,
     pub draft_reply: String,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
 }
+
+#[derive(serde::Serialize)]
+struct DraftedResponse {
+    customer_id: String,
+    context_summary: String,
+    draft_reply: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    total_amount_cents: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    required_deposit_cents: Option<i64>,
+}
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedThread {
@@ -89,7 +102,7 @@ async fn generate_draft_reply(
     customer_message: &str,
     context_summary: &str,
     db: &Arc<DB>,
-) -> String {
+) -> TriageAgentResponse {
     let (business_name, industry): (String, String) = match &db.store {
         crate::db::DbStore::Postgres => sqlx::query_as(
             "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -170,7 +183,7 @@ async fn generate_draft_reply(
 
 
     let prompt = format!(
-        "Write one concise, warm customer-service reply. Business context: {}. Customer recent history: {}. Customer message: {}",
+        "You are an AI work assistant acting as Work Triage, Customer Assistant, and Sales Agent. Analyze the following message and output ONLY a JSON object with no markdown formatting. The JSON must contain exactly these keys: 'intent' (either 'general' or 'sales'), 'draft_reply' (a warm, helpful response), 'total_amount_cents' (integer, optional, based on pricing logic or inferred), and 'required_deposit_cents' (integer, optional, usually 5000 for $50 deposit if it is a sales inquiry for custom work like cakes or services). Business context: {}. Customer recent history: {}. Customer message: {}",
         business_context, enriched_context_summary, customer_message
     );
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
@@ -190,9 +203,19 @@ async fn generate_draft_reply(
         _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
     };
 
+    let fallback = TriageAgentResponse {
+        intent: "general".to_string(),
+        draft_reply: format!("Hi there! Thanks for your message: '{}'. How can we help?", customer_message),
+        total_amount_cents: None,
+        required_deposit_cents: None,
+    };
+
     match llm_res {
-        Ok(reply) => reply,
-        Err(_) => format!("Hi there! Thanks for your message: '{}'. How can we help?", customer_message),
+        Ok(reply) => {
+            let clean_reply = reply.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+            serde_json::from_str::<TriageAgentResponse>(clean_reply).unwrap_or(fallback)
+        },
+        Err(_) => fallback,
     }
 }
 
@@ -311,24 +334,34 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = generate_draft_reply(
+            let agent_res = generate_draft_reply(
                 tenant_id,
                 &customer_id,
                 &payload.message,
                 &context_summary,
                 &state.db,
             ).await;
+
+            let action_type = if agent_res.intent == "sales" {
+                "Draft Quote"
+            } else {
+                "DRAFT_REPLY"
+            };
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
+                context_summary: context_summary.clone(),
+                draft_reply: agent_res.draft_reply,
+                total_amount_cents: agent_res.total_amount_cents,
+                required_deposit_cents: agent_res.required_deposit_cents,
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DRAFT_REPLY', $4, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, $4, $5, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
+                .bind(action_type)
                 .bind(&action_payload)
                 .execute(&state.db.pool).await;
         }
@@ -368,24 +401,34 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = generate_draft_reply(
+            let agent_res = generate_draft_reply(
                 tenant_id,
                 &customer_id,
                 &payload.message,
                 &context_summary,
                 &state.db,
             ).await;
+
+            let action_type = if agent_res.intent == "sales" {
+                "Draft Quote"
+            } else {
+                "DRAFT_REPLY"
+            };
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
+                context_summary: context_summary.clone(),
+                draft_reply: agent_res.draft_reply,
+                total_amount_cents: agent_res.total_amount_cents,
+                required_deposit_cents: agent_res.required_deposit_cents,
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, ?, ?, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
+                .bind(action_type)
                 .bind(&action_payload)
                 .execute(sqlite_pool).await;
         }
