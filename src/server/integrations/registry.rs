@@ -18,6 +18,7 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    whatsapp_cloud_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::whatsapp_cloud::provider::WhatsAppCloudProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
@@ -62,6 +63,7 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            whatsapp_cloud_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -148,7 +150,27 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
-                 "meta" | "whatsapp" | "whatsapp_cloud_api" => {
+                 "whatsapp_cloud_api" => {
+                     if !creds.api_token.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let text = content.to_string();
+
+                         let client = {
+                             let clients = self.whatsapp_cloud_clients.read().unwrap();
+                             clients.get(integration_id).cloned()
+                         };
+                         if let Some(client) = client {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 if let Err(e) = client.send_message(&to, &text).await {
+                                     ::server_telemetry::record_error_signal("[bug] Failed to send WhatsApp Cloud API message");
+                                     tracing::warn!("Failed to send WhatsApp Cloud API message: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 "meta" | "whatsapp" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                          let text = content.to_string();
@@ -159,7 +181,7 @@ impl IntegrationsRegistry {
                          };
                          if let Some(client) = client {
                              let client = client.clone();
-                             let is_whatsapp = integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api";
+                             let is_whatsapp = integration_id == "whatsapp";
                              tokio::spawn(async move {
                                  // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
                                  // Otherwise we default to whatsapp
@@ -231,7 +253,14 @@ impl IntegrationsRegistry {
                 Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
             )));
         }
-        if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        if integration_id == "whatsapp_cloud_api" {
+            let mut clients = self.whatsapp_cloud_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::whatsapp_cloud::provider::WhatsAppCloudProvider::new(
+                if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() },
+                creds.api_token.clone()
+            )));
+        }
+        if integration_id == "whatsapp" {
             let mut clients = self.meta_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
                 creds.api_token.clone(),
@@ -470,7 +499,15 @@ impl IntegrationsRegistry {
             if let Some(c) = client {
                 return c.send_whatsapp(to, from, body).await;
             }
-        } else if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        } else if integration_id == "whatsapp_cloud_api" {
+            let client = {
+                let clients = self.whatsapp_cloud_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = client {
+                return c.send_message(to, body).await;
+            }
+        } else if integration_id == "meta" || integration_id == "whatsapp" {
             let client = {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -574,8 +611,19 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
+        if integration_id == "whatsapp_cloud_api" {
+            let client = {
+                let clients = self.whatsapp_cloud_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = client {
+                return c.send_message(to, body).await;
+            }
+            return Err("integration not found or not supported".to_string());
+        }
+
         let client = {
-            if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+            if integration_id == "meta" || integration_id == "whatsapp" {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
