@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-describe("POST /api/inbox/webhook", () => {
+describe("POST /api/v1/inbox/webhook", () => {
   beforeEach(() => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
     global.fetch = vi.fn();
@@ -23,7 +23,7 @@ describe("POST /api/inbox/webhook", () => {
       message: "Are you open today?",
       business_context: "Bakery hours and inventory",
     };
-    const req = new Request("http://localhost/api/inbox/webhook", {
+    const req = new Request("http://localhost/api/v1/inbox/webhook", {
       method: "POST",
       headers: {
         authorization: "Bearer token",

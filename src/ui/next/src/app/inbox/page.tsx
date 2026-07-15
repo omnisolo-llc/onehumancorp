@@ -68,7 +68,7 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
   useEffect(() => {
     async function fetchSummary() {
       try {
-        const res = await fetch(`/api/memory/summary/${customerId}`);
+        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
         if (res.ok) {
           const data = await res.json();
           setSummary(data);

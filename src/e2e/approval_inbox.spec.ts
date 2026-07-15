@@ -9,7 +9,7 @@ test('approval_inbox', async ({ page, request, loginAs, adminUser }) => {
 test.describe('Dashboard - Ambassador Agent Approval', () => {
   test('displays Action Required card for incoming message and allows 1-tap approve', async ({ request, page, adminUser, loginAs }) => {
     // 1. Send webhook simulating incoming message
-    const webhookRes = await request.post('/api/inbox/webhook', {
+    const webhookRes = await request.post('/api/v1/inbox/webhook', {
       data: {
         source: 'instagram',
         message: 'hello e2e vegan options',

@@ -59,7 +59,7 @@ export function crossSessionMemoryRequest(
 }
 
 export function memoryCustomerPath(customerId: string): string {
-  return `/api/memory/summary/${memoryId(customerId)}`;
+  return `/api/v1/memory/summary/${memoryId(customerId)}`;
 }
 
 export function invalidMemoryId(): Response {

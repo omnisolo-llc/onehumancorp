@@ -30,7 +30,7 @@ test.describe('Omnichannel Unified Customer Memory Graph UI', () => {
   });
 
   test('should show loading state temporarily before network failure resolves', async ({ page }) => {
-    await page.route('**/api/inbox/summary/**', async route => {
+    await page.route('**/api/v1/inbox/summary/**', async route => {
       await new Promise(resolve => setTimeout(resolve, 500));
       await route.fulfill({ status: 404, body: 'Not found' });
     });

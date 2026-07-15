@@ -18,7 +18,7 @@ export default function CrossSessionRecall() {
     setResults([]);
 
     try {
-      const res = await fetch("/api/memory/cross-session", {
+      const res = await fetch("/api/v1/memory/cross-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

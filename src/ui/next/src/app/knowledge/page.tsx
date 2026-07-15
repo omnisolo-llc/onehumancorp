@@ -12,7 +12,7 @@ export default function KnowledgePage() {
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch("/api/memory");
+      const res = await fetch("/api/v1/memory");
       if (res.ok) {
         const data = await res.json() as { memories?: any[] };
         setDocuments((data.memories ?? []).map((m: any) => ({
@@ -33,7 +33,7 @@ export default function KnowledgePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/memory/${id}`, {
+      const response = await fetch(`/api/v1/memory/${id}`, {
           method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete document");
@@ -54,7 +54,7 @@ export default function KnowledgePage() {
       if (file.size > 750_000) throw new Error("Document exceeds the 750 KB limit");
       const content = await file.text();
 
-      const response = await fetch("/api/memory/upload", {
+      const response = await fetch("/api/v1/memory/upload", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
