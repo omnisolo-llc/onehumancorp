@@ -81,22 +81,13 @@ pub fn reduce_tokens(data: &str) -> String {
                 return true;
             }
 
-            // Allocation-free case-insensitive binary search
+            // Fast stack-allocated case-insensitive binary search
+            let mut buf = [0u8; 10];
+            for (i, b) in word.bytes().take(10).enumerate() {
+                buf[i] = b.to_ascii_lowercase();
+            }
             let res = STOP_WORDS.binary_search_by(|probe| {
-                let mut it1 = probe.bytes();
-                let mut it2 = word.bytes().map(|b| b.to_ascii_lowercase());
-                loop {
-                    match (it1.next(), it2.next()) {
-                        (Some(b1), Some(b2)) => {
-                            if b1 != b2 {
-                                return b1.cmp(&b2);
-                            }
-                        }
-                        (Some(_), None) => return std::cmp::Ordering::Greater,
-                        (None, Some(_)) => return std::cmp::Ordering::Less,
-                        (None, None) => return std::cmp::Ordering::Equal,
-                    }
-                }
+                probe.as_bytes().cmp(&buf[..len])
             });
             res.is_err()
         })
