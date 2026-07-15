@@ -67,6 +67,5 @@ exports[`protected backend transport source contract > keeps backend origin and 
   "src/app/api/v1/shipping/rates/route.ts: direct backend configuration",
   "src/app/api/v1/shipping/rates/route.ts: browser identity forwarding",
   "src/app/api/v1/work-intake/submit/route.ts: direct backend configuration",
-  "src/app/api/workflow/run/route.ts: direct backend configuration",
 ]
 `;

@@ -39,7 +39,7 @@ export default function VisualWorkflowPage() {
         target: e.target
       }));
 
-      const res = await fetch("/api/workflow/run", {
+      const res = await fetch("/api/v1/workflow/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

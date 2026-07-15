@@ -23,7 +23,7 @@ test.describe('Visual Workflow Builder', () => {
     // Listen for the request to verify payload structure
     let capturedPayload: any = null;
     page.on('request', request => {
-      if (request.url().includes('/api/workflow/run')) {
+      if (request.url().includes('/api/v1/workflow/run')) {
         capturedPayload = request.postDataJSON();
       }
     });
