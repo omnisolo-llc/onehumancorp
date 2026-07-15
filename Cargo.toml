@@ -34,7 +34,7 @@ once_cell = "1"
 async-trait = "0.1"
 urlencoding = "2"
 async-recursion = "1"
-tracing-opentelemetry = "0.28"
+tracing-opentelemetry = "0.33"
 tonic-build = "0.12"
 tokio-tungstenite = "0.29.0"
 dashmap = "5"
@@ -116,15 +116,15 @@ version = "0.8"
 features = [ "postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros",]
 
 [dependencies.opentelemetry]
-version = "0.27"
+version = "0.32"
 features = [ "metrics", "trace",]
 
 [dependencies.opentelemetry_sdk]
-version = "0.27"
+version = "0.32"
 features = [ "rt-tokio",]
 
 [dependencies.opentelemetry-otlp]
-version = "0.27"
+version = "0.32"
 features = [ "grpc-tonic",]
 
 [dependencies.axum]

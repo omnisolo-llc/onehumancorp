@@ -212,11 +212,13 @@ fn init_otel() {
         .build()
         .expect("failed to build tracer");
 
-    let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
-        .with_batch_exporter(tracer, opentelemetry_sdk::runtime::Tokio)
-        .with_resource(opentelemetry_sdk::Resource::new(vec![
-            opentelemetry::KeyValue::new("service.name", "ohc-agent"),
-        ]))
+    let tracer_provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(tracer)
+        .with_resource(
+            opentelemetry_sdk::Resource::builder_empty()
+                .with_attributes([opentelemetry::KeyValue::new("service.name", "ohc-agent")])
+                .build(),
+        )
         .build();
 
     opentelemetry::global::set_tracer_provider(tracer_provider.clone());
