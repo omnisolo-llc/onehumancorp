@@ -25,7 +25,7 @@ export default function MyPlanPage() {
     const fetchPlanData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/billing/my-plan', {
+        const response = await fetch('/api/v1/billing/my-plan', {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (response.ok) {
@@ -53,7 +53,7 @@ export default function MyPlanPage() {
     setIsManagingBilling(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/create-billing-portal-session', {
+      const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

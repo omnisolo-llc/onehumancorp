@@ -22,7 +22,7 @@ export default function PricingPage() {
     const fetchPlanData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/billing/my-plan', {
+        const response = await fetch('/api/v1/billing/my-plan', {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (response.ok) {
@@ -43,7 +43,7 @@ export default function PricingPage() {
   const handleManageBilling = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/create-billing-portal-session', {
+      const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export default function PricingPage() {
   const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/create-checkout-session', {
+      const response = await fetch('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -138,7 +138,7 @@ function CheckoutContent() {
     setIsSubscription(isSub);
 
     try {
-      const response = await fetch("/api/billing/create-checkout-session", {
+      const response = await fetch("/api/v1/billing/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -63,7 +63,7 @@ export default function CostDashboardPage() {
     if (confirm('Are you sure you want to cancel your subscription?')) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/billing/cancel-subscription', {
+        const response = await fetch('/api/v1/billing/cancel-subscription', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export default function CostDashboardPage() {
   const handleDownloadInvoice = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/download-invoice', {
+      const response = await fetch('/api/v1/billing/download-invoice', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ export default function CostDashboardPage() {
   const handleManageBilling = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/create-billing-portal-session', {
+      const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,8 +137,8 @@ export default function CostDashboardPage() {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         const [costRes, planRes] = await Promise.all([
-          fetch('/api/billing/cost-dashboard', { headers }),
-          fetch('/api/billing/my-plan', { headers })
+          fetch('/api/v1/billing/cost-dashboard', { headers }),
+          fetch('/api/v1/billing/my-plan', { headers })
         ]);
 
         if (costRes.ok) {

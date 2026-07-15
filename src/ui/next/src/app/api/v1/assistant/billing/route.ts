@@ -8,7 +8,7 @@ function finiteNumber(value: unknown): number | null {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const response = await proxyBackendRequest(request, "/api/billing/my-plan");
+  const response = await proxyBackendRequest(request, "/api/v1/billing/my-plan");
   if (!response.ok) return response;
   const value = await response.json().catch(() => null);
   if (value === null || typeof value !== "object" || Array.isArray(value)) {

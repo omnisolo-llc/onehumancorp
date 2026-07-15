@@ -9,7 +9,7 @@ vi.mock("@/app/api/backendCatchAll", () => ({ proxyCurrentBackendPath }));
 import { POST } from "./route";
 
 test("uses the authenticated billing transport", async () => {
-  const request = new Request("http://localhost/api/billing/create-checkout-session", {
+  const request = new Request("http://localhost/api/v1/billing/create-checkout-session", {
     method: "POST",
     body: '{"tier":"Starter"}',
   });
