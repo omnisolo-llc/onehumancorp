@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-describe("POST /api/integrations/[id]/connect", () => {
+describe("POST /api/v1/integrations/[id]/connect", () => {
   beforeEach(() => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
     global.fetch = vi.fn();
@@ -22,7 +22,7 @@ describe("POST /api/integrations/[id]/connect", () => {
       json: async () => backendResponse,
     });
 
-    const req = new Request("http://localhost/api/integrations/shippo/connect", {
+    const req = new Request("http://localhost/api/v1/integrations/shippo/connect", {
       method: "POST",
       headers: {
         authorization: "Bearer token",
@@ -36,7 +36,7 @@ describe("POST /api/integrations/[id]/connect", () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(backendResponse);
     expect(global.fetch).toHaveBeenCalledWith(
-      "http://backend.internal/api/integrations/shippo/connect",
+      "http://backend.internal/api/v1/integrations/shippo/connect",
       {
         method: "POST",
         headers: {

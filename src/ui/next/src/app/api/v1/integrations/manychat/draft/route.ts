@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/integrations/manychat/draft`, {
+    const res = await fetch(`${backendUrl}/api/v1/integrations/manychat/draft`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

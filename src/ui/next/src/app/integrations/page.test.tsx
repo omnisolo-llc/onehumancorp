@@ -31,7 +31,7 @@ describe("Integrations", () => {
       value: { assign },
     });
     (global.fetch as any).mockImplementation((url: string) => {
-        if (url === '/api/integrations') {
+        if (url === '/api/v1/integrations') {
             return Promise.resolve({
                 ok: true,
                 json: async () => ({
@@ -40,7 +40,7 @@ describe("Integrations", () => {
                 })
             });
         }
-        if (url === '/api/integrations/shippo/connect') {
+        if (url === '/api/v1/integrations/shippo/connect') {
             return Promise.resolve({
                 ok: true,
                 json: async () => ({
@@ -55,7 +55,7 @@ describe("Integrations", () => {
 
     // Wait for initial load fetch to complete
     await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/integrations");
+        expect(global.fetch).toHaveBeenCalledWith("/api/v1/integrations");
     });
 
     const connectButtons = screen.getAllByRole("button", { name: "Connect" });
@@ -63,7 +63,7 @@ describe("Integrations", () => {
     fireEvent.click(connectButtons[4]);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/integrations/shippo/connect", {
+      expect(global.fetch).toHaveBeenCalledWith("/api/v1/integrations/shippo/connect", {
         method: "POST",
       });
       expect(assign).toHaveBeenCalledWith("https://oauth.example/shippo");

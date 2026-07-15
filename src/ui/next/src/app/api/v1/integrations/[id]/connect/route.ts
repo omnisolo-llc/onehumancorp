@@ -28,7 +28,7 @@ export async function POST(req: Request, context: ConnectContext) {
 
     const targetId = id === 'whatsapp' ? 'twilio' : encodeURIComponent(id);
 
-    const res = await fetch(`${backendUrl}/api/integrations/${targetId}/connect`, {
+    const res = await fetch(`${backendUrl}/api/v1/integrations/${targetId}/connect`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),

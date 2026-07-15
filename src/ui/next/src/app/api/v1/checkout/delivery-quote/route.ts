@@ -4,7 +4,7 @@ import {
 } from "@/lib/auth/backendTransport";
 
 export async function POST(request: Request): Promise<Response> {
-  return proxyBackendRequest(request, "/api/checkout/delivery-quote", {
+  return proxyBackendRequest(request, "/api/v1/checkout/delivery-quote", {
     forwardQuery: false,
     requestContentType: "application/json",
     transformRequestBody: validateJsonRequestBody,
