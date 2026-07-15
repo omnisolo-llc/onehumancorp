@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "NODE_DISABLE_COMPILE_CACHE=1" >> "$GITHUB_ENV"
+fi
+if command -v sudo >/dev/null 2>&1; then
+  sudo -n rm -rf /tmp/node-compile-cache 2>/dev/null || true
+fi
+rm -rf /tmp/node-compile-cache 2>/dev/null || true
+
 scanner_error() {
   local reason="$1"
   shift
