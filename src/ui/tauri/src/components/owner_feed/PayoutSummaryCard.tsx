@@ -25,7 +25,7 @@ export const PayoutSummaryCard: React.FC<PayoutSummaryCardProps> = ({
 
       <button
         onClick={onViewDetails} data-testid="feed-approve-btn"
-                    className="w-full bg-[#0066FF] text-white min-h-[44px] px-4 rounded-[8px] text-sm font-medium hover:bg-blue-600 transition-colors"
+                    className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] px-4 rounded-[8px] text-sm font-medium hover:bg-blue-600 transition-colors"
                 >
         View Details
       </button>

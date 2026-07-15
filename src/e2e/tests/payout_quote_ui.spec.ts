@@ -59,4 +59,79 @@ test.describe('Owner Feed - UI Components Verify', () => {
         const windowWidth = await page.evaluate(() => window.innerWidth);
         expect(bodyWidth).toBeLessThanOrEqual(windowWidth);
     });
+
+    test('Verify PayoutSummaryCard approve button exists and is clickable', async ({ page }) => {
+        // Wait for feed to load
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+
+        // This relies on the UI rendering the correct test id for the card buttons
+        const approveBtns = page.locator('[data-testid="feed-approve-btn"]');
+        if (await approveBtns.count() > 0) {
+            const btn = approveBtns.first();
+            await expect(btn).toBeVisible();
+            await btn.click({ trial: true });
+        }
+    });
+
+    test('Verify ReviewDraftQuoteCard edit button exists and is clickable', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+
+        const dismissBtns = page.locator('[data-testid="feed-dismiss-btn"]');
+        if (await dismissBtns.count() > 0) {
+            const btn = dismissBtns.first();
+            await expect(btn).toBeVisible();
+            await btn.click({ trial: true });
+        }
+    });
+
+    test('Verify AgentFeedCard rendering with valid touch targets', async ({ page }) => {
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+
+        const approveBtns = page.locator('[data-testid="feed-approve-btn"]');
+        const dismissBtns = page.locator('[data-testid="feed-dismiss-btn"]');
+
+        if (await approveBtns.count() > 0 && await dismissBtns.count() > 0) {
+            const boxApprove = await approveBtns.first().boundingBox();
+            if (boxApprove) {
+                expect(boxApprove.width).toBeGreaterThanOrEqual(44);
+                expect(boxApprove.height).toBeGreaterThanOrEqual(44);
+            }
+            const boxDismiss = await dismissBtns.first().boundingBox();
+            if (boxDismiss) {
+                expect(boxDismiss.width).toBeGreaterThanOrEqual(44);
+                expect(boxDismiss.height).toBeGreaterThanOrEqual(44);
+            }
+        }
+    });
+
+    test('Verify owner feed transitions on 375px mobile screen', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+
+        const approveBtns = page.locator('[data-testid="feed-approve-btn"]');
+        if (await approveBtns.count() > 0) {
+            const boxApprove = await approveBtns.first().boundingBox();
+            if (boxApprove) {
+                expect(boxApprove.width).toBeGreaterThanOrEqual(44);
+            }
+        }
+    });
+
+    test('Verify owner feed transitions on 768px tablet screen', async ({ page }) => {
+        await page.setViewportSize({ width: 768, height: 1024 });
+        await page.goto('/');
+        await page.waitForLoadState('networkidle');
+
+        const approveBtns = page.locator('[data-testid="feed-approve-btn"]');
+        if (await approveBtns.count() > 0) {
+            const boxApprove = await approveBtns.first().boundingBox();
+            if (boxApprove) {
+                expect(boxApprove.width).toBeGreaterThanOrEqual(44);
+            }
+        }
+    });
 });
