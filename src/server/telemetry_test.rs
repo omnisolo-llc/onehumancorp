@@ -825,7 +825,9 @@ fn test_telemetry_batch_pii_redaction() {
             "user_email": "test@example.com",
             "api_key": "sk-1234567890abcdef",
             "credit_card": "4111-1111-1111-1111",
-            "safe_metric": 42
+            "safe_metric": 42,
+            "organization_name": "Acme Corp",
+            "organization_id": "org_123"
         }
     });
 
@@ -835,4 +837,6 @@ fn test_telemetry_batch_pii_redaction() {
     assert_eq!(redacted["labels"]["api_key"], "[REDACTED]", "api_key must be redacted");
     assert_eq!(redacted["labels"]["credit_card"], "[REDACTED]", "credit_card must be redacted");
     assert_eq!(redacted["labels"]["safe_metric"], 42, "safe metrics should remain intact");
+    assert_eq!(redacted["labels"]["organization_name"], "[REDACTED]", "organization name must be redacted");
+    assert_eq!(redacted["labels"]["organization_id"], "org_123", "organization_id must not be redacted");
 }

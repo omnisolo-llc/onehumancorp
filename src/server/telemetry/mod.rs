@@ -1385,6 +1385,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("macaddress")
         || k.contains("creditcard") || k.contains("deviceid") || k.contains("gps") || k.contains("latitude") || k.contains("longitude")
         || (k.contains("tenant") && k != "tenantid")
+        || (k.contains("organization") && k != "organizationid" && k != "organization_id")
 }
 
 pub fn is_email(s: &str) -> bool {
