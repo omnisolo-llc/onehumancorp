@@ -1428,9 +1428,21 @@
             aria-label="Next Step"
             title="Next Step"
             data-next="step-context"
-            style="width: 100%;"
+            style="width: 100%; margin-bottom: 10px;"
           >
             Step-by-Step Setup
+          </button>
+
+          <button
+            type="button"
+            class="setup-nav-button"
+            data-testid="skip-setup-btn"
+            aria-label="Skip setup"
+            title="Skip setup"
+            onclick="handleSkipSetup()"
+            style="width: 100%; min-height: 44px; background: transparent; border: none; color: #555; font-size: 14px; font-weight: 600; cursor: pointer;"
+          >
+            Skip setup
           </button>
         </div>
       </div>
@@ -3543,6 +3555,11 @@
         } else {
           inputs.categories.value = "";
         }
+      }
+
+      function handleSkipSetup() {
+        localStorage.setItem("has_onboarded", "true");
+        window.location.href = "dashboard.html#unified-agent-feed-section";
       }
 
       function goToStep(stepId, shouldSave = true) {
