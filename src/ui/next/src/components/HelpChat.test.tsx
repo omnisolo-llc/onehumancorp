@@ -73,7 +73,7 @@ describe('HelpChat Component', () => {
       expect(screen.getByText('Hello from AI')).toBeInTheDocument();
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ message: 'Test message' })
     }));

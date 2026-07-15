@@ -71,7 +71,7 @@ describe('HelpWidget', () => {
           ])
         });
       }
-      if (url.includes('/api/chat')) {
+      if (url.includes('/api/v1/chat')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ reply: "Hello from AI", link: { url: "https://example.com", title: "Example" } })
@@ -328,7 +328,7 @@ describe('HelpWidget', () => {
 
   it('handles chat fetch error', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
-        if (url.includes('/api/chat')) {
+        if (url.includes('/api/v1/chat')) {
             return Promise.resolve({
               ok: false,
               json: () => Promise.resolve({})

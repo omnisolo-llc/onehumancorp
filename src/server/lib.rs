@@ -7307,7 +7307,7 @@ async fn create_ui_bom_item_handler(
         .route("/social-share-widget.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
         }))
-                .route("/api/chat", axum::routing::post(|
+                .route("/api/v1/chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
             axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
             axum::Json(req): axum::Json<ChatRequest>
