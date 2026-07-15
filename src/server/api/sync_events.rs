@@ -55,6 +55,25 @@ fn apply_domain_logic<'a, 'c>(
                     .execute(&mut **tx)
                     .await?;
 
+                if is_sold_out {
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "sync_event_id": event.id,
+                        "product_id": event.entity_id,
+                        "message": "Product marked sold out while offline. Verify no conflicting pre-orders were placed."
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&ai_payload)
+                    .execute(&mut **tx)
+                    .await?;
+                }
+
                 if let Some(client) = crate::get_redis_client() {
                     if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                         let invalidation_topic = "cache_invalidation_events";

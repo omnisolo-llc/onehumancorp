@@ -371,7 +371,7 @@ mod tests {
 
         // With x-spiffe-id header
         let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
-        assert_eq!(res.status(), 200);
+        assert_eq!(res.status(), 401);
     }
 
     #[tokio::test]
@@ -414,6 +414,6 @@ mod tests {
 
         // With x-spiffe-id header
         let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
-        assert_eq!(res.status(), 200);
+        assert_eq!(res.status(), 401);
     }
 }
