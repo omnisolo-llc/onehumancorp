@@ -449,6 +449,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
   OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
   OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
+  OHC_AGENT_TOKEN="test_agent_token_that_is_at_least_32_bytes_long" \
+  OHC_AGENT_AUTH_KEY="test_agent_token_that_is_at_least_32_bytes_long" \
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \

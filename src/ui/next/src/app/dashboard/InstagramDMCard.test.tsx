@@ -15,7 +15,7 @@ describe('InstagramDMCard', () => {
 
     const { container } = render(<InstagramDMCard approval={approval} />);
 
-    expect(screen.getByText('Instagram DM')).toBeInTheDocument();
+    expect(screen.getByText('Instagram DM Triage')).toBeInTheDocument();
     expect(screen.getByText('Test Customer Message')).toBeInTheDocument();
     expect(screen.getByText('Test Draft Reply')).toBeInTheDocument();
 
