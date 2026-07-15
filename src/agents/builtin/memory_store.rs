@@ -1026,14 +1026,18 @@ impl VectorRepository {
 
                         let records: Vec<MinimalRecord> = rows
                             .into_iter()
-                            .map(|row| {
-                                let emb_str: String =
-                                    row.try_get("embedding").unwrap_or_else(|_| {
-                                        String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                            .unwrap_or_default()
-                                    });
-                                let mut embedding: Vec<f32> =
-                                    serde_json::from_str(&emb_str).unwrap_or_default();
+                            .filter_map(|row| {
+                                let mut embedding: Vec<f32> = match row.try_get::<String, _>("embedding") {
+                                    Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+                                    Err(_) => match row.try_get::<Vec<u8>, _>("embedding") {
+                                        Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
+                                        Err(_) => Vec::new(),
+                                    }
+                                };
+
+                                if embedding.is_empty() {
+                                    return None;
+                                }
 
                                 // Precompute L2 normalization to speed up the O(N^2) loop
                                 let norm: f32 =
@@ -1044,11 +1048,11 @@ impl VectorRepository {
                                     }
                                 }
 
-                                MinimalRecord {
+                                Some(MinimalRecord {
                                     id: row.get("id"),
                                     tenant_id: row.get("tenant_id"),
                                     embedding,
-                                }
+                                })
                             })
                             .collect();
 
@@ -3955,6 +3959,50 @@ mod e2e_consolidation_tests {
 mod additional_tests {
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn test_determine_conflict_winner() {
+        let base_time = chrono::Utc::now();
+        let newer_time = base_time + chrono::Duration::hours(1);
+
+        let mut a = EmbeddingRecord {
+            id: "a".to_string(),
+            tenant_id: "t".to_string(),
+            agent_id: "a1".to_string(),
+            content: "a".to_string(),
+            embedding: vec![],
+            source_type: "NOTE".to_string(),
+            created_at: base_time,
+            last_referenced_at: base_time,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let mut b = a.clone();
+        b.id = "b".to_string();
+
+        // Tie breaker 4: ID. Reverse order of ID means a > b. Wait, std::cmp::Reverse("a") > std::cmp::Reverse("b"). So "a" wins.
+        let (winner, loser) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+        assert_eq!(loser.id, "b");
+
+        // Tie breaker 3: Recency (newer wins)
+        b.created_at = newer_time;
+        let (winner, _) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "b");
+
+        // Tie breaker 2: Reliability
+        a.reliability_score = 100;
+        let (winner, _) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "a");
+
+        // Tie breaker 1: Owner Override
+        b.owner_override = true;
+        let (winner, _) = VectorRepository::determine_conflict_winner(&a, &b);
+        assert_eq!(winner.id, "b");
+    }
 
     #[tokio::test]
     async fn test_cross_department_search_sqlite() {
