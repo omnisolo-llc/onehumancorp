@@ -8,7 +8,7 @@ const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/mesh/v2/collective',
   '/api/ui/dashboard/analytics/briefing',
   '/api/ui/triage',
-  '/api/finance/safe-to-spend',
+  '/api/v1/payments/ledger/safe-to-spend',
   '/api/v1/billing/department-tier-usage',
   '/api/v1/growth/milestone',
   '/api/v1/growth/wrapped',

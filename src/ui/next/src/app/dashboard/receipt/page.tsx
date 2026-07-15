@@ -31,7 +31,7 @@ export default function SnapReceiptPage() {
 
     try {
       // Send data to backend
-      const response = await fetch('/api/finance/receipt', {
+      const response = await fetch('/api/v1/payments/ledger/receipt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

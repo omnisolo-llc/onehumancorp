@@ -72,11 +72,11 @@ pub struct SnapReceiptRequest {
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/api/payments/intent", post(create_payment_intent))
-        .route("/api/payments/webhook", post(stripe_webhook))
-        .route("/api/ledger/balance", get(get_balance))
-        .route("/api/finance/safe-to-spend", get(get_safe_to_spend))
-        .route("/api/finance/receipt", post(process_receipt))
+        .route("/intent", post(create_payment_intent))
+        .route("/webhook", post(stripe_webhook))
+        .route("/balance", get(get_balance))
+        .route("/safe-to-spend", get(get_safe_to_spend))
+        .route("/receipt", post(process_receipt))
 }
 
 async fn create_payment_intent(
