@@ -2943,8 +2943,10 @@
         if (state.step === undefined || state.step === 0) {
           if (state.step === 0) { const instantBioInputEl = document.getElementById("instant-bio"); if (instantBioInputEl) instantBioInputEl.value = ""; }
           goToStep("step-initial", false);
-        } else if (state.step < steps.length) {
+        } else if (typeof state.step === "number" && state.step > 0 && state.step < steps.length) {
           goToStep(steps[state.step], false);
+        } else if (typeof state.step === "string" && steps.includes(state.step)) {
+          goToStep(state.step, false);
         } else {
           goToStep("step-initial", false);
         }
