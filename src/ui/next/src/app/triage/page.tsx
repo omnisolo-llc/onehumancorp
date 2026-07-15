@@ -348,7 +348,21 @@ export default function TriagePage() {
                       </div>
                     ) : (
                       <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
-                        {item.action_type ? (
+                        {item.action_type === 'escalate_to_human' ? (
+                          <>
+                            <button
+                              disabled={isProcessing}
+                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#FF3B30] text-white font-medium hover:bg-[#FF3B30]/80 transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                              data-testid={`triage-takeover-btn-${item.id}`}
+                              onClick={async () => {
+                                // Real implementation would call /api/inbox/handoff/accept and navigate to the thread
+                                await handleDecision(item.id, true);
+                              }}
+                            >
+                              Take Over Conversation
+                            </button>
+                          </>
+                        ) : item.action_type ? (
                           <>
                             <button
                               disabled={isProcessing}
