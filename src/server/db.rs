@@ -66,7 +66,7 @@ pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
         .after_release(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("DISCARD ALL").await?;
+                conn.execute("RESET ROLE; RESET ALL;").await?;
                 Ok(true)
             })
         })
