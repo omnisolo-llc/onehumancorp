@@ -24,7 +24,7 @@ test.describe('Unified Action Feed e2e', () => {
       lifecycle_state: "PENDING"
     };
 
-    const res = await request.post('/api/agent-feed', {
+    const res = await request.post('/api/v1/agent-feed', {
       data: feedItemPayload
     });
     expect(res.ok()).toBeTruthy();
@@ -70,7 +70,7 @@ test.describe('Unified Action Feed e2e', () => {
       lifecycle_state: "PENDING"
     };
 
-    const res = await request.post('/api/agent-feed', {
+    const res = await request.post('/api/v1/agent-feed', {
       data: feedItemPayload
     });
     expect(res.ok()).toBeTruthy();

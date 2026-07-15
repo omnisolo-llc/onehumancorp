@@ -28,7 +28,7 @@ export default function FeedPage() {
 
   const fetchFeed = async () => {
     try {
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       if (!res.ok) {
         throw new Error('Failed to fetch feed');
       }
@@ -46,7 +46,7 @@ export default function FeedPage() {
     try {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-invoice-draft', { method: 'POST' });
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
@@ -60,7 +60,7 @@ export default function FeedPage() {
     try {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-invoice-followup', { method: 'POST' });
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
@@ -194,7 +194,7 @@ export default function FeedPage() {
       if (proposed) bodyPayload.proposed_action = proposed;
       if (context) bodyPayload.context_payload = context;
 
-      const res = await fetch(`/api/agent-feed/${id}/state`, {
+      const res = await fetch(`/api/v1/agent-feed/${id}/state`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyPayload),
@@ -247,7 +247,7 @@ export default function FeedPage() {
     try {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-booking-draft', { method: 'POST' });
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
@@ -262,7 +262,7 @@ export default function FeedPage() {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-dispute-resolution', { method: 'POST' });
       // The websocket should pick it up, but we can also refetch
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
@@ -277,7 +277,7 @@ export default function FeedPage() {
     try {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-promoter-draft', { method: 'POST' });
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {
@@ -292,7 +292,7 @@ export default function FeedPage() {
       setLoading(true);
       await fetch('/api/v1/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
       // The websocket should pick it up, but we can also refetch
-      const res = await fetch('/api/agent-feed');
+      const res = await fetch('/api/v1/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
     } catch (err) {

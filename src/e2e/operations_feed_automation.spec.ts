@@ -24,7 +24,7 @@ test.describe('Operations Agent Task Automation', () => {
     await markCompleteBtn.click();
 
     // Check that we hit the API successfully to approve it
-    await page.waitForResponse(response => response.url().includes('/api/agent-feed/e2e-feed-ops-daily-routine/state') && response.status() === 200, { timeout: 15000 }).catch(() => {});
+    await page.waitForResponse(response => response.url().includes('/api/v1/agent-feed/e2e-feed-ops-daily-routine/state') && response.status() === 200, { timeout: 15000 }).catch(() => {});
 
     // 4. Verify the task disappears from the feed
     // Depending on optimistic update or fast refresh, it should hide
