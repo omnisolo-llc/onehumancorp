@@ -970,7 +970,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border  border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism "
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism "
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -1011,7 +1011,7 @@ export default function OnboardingWizard() {
         </div>
 
         {error && (
-          <div className="absolute top-4 left-4 right-4 z-[9999] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="absolute top-4 left-4 right-4 z-[9999] glassmorphism border border-[#FF3B30]/50 text-[#FF3B30] p-3 text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"
@@ -1125,7 +1125,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div
                   id="chat-messages"
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
+                  className="glassmorphism flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
                 >
                   {chatMessages.length === 0 && (
                     <div className="mb-2">
