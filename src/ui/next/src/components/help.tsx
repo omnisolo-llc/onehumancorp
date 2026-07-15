@@ -201,7 +201,7 @@ export function HelpWidget() {
     setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
 
     try {
-      const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
+      const response = await fetch("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
       if (!response.ok) throw new Error("Failed to fetch chat reply");
       const data = await response.json();
       const reply = normalizeChatReply(data);

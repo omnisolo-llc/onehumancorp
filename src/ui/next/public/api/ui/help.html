@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messages.appendChild(aiMsg);
         messages.scrollTop = messages.scrollHeight;
 
-        fetch("/api/chat", {
+        fetch("/api/v1/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: text })

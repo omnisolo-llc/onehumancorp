@@ -15,8 +15,8 @@ describe("native chat API", () => {
     expect(() => normalizeChatBody(new TextEncoder().encode(JSON.stringify({ message: "x".repeat(1001) })))).toThrow();
   });
   test("uses authenticated transport", async () => {
-    const request = new Request("http://localhost/api/chat", { method: "POST", body: '{"message":"Help"}' });
+    const request = new Request("http://localhost/api/v1/chat", { method: "POST", body: '{"message":"Help"}' });
     await POST(request);
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/chat", { transformRequestBody: normalizeChatBody });
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/chat", { transformRequestBody: normalizeChatBody });
   });
 });

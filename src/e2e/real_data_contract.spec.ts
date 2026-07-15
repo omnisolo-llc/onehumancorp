@@ -41,7 +41,7 @@ const explicitAllowlist = new Set<string>([
 const knownLegacyRealDataDebt = new Set<string>([
   'src/ui/next/src/app/analytics/page.tsx',
   'src/ui/next/src/app/api/agents/workflows/route.ts',
-  'src/ui/next/src/app/api/chat/route.ts',
+  'src/ui/next/src/app/api/v1/chat/route.ts',
   'src/ui/next/src/app/api/inbox/webhook/route.ts',
   'src/ui/next/src/app/api/integrations/manychat/draft/route.ts',
   'src/ui/next/src/app/api/integrations/manychat/send/route.ts',
