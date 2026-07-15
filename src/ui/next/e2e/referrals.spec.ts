@@ -35,6 +35,6 @@ test.describe('Referrals Growth Flow', () => {
 
     const referralLink = page.locator('#referral-link');
     await expect(referralLink).toBeVisible();
-    await expect(referralLink).toHaveText('ohc://join?ref=maya-cakes');
+    await expect(referralLink).toHaveText('https://ohc.app/join?ref=maya-cakes');
   });
 });
