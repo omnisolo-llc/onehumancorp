@@ -106,7 +106,57 @@ impl NewsletterWorker {
                             temperature: 0.7,
                         };
 
-                        if let Ok(resp) = llm_client.chat(req).await {
+                        let mut attempts = 0;
+                        let max_retries = 3;
+                        let mut ai_resp = None;
+
+                        while attempts < max_retries {
+                            let chat_future = llm_client.chat(req.clone());
+                            match tokio::time::timeout(std::time::Duration::from_secs(60), chat_future).await {
+                                Ok(Ok(resp)) => {
+                                    ai_resp = Some(resp);
+                                    break;
+                                },
+                                Ok(Err(_)) | Err(_) => {
+                                    attempts += 1;
+                                    if attempts < max_retries {
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                    } else {
+                                        let notif_id = Uuid::new_v4();
+                                        match &db.store {
+                                            crate::db::DbStore::Postgres => {
+                                                if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                                    .bind(&notif_id.to_string())
+                                                    .bind(&tenant_id.to_string())
+                                                    .bind("Newsletter Agent")
+                                                    .bind(serde_json::json!({"description": "AI Agent Paused: The Newsletter Agent"}))
+                                                    .bind(serde_json::json!({"proposed_content": "System is paused. LLM API is unavailable."}))
+                                                    .bind("PAUSED")
+                                                    .execute(&db.pool)
+                                                    .await {
+                                                        tracing::error!("Failed to insert PAUSED state for Newsletter Agent: {}", e);
+                                                    }
+                                            },
+                                            crate::db::DbStore::Sqlite(_) => {
+                                                if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                                    .bind(&notif_id.to_string())
+                                                    .bind(&tenant_id_str)
+                                                    .bind("Newsletter Agent")
+                                                    .bind(serde_json::json!({"description": "AI Agent Paused: The Newsletter Agent"}).to_string())
+                                                    .bind(serde_json::json!({"proposed_content": "System is paused. LLM API is unavailable."}).to_string())
+                                                    .bind("PAUSED")
+                                                    .execute(&db.pool)
+                                                    .await {
+                                                        tracing::error!("Failed to insert PAUSED state for Newsletter Agent: {}", e);
+                                                    }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if let Some(resp) = ai_resp {
                                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp.message.content) {
                                     if let Some(s) = parsed.get("subject").and_then(|v| v.as_str()) { subject = s.to_string(); }
                                     if let Some(m) = parsed.get("body_markdown").and_then(|v| v.as_str()) { body_markdown = m.to_string(); }
