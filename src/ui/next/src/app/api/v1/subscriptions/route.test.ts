@@ -26,21 +26,21 @@ describe("authenticated subscription routes", () => {
       "http://localhost/api/subscriptions?tenant_id=attacker",
     );
     const detailRequest = new Request(
-      "http://localhost/api/subscriptions/sub-7?expand=attacker",
+      "http://localhost/api/v1/subscriptions/sub-7?expand=attacker",
     );
 
     await GET(listRequest);
     await getById(detailRequest, context("sub-7"));
 
     expect(proxyBackendRequest.mock.calls).toEqual([
-      [listRequest, "/api/subscriptions", { forwardQuery: false }],
-      [detailRequest, "/api/subscriptions/sub-7", { forwardQuery: false }],
+      [listRequest, "/api/v1/subscriptions", { forwardQuery: false }],
+      [detailRequest, "/api/v1/subscriptions/sub-7", { forwardQuery: false }],
     ]);
   });
 
   test("preserves action JSON validation without inbound queries", async () => {
     const request = new Request(
-      "http://localhost/api/subscriptions/sub-7/action?dry_run=true",
+      "http://localhost/api/v1/subscriptions/sub-7/action?dry_run=true",
       { method: "POST", body: ' { "action": "pause" } ' },
     );
 
@@ -48,7 +48,7 @@ describe("authenticated subscription routes", () => {
 
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/subscriptions/sub-7/action",
+      "/api/v1/subscriptions/sub-7/action",
       {
         forwardQuery: false,
         requestContentType: "application/json",
