@@ -578,6 +578,14 @@ export default function OnboardingWizard() {
       updateState({ startResult: result });
       localStorage.setItem("has_onboarded", "true");
 
+      if (result.organization_id) {
+        localStorage.setItem("tenant_id", result.organization_id);
+        localStorage.setItem("tenant", result.organization_id);
+      }
+      if (result.user_id) {
+        localStorage.setItem("user_id", result.user_id);
+      }
+
       const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
         method: "POST",
       });

@@ -58,7 +58,7 @@ rust_test(
     crate = ":server_auth",
     deps = [
         "@crates//:rcgen",
-        "@crates//:tower-0.5.3",
+
     ],
     edition = "2024",
     target_compatible_with = select({

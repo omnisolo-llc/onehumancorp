@@ -32,6 +32,16 @@ export default function ZeroClickBuilderPage() {
       }
 
       const data = await response.json();
+
+      if (data.organization_id) {
+        localStorage.setItem("tenant_id", data.organization_id);
+        localStorage.setItem("tenant", data.organization_id);
+      }
+      if (data.user_id) {
+        localStorage.setItem("user_id", data.user_id);
+      }
+      localStorage.setItem("has_onboarded", "true");
+
       setBuilderState('success');
     } catch (err) {
       console.error(err);

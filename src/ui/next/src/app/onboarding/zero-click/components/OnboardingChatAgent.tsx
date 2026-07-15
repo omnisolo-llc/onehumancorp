@@ -126,6 +126,15 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       const provisionedData = await res.json();
 
+      if (provisionedData.organization_id) {
+        localStorage.setItem("tenant_id", provisionedData.organization_id);
+        localStorage.setItem("tenant", provisionedData.organization_id);
+      }
+      if (provisionedData.user_id) {
+        localStorage.setItem("user_id", provisionedData.user_id);
+      }
+      localStorage.setItem("has_onboarded", "true");
+
       // Complete immediately in tests to avoid timeout issues
       if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
          setIsProvisioning(false);

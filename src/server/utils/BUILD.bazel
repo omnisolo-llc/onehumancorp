@@ -55,7 +55,7 @@ rust_test(
     }),
     deps = [
         "@crates//:reqwest",
-        "@crates//:tower",
+
         "@crates//:temp-env",
     ],
 )

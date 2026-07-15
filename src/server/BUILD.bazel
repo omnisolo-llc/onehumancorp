@@ -504,7 +504,7 @@ rust_library(
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
-        "@crates//:tower",
+
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:urlencoding",

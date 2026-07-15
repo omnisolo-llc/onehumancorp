@@ -1020,6 +1020,9 @@ describe("OnboardingWizard", () => {
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
 
+    expect(localStorage.getItem("tenant_id")).toBe("org_123");
+    expect(localStorage.getItem("tenant")).toBe("org_123");
+
     const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/launch'));
     expect(launchCall).toBeDefined();
     expect(launchCall.url).toBe("/api/v1/onboarding/launch");
