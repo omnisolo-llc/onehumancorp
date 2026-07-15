@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agent Terminal Multi-Backend UI', () => {
     test('Simulate changing backend and running a command', async ({ page, request }) => {
         // Mock the API responses
-        await page.route('/api/terminal/backend', async route => {
+        await page.route('/api/v1/payments/terminal/backend', async route => {
             if (route.request().method() === 'GET') {
                 await route.fulfill({ json: { backend: 'local' } });
             } else if (route.request().method() === 'POST') {
@@ -12,7 +12,7 @@ test.describe('Agent Terminal Multi-Backend UI', () => {
             }
         });
 
-        await page.route('/api/terminal/session/start', async route => {
+        await page.route('/api/v1/payments/terminal/session/start', async route => {
             await route.fulfill({ json: { output: 'hello\n' } });
         });
 

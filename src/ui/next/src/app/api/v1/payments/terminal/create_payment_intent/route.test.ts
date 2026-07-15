@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/authTestFixtures";
 import { POST } from "./route";
 
-describe("POST /api/terminal/create_payment_intent", () => {
+describe("POST /api/v1/payments/terminal/create_payment_intent", () => {
   beforeEach(() => {
     stubAuthEnvironment();
     global.fetch = vi.fn();
@@ -24,7 +24,7 @@ describe("POST /api/terminal/create_payment_intent", () => {
     );
 
     const body = { amount: 4500, currency: "usd" };
-    const req = new Request(`${TEST_WEB_ORIGIN}/api/terminal/create_payment_intent`, {
+    const req = new Request(`${TEST_WEB_ORIGIN}/api/v1/payments/terminal/create_payment_intent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

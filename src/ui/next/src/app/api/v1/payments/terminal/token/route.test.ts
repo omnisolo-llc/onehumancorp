@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth/authTestFixtures";
 import { POST } from "./route";
 
-describe("POST /api/terminal/connection_token", () => {
+describe("POST /api/v1/payments/terminal/token", () => {
   beforeEach(() => {
     stubAuthEnvironment();
     global.fetch = vi.fn();
@@ -23,7 +23,7 @@ describe("POST /api/terminal/connection_token", () => {
       Response.json({ token: "tss_live_secret" }),
     );
 
-    const req = new Request(`${TEST_WEB_ORIGIN}/api/terminal/connection_token`, {
+    const req = new Request(`${TEST_WEB_ORIGIN}/api/v1/payments/terminal/token`, {
       method: "POST",
       headers: { cookie: await authenticatedCookie() },
     });
