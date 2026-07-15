@@ -1,6 +1,25 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Onboarding UI Audit', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => { window.localStorage.clear(); });
+    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE) : process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, "src/ui/tauri/src/ui");
+    await page.route("**/setup.html", async route => {
+        const fileContent = fs.readFileSync(path.join(tauriUiDir, "setup.html"), "utf-8");
+        await route.fulfill({ contentType: "text/html", body: fileContent });
+    });
+    await page.route("**/api/tooltips", async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
+    await page.route("**/api/onboarding/draft", async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
+    await page.route("**/api/onboarding/start", async route => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ organization_id: "test-org-123" }) });
+    });
+    await page.route("**/*dashboard.html*", async route => {
+      await route.fulfill({ status: 200, contentType: "text/html", body: "<html><body>Success</body></html>" });
+    });
+  });
 
   test('Should navigate the setup successfully via Conversational Setup', async ({ page }) => {
     // Start at the onboarding page
