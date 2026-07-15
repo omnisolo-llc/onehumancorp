@@ -1,29 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl?.searchParams || new URL(request.url).searchParams;
-  const tenant = searchParams.get('tenant') || 'default';
-  const style = searchParams.get('style') || 'pill';
-  const text = searchParams.get('text') || 'Powered by OHC';
-  const theme = searchParams.get('theme') || 'light';
+  const searchParams =
+    request.nextUrl?.searchParams || new URL(request.url).searchParams;
+  const tenant = searchParams.get("tenant") || "default";
+  const style = searchParams.get("style") || "pill";
+  const text = searchParams.get("text") || "Powered by OHC";
+  const theme = searchParams.get("theme") || "light";
 
   // For testing purposes, we can hardcode the API URL to http://localhost:8080 or use an environment variable.
-  const apiBase = process.env.API_BASE_URL || 'http://localhost:8080';
+  const apiBase = process.env.API_BASE_URL || "http://localhost:8080";
 
   // Track impression or referral intent via the main server
   try {
-     await fetch(`${apiBase}/api/v1/growth/referrals/click`, {
-         method: 'POST',
-         headers: {
-             'Content-Type': 'application/json'
-         },
-         body: JSON.stringify({
-            tenant_id: tenant,
-            source: 'footer_branding'
-         })
-     });
+    await fetch(`${apiBase}/api/v1/growth/referrals/click`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenant_id: tenant,
+        source: "footer_branding",
+      }),
+    });
   } catch (error) {
-     console.error('Failed to log impression', error);
+    console.error("Failed to log impression", error);
   }
 
   const jsCode = `
@@ -121,8 +122,8 @@ export async function GET(request: NextRequest) {
   return new NextResponse(jsCode, {
     status: 200,
     headers: {
-      'Content-Type': 'application/javascript',
-      'Cache-Control': 'public, max-age=3600',
+      "Content-Type": "application/javascript",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }
