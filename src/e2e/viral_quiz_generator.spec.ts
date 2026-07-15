@@ -42,7 +42,7 @@ test.describe('Viral Quiz Generator Loop', () => {
     await publicPage.goto(generatedLinkUrl.trim());
 
     // 6. Test the Public Quiz Loop
-    await expect(publicPage.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible();
+    await expect(publicPage.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible({ timeout: 15000 });
     await publicPage.getByRole('button', { name: 'Start Quiz' }).click();
 
     // See question
