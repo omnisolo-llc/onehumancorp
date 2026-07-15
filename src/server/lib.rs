@@ -7099,7 +7099,15 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/proposals", api::proposals::router().with_state(db.pool.clone()))
-        .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()))
+        .nest(
+            "/api/v1/booking/request",
+            api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest(
             "/api/v1/booking/reserve",
             api::booking::reserve::router(db.clone()).route_layer(

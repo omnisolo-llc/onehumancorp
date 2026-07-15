@@ -1,16 +1,17 @@
-use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentEvent;
+use axum::{
+    Router,
+    extract::{Extension, Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BookingRequestPayload {
     pub description: String,
     #[serde(default)]
@@ -36,13 +37,36 @@ where
 
 async fn handle_booking_request(
     State((orchestrator, pool)): State<(Arc<DepartmentOrchestrator>, sqlx::PgPool)>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(payload): Json<BookingRequestPayload>,
 ) -> impl IntoResponse {
-    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
-        Some(t) if !t.trim().is_empty() => t.to_string(),
-        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    let tenant_id = match claims
+        .as_ref()
+        .and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
+    {
+        Some(tenant_id) => tenant_id,
+        _ => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                axum::Json(serde_json::json!({"error": "unauthorized"})),
+            )
+                .into_response();
+        }
     };
+    if payload.description.trim().is_empty()
+        || payload.description.chars().count() > 10_000
+        || payload.timestamp.chars().count() > 128
+        || payload
+            .file_name
+            .as_ref()
+            .is_some_and(|name| name.chars().count() > 255)
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid booking request"})),
+        )
+            .into_response();
+    }
 
     let tenant_id_clone = tenant_id.clone();
     let event = DepartmentEvent {
@@ -56,10 +80,9 @@ async fn handle_booking_request(
         }),
     };
 
-
     // 1. Dispatch event to orchestrator
     match orchestrator.dispatch_event(event).await {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(e) => {
             tracing::error!("Failed to dispatch booking request event: {}", e);
         }
@@ -67,11 +90,32 @@ async fn handle_booking_request(
 
     // 2. Also inject directly to agent feed to ensure owner sees it immediately.
     let feed_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query(
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(error) => {
+            tracing::error!("failed to begin booking request transaction: {error}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    };
+    if let Err(error) =
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id_clone).await
+    {
+        tracing::error!("failed to bind booking request tenant context: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
+    }
+    let feed_result = sqlx::query(
         r#"
         INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
         VALUES ($1, $2, 'booking_request', 'new', $3)
-        "#
+        "#,
     )
     .bind(&feed_id)
     .bind(&tenant_id_clone)
@@ -79,8 +123,24 @@ async fn handle_booking_request(
         "message": payload.description,
         "source": "booking_form"
     }))
-    .execute(&pool)
+    .execute(&mut *tx)
     .await;
+    if let Err(error) = feed_result {
+        tracing::error!("failed to persist booking request: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
+    }
+    if let Err(error) = tx.commit().await {
+        tracing::error!("failed to commit booking request: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
+    }
 
     (
         StatusCode::OK,
@@ -88,6 +148,6 @@ async fn handle_booking_request(
             success: true,
             request_id: Some(feed_id),
         }),
-    ).into_response()
-
+    )
+        .into_response()
 }
