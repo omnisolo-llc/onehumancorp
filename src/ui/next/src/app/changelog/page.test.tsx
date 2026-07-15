@@ -6,7 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 import ChangelogPage from './page';
 
 describe('ChangelogPage', () => {
-  global.fetch = vi.fn().mockResolvedValue({
+  beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
     json: () => Promise.resolve([{
       version: "Version 1.0 (Latest)",
       contentLines: [
@@ -18,6 +19,11 @@ describe('ChangelogPage', () => {
     }]),
     ok: true
   }) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it('renders the release notes page correctly', async () => {
     await act(async () => {
