@@ -1,4 +1,5 @@
 # Tool Integration Research Report (Q3)
+> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
 
 ## 1. Social Media Integration: Chatwoot & Meta Graph API
 

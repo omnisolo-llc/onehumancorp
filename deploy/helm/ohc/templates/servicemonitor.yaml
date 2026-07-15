@@ -43,19 +43,4 @@ spec:
   - port: http
     path: /metrics
     interval: 15s
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: {{ .Release.Name }}-chatwoot-monitor
-  labels:
-    release: {{ .Release.Name }}
-spec:
-  selector:
-    matchLabels:
-      app: {{ .Release.Name }}-chatwoot
-  endpoints:
-  - port: http
-    path: /metrics
-    interval: 15s
 {{- end }}

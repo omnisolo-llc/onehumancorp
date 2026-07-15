@@ -54,6 +54,163 @@ Fresh verification at the final UI head produced the following exact evidence:
 
 The production server still logs expected missing-service errors in this isolated environment: proxy/fetch connection refusals for local backends on ports 8080 and 18789, Postgres on 5432, and the backend-served Swagger CSS/bundle. The audit allows only the enumerated message plus URL/port/path combinations; an identical 500 response on an unknown API path is a tested failure. Next also identifies request-header/request-URL API routes as dynamic during static generation. These messages did not cause navigation, hydration, shell, screenshot, test, or build failures.
 
+### CHAT-00 — Chatwoot removal
+
+**Status (2026-07-13): Removed from the active application and deployment graph.** The repository owner confirmed in this thread on 2026-07-13 that there was no real-customer or production Chatwoot deployment or data. That owner statement was not independently verified against an external production system. On that owner-confirmed basis, no Chatwoot data migration was performed. The native OHC omnichannel inbox remains in place; expanding its channel and inbox capabilities belongs to later native-chat projects rather than this removal.
+
+The removal deleted the unused Rust integration crate and its Cargo workspace/dependency, integration re-export, Tauri Bazel-manifest, lockfile, and Bazel graph edges. Deployment removal covered the three Compose services (migration, web, and worker), related backend environment/database initialization, both Prometheus scrape jobs, the dedicated Helm workload and service templates, Helm values and backend environment, HPA, ServiceMonitor, NetworkPolicy and ingress peers, deploy Bazel filegroups, and the Kind override. Active product surfaces now advertise the native inbox and direct Instagram DM, WhatsApp, SMS, and email connectors. Active README, developer, business, customer-success, and C++ evaluation claims were updated; exactly three research reports are retained with explicit superseded-architecture markers. A fail-closed tracked-file residue guard and its CI step enforce the active-source boundary.
+
+Removal-matrix evidence captured at `36d36f4337526841344b98103230fcaa1ac1e9d8`:
+
+- `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0 with no output.
+- `cargo check -p ohc-mono --locked` exited 0. Cargo emitted four existing unused-variable warnings for `db` in `src/server/api/staff_mesh.rs`; no warning was suppressed for this work.
+- `bazel test --config=local --remote_cache= --remote_executor= --bes_backend= //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exited 0 with 3/3 Bazel test targets passing. The integration log reports 6 passed and 0 failed; the Vitest log reports 235 test files and 943 tests passed; the deployment artifact target reports its checks passed. Bazel also warned that some declared test sizes exceed its size guidance.
+- The initial separately produced Bazel graph contained 7,283 labels; its producer exited 0 before the negative scan found zero Chatwoot labels.
+
+That initial graph result was then reproduced from the corrected report tree with a private producer file and a separate negative command. The producer must succeed before the residue status is evaluated; status 1 is required to mean no match. The exact block was:
+
+```bash
+set -euo pipefail
+umask 077
+query_dir=$(mktemp -d /tmp/ohc-chatwoot-bazel-query.XXXXXX)
+printf 'query_dir=%s\n' "$query_dir"
+(
+  trap 'rm -rf "$query_dir"' EXIT HUP INT TERM
+  test "$(stat -c '%a' "$query_dir")" = 700
+
+  bazel query //... >"$query_dir/labels.txt" 2>"$query_dir/query.err"
+  label_count=$(wc -l <"$query_dir/labels.txt")
+  test "$label_count" -eq 7283
+
+  set +e
+  rg -i 'chatwoot' "$query_dir/labels.txt" >/dev/null
+  residue_status=$?
+  set -e
+  test "$residue_status" -eq 1
+
+  chmod -R go-rwx "$query_dir"
+  test "$(stat -c '%a' "$query_dir")" = 700
+  if find "$query_dir" -mindepth 1 -perm /077 -print -quit | grep -q .; then
+    printf 'non-private query evidence entry found\n' >&2
+    exit 1
+  fi
+  printf 'bazel_query_labels=%s\nresidue_scan_status=%s\nprivate_directory_mode=%s\n' \
+    "$label_count" "$residue_status" "$(stat -c '%a' "$query_dir")"
+)
+test ! -e "$query_dir"
+printf 'secure_query_dir_absent=1\n'
+```
+
+The block exited 0 and reported `bazel_query_labels=7283`, `residue_scan_status=1`, `private_directory_mode=700`, and `secure_query_dir_absent=1`. It printed neither label contents nor query diagnostics.
+
+The deployment renders and locked Cargo metadata were rerun from the corrected report tree in one private, copy-pasteable block. The main default inventory intentionally activates 5 services, while `--profile '*'` expands it to all 11 declared services. The e2e default and all-profile inventories each contain the same 2 services. The exact block was:
+
+```bash
+set -euo pipefail
+umask 077
+evidence_dir=$(mktemp -d /tmp/ohc-chatwoot-verify.XXXXXX)
+printf 'evidence_dir=%s\n' "$evidence_dir"
+(
+  trap 'rm -rf "$evidence_dir"' EXIT HUP INT TERM
+  test "$(stat -c '%a' "$evidence_dir")" = 700
+
+  cargo metadata --locked --format-version=1 --no-deps >"$evidence_dir/cargo-metadata.json"
+
+  docker compose -f deploy/docker-compose.yml config >"$evidence_dir/compose-main-default.yaml"
+  docker compose -f deploy/docker-compose.yml config --services >"$evidence_dir/compose-main-default-services.txt"
+  docker compose -f deploy/docker-compose.yml --profile '*' config >"$evidence_dir/compose-main-all-profiles.yaml"
+  docker compose -f deploy/docker-compose.yml --profile '*' config --services >"$evidence_dir/compose-main-all-profile-services.txt"
+  docker compose -f deploy/docker-compose.e2e.yml config >"$evidence_dir/compose-e2e-default.yaml"
+  docker compose -f deploy/docker-compose.e2e.yml config --services >"$evidence_dir/compose-e2e-default-services.txt"
+  docker compose -f deploy/docker-compose.e2e.yml --profile '*' config >"$evidence_dir/compose-e2e-all-profiles.yaml"
+  docker compose -f deploy/docker-compose.e2e.yml --profile '*' config --services >"$evidence_dir/compose-e2e-all-profile-services.txt"
+
+  main_default_count=$(wc -l <"$evidence_dir/compose-main-default-services.txt")
+  main_all_count=$(wc -l <"$evidence_dir/compose-main-all-profile-services.txt")
+  e2e_default_count=$(wc -l <"$evidence_dir/compose-e2e-default-services.txt")
+  e2e_all_count=$(wc -l <"$evidence_dir/compose-e2e-all-profile-services.txt")
+  test "$main_default_count" -eq 5
+  test "$main_all_count" -eq 11
+  test "$e2e_default_count" -eq 2
+  test "$e2e_all_count" -eq 2
+
+  mkdir -p "$evidence_dir/chart/ohc"
+  cp -a deploy/helm/ohc/. "$evidence_dir/chart/ohc/"
+  helm dependency build "$evidence_dir/chart/ohc"
+  helm lint "$evidence_dir/chart/ohc"
+  helm template ohc "$evidence_dir/chart/ohc" >"$evidence_dir/helm-render.yaml"
+
+  rendered_outputs=(
+    "$evidence_dir/cargo-metadata.json"
+    "$evidence_dir/compose-main-default.yaml"
+    "$evidence_dir/compose-main-default-services.txt"
+    "$evidence_dir/compose-main-all-profiles.yaml"
+    "$evidence_dir/compose-main-all-profile-services.txt"
+    "$evidence_dir/compose-e2e-default.yaml"
+    "$evidence_dir/compose-e2e-default-services.txt"
+    "$evidence_dir/compose-e2e-all-profiles.yaml"
+    "$evidence_dir/compose-e2e-all-profile-services.txt"
+    "$evidence_dir/helm-render.yaml"
+  )
+  if rg -q -i 'chatwoot' -- "${rendered_outputs[@]}"; then
+    printf 'rendered Chatwoot residue found\n' >&2
+    exit 1
+  else
+    rg_status=$?
+    test "$rg_status" -eq 1
+  fi
+
+  chmod -R go-rwx "$evidence_dir"
+  test "$(stat -c '%a' "$evidence_dir")" = 700
+  if find "$evidence_dir" -mindepth 1 -perm /077 -print -quit | grep -q .; then
+    printf 'non-private evidence entry found\n' >&2
+    exit 1
+  fi
+  printf 'service_counts main_default=%s main_all_profiles=%s e2e_default=%s e2e_all_profiles=%s\n' \
+    "$main_default_count" "$main_all_count" "$e2e_default_count" "$e2e_all_count"
+  printf 'rendered_residue_matches=0\nprivate_directory_mode=%s\n' "$(stat -c '%a' "$evidence_dir")"
+)
+test ! -e "$evidence_dir"
+printf 'secure_evidence_dir_absent=1\n'
+```
+
+The block exited 0. Locked metadata, all eight explicit Compose outputs/inventories, isolated Helm dependency build, lint, template, negative scans, permission checks, and cleanup therefore completed in sequence. Helm reported 1 chart linted and 0 failed, with only the recommendation to add a chart icon. It reported `main_default=5`, `main_all_profiles=11`, `e2e_default=2`, `e2e_all_profiles=2`, zero rendered residue matches, directory mode 0700, no group/world-accessible descendant, and `secure_evidence_dir_absent=1`. No chart dependency or generated evidence artifact was added to the repository.
+
+Before the secure rerun, the twelve earlier predictable artifacts—`ohc-cargo-metadata-final.json`, both default Compose renders, both all-profile Compose renders, four Compose service inventories, `ohc-helm-final.yaml`, and both Bazel-query output files—were inventoried at mode 0664, removed by their exact paths, and confirmed absent. They were not retained.
+
+Post-report checks at the final report HEAD are distinct from the removal matrix at `36d36f4`: `git grep -l -i 'chatwoot' -- . | sort` returned exactly eight allowed tracked paths in the corrected report tree: `.github/workflows/ci.yml`, the residue guard, this evidence report, the native removal plan and omnichannel design, and exactly three marked historical research reports. `git diff --check` and the residue guard exited 0 with no output. The only remaining worktree entry outside the report was the unrelated untracked `docs/superpowers/plans/2026-07-13-authentication-hardening.md`.
+
+#### Post-hardening terminal verification (2026-07-13)
+
+Commit `7c048495cdba1bd3139969fd20ff523c5af45235` is the terminal code head for this verification; the evidence-only report commit follows it. This subsection supersedes earlier uses of “final” for mutable current-tree evidence, but does not invalidate evidence explicitly anchored to earlier hashes such as the removal matrix at `36d36f4`.
+
+- `bash -n deploy/tests/no_chatwoot_residue_test.sh` exited 0 with no output. A timed `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0 in 0.764 seconds and produced zero output bytes.
+- `git grep -l -i 'chatwoot' -- . | sort` exited 0 and returned exactly eight tracked paths: the CI workflow, residue guard, this report, native removal plan, native omnichannel specification, and three marked historical research reports.
+- `cargo check -p ohc-mono --locked` exited 0 after 28.38 seconds. It emitted the same four unused-`db` warnings in `src/server/api/staff_mesh.rs`; no warning was suppressed.
+- `bazel test --config=local --remote_cache= --remote_executor= --bes_backend= //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exited 0 with 3/3 targets passing. Bazel reported `Executed 0 out of 3 tests: 3 tests pass` because all three results were cached. The retained target logs report 6/6 integration tests, 235 Vitest files and 943 tests, and the deployment artifact check passing; these counts were inspected but were not freshly executed by this cached invocation. The test-size guidance warning remained.
+- The exact private Cargo/Compose/Helm block above was reexecuted verbatim at `7c048495`. It exited 0 with primary service counts 5 default and 11 with all profiles, e2e counts 2 default and 2 with all profiles, zero rendered residue matches, evidence-directory mode 0700, no group/world-accessible entry, and cleanup confirmed. Helm again reported 1 chart linted, 0 failed, with only the icon recommendation.
+- The exact private Bazel-query block above was reexecuted verbatim at `7c048495`. Its producer exited 0 with 7,283 labels; the separately run residue scan returned the required status 1, directory mode was 0700, and cleanup was confirmed.
+
+A single private disposable-repository fixture exercised the post-hardening all-tracked and symlink-provenance behavior. The complete corrected rerun exited 0 with these asserted case outcomes:
+
+| Case | Required and observed guard exit | Additional assertion |
+|---|---:|---|
+| New tracked document residue | 1 | New `docs/` path reported |
+| Binary residue | 1 | Path reported; matching content not printed |
+| Pathspec-magic filename residue | 1 | Literal tracked path detected |
+| Tracked semantic alias | 1 | `active symlink: alias.txt` reported |
+| Two aliases to one matching target | 1 | Both alias paths reported |
+| Symlink cycle | 2 | Resolution scanner error reported |
+| Repository escape | 2 | Escape scanner error reported |
+| Directory target | 2 | Precise `tracked directory symlink target unsupported directory-link` diagnostic reported |
+| Near-miss allowlisted filename | 1 | Similar-but-not-equal report path rejected |
+| Empty repository | 2 | No tracked scan files diagnostic reported |
+| Guard-only repository | 2 | No tracked scan files diagnostic reported |
+
+The first disposable-suite attempt reached all requested case statuses but its final fixture-only permission assertion counted symlink mode bits despite the enclosing mode-0700 directory and therefore exited 1. The assertion was corrected to inspect non-symlink entries, the entire suite was recreated and rerun to the exit-0 result above, and both suite directories and the temporary fixture script were removed. `git diff --check` then exited 0; before this report edit, the unrelated authentication-hardening plan was the only worktree entry.
+
+All required local tools were available. This evidence does not claim a remote CI run, live-cluster rollout, or external production-system check; those checks were not run. Earlier default Bazel remote-cache/BES attempts in this environment were unauthorized, so the explicit local Bazel matrix above is the authoritative local matrix evidence.
+
 ## Boundary matrix — initial pre-remediation snapshot
 
 This matrix records the state observed at the initial audit head. It is retained as finding evidence, not as a description of current HEAD; the dated status blocks under F-01 through F-11 are the current-state record.

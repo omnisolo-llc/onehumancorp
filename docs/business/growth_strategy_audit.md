@@ -18,7 +18,7 @@ Enterprise and prosumer markets are increasingly wary of cloud-based AI due to I
 ### Key Value Pillars:
 - **Zero Data Leakage**: All SIPDB (Swarm Intelligence Protocol Database) operations occur entirely on the host machine via SQLite. No cloud telemetry or context boundaries are breached.
 - **Air-Gapped Autonomy**: Agents function completely offline or via private, self-hosted LLM endpoints.
-- **Graceful Degradation**: Heavy dependencies (Redis/Chatwoot) are bypassed without sacrificing core agentic capabilities.
+- **Graceful Degradation**: Optional cloud messaging dependencies are bypassed without sacrificing core agentic capabilities.
 
 ## 2. Hybrid Funnel Audit
 
