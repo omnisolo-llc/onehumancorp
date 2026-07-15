@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS inventory_levels (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    variant_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     location_id TEXT NOT NULL,
     available_count INT NOT NULL DEFAULT 0,
     committed_count INT NOT NULL DEFAULT 0,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS inventory_levels (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_levels_tenant_id ON inventory_levels(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_inventory_levels_variant_id ON inventory_levels(variant_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_levels_product_id ON inventory_levels(product_id);
 
 ALTER TABLE IF EXISTS inventory_levels ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_inventory_levels ON inventory_levels;
