@@ -16,7 +16,7 @@ function validateMessagesRequest(
 }
 
 export function POST(request: Request): Promise<Response> {
-  return proxyBackendRequest(request, "/api/onboarding/chat", {
+  return proxyBackendRequest(request, "/api/v1/onboarding/chat", {
     forwardQuery: false,
     requestContentType: "application/json",
     transformRequestBody: validateMessagesRequest,

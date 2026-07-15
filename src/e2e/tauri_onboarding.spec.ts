@@ -92,8 +92,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Type into chat
     await page.fill('#chat-input', 'I run a mobile dog grooming business.');
 
-    // We need to mock the /api/onboarding/chat response before sending
-    await page.route('http://127.0.0.1:18789/api/onboarding/chat', async route => {
+    // We need to mock the /api/v1/onboarding/chat response before sending
+    await page.route('http://127.0.0.1:18789/api/v1/onboarding/chat', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -392,7 +392,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     });
 
     // We add an intercept to track that start_zero_click does what is expected.
-    await page.route('**/api/onboarding/start_zero_click', async route => {
+    await page.route('**/api/v1/onboarding/start_zero_click', async route => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ organization_id: 'test-org-new', user_id: 'owner' }) });
     });
 

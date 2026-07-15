@@ -9,7 +9,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
     const webBaseUrl = process.env.WEB_BASE_URL || 'http://127.0.0.1:18789';
 
     // 1. Setup tenant & service catalog
-    await request.post(`${apiBaseUrl}/api/onboarding/start`, {
+    await request.post(`${apiBaseUrl}/api/v1/onboarding/start`, {
       data: {
         organization_id: tenantId,
         business_type: 'Service',

@@ -37,7 +37,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     // Route all API calls to the real backend
     await page.route('http://mock/api/**/*', async route => {
         const url = new URL(route.request().url());
-        if (url.pathname === '/api/onboarding/chat') {
+        if (url.pathname === '/api/v1/onboarding/chat') {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -56,7 +56,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
                     }
                 })
             });
-        } else if (url.pathname === '/api/onboarding/start') {
+        } else if (url.pathname === '/api/v1/onboarding/start') {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',

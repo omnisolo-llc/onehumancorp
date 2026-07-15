@@ -126,7 +126,7 @@ export default function OnboardingWizard() {
     };
 
     try {
-      await fetchWithRetry("/api/onboarding/state", {
+      await fetchWithRetry("/api/v1/onboarding/state", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -185,7 +185,7 @@ export default function OnboardingWizard() {
         instantImageUrl,
       };
 
-      const res = await fetchWithRetry("/api/onboarding/draft", {
+      const res = await fetchWithRetry("/api/v1/onboarding/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -206,10 +206,10 @@ export default function OnboardingWizard() {
   // Read state from server on mount
   useEffect(() => {
     Promise.all([
-      fetchWithRetry("/api/onboarding/draft", {})
+      fetchWithRetry("/api/v1/onboarding/draft", {})
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
-      fetchWithRetry("/api/onboarding/state", {})
+      fetchWithRetry("/api/v1/onboarding/state", {})
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
     ])
@@ -299,7 +299,7 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
-      fetchWithRetry("/api/onboarding/state", {
+      fetchWithRetry("/api/v1/onboarding/state", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -338,7 +338,7 @@ export default function OnboardingWizard() {
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       updateState({ bio: combinedDescription });
 
-      const intakeRes = await fetchWithRetry("/api/onboarding/intake", {
+      const intakeRes = await fetchWithRetry("/api/v1/onboarding/intake", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -435,7 +435,7 @@ export default function OnboardingWizard() {
     updateState({ isLoading: true });
 
     try {
-      const res = await fetchWithRetry("/api/onboarding/chat", {
+      const res = await fetchWithRetry("/api/v1/onboarding/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newHistory }),
@@ -474,7 +474,7 @@ export default function OnboardingWizard() {
         updateState({ location: intakeData.location || "" });
         updateState({ targetAudience: intakeData.target_audience || "" });
 
-        const startRes = await fetchWithRetry("/api/onboarding/start", {
+        const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -505,7 +505,7 @@ export default function OnboardingWizard() {
         const result = await startRes.json();
         updateState({ startResult: result });
 
-        const launchRes = await fetchWithRetry("/api/onboarding/launch", {
+        const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
           method: "POST",
         });
         if (!launchRes.ok) throw new Error("Launch failed");
@@ -542,7 +542,7 @@ export default function OnboardingWizard() {
       syncStateToBackend({ step: 4 });
 
       const startRes = await fetchWithRetry(
-        "/api/onboarding/start_zero_click",
+        "/api/v1/onboarding/start_zero_click",
         {
           method: "POST",
           headers: {
@@ -578,7 +578,7 @@ export default function OnboardingWizard() {
       updateState({ startResult: result });
       localStorage.setItem("has_onboarded", "true");
 
-      const launchRes = await fetchWithRetry("/api/onboarding/launch", {
+      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
         method: "POST",
       });
       if (!launchRes.ok) throw new Error("Launch failed");
@@ -610,7 +610,7 @@ export default function OnboardingWizard() {
     updateState({ step: 4 });
     syncStateToBackend({ step: 4 }); // Go to loading screen
     try {
-      const startRes = await fetchWithRetry("/api/onboarding/start", {
+      const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -650,7 +650,7 @@ export default function OnboardingWizard() {
 
       updateState({ startResult: result });
       localStorage.setItem("has_onboarded", "true");
-      const launchRes = await fetchWithRetry("/api/onboarding/launch", {
+      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
         method: "POST",
       });
       if (!launchRes.ok) throw new Error("Launch failed");

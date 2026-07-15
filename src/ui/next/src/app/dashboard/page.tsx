@@ -232,7 +232,7 @@ export default function Dashboard() {
             return res.json();
           });
 
-        const onboardingPromise = fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+        const onboardingPromise = fetch(`/api/v1/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 

@@ -85,10 +85,10 @@ describe("OnboardingWizard", () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/launch") {
+      if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/intake") {
+      if (url === "/api/v1/onboarding/intake") {
         return Promise.resolve({
           ok: true,
           json: async () => ({
@@ -208,10 +208,10 @@ describe("OnboardingWizard", () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/launch") {
+      if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/intake") {
+      if (url === "/api/v1/onboarding/intake") {
         return Promise.resolve({
           ok: true,
           json: async () => ({
@@ -222,7 +222,7 @@ describe("OnboardingWizard", () => {
           }),
         });
       }
-      if (url === "/api/onboarding/start") {
+      if (url === "/api/v1/onboarding/start") {
         return Promise.resolve({
           ok: true,
           json: async () => ({ message: "Success!" }),
@@ -312,7 +312,7 @@ describe("OnboardingWizard", () => {
 
     const startCall = vi
       .mocked(global.fetch)
-      .mock.calls.find(([url]) => url === "/api/onboarding/start");
+      .mock.calls.find(([url]) => url === "/api/v1/onboarding/start");
     expect(startCall).toBeDefined();
     const startBody = JSON.parse(String(startCall?.[1]?.body));
     expect(startBody.admin_name).toBeUndefined();
@@ -328,10 +328,10 @@ describe("OnboardingWizard", () => {
 
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/launch") {
+      if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/intake" || url === "/api/onboarding/start") {
+      if (url === "/api/v1/onboarding/intake" || url === "/api/v1/onboarding/start") {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -419,10 +419,10 @@ describe("OnboardingWizard", () => {
 
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/launch") {
+      if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/intake" || url === "/api/onboarding/start") {
+      if (url === "/api/v1/onboarding/intake" || url === "/api/v1/onboarding/start") {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -687,7 +687,7 @@ describe("OnboardingWizard", () => {
 
     let fetchCalls = 0;
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/draft") {
+      if (url === "/api/v1/onboarding/draft") {
         fetchCalls++;
         if (fetchCalls < 2) {
           return Promise.resolve({
@@ -733,7 +733,7 @@ describe("OnboardingWizard", () => {
 
   it("loads draft state correctly on mount", async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/draft") {
+      if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({
           ok: true,
           json: async () => ({
@@ -748,7 +748,7 @@ describe("OnboardingWizard", () => {
           }),
         });
       }
-      if (url === "/api/onboarding/state") {
+      if (url === "/api/v1/onboarding/state") {
         return Promise.resolve({
           ok: true,
           json: async () => ({ wizardState: { bio: "Draft Bio" } }),
@@ -805,7 +805,7 @@ describe("OnboardingWizard", () => {
 
     // Mock draft API success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/draft") {
+      if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({
           ok: true,
           json: async () => ({}),
@@ -842,7 +842,7 @@ describe("OnboardingWizard", () => {
 
     // Verify API was called
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/onboarding/draft",
+      "/api/v1/onboarding/draft",
       expect.objectContaining({
         method: "POST",
       }),
@@ -851,7 +851,7 @@ describe("OnboardingWizard", () => {
       .mocked(global.fetch)
       .mock.calls.find(
         ([url, options]) =>
-          url === "/api/onboarding/draft" && options?.method === "POST",
+          url === "/api/v1/onboarding/draft" && options?.method === "POST",
       );
     expect(draftRequest).toBeDefined();
     expect(String(draftRequest?.[1]?.body)).not.toContain("adminPassword");
@@ -882,7 +882,7 @@ describe("OnboardingWizard", () => {
 
     // Mock the draft save success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === "/api/onboarding/draft") {
+      if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
       return Promise.resolve({
@@ -933,7 +933,7 @@ describe("OnboardingWizard", () => {
 
     // Verify it saved
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/onboarding/draft",
+      "/api/v1/onboarding/draft",
       expect.objectContaining({
         method: "POST",
         body: expect.stringContaining("https://example.com/save_draft.png"),
@@ -970,22 +970,22 @@ describe("OnboardingWizard", () => {
     global.fetch = vi.fn().mockImplementation((url, options) => {
       fetchCalls.push({ url, options });
 
-      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ organization_id: "org_123" }),
         });
       }
-      if (typeof url === "string" && url.includes("/api/onboarding/launch")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/launch")) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({}),
         });
       }
-      if (typeof url === "string" && url.includes("/api/onboarding/state")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/state")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
-      if (typeof url === "string" && url.includes("/api/onboarding/draft")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/draft")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
 
@@ -1011,18 +1011,18 @@ describe("OnboardingWizard", () => {
       expect(screen.queryByText(/You're Live!/i)).toBeInTheDocument();
     }, { timeout: 4000 });
 
-    const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/start_zero_click'));
+    const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/start_zero_click'));
     expect(startZeroClickCall).toBeDefined();
-    expect(startZeroClickCall.url).toBe("/api/onboarding/start_zero_click");
+    expect(startZeroClickCall.url).toBe("/api/v1/onboarding/start_zero_click");
     expect(startZeroClickCall.options.headers).toEqual({
       "Content-Type": "application/json",
     });
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
 
-    const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/launch'));
+    const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/launch'));
     expect(launchCall).toBeDefined();
-    expect(launchCall.url).toBe("/api/onboarding/launch");
+    expect(launchCall.url).toBe("/api/v1/onboarding/launch");
     expect(launchCall.options.headers).toBeUndefined();
   });
 
@@ -1033,7 +1033,7 @@ describe("OnboardingWizard", () => {
     console.error = vi.fn(); // Suppress expected error log
 
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -1136,7 +1136,7 @@ describe("OnboardingWizard", () => {
     expect(useOnboardingStore.getState().step).toBe(-2);
   });
 
-  it("Step 3: Passes initial_products from localStorage to /api/onboarding/start", async () => {
+  it("Step 3: Passes initial_products from localStorage to /api/v1/onboarding/start", async () => {
     const user = userEvent.setup({ delay: null });
 
     localStorage.setItem(
@@ -1152,20 +1152,20 @@ describe("OnboardingWizard", () => {
 
     let startRequestPayload: any = null;
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url === "/api/onboarding/start") {
+      if (url === "/api/v1/onboarding/start") {
         startRequestPayload = JSON.parse(options.body);
         return Promise.resolve({
           ok: true,
           json: async () => ({ organization_id: "org_123", status: "started" }),
         });
       }
-      if (url === "/api/onboarding/launch") {
+      if (url === "/api/v1/onboarding/launch") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/state") {
+      if (url === "/api/v1/onboarding/state") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
-      if (url === "/api/onboarding/draft") {
+      if (url === "/api/v1/onboarding/draft") {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -1266,7 +1266,7 @@ describe("OnboardingWizard", () => {
 
     // Mock API
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
+      if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: false,
           status: 500,

@@ -11,7 +11,7 @@ test.describe('Onboarding Error Banner UI', () => {
   });
 
   test('Error banner should render correctly with premium macOS translucent aesthetics when API fails', async ({ page }) => {
-    await page.route('**/api/onboarding/start', route => {
+    await page.route('**/api/v1/onboarding/start', route => {
       route.abort('failed');
     });
 
@@ -56,7 +56,7 @@ test.describe('Onboarding Error Banner UI', () => {
 
   test('Error banner should remain pinned outside scroll area when scrolling down the form', async ({ page }) => {
     // Setup error state
-    await page.route('**/api/onboarding/start', route => {
+    await page.route('**/api/v1/onboarding/start', route => {
       route.abort('failed');
     });
 
@@ -90,7 +90,7 @@ test.describe('Onboarding Error Banner UI', () => {
 
   test('Error banner should disappear if a subsequent submission succeeds', async ({ page }) => {
     // First, mock the network request to fail
-    await page.route('**/api/onboarding/start', route => {
+    await page.route('**/api/v1/onboarding/start', route => {
       route.abort('failed');
     }, { times: 1 });
 
@@ -119,7 +119,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await expect(errorBanner).toBeVisible();
 
     // Now mock the request to succeed
-    await page.unroute('**/api/onboarding/start');
+    await page.unroute('**/api/v1/onboarding/start');
 
     // Resubmit
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
@@ -134,7 +134,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Mock failure
-    await page.route('**/api/onboarding/start', route => {
+    await page.route('**/api/v1/onboarding/start', route => {
       route.abort('failed');
     });
 
@@ -167,7 +167,7 @@ test.describe('Onboarding Error Banner UI', () => {
 
   test('Error banner shows the alert icon alongside the text', async ({ page }) => {
     // Mock failure
-    await page.route('**/api/onboarding/start', route => {
+    await page.route('**/api/v1/onboarding/start', route => {
       route.abort('failed');
     });
 

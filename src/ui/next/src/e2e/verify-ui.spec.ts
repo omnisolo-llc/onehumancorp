@@ -2,7 +2,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test('Verify onboarding UI', async ({ page }) => {
   // Mock external API responses to eliminate backend dependencies
-  await page.route('**/api/onboarding/intake', route => {
+  await page.route('**/api/v1/onboarding/intake', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -15,7 +15,7 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-  await page.route('**/api/onboarding/start', route => {
+  await page.route('**/api/v1/onboarding/start', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -23,7 +23,7 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-  await page.route('**/api/onboarding/state', route => {
+  await page.route('**/api/v1/onboarding/state', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -31,7 +31,7 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-  await page.route('**/api/onboarding/draft', route => {
+  await page.route('**/api/v1/onboarding/draft', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -76,7 +76,7 @@ test('Verify onboarding UI', async ({ page }) => {
 });
 
 test('Verify Instant Build UI', async ({ page }) => {
-  await page.route('**/api/onboarding/start', route => {
+  await page.route('**/api/v1/onboarding/start', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -84,7 +84,7 @@ test('Verify Instant Build UI', async ({ page }) => {
     });
   });
 
-  await page.route('**/api/onboarding/state', route => {
+  await page.route('**/api/v1/onboarding/state', route => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
