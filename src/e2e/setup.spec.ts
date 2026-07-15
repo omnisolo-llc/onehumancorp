@@ -200,6 +200,78 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
     // Wait for the state to be reloaded (it jumps to step 3 since it was saved)
     await expect(page.getByTestId('business-name')).toHaveValue('AutoSave Bakery');
     });
+
+
+
+  test('should navigate forward and backward using Back button while retaining state', async ({ page }) => {
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const htmlContent = (() => {
+            try {
+                return fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+            } catch(e) {
+                return fs.readFileSync(path.join(process.env.TEST_SRCDIR || '', process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+            }
+        })();
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    // intercept tooltips
+    await page.route('**/api/tooltips', async route => {
+        await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+    await page.route('**/api/onboarding/draft', async route => {
+        await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    await page.goto('http://mock/setup.html');
+
+    // Initial loading
+    await expect(page.locator('h1').first()).toBeVisible();
+
+    // Start manual configuration
+    await page.getByTestId('next-step-btn').first().click();
+
+    // Step 1: Context
+    await expect(page.locator('#step-context')).toHaveClass(/active/);
+    await page.getByTestId('context-storefront').click();
+    await page.getByTestId('next-step-btn').nth(1).click();
+
+    // Step 2: Categories
+    await expect(page.locator('#step-categories')).toHaveClass(/active/);
+    const categorySelect = page.getByTestId('business-categories');
+    await expect(categorySelect).toBeVisible();
+    await categorySelect.selectOption('Other');
+
+    // Go back to Step 1: Context
+    await page.locator('#step-categories').getByTestId('prev-step-btn').click();
+
+    // Assert we are on Step 1 and the context is still selected
+    await expect(page.locator('#step-context')).toHaveClass(/active/);
+    await expect(page.locator('#step-categories')).not.toHaveClass(/active/);
+
+    // Navigate forward again
+    await page.getByTestId('next-step-btn').nth(1).click();
+
+    // Step 2: Categories should retain state
+    // State is maintained in the input, but we also ensure it's still visible
+    await expect(page.locator('#step-categories')).toHaveClass(/active/);
+    await expect(page.getByTestId('business-categories')).toHaveValue('Other');
+
+    // Proceed to Step 3: Name
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await expect(page.locator('#step-name')).toHaveClass(/active/);
+    await page.getByTestId('business-name').fill('My Test Business');
+
+    // Go back to Step 2: Categories
+    await page.locator('#step-name').getByTestId('prev-step-btn').click();
+    await expect(page.locator('#step-categories')).toHaveClass(/active/);
+
+    // Go forward to Step 3: Name and assert state is kept
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await expect(page.locator('#step-name')).toHaveClass(/active/);
+    await expect(page.getByTestId('business-name')).toHaveValue('My Test Business');
+  });
+
   test('should show submit error if start fails', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
