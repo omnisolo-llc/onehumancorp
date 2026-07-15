@@ -21,5 +21,5 @@ pub async fn execute_code_native(_req: Json<CodeNativeRequest>) -> Json<CodeNati
 }
 
 pub fn routes() -> Router {
-    Router::new().route("/api/agents/code-native", post(execute_code_native))
+    Router::new().route("/api/v1/agents/code-native", post(execute_code_native))
 }

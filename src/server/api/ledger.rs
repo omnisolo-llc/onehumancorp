@@ -59,11 +59,11 @@ pub struct GetInvoiceQuery {
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/api/ledger/invoice/{id}", get(get_invoice))
-        .route("/api/ledger/invoice/draft", post(create_invoice_draft))
-        .route("/api/ledger/invoice/{id}/update", put(update_invoice_status))
-        .route("/api/ledger/invoice/{id}/pay", post(apply_payment))
-        .route("/api/ledger/entries/{tenant_id}", get(get_ledger_entries))
+        .route("/api/v1/ledger/invoice/{id}", get(get_invoice))
+        .route("/api/v1/ledger/invoice/draft", post(create_invoice_draft))
+        .route("/api/v1/ledger/invoice/{id}/update", put(update_invoice_status))
+        .route("/api/v1/ledger/invoice/{id}/pay", post(apply_payment))
+        .route("/api/v1/ledger/entries/{tenant_id}", get(get_ledger_entries))
 }
 
 async fn get_invoice(
