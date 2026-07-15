@@ -72,4 +72,43 @@ test.describe("Documentation User Journey", () => {
       page.locator("text=How do I add a product?").first(),
     ).toBeVisible();
   });
+
+  test("Maya uses a walkthrough from the Help Widget", async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto("/dashboard");
+
+    // Click the floating help button
+    const helpButton = page.locator('#ohc-floating-help-btn');
+    await expect(helpButton).toBeVisible();
+    await helpButton.click({ force: true });
+
+    // Click a Tour button inside the Help Widget
+    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
+    await expect(tourButton).toBeVisible();
+    await tourButton.click();
+
+    // The Walkthrough bubble should appear
+    const bubble = page.locator('#walkthrough-bubble');
+    await expect(bubble).toBeVisible();
+
+    // First step
+    await expect(bubble.locator('h4')).toHaveText('Set up your store');
+
+    const nextBtn = page.locator('#wt-next');
+    await expect(nextBtn).toBeVisible();
+
+    // Click through steps
+    await nextBtn.click();
+    await expect(bubble.locator('h4')).toHaveText('Describe your business');
+
+    await nextBtn.click();
+    await expect(bubble.locator('h4')).toHaveText('Generate Store');
+
+    // Click finish
+    await expect(nextBtn).toHaveText('Finish');
+    await nextBtn.click();
+
+    // Walkthrough should close
+    await expect(bubble).not.toBeVisible();
+  });
 });

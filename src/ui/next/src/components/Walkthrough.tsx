@@ -24,39 +24,52 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   useEffect(() => {
     if (!isOpen || steps.length === 0) return;
 
-    const currentStep = steps[currentStepIndex];
-    const targetElement = document.getElementById(currentStep.targetId);
+    let timeoutId: NodeJS.Timeout;
+    let resizeTimeoutId: NodeJS.Timeout;
 
-    if (targetElement) {
-      // Scroll into view gently if needed
-      targetElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-
-      // We need a slight delay to let scrolling settle before measuring
-      const timeoutId = setTimeout(() => {
-        setTargetRect(targetElement.getBoundingClientRect());
-      }, 300);
-
-      // Also attach resize/scroll listeners for recalculation with debounce
-      let resizeTimeoutId: NodeJS.Timeout;
-      const handleScroll = () => {
-          clearTimeout(resizeTimeoutId);
-          resizeTimeoutId = setTimeout(() => {
-              setTargetRect(targetElement.getBoundingClientRect());
-          }, 50);
-      };
-      window.addEventListener('scroll', handleScroll, true);
-      window.addEventListener('resize', handleScroll);
-
-      return () => {
-        clearTimeout(timeoutId);
+    const handleScroll = () => {
+      const el = document.getElementById(steps[currentStepIndex].targetId);
+      if (el) {
         clearTimeout(resizeTimeoutId);
-        window.removeEventListener('scroll', handleScroll, true);
-        window.removeEventListener('resize', handleScroll);
-      };
-    } else {
-      console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);
-      setTargetRect(null);
-    }
+        resizeTimeoutId = setTimeout(() => {
+          setTargetRect(el.getBoundingClientRect());
+        }, 50);
+      }
+    };
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const updateRect = () => {
+      const currentStep = steps[currentStepIndex];
+      const targetElement = document.getElementById(currentStep.targetId);
+
+      if (targetElement) {
+        targetElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        timeoutId = setTimeout(() => {
+          setTargetRect(targetElement.getBoundingClientRect());
+        }, 300);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        // Poll for the element in case it hasn't rendered yet
+        timeoutId = setTimeout(updateRect, 100);
+      } else {
+        console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);
+        setTargetRect(null);
+      }
+    };
+
+    updateRect();
+
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(resizeTimeoutId);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, [isOpen, currentStepIndex, steps]);
 
   if (!isOpen || steps.length === 0) return null;

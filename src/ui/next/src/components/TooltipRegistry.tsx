@@ -28,7 +28,8 @@ export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "dashboard-walkthrough-btn": "Take a quick tour of the dashboard.",
   "help-advanced-toggle-tooltip": "Show advanced developer options.",
   "help-btn-tooltip-appshell": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
-  "checkout-pay-tooltip": "Click to process your payment."
+  "checkout-pay-tooltip": "Click to process your payment.",
+  "help-search-tooltip": "Search for help articles and videos..."
 };
 
 export function TooltipProvider({ children }: { children: ReactNode }) {

@@ -317,6 +317,7 @@ describe('Walkthrough Component', () => {
   });
 
   it('logs a warning and returns null targetRect when target is not found', () => {
+    vi.useFakeTimers();
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const steps = [
@@ -327,8 +328,14 @@ describe('Walkthrough Component', () => {
       <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
     );
 
+    // Fast forward to exhaust max polls
+    for (let i = 0; i <= 20; i++) {
+        vi.runOnlyPendingTimers();
+    }
+
     expect(consoleWarnSpy).toHaveBeenCalledWith('Walkthrough: Target element with id "nonexistent-step" not found.');
     consoleWarnSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it('removes window event listeners on unmount', () => {
@@ -395,6 +402,7 @@ describe('Walkthrough Component', () => {
   });
 
   it('provides null targetRect when document.getElementById returns null', () => {
+    vi.useFakeTimers();
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const getElementByIdSpy = vi.spyOn(document, 'getElementById').mockReturnValue(null);
 
@@ -402,8 +410,13 @@ describe('Walkthrough Component', () => {
 
     render(<InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />);
 
+    for (let i = 0; i <= 20; i++) {
+        vi.runOnlyPendingTimers();
+    }
+
     expect(consoleWarnSpy).toHaveBeenCalledWith('Walkthrough: Target element with id "nonexistent" not found.');
 
     consoleWarnSpy.mockRestore();
     getElementByIdSpy.mockRestore();
+    vi.useRealTimers();
   });
