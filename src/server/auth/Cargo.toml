@@ -11,7 +11,7 @@ bcrypt = "0.16.0"
 chrono = { workspace = true }
 hex = "0.4"
 hmac = "0.12"
-jsonwebtoken = "9"
+jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto", "use_pem"] }
 rand = "0.8"
 redis = { version = "0.27.6", features = ["tokio-comp"] }
 serde = { workspace = true }
