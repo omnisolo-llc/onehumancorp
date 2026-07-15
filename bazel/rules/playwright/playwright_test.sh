@@ -139,6 +139,7 @@ for candidate in "src/agents/builtin/ohc-builtin-agent" "../_main/src/agents/bui
 done
 
 export NODE_DISABLE_COMPILE_CACHE=1
+export NODE_COMPILE_CACHE=/tmp/node-compile-cache-$(uuidgen)
 export HOME="${HOME:-$TEST_TMPDIR/home}"
 mkdir -p "$HOME"
 
@@ -567,6 +568,7 @@ NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
 export CI=false
 export NODE_DISABLE_COMPILE_CACHE=1
+export NODE_COMPILE_CACHE=/tmp/node-compile-cache-$(uuidgen)
 echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
 (
   cd "$NEXT_WORK_DIR"
