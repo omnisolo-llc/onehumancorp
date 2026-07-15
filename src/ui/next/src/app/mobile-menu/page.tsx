@@ -11,10 +11,7 @@ export default function MobileMenu() {
   const [language, setLanguage] = useState<'en' | 'ar'>('en');
 
   useEffect(() => {
-    // Register Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker registration failed:', err));
-    }
+
 
     SyncManager.getInstance();
 
