@@ -381,46 +381,35 @@ mod tests {
 
 
 #[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PosAuthRequest {
     pub pin: String,
 }
 
 pub async fn pos_auth_handler(
-    _headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
     axum::extract::Json(payload): axum::extract::Json<PosAuthRequest>,
-) -> Json<serde_json::Value> {
-    let pool = crate::db::get_pool();
-
-    let row_res = sqlx::query("SELECT id, name, organization_id as tenant_id, role FROM organization_users WHERE id = $1 LIMIT 1")
-        .bind(&payload.pin)
-        .fetch_optional(&pool)
-        .await;
-
-    match row_res {
-        Ok(Some(row)) => {
-            let id: String = sqlx::Row::get(&row, "id");
-            let name: String = sqlx::Row::get(&row, "name");
-            let tenant_id: String = sqlx::Row::get(&row, "tenant_id");
-            let role: String = sqlx::Row::get(&row, "role");
-
-            Json(json!({
-                "success": true,
-                "staff": {
-                    "id": id,
-                    "name": name,
-                    "role": role,
-                    "tenant_id": tenant_id
-                }
-            }))
-        }
-        _ => {
-            Json(json!({
-                "success": false,
-                "error": "Invalid PIN"
-            }))
-        }
+) -> impl IntoResponse {
+    let Some(Extension(claims)) = claims else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if payload.pin.len() > 64 {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
     }
+
+    Json(json!({
+        "success": true,
+        "staff": {
+            "id": claims.sub,
+            "name": claims.username,
+            "role": claims.roles.first().cloned().unwrap_or_else(|| "STAFF".to_string()),
+            "tenant_id": tenant_id,
+        }
+    })).into_response()
 }
 
 #[derive(serde::Deserialize)]
