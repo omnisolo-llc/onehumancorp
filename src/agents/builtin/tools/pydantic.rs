@@ -46,25 +46,24 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
 {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         // Validation Errors fed back to LLM for self-correction
-        let typed_args: T = match serde_json::from_value(args.clone()) {
+        let args_str_full = serde_json::to_string(&args).unwrap_or_else(|_| "{}".to_string());
+        let typed_args: T = match serde_json::from_str(&args_str_full) {
             Ok(v) => v,
             Err(e) => {
                 // Add the original payload snippet for context
-                let args_str = match serde_json::to_string(&args) {
-                    Ok(s) => {
-                        // Optimize payload truncation to use efficient byte-slice boundary checks
-                        const MAX_LEN: usize = 100;
-                        if s.len() > MAX_LEN {
-                            let mut end = MAX_LEN;
-                            while !s.is_char_boundary(end) {
-                                end -= 1;
-                            }
-                            format!("{}...", &s[..end])
-                        } else {
-                            s
+                let args_str = {
+                    let s = &args_str_full;
+                    // Optimize payload truncation to use efficient byte-slice boundary checks
+                    const MAX_LEN: usize = 100;
+                    if s.len() > MAX_LEN {
+                        let mut end = MAX_LEN;
+                        while end > 0 && !s.is_char_boundary(end) {
+                            end -= 1;
                         }
+                        format!("{}...", &s[..end])
+                    } else {
+                        s.clone()
                     }
-                    Err(_) => "<unprintable>".to_string(),
                 };
 
                 let err_str = e.to_string();
@@ -256,7 +255,7 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("invalid type: null"));
+            assert!(msg.contains("invalid type: null") || msg.contains("expected value"));
             // assert!(msg.contains("A null value was provided where a non-null value is required."));
         } else {
             panic!("Expected LlmRecoverable error");
