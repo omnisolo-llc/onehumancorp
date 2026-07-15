@@ -5,7 +5,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
-    const res = await fetch(`${backendUrl}/api/pos/orders/translate`, {
+    const res = await fetch(`${backendUrl}/api/v1/pos/orders/translate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

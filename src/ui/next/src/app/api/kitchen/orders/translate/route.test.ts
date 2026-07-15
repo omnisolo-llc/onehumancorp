@@ -28,7 +28,7 @@ describe("POST /api/kitchen/orders/translate", () => {
     const res = await POST(req);
     const data = await res.json();
 
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/pos/orders/translate", {
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/pos/orders/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

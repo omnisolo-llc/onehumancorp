@@ -10,8 +10,8 @@ test.describe('KDS Offline & Multilingual', () => {
     await page.evaluate(() => localStorage.clear());
 
     // Reset backend state before each test
-    await request.delete('/api/pos/orders');
-    await request.delete('/api/pos/inventory');
+    await request.delete('/api/v1/pos/orders');
+    await request.delete('/api/v1/pos/inventory');
 
     // Reload to ensure fresh state with clean local storage
     await page.reload();

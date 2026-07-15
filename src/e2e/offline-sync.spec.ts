@@ -20,7 +20,7 @@ test.describe('Offline-First Tap-to-Pay Omnichannel Inventory Sync Mesh', () => 
       }
     };
 
-    const response = await request.post(`${baseURL}/api/pos/inventory`, {
+    const response = await request.post(`${baseURL}/api/v1/pos/inventory`, {
       headers: {
         'x-spiffe-id': spiffeId,
         'Content-Type': 'application/json'
