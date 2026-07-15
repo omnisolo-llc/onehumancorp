@@ -7183,7 +7183,7 @@ async fn create_ui_bom_item_handler(
             (axum::http::StatusCode::OK, [("content-type", "text/css")], include_str!("../ui/tauri/src/ui/swagger-ui.css"))
         }))
         .route("/api/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
-            (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.txt"))
+            (axum::http::StatusCode::OK, [("content-type", "application/javascript")], "")
         }))
         .route("/kairos", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
