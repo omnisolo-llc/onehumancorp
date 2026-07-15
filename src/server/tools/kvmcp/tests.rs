@@ -33,7 +33,7 @@ async fn test_kv_get_set_list_delete_standalone() {
         let tools = server.get_tools();
         assert_eq!(tools.len(), 4);
 
-        let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent".to_string();
+        let spiffe_id = "spiffe://onehumancorp.io/org/test_org/agent/test_agent".to_string();
 
         let req = McpInvokeRequest {
             action: "".to_string(),
@@ -95,13 +95,13 @@ async fn test_tenant_id_parsing() {
     });
     let server = KvMcpServer::new(db, None);
 
-    let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent";
+    let spiffe_id = "spiffe://onehumancorp.io/org/test_org/agent/test_agent";
     assert_eq!(server.get_tenant_id(spiffe_id).unwrap(), "test_org");
 
-    let bad_spiffe = "spiffe://ohc/something/else";
+    let bad_spiffe = "spiffe://onehumancorp.io/something/else";
     assert!(server.get_tenant_id(bad_spiffe).is_err());
 
-    let empty_spiffe = "spiffe://ohc/org//agent/test_agent";
+    let empty_spiffe = "spiffe://onehumancorp.io/org//agent/test_agent";
     assert!(server.get_tenant_id(empty_spiffe).is_err());
 }
 
@@ -114,7 +114,7 @@ async fn test_redis_unconfigured() {
         });
 
         let server = KvMcpServer::new(db, None);
-        let spiffe_id = "spiffe://ohc/org/test_org/agent/test_agent".to_string();
+        let spiffe_id = "spiffe://onehumancorp.io/org/test_org/agent/test_agent".to_string();
 
         let req = McpInvokeRequest {
             action: "".to_string(),

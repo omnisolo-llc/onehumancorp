@@ -1032,7 +1032,7 @@ describe("OnboardingWizard", () => {
     const bioInput = screen.getByTestId("instant-bio");
     await user.clear(bioInput);
 
-    const generateBtn = screen.getByRole("button", { name: /Generate Storefront/i });
+    const generateBtn = screen.getByRole("button", { name: /Generate My Workspace/i });
 
     await waitFor(() => {
       expect(generateBtn).toBeDisabled();
@@ -1080,7 +1080,7 @@ describe("OnboardingWizard", () => {
     const bioInput = await screen.findByTestId("instant-bio");
     await user.type(bioInput, "I consult startups in SF.");
 
-    const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
+    const generateBtn = screen.getAllByRole("button", { name: "Generate My Workspace" })[0];
     await user.click(generateBtn);
 
     await waitFor(() => {
@@ -1120,7 +1120,7 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
+    const generateBtn = screen.getAllByRole("button", { name: "Generate My Workspace" })[0];
     await user.click(generateBtn);
 
     await waitFor(() => {

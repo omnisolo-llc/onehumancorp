@@ -1010,7 +1010,7 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        {error && (
+        {error && step !== -1 && (
           <div className="absolute top-4 left-4 right-4 z-[9999] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg
               className="w-5 h-5 flex-shrink-0"
@@ -1311,6 +1311,19 @@ export default function OnboardingWizard() {
                   autoComplete="url"
                 />
 
+                {error && step === -1 && (
+                  <div
+                    id="instant-error"
+                    className="mt-2 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake"
+                    aria-live="polite"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p className="flex-1">{error}</p>
+                  </div>
+                )}
+
                 <div className="mt-4">
                   <button
                     id="generate-storefront-btn"
@@ -1319,7 +1332,7 @@ export default function OnboardingWizard() {
                     className="flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     <span className="flex items-center gap-2">
-                      <SetupIcon name="sparkles" /> Generate Storefront
+                      <SetupIcon name="sparkles" /> Generate My Workspace
                     </span>
                   </button>
                 </div>
