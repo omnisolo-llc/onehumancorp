@@ -1,4 +1,4 @@
-import { proxyBackendGet, proxyBackendPost } from "../../ui/backendProxy";
+import { proxyBackendGet, proxyBackendPost } from "../../../ui/backendProxy";
 
 export async function GET(req: Request) {
   return proxyBackendGet(req, "/api/v1/settings/sms-confirm");
