@@ -5,7 +5,7 @@ const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded
 const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/ui/swagger-ui.css',
   '/api/ui/swagger-ui-bundle.js',
-  '/api/mesh/v2/collective',
+  '/api/v1/mesh/v2/collective',
   '/api/ui/dashboard/analytics/briefing',
   '/api/ui/triage',
   '/api/finance/safe-to-spend',

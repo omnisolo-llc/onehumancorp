@@ -19,7 +19,7 @@ export function useSyncGateway({ topics, enabled = true }: UseSyncGatewayOptions
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const topicsQuery = topics.join(',');
-    const wsUrl = `${protocol}//${window.location.host}/api/sync/ws?topics=${topicsQuery}`;
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?topics=${topicsQuery}`;
 
     if (typeof process.env.VITEST !== 'undefined' || process.env.NODE_ENV === 'test') return;
 
