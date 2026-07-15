@@ -266,7 +266,7 @@ describe("server-only authenticated backend transport", () => {
 
   it("allows a trusted route to suppress inbound query forwarding", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
-      expect(String(input)).toBe("https://api.example.com/api/fulfillment");
+      expect(String(input)).toBe("https://api.example.com/api/v1/fulfillment");
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
@@ -277,7 +277,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       input,
-      "/api/fulfillment",
+      "/api/v1/fulfillment",
       deps,
       { forwardQuery: false },
     );

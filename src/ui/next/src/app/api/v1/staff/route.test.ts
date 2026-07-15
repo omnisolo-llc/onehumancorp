@@ -5,9 +5,9 @@ vi.mock("@/app/api/backendCatchAll", () => ({ proxyCurrentBackendPath }));
 
 import { GET, POST } from "./route";
 
-test("uses authenticated transport for timecard reads and writes", async () => {
-  const read = new Request("http://localhost/api/staff/timecard");
-  const write = new Request("http://localhost/api/staff/timecard", { method: "POST", body: "[]" });
+test("uses authenticated transport for staff reads and writes", async () => {
+  const read = new Request("http://localhost/api/v1/staff");
+  const write = new Request("http://localhost/api/v1/staff", { method: "POST", body: "{}" });
   await GET(read);
   await POST(write);
   expect(proxyCurrentBackendPath).toHaveBeenNthCalledWith(1, read);
