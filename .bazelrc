@@ -2,8 +2,8 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
-build --config=remote-cache
-build --config=bes
+# build --config=remote-cache
+# build --config=bes
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
