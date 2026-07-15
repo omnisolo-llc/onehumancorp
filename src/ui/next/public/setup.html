@@ -29,7 +29,7 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 20px;
-        padding-bottom: 80px;
+        padding-bottom: 24px;
         border-radius: 16px;
         box-shadow:
           0 4px 6px -1px rgba(0, 0, 0, 0.1),
@@ -39,24 +39,21 @@
         max-width: 480px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
-        max-height: calc(100vh - 40px);
+        max-height: 90vh;
         overflow-y: auto;
       }
       /* OHC Premium Glassmorphism */
-      .glassmorphism {
-        border-radius: 16px;
+      .glassmorphism, .container, .card, .panel {
+        border-radius: 16px !important;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-
       @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          border-radius: 16px;
+        .glassmorphism, .container, .card, .panel {
+          border-radius: 16px !important;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -80,7 +77,7 @@
       input {
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -96,9 +93,16 @@
       }
 
       @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         select,
         textarea,
         input {
+
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
@@ -108,7 +112,7 @@
       textarea:focus,
       select:focus {
         outline: none;
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -121,33 +125,38 @@
         min-width: 44px;
         box-sizing: border-box;
       }
-      .glassmorphism {
-        border-radius: 16px !important;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
-      textarea.glassmorphism, input.glassmorphism {
+      /* Base glass-control */
+      .glass-control,
+      .glassmorphism input,
+      .glassmorphism textarea,
+      .glassmorphism select,
+      .glassmorphism button {
         border-radius: 8px !important;
+        min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      button {
+
+      @media (prefers-color-scheme: dark) {
+        .glass-control,
+        .glassmorphism input,
+        .glassmorphism textarea,
+        .glassmorphism select,
+        .glassmorphism button {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      button, .btn-primary {
         min-width: 44px;
-        background-color: #0066ff;
+        background-color: #0066FF;
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
@@ -156,38 +165,47 @@
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
       }
-      button:hover {
+      button:hover, .btn-primary:hover {
         background-color: #0052cc;
       }
-      button:active {
+      button:active, .btn-primary:active {
         transform: scale(0.98);
       }
 
       .error-msg {
-        color: #ff3b30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
+        background: rgba(255, 59, 48, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid #FF3B30;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        min-height: 44px;
         display: none;
+        align-items: center;
+        justify-content: flex-start;
+        color: #FF3B30;
+        font-size: 14px;
+        font-weight: 600;
         text-align: left;
-      }
+    }
 
       .invalid-input {
         background: rgba(255, 59, 48, 0.1) !important;
-        border-color: #ff3b30 !important;
+        border-color: #FF3B30 !important;
       }
 
       .text-\[\#FF3B30\] {
-        color: #ff3b30 !important;
+        color: #FF3B30 !important;
       }
       .border-\[\#FF3B30\] {
-        border-color: #ff3b30 !important;
+        border-color: #FF3B30 !important;
       }
       .border-\[\#FF3B30\]\/30 {
         border-color: rgba(255, 59, 48, 0.3) !important;
         border-width: 1px !important;
         border-style: solid !important;
-        border-radius: 16px;
         padding: 10px !important;
       }
 
@@ -244,7 +262,6 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -306,14 +323,16 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
           background: rgba(22, 22, 26, 0.7);
@@ -328,7 +347,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066ff;
+          box-shadow: 0 0 0 1px #0066FF;
         }
         body {
           background-color: #16161a;
@@ -338,18 +357,11 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow:
             0 4px 6px -1px rgba(0, 0, 0, 0.1),
             0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
+        /* Cleaned up duplicate glass-control */
         h1 {
           color: #f5f5f7;
         }
@@ -364,7 +376,7 @@
         input:focus,
         textarea:focus,
         select:focus {
-          border-color: #0071e3;
+          border-color: #0071E3;
           background: rgba(22, 22, 26, 0.7);
         }
       }
@@ -391,7 +403,7 @@
         top: 50%;
         left: 0;
         height: 2px;
-        background: #0066ff;
+        background: #0066FF;
         z-index: 1;
         transform: translateY(-50%);
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -408,7 +420,7 @@
       }
 
       .btn-instant-build {
-        background: #0066ff;
+        background: #0066FF;
         color: white;
         border: none;
         min-height: 44px;
@@ -428,8 +440,11 @@
       .btn-instant-build:hover {
         background: #0052cc;
       }
-      .btn-instant-build:disabled {
-        opacity: 0.5;
+      .btn-instant-build:disabled,
+      button:disabled,
+      button[disabled],
+      .btn-primary:disabled {
+        opacity: 0.55;
         cursor: not-allowed;
       }
 
@@ -443,36 +458,42 @@
         animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .chat-message.assistant {
+        border-radius: 16px 16px 16px 0;
         align-self: flex-start;
       }
       .chat-message.user {
+        border-radius: 16px 16px 0 16px;
         align-self: flex-end;
       }
       .chat-bubble {
         padding: 12px 16px;
-        border-radius: 16px;
         font-size: 14px;
         line-height: 1.5;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-radius: 16px;
       }
       .chat-message.assistant .chat-bubble {
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-bottom-left-radius: 4px;
         color: #1d1d1f;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
       }
       @media (prefers-color-scheme: dark) {
         .chat-message.assistant .chat-bubble {
           background: rgba(40, 40, 45, 0.8);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #f5f5f7;
-        }
+          border-radius: 16px;
+          border-bottom-left-radius: 4px;
+      }
       }
       .chat-message.user .chat-bubble {
-        background: #0066ff;
+        background: #0066FF;
         border: 1px solid #0052cc;
-        border-bottom-right-radius: 4px;
         color: white;
+        border-radius: 16px;
+        border-bottom-right-radius: 4px;
       }
       .chat-sender {
         font-size: 11px;
@@ -488,7 +509,7 @@
         text-align: right;
       }
 
-      @keyframes fadeIn {
+      @keyframes stepFadeIn {
         from {
           opacity: 0;
           transform: translateY(5px);
@@ -511,8 +532,8 @@
       }
 
       .step-indicator.active {
-        background: #0066ff;
-        border-color: #0071e3;
+        background: #0066FF;
+        border-color: #0071E3;
         transform: scale(1.3);
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
@@ -538,7 +559,6 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -600,14 +620,16 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
           background: rgba(22, 22, 26, 0.7);
@@ -622,7 +644,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066ff;
+          box-shadow: 0 0 0 1px #0066FF;
         }
         .stepper::before {
           background: rgba(22, 22, 26, 0.7);
@@ -632,7 +654,7 @@
           top: 50%;
           left: 0;
           height: 2px;
-          background: #0066ff;
+          background: #0066FF;
           z-index: 1;
           transform: translateY(-50%);
           transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -645,13 +667,8 @@
       }
 
       /* Multi-step logic */
-      .step {
-        display: none;
-        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .step.active {
-        display: block;
-      }
+
+
       @keyframes fadeIn {
         0% {
           opacity: 0;
@@ -669,7 +686,7 @@
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -696,7 +713,7 @@
       select:focus,
       textarea:focus {
         outline: none;
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -714,7 +731,6 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         padding: 16px;
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -729,10 +745,10 @@
         transform: translateY(-2px);
       }
       .context-card.selected {
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(0, 102, 255, 0.1);
         box-shadow:
-          0 0 0 1px #0066ff,
+          0 0 0 1px #0066FF,
           0 4px 12px rgba(0, 102, 255, 0.15);
       }
       .context-card input[type="radio"] {
@@ -771,7 +787,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         cursor: pointer;
         transition:
@@ -783,9 +799,9 @@
         background: rgba(255, 255, 255, 0.85);
       }
       .radio-option.selected {
-        border-color: #0066ff;
+        border-color: #0066FF;
         background: rgba(255, 255, 255, 0.65);
-        box-shadow: 0 0 0 1px #0066ff;
+        box-shadow: 0 0 0 1px #0066FF;
       }
       .radio-option input[type="radio"] {
         display: none;
@@ -806,10 +822,10 @@
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
         margin-top: 10px;
-        min-height: 44px !important;
+        min-height: 44px;
       }
       .btn-secondary:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
         color: #1d1d1f;
       }
       .btn-group {
@@ -818,7 +834,7 @@
         gap: 10px;
       }
 
-      .persona-row {
+      .persona-row, #step-context {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
@@ -833,12 +849,12 @@
         min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         display: flex;
         align-items: center;
         border-radius: 8px;
         background: rgba(0, 102, 255, 0.1);
-        color: #0066ff;
+        color: #0066FF;
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
@@ -849,7 +865,7 @@
         background: rgba(0, 102, 255, 0.2);
       }
       .persona-chip.selected {
-        background: #0066ff;
+        background: #0066FF;
         color: white;
       }
 
@@ -857,7 +873,6 @@
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
-        border-radius: 16px;
         border-bottom-left-radius: 4px;
         font-size: 14px;
         line-height: 1.4;
@@ -884,7 +899,6 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -946,14 +960,16 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
           background: rgba(22, 22, 26, 0.7);
@@ -968,7 +984,7 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066ff;
+          box-shadow: 0 0 0 1px #0066FF;
         }
         input,
         select,
@@ -980,7 +996,7 @@
         input:focus,
         select:focus,
         textarea:focus {
-          border-color: #0071e3;
+          border-color: #0071E3;
           background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
@@ -990,15 +1006,15 @@
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .radio-option:hover {
           background: rgba(40, 40, 45, 0.7);
         }
         .radio-option.selected {
-          border-color: #0066ff;
+          border-color: #0066FF;
           background: rgba(22, 22, 26, 0.7);
-          box-shadow: 0 0 0 1px #0066ff;
+          box-shadow: 0 0 0 1px #0066FF;
         }
         .radio-label {
           color: #f5f5f7;
@@ -1014,15 +1030,14 @@
         .chat-bubble {
           background: rgba(22, 22, 26, 0.7);
           color: #f5f5f7;
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
 
       @media (max-width: 768px) {
         .container {
           padding: 20px;
-          padding-bottom: 80px;
-          border-radius: 16px;
+          padding-bottom: 24px;
           width: 100%;
           border: none;
         }
@@ -1037,7 +1052,14 @@
           box-sizing: border-box;
           min-height: 44px;
           border-radius: 8px;
-          min-height: 44px !important;
+          min-height: 44px;
+        }
+        .persona-row, #step-context {
+          flex-direction: column !important;
+        }
+        .work-context-cards, #context-group {
+          display: flex;
+          flex-direction: column !important;
         }
       }
 
@@ -1046,73 +1068,21 @@
           padding: 16px;
           margin: 0;
           width: 100vw;
-          max-width: 100vw;
+          max-width: 375px;
           box-sizing: border-box;
           overflow-x: hidden;
           height: auto;
           max-height: 100vh;
-          border-radius: 16px;
-          overflow-y: auto;
-          border: none;
         }
-        .context-card {
-          padding: 12px;
-          min-height: 44px;
-          border-radius: 8px;
-        }
-        .work-context-cards {
-          display: flex;
-          flex-direction: column;
-        }
-        .persona-row {
-          flex-direction: column;
-        }
-        .radio-group {
-          grid-template-columns: 1fr;
-        }
-        .stepper {
-          gap: 8px;
-          padding: 0 10px;
-        }
-        .step-indicator {
-          width: 10px;
-          height: 10px;
-        }
-        .radio-option {
-          min-height: 44px;
-          min-width: 44px;
-          box-sizing: border-box;
-          padding: 8px 12px;
+        h1 { font-size: 20px; }
+        p { font-size: 13px; }
+        select, textarea, input, button, .btn-primary {
           font-size: 14px;
-          border-radius: 8px;
-        }
-        button,
-        input,
-        select,
-        textarea {
-          min-height: 44px;
-          min-width: 44px;
-          box-sizing: border-box;
-          border-radius: 8px;
-        }
-        h1 {
-          font-size: 20px;
-        }
-        p {
-          font-size: 13px;
-        }
-        .persona-chip {
-          min-height: 44px;
-          min-width: 44px;
-          box-sizing: border-box;
-          padding: 6px 12px;
-          font-size: 12px;
-          border-radius: 16px;
         }
       }
 
       *:focus-visible {
-        outline: 3px solid #0066ff;
+        outline: 3px solid #0066FF;
         outline-offset: 2px;
       }
 
@@ -1168,14 +1138,89 @@
 
       .context-card {
         min-height: 44px;
-        border-radius: 16px;
       }
 
       .glassmorphism.container,
       .glassmorphism.card,
       .glassmorphism.panel {
-        border-radius: 16px;
       }
+      #instant-bio { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; border-radius: 8px; }
+      .context-card { min-height: 44px !important; padding: 12px; margin: 4px; box-sizing: border-box; }
+
+      /* --- OHC Premium Dark Mode & Animations --- */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #000000;
+          color: #f5f5f7;
+        }
+        h1, h2, h3, h4, p, label {
+          color: #f5f5f7 !important;
+        }
+        .container, .glassmorphism, .context-card, .toggle-row, .ohc-tooltip {
+          background: rgba(22, 22, 26, 0.7) !important;
+          backdrop-filter: blur(30px) saturate(210%) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+        .context-card:hover {
+          background: rgba(40, 40, 45, 0.7) !important;
+        }
+        .context-desc, .toggle-desc {
+          color: #a1a1a6 !important;
+        }
+        input, select, textarea {
+          background: rgba(30, 30, 30, 0.8) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+          color: #f5f5f7 !important;
+        }
+        footer {
+          background: rgba(22, 22, 26, 0.7) !important;
+          border-top-color: rgba(255, 255, 255, 0.1) !important;
+          color: #f5f5f7 !important;
+        }
+        footer a {
+          color: #0066FF !important;
+        }
+      }
+
+      /* Transitions */
+      .container {
+        transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .context-card {
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Entrance/Exit Animation */
+      .step {
+        display: none;
+        opacity: 0;
+        transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .step.active {
+        display: block;
+        opacity: 1;
+        animation: stepFadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .step.exit {
+        opacity: 0;
+        animation: stepFadeOut 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes stepFadeOut {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+      }
+      @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
     </style>
 
     <style>
@@ -1196,7 +1241,6 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -1258,14 +1302,16 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
           background: rgba(22, 22, 26, 0.7);
@@ -1280,21 +1326,23 @@
         }
         .context-card.selected {
           background: rgba(0, 102, 255, 0.2);
-          box-shadow: 0 0 0 1px #0066ff;
+          box-shadow: 0 0 0 1px #0066FF;
         }
       }
     </style>
-  </head>
+
+
+</head>
   <body>
     <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
+
       <div class="step active" id="step-initial">
         <div
           style="
             width: 64px;
             height: 64px;
             background: rgba(0, 102, 255, 0.1);
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1302,7 +1350,7 @@
           "
         >
           <svg
-            style="width: 32px; height: 32px; color: #0066ff"
+            style="width: 32px; height: 32px; color: #0066FF"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -1315,99 +1363,28 @@
             />
           </svg>
         </div>
-        <h1>10-Minute Setup Wizard</h1>
-        <p>
-          Zero tech skills needed. We do the heavy lifting. Review and add any
-          extra details to help our AI generate the perfect store.
-        </p>
-
-        <div class="btn-group" style="margin-top: 32px">
-          <button
-            class="next-step-btn"
-            data-testid="next-step-btn"
-            data-next="step-context"
-          >
-            Start My Business
-          </button>
-          <button
-            type="button"
-            class="glassmorphism btn-instant-build"
-            onclick="
-              goToStep('step-instant');
-            "
-          >
-            <span id="instant-build-btn-text">Instant Build</span>
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            onclick="goToStep('step-chat')"
-            style="margin-bottom: 10px; width: 100%;"
-          >
-            Conversational Setup
-          </button>
-          <button
-            type="button"
-            class="btn-secondary next-step-btn"
-            data-testid="next-step-btn"
-            data-next="step-context"
-            style="width: 100%;"
-          >
-            Step-by-Step Setup
-          </button>
-        </div>
-      </div>
-
-      <!-- Step Instant: Instant Build -->
-      <div class="step" id="step-instant">
-        <button
-          onclick="goToStep('step-initial')"
-          style="
-            background: none;
-            border: none;
-            color: #0066ff;
-            padding: 0;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 24px;
-            min-height: 44px;
-          "
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Back
-        </button>
-
         <h1>Tell us about your business</h1>
-        <p>Our AI will handle the rest in 30 seconds.</p>
+        <p>
+          Type a quick description and our AI will build your entire workspace in seconds.
+        </p>
 
         <textarea
           id="instant-bio"
           data-testid="instant-bio"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
           rows="4"
           style="resize: none; padding: 14px"
           enterkeyhint="next"
+          autocapitalize="sentences"
         ></textarea>
+
         <input
           type="url"
           id="instant-image-url"
           data-testid="instant-image-url"
-          class="glassmorphism"
-          placeholder="Image URL (Optional)"
+          class="glass-control glassmorphism"
+          placeholder="Image URL (Optional - e.g. logo or storefront)"
           inputmode="url"
           autocomplete="url"
           enterkeyhint="next"
@@ -1418,23 +1395,50 @@
             border-radius: 8px;
           "
         />
-        <div
-          id="instant-error"
-          class="error-msg"
-          aria-live="polite"
-          style="margin-bottom: 20px"
-        ></div>
 
-        <div class="btn-group" style="margin-top: 24px">
+        <div id="instant-error" class="error-msg" aria-live="polite"></div>
+
+        <div class="btn-group" style="margin-top: 16px">
           <button
             id="generate-storefront-btn"
+            aria-label="Generate Storefront"
+            title="Generate Storefront"
             data-testid="generate-storefront-btn"
+            class="btn-primary" style="width: 100%; min-height: 44px !important; padding: 12px; margin: 4px;"
             disabled
           >
-            Next
+            Generate My Workspace
+          </button>
+
+          <div style="margin-top: 24px; margin-bottom: 12px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; justify-content: center; min-height: 44px;">
+            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-right: 12px;"></span>
+            Or configure manually
+            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-left: 12px;"></span>
+          </div>
+
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-chat')"
+            style="margin-bottom: 10px; width: 100%;"
+          >
+            Conversational Setup
+          </button>
+          <button
+            type="button"
+            class="btn-primary next-step-btn"
+            data-testid="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-next="step-context"
+            style="width: 100%;"
+          >
+            Step-by-Step Setup
           </button>
         </div>
       </div>
+
+
 
       <div class="step" id="step-loading">
         <h1 id="loading-title">Building Your Business...</h1>
@@ -1446,7 +1450,7 @@
             width: 40px;
             height: 40px;
             border-width: 4px;
-            border-top-color: #0066ff;
+            border-top-color: #0066FF;
           "
         ></div>
         <div
@@ -1462,9 +1466,14 @@
           "
         >
           <div
-            class="loading-step"
             id="step-provisioning"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.55;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1475,12 +1484,17 @@
                 background: #ccc;
               "
             ></div>
-            Hiring your AI Workforce...
+            Provisioning Workspace
           </div>
           <div
-            class="loading-step"
             id="step-catalog"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.55;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1491,12 +1505,17 @@
                 background: #ccc;
               "
             ></div>
-            Generating your product catalog...
+            Generating Catalog
           </div>
           <div
-            class="loading-step"
             id="step-storefront"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.55;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1507,10 +1526,11 @@
                 background: #ccc;
               "
             ></div>
-            Setting up your Command Center...
+            Publishing Storefront
           </div>
         </div>
       </div>
+
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
@@ -1519,7 +1539,7 @@
           style="
             background: none;
             border: none;
-            color: #0066ff;
+            color: #0066FF;
             padding: 0;
             box-shadow: none;
             width: auto;
@@ -1552,14 +1572,13 @@
 
         <div
           id="chat-messages"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="
             text-align: left;
             display: flex;
             flex-direction: column;
             padding: 16px;
             gap: 4px;
-            border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.4);
           "
         >
@@ -1584,7 +1603,7 @@
               type="url"
               id="chat-image-url"
               data-testid="chat-image-url"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               placeholder="Image URL (Optional)"
               inputmode="url"
               autocomplete="url"
@@ -1601,18 +1620,17 @@
             <button
               type="button"
               id="chat-upload-btn"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               style="
                 width: 44px;
-                height: 44px;
+                min-height: 44px;
                 min-width: 44px;
-                border-radius: 16px;
                 padding: 0;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 background: rgba(0, 102, 255, 0.1);
-                color: #0066ff;
+                color: #0066FF;
               "
               onclick="
                 document.getElementById('chat-image-container').style.display =
@@ -1640,31 +1658,33 @@
               type="text"
               id="chat-input"
               data-testid="chat-input"
-              class="glassmorphism"
-              placeholder="e.g. I am a home baker"
-              enterkeyhint="send"
+              class="glass-control glassmorphism"
+              placeholder="Type a message..."
+
+              autocomplete="off"
               style="
                 margin-bottom: 0;
                 flex-grow: 1;
                 min-height: 44px;
                 border-radius: 8px;
               "
-            />
+             enterkeyhint="next" />
             <button
               id="chat-send-btn"
-              type="submit"
+              aria-label="Send Chat Message"
+              title="Send Chat Message"
               data-testid="chat-send-btn"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               style="
                 width: 44px;
-                height: 44px;
+                min-height: 44px;
                 min-width: 44px;
                 border-radius: 8px;
                 padding: 0;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                background: #0066ff;
+                background: #0066FF;
                 color: white;
               "
             >
@@ -1692,7 +1712,7 @@
           style="
             background: none;
             border: none;
-            color: #0066ff;
+            color: #0066FF;
             padding: 0;
             box-shadow: none;
             width: auto;
@@ -1725,17 +1745,16 @@
 
         <div
           id="approval-details"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="
             text-align: left;
             padding: 16px;
             margin-bottom: 24px;
-            border-radius: 16px;
           "
         ></div>
 
         <div class="btn-group">
-          <button id="approve-publish-btn" data-testid="approve-publish-btn">
+          <button id="approve-publish-btn" aria-label="Approve and Publish" title="Approve and Publish" data-testid="approve-publish-btn" style="min-height: 44px;">
             Approve & Publish
           </button>
         </div>
@@ -1748,7 +1767,7 @@
         role="progressbar"
         aria-label="Setup progress"
         aria-valuemin="0"
-        aria-valuemax="8"
+        aria-valuemax="10"
       >
         <div class="stepper-progress" id="stepper-progress"></div>
         <div class="step-indicator active" data-step="step-context"></div>
@@ -1757,6 +1776,8 @@
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-location"></div>
+        <div class="step-indicator" data-step="step-target-audience"></div>
         <div class="step-indicator" data-step="step-domain"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
@@ -1839,7 +1860,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -1864,9 +1885,9 @@
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
         <select
-          id="business-categories"
+          id="business-categories" required
           data-testid="business-categories"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
         >
           <option value="" disabled selected>Select a category...</option>
         </select>
@@ -1875,7 +1896,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -1910,15 +1931,14 @@
         <p>We'll use this to set up your workspace.</p>
         <input
           type="text"
-          id="business-name"
+          id="business-name" required autocomplete="organization" enterkeyhint="next"
           data-testid="business-name"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
           inputmode="text"
           autocomplete="organization"
           autocapitalize="words"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">
           Business Name is required.
         </div>
@@ -1927,16 +1947,15 @@
           type="text"
           id="business-tagline"
           data-testid="business-tagline"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="Tagline (optional)"
           inputmode="text"
           autocomplete="off"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2002,7 +2021,7 @@
         <select
           id="assistant-tone"
           data-testid="assistant-tone"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="margin-bottom: 0"
         >
           <option value="" disabled selected>Select a tone</option>
@@ -2015,7 +2034,7 @@
         </div>
 
         <div class="capability-toggles">
-          <label tabindex="0" class="toggle-row">
+          <label tabindex="0" class="toggle-row glass-control glassmorphism">
             <div class="toggle-info">
               <span class="toggle-title">Draft Replies</span>
               <span class="toggle-desc"
@@ -2032,7 +2051,7 @@
               <span class="slider"></span>
             </div>
           </label>
-          <label tabindex="0" class="toggle-row">
+          <label tabindex="0" class="toggle-row glass-control glassmorphism">
             <div class="toggle-info">
               <span class="toggle-title">Schedule Meetings</span>
               <span class="toggle-desc"
@@ -2049,7 +2068,7 @@
               <span class="slider"></span>
             </div>
           </label>
-          <label tabindex="0" class="toggle-row">
+          <label tabindex="0" class="toggle-row glass-control glassmorphism">
             <div class="toggle-info">
               <span class="toggle-title">Manage Inventory</span>
               <span class="toggle-desc"
@@ -2069,7 +2088,7 @@
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2105,13 +2124,14 @@
 
         <input
           type="text"
-          id="admin-name"
+          id="admin-name" autocomplete="name" autocorrect="off" enterkeyhint="next"
           data-testid="admin-name"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
           inputmode="text"
           autocomplete="name"
           enterkeyhint="next"
+          autocapitalize="words"
         />
         <div id="admin-name-error" class="error-msg" aria-live="polite">
           Please enter your name.
@@ -2119,13 +2139,14 @@
 
         <input
           type="email"
-          id="admin-email"
+          id="admin-email" inputmode="email" autocomplete="email" autocorrect="off" enterkeyhint="next"
           data-testid="admin-email"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
           inputmode="email"
           autocomplete="email"
           enterkeyhint="next"
+          autocapitalize="none"
         />
         <div id="email-error" class="error-msg" aria-live="polite">
           Please enter a valid email address.
@@ -2142,9 +2163,9 @@
         >
           <input
             type="password"
-            id="admin-password"
+            id="admin-password" autocomplete="new-password" autocorrect="off" enterkeyhint="next"
             data-testid="admin-password"
-            class="glassmorphism"
+            class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
             autocomplete="new-password"
             enterkeyhint="next"
@@ -2337,7 +2358,7 @@
         </div>
 
         <div style="padding-top: 8px">
-          <label tabindex="0" class="toggle-row" style="cursor: pointer">
+          <label tabindex="0" class="toggle-row glass-control glassmorphism" style="cursor: pointer">
             <div class="toggle-info">
               <span class="toggle-title">Allow AI to Auto-Respond</span>
             </div>
@@ -2355,7 +2376,7 @@
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2391,6 +2412,7 @@
         <textarea
           id="first-offer"
           data-testid="first-offer"
+          autocorrect="off"
           class="glass-control glassmorphism"
           placeholder="e.g. I bake custom vegan cakes"
           inputmode="text"
@@ -2403,7 +2425,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2443,15 +2465,14 @@
           class="glass-control glassmorphism"
           placeholder="e.g. Portland, OR"
           inputmode="text"
-          autocomplete="off"
-          enterkeyhint="next"
-        />
+          autocomplete="address-level2"
+           enterkeyhint="next" />
         <div id="location-error" class="error-msg" aria-live="polite">
           Please tell us your location.
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2473,7 +2494,7 @@
             aria-label="Previous Step"
             title="Previous Step"
             data-testid="prev-step-btn"
-            data-prev="step-location"
+            data-prev="step-offer"
           >
             Back
           </button>
@@ -2492,14 +2513,13 @@
           placeholder="e.g. Local families, Tech startups"
           inputmode="text"
           autocomplete="off"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
         <div id="target-audience-error" class="error-msg" aria-live="polite">
           Please tell us your target audience.
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2532,36 +2552,21 @@
       <div class="step" id="step-domain">
         <h1>Where will your business live?</h1>
         <p>Choose your workspace domain</p>
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-          "
-        >
+        <div class="glass-control glassmorphism" style="display: flex; align-items: center; padding: 0 16px; margin-bottom: 0; width: 100%; box-sizing: border-box; min-height: 44px;">
           <input
             type="text"
             id="domain-name"
             data-testid="domain-name"
-            class="glassmorphism"
             placeholder="e.g. my-business"
             inputmode="url"
             autocomplete="off"
+            enterkeyhint="done"
             autocapitalize="none"
             autocorrect="off"
-            enterkeyhint="done"
-            style="margin-bottom: 0; text-align: right; padding-right: 4px"
+            style="flex: 1; border: none; background: transparent; outline: none; margin-bottom: 0; padding: 0; font-size: 16px; font-family: inherit; color: inherit; text-align: right; min-width: 0; min-height: 44px; appearance: none; box-shadow: none;"
+            enterkeyhint="next"
           />
-          <span
-            style="
-              font-size: 18px;
-              font-weight: 500;
-              color: #1d1d1f;
-              opacity: 0.8;
-            "
-            >.ohc.app</span
-          >
+          <span style="font-size: 16px; font-weight: 500; color: #1d1d1f; opacity: 0.8; padding-left: 4px; white-space: nowrap; flex-shrink: 0;">.ohc.app</span>
         </div>
         <div
           id="domain-error"
@@ -2573,7 +2578,7 @@
         </div>
         <div class="btn-group" style="margin-top: 20px">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2609,7 +2614,8 @@
         <select
           id="template-selection"
           data-testid="template-selection"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
+          style="min-height: 44px;"
         >
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
@@ -2662,7 +2668,7 @@
 
         if (persona === "Baker") {
           state.work_context = "Storefront";
-          state.categories = "Bakery";
+          state.categories = "Home Baker";
           state.business_name = "Maya's Bakery";
           state.assistant_name = "Cookie";
           state.assistant_tone = "Friendly";
@@ -2731,6 +2737,22 @@
         instant_image_url: document.getElementById("instant-image-url"),
       };
 
+      Object.values(inputs).forEach(inputEl => {
+        if (inputEl) {
+          // If inputEl is a NodeList (like radio buttons)
+          if (inputEl.length !== undefined && !inputEl.tagName) {
+            inputEl.forEach(radio => {
+              radio.addEventListener("change", () => saveCurrentState());
+              radio.addEventListener("blur", () => saveCurrentState());
+            });
+          } else if (inputEl.addEventListener) {
+            inputEl.addEventListener("input", () => debouncedAutoSave());
+            inputEl.addEventListener("change", () => saveCurrentState());
+            inputEl.addEventListener("blur", () => saveCurrentState());
+          }
+        }
+      });
+
       const errors = {
         context: document.getElementById("context-error"),
         categories: document.getElementById("categories-error"),
@@ -2766,6 +2788,7 @@
         clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
           saveCurrentState();
+          localStorage.setItem("onboardingState", JSON.stringify(state));
 
           const backendUrl =
             window.location.protocol === "file:" ||
@@ -2866,48 +2889,67 @@
           }
         }
 
-        // Merge from localStorage as fallback
+        // Compare updated_at from backend and localStorage to prioritize the most recent
         const stored = localStorage.getItem("onboardingState");
+        let parsedStored = null;
         if (stored) {
-          const parsed = JSON.parse(stored);
-          state = { ...state, ...parsed };
-          if (parsed.businessName && !parsed.business_name) {
-            state.business_name = parsed.businessName;
-          }
+          parsedStored = JSON.parse(stored);
         }
 
-        // Merge backend state, taking priority
+        // Default to merging backend state if it exists
         if (loadedState && Object.keys(loadedState).length > 0) {
-          state = { ...state, ...loadedState };
-          if (loadedState.businessName && !loadedState.business_name) {
-             state.business_name = loadedState.businessName;
+          // Compare updated_at timestamps
+          const backendUpdatedAt = loadedState.updated_at || 0;
+          const localUpdatedAt = parsedStored ? (parsedStored.updated_at || 0) : 0;
+
+          if (localUpdatedAt > backendUpdatedAt) {
+             // Local is newer, so start with backend and override with local
+             state = { ...state, ...loadedState, ...parsedStored };
+          } else {
+             // Backend is newer or equal, so start with local and override with backend
+             if (parsedStored) {
+                 state = { ...state, ...parsedStored };
+             }
+             state = { ...state, ...loadedState };
           }
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        } else if (parsedStored) {
+          // No backend state, just use local
+          state = { ...state, ...parsedStored };
         }
+
+        // Ensure business name consistency
+        if (state.businessName && !state.business_name) {
+            state.business_name = state.businessName;
+        }
+        if (state.business_name && !state.businessName) {
+            state.businessName = state.business_name;
+        }
+        localStorage.setItem("onboardingState", JSON.stringify(state));
 
         populateForm();
 
+        const steps = [
+          "step-initial",
+          "step-context",
+          "step-categories",
+          "step-name",
+          "step-assistant",
+          "step-admin",
+          "step-offer",
+          "step-location",
+          "step-target-audience",
+          "step-domain",
+          "step-template",
+          "step-chat",
+        ];
+
         if (state.step === undefined || state.step === 0) {
+          if (state.step === 0) { const instantBioInputEl = document.getElementById("instant-bio"); if (instantBioInputEl) instantBioInputEl.value = ""; }
           goToStep("step-initial", false);
+        } else if (state.step < steps.length) {
+          goToStep(steps[state.step], false);
         } else {
-          const steps = [
-            "step-initial",
-            "step-context",
-            "step-categories",
-            "step-name",
-            "step-assistant",
-            "step-admin",
-            "step-offer",
-            "step-location",
-            "step-target-audience",
-            "step-domain",
-            "step-template",
-            "step-instant",
-            "step-chat",
-          ];
-          if (state.step < steps.length) {
-            goToStep(steps[state.step], false);
-          }
+          goToStep("step-initial", false);
         }
       }
       loadState();
@@ -2927,19 +2969,6 @@
           }
         }
       });
-
-
-      if (inputs.domain_name) {
-        inputs.domain_name.addEventListener("input", () => {
-          const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
-          const val = inputs.domain_name.value.trim();
-          if (val.length >= 3 && domainRegex.test(val)) {
-            const errEl = document.getElementById("domain-error");
-            if (errEl) errEl.style.display = "none";
-            inputs.domain_name.classList.remove("invalid-input");
-          }
-        });
-      }
 
       inputs.admin_email.addEventListener("input", () => {
         if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
@@ -2965,6 +2994,13 @@
         }
       });
 
+      inputs.assistant_tone.addEventListener("change", () => {
+        if (inputs.assistant_tone.value) {
+          errors.assistant_tone.style.display = "none";
+          inputs.assistant_tone.classList.remove("invalid-input");
+        }
+      });
+
       inputs.first_offer.addEventListener("input", () => {
         if (inputs.first_offer.value.trim().length > 0) {
           errors.first_offer.style.display = "none";
@@ -2985,6 +3021,20 @@
           inputs.target_audience.classList.remove("invalid-input");
         }
       });
+
+      if (inputs.domain_name) {
+        inputs.domain_name.addEventListener("input", () => {
+          const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+          if (
+            inputs.domain_name.value.trim().length >= 3 &&
+            domainRegex.test(inputs.domain_name.value.trim())
+          ) {
+            const errEl = document.getElementById("domain-error");
+            if (errEl) errEl.style.display = "none";
+            inputs.domain_name.classList.remove("invalid-input");
+          }
+        });
+      }
 
       function populateForm() {
         if (state.business_name) inputs.name.value = state.business_name;
@@ -3067,8 +3117,7 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-            "step-instant",
-            "step-chat",
+          "step-chat",
           ];
           if (state.step < steps.length) {
             goToStep(steps[state.step]);
@@ -3078,6 +3127,7 @@
 
       var saveStateTimer = null;
       function saveCurrentState() {
+        state.updated_at = Date.now();
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
         state.businessName = inputs.name.value; // Sync for E2E
@@ -3129,8 +3179,7 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-            "step-instant",
-            "step-chat",
+          "step-chat",
           ].indexOf(activeStep.id);
           if (stepIndex !== -1) {
             state.step = stepIndex;
@@ -3145,19 +3194,19 @@
 
         clearTimeout(saveStateTimer);
         saveStateTimer = setTimeout(async () => {
+          localStorage.setItem("onboardingState", JSON.stringify(state));
           if (window.__TAURI__ && window.__TAURI__.core) {
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
               .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
           } else {
-            localStorage.setItem("onboardingState", JSON.stringify(state));
             const backendUrl =
               window.location.protocol === "file:" ||
               ["1420", "3000", "8081"].includes(window.location.port)
                 ? "http://127.0.0.1:18789"
                 : "";
             try {
-              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+              await fetch(`${backendUrl}/api/onboarding/draft`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -3166,22 +3215,21 @@
                 },
                 body: JSON.stringify(state),
               });
-              if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
-              }
             } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
+              console.warn("Network error syncing onboarding state, offline fallback active");
             }
           }
         }, 1000);
       }
+      window.addEventListener('online', () => {
+          saveCurrentState();
+      });
 
       function validateStep(stepId) {
         let isValid = true;
 
         if (
           stepId === "step-initial" ||
-          stepId === "step-instant" ||
           stepId === "step-chat" ||
           stepId === "step-approval"
         ) {
@@ -3193,14 +3241,14 @@
             'input[name="work_context"]:checked',
           );
           if (!selected) {
-            errors.context.style.display = "block";
+            errors.context.style.display = "flex";
             isValid = false;
           } else {
             state.work_context = selected.value;
           }
         } else if (stepId === "step-categories") {
           if (inputs.categories.value.trim() === "") {
-            errors.categories.style.display = "block";
+            errors.categories.style.display = "flex";
             inputs.categories.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3209,8 +3257,9 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length === 0) {
-            errors.name.style.display = "block";
+          if (inputs.name.value.trim().length < 3) {
+            errors.name.innerText = "Business Name must be at least 3 characters.";
+            errors.name.style.display = "flex";
             inputs.name.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3300,7 +3349,7 @@
         } else if (stepId === "step-location") {
           if (inputs.location.value.trim() === "") {
             errors.location.innerText = "Please tell us your location.";
-            errors.location.style.display = "block";
+            errors.location.style.display = "flex";
             inputs.location.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3311,7 +3360,7 @@
         } else if (stepId === "step-target-audience") {
           if (inputs.target_audience.value.trim() === "") {
             errors.target_audience.innerText = "Please tell us your target audience.";
-            errors.target_audience.style.display = "block";
+            errors.target_audience.style.display = "flex";
             inputs.target_audience.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3320,8 +3369,10 @@
             state.target_audience = inputs.target_audience.value.trim();
           }
         } else if (stepId === "step-domain") {
-          if (inputs.domain_name.value.trim().length < 3) {
-            errors.domain_name.style.display = "block";
+          const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+          if (inputs.domain_name.value.trim().length < 3 || !domainRegex.test(inputs.domain_name.value.trim())) {
+            errors.domain_name.innerText = "Domain must be at least 3 characters, contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.";
+            errors.domain_name.style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3375,6 +3426,15 @@
           state.assistant_name = selected.value;
           document.querySelectorAll('#assistant-team-cards .context-card').forEach((el) => el.classList.remove("selected"));
           selected.closest(".context-card").classList.add("selected");
+          // Clear error if selection made
+          const errorMsg = document.getElementById("assistant-name-error");
+          const inputEl = document.getElementById("assistant-name");
+          if (errorMsg) {
+             errorMsg.style.display = "none";
+          }
+          if (inputEl) {
+             inputEl.classList.remove("invalid-input");
+          }
         }
       }
 
@@ -3382,7 +3442,6 @@
         const stepperIndicator = document.getElementById("stepper-indicator");
         if (
           stepId === "step-initial" ||
-          stepId === "step-instant" ||
           stepId === "step-chat" ||
           stepId === "step-approval"
         ) {
@@ -3398,6 +3457,8 @@
           "step-assistant",
           "step-admin",
           "step-offer",
+          "step-location",
+          "step-target-audience",
           "step-domain",
           "step-template",
         ];
@@ -3407,7 +3468,7 @@
 
         const stepperProgress = document.getElementById("stepper-progress");
         if (stepperProgress) {
-          stepperProgress.style.width = (currentIndex / 7) * 100 + "%";
+          stepperProgress.style.width = (currentIndex / (steps.length - 1)) * 100 + "%";
         }
 
         document
@@ -3438,7 +3499,7 @@
           "Other",
         ],
         Storefront: [
-          "Bakery",
+          "Home Baker",
           "Cafe",
           "Restaurant",
           "Retail",
@@ -3488,7 +3549,7 @@
       }
 
       function goToStep(stepId, shouldSave = true) {
-        if (stepId === "step-instant") {
+        if (stepId === "step-initial") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
           if (instantBioInputEl && generateStorefrontBtn) {
@@ -3498,20 +3559,54 @@
         if (stepId === "step-categories") {
           populateCategories();
         }
-        document.querySelectorAll(".step").forEach((el) => {
-          el.classList.remove("active");
-          el.style.display = "none";
-        });
-        if (document.querySelector(".container")) {
-          document.querySelector(".container").scrollTo(0, 0);
-        }
-        document.getElementById(stepId).classList.add("active");
-        document.getElementById(stepId).style.display = "block";
-        updateStepper(stepId);
 
-        if (shouldSave) {
-          saveCurrentState();
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+        const activeSteps = document.querySelectorAll(".step.active");
+        if (activeSteps.length > 0) {
+          activeSteps.forEach((el) => {
+            el.classList.remove("active");
+            el.classList.add("exit");
+          });
+
+          setTimeout(() => {
+            document.querySelectorAll(".step.exit").forEach((el) => {
+              el.style.display = "none";
+              el.classList.remove("exit");
+            });
+            if (document.querySelector(".container")) {
+              document.querySelector(".container").scrollTo(0, 0);
+            }
+            const nextStep = document.getElementById(stepId);
+            if (nextStep) {
+              nextStep.style.display = "block";
+              // trigger reflow
+              void nextStep.offsetWidth;
+              nextStep.classList.add("active");
+              updateStepper(stepId);
+            }
+            if (shouldSave) {
+              saveCurrentState();
+              localStorage.setItem("onboardingState", JSON.stringify(state));
+            }
+          }, 150); // match exit transition timing
+        } else {
+          document.querySelectorAll(".step").forEach((el) => {
+            el.classList.remove("active");
+            el.style.display = "none";
+          });
+          if (document.querySelector(".container")) {
+            document.querySelector(".container").scrollTo(0, 0);
+          }
+          const nextStep = document.getElementById(stepId);
+          if (nextStep) {
+            nextStep.style.display = "block";
+            nextStep.classList.add("active");
+            updateStepper(stepId);
+          }
+
+          if (shouldSave) {
+            saveCurrentState();
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          }
         }
       }
 
@@ -3528,20 +3623,6 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for select inputs
-      document.querySelectorAll("select").forEach((input) => {
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const step = e.target.closest(".step");
-            const nextBtn =
-              step.querySelector(".next-step-btn") ||
-              step.querySelector("#finish-btn");
-            if (nextBtn) nextBtn.click();
-          }
-        });
-      });
-
       document.querySelectorAll(".prev-step-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const prevStepId = e.target.getAttribute("data-prev");
@@ -3554,28 +3635,28 @@
         btn.addEventListener("click", async (e) => {
           e.preventDefault();
           const originalText = btn.innerText;
-          btn.innerText = "Saving...";
-          btn.disabled = true;
+          e.target.innerText = "Saving...";
+          e.target.disabled = true;
 
           // Add a small delay to allow browser to render "Saving..."
-          await new Promise((r) => setTimeout(r, 100));
+
 
           saveCurrentState();
 
-          btn.innerText = "Draft Saved!";
-          btn.style.backgroundColor = "#34C759";
-          btn.style.color = "white";
-          btn.style.borderColor = "#34C759";
+          e.target.innerText = "Draft Saved!";
+          e.target.style.backgroundColor = "#34C759";
+          e.target.style.color = "white";
+          e.target.style.borderColor = "#34C759";
 
           const msg = document.getElementById("draft-saved-msg");
           if (msg) msg.style.display = "block";
 
           setTimeout(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-            btn.style.backgroundColor = "";
-            btn.style.color = "";
-            btn.style.borderColor = "";
+            e.target.innerText = originalText;
+            e.target.disabled = false;
+            e.target.style.backgroundColor = "";
+            e.target.style.color = "";
+            e.target.style.borderColor = "";
             if (msg) msg.style.display = "none";
           }, 2000);
         });
@@ -3690,112 +3771,136 @@
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           if (data.is_complete && data.intake_data) {
-            const intakeData = data.intake_data;
-            const agentBadges = document.querySelectorAll(
-              "#ai-agents-container .agent-badge",
-            );
-            const selectedAgents = Array.from(agentBadges).map((b) =>
-              b.innerText.trim(),
-            );
-            const autoRespondChecked = document.getElementById(
-              "ai-auto-respond",
-            )
-              ? document.getElementById("ai-auto-respond").checked
-              : true;
+            goToStep("step-loading");
 
-            const req = {
-              company_name: intakeData.business_name || "My Business",
-              business_type: intakeData.business_type || "Online Store",
-              company_description: chatHistory.map((m) => m.content).join(" "),
-              selling_categories: intakeData.categories || ["physical"],
-              payment_pref: "online",
-              admin_email: "admin@mybusiness.com",
-              admin_name: "Admin",
-              admin_password: "password123",
-              website_template: "auto",
-              first_product_name:
-                intakeData.initial_products?.[0]?.name || "First Product",
-              first_product_price:
-                intakeData.initial_products?.[0]?.price || "0.00",
-              domain_choice:
-                state.domain || generateSubdomain(state.business_name),
-              price_type: "fixed",
-              location: intakeData.location || "Local",
-              target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products || [],
-              ai_agents: selectedAgents,
-              ai_auto_respond: autoRespondChecked,
-            };
-
-            window.pendingOnboardingReq = req;
-            let productsHtml = "";
-            if (req.initial_products && req.initial_products.length > 0) {
-              productsHtml = req.initial_products
-                .map((p) => `<li>${p.name} - ${p.price}</li>`)
-                .join("");
-            } else {
-              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+            const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+            let loadingTextIdx = 0;
+            const loadingTitle = document.getElementById("loading-title");
+            if (loadingTitle) {
+              loadingTitle.innerText = loadingTexts[loadingTextIdx];
+              window.generateStorefrontLoadingInterval = setInterval(() => {
+                loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
+                loadingTitle.innerText = loadingTexts[loadingTextIdx];
+              }, 3000);
             }
 
-            const summaryCard = document.createElement("div");
-            summaryCard.className = "glassmorphism";
-            summaryCard.style.cssText =
-              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
-
-            if (
-              window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
-              summaryCard.style.borderTop =
-                "1px solid rgba(255, 255, 255, 0.1)";
-              summaryCard.style.color = "#F5F5F7";
+            const bioInput = chatHistory.map((m) => m.content).join("\n");
+            // Find the last uploaded image if any
+            let imageUrl = undefined;
+            for (let i = chatHistory.length - 1; i >= 0; i--) {
+              if (chatHistory[i].image_url) {
+                imageUrl = chatHistory[i].image_url;
+                break;
+              }
             }
 
-            summaryCard.innerHTML = `
-                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
-                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
-                      </div>
-                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
-                  `;
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const startReq = {
+                business_type: data.intake_data.business_type || state.work_context || "Other",
+                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                company_description: bioInput || state.tagline,
+                selling_categories: data.intake_data.categories || [state.categories || "Other"],
+                payment_pref: "online",
+                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+                admin_name: document.getElementById("admin-name")?.value || "Owner",
+                admin_password: document.getElementById("admin-password")?.value || "password123",
+                website_template: state.template_selection || "Modern",
+                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
+                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                domain_choice: state.domain || "subdomain",
+                price_type: "fixed",
+                location: data.intake_data.location || state.location || "Global",
+                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
+                initial_products: data.intake_data.initial_products || [],
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.intake_data.deposit_percentage,
+                lead_time_days: data.intake_data.lead_time_days
+              };
 
-            document.getElementById("step-chat").style.position = "relative";
-            document.getElementById("step-chat").style.overflow = "hidden";
-            document.getElementById("step-chat").appendChild(summaryCard);
+              const startData = await window.__TAURI__.core.invoke("start_onboarding", { req: startReq });
 
-            // Trigger slide up
-            requestAnimationFrame(() => {
-              summaryCard.style.transform = "translateY(0)";
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+              if (startData && startData.user_id) {
+                localStorage.setItem("user_id", startData.user_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              if (window.generateStorefrontLoadingInterval) {
+                  clearInterval(window.generateStorefrontLoadingInterval);
+                  delete window.generateStorefrontLoadingInterval;
+              }
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+              return;
+            }
+
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                business_type: data.intake_data.business_type || state.work_context || "Other",
+                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                company_description: bioInput || state.tagline,
+                selling_categories: data.intake_data.categories || [state.categories || "Other"],
+                payment_pref: "online",
+                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+                website_template: state.template_selection || "Modern",
+                domain_choice: state.domain || "subdomain",
+                admin_name: document.getElementById("admin-name")?.value || "Owner",
+                admin_password: document.getElementById("admin-password")?.value || "password123",
+                price_type: "fixed",
+                location: data.intake_data.location || state.location || "Global",
+                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
+                initial_products: data.intake_data.initial_products || [],
+                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
+                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.intake_data.deposit_percentage,
+                lead_time_days: data.intake_data.lead_time_days
+              }),
             });
 
-            document
-              .getElementById("approve-publish-btn-chat")
-              .addEventListener("click", async () => {
-                const btn = document.getElementById("approve-publish-btn-chat");
-                btn.disabled = true;
-                btn.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-
-                const approvePublishBtn = document.getElementById(
-                  "approve-publish-btn",
-                );
-                if (approvePublishBtn) {
-                  approvePublishBtn.click();
-                }
-              });
-            // Scroll to bottom
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-            // Zero-click onboarding
-            const approvePublishBtnChat = document.getElementById(
-              "approve-publish-btn-chat",
-            );
-            if (approvePublishBtnChat) {
-              approvePublishBtnChat.click();
+            if (!startRes.ok) {
+              const errData = await startRes.json().catch(() => ({}));
+              throw new Error(
+                errData.error ||
+                  errData.message ||
+                  "Failed to start onboarding",
+              );
             }
+
+            const startData = await startRes.json();
+
+            if (startData.organization_id) {
+              localStorage.setItem("tenant_id", startData.organization_id);
+              localStorage.setItem("tenant", startData.organization_id);
+            }
+            if (startData.user_id) {
+              localStorage.setItem("user_id", startData.user_id);
+            }
+
+            localStorage.removeItem("onboardingState");
+            localStorage.setItem("has_onboarded", "true");
+
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
+            }
+
+            window.location.href = "dashboard.html#unified-agent-feed-section";
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -3860,7 +3965,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html";
+              window.location.href = "dashboard.html#unified-agent-feed-section";
               return;
             }
 
@@ -3882,14 +3987,14 @@
                 payment_pref: req.payment_pref,
                 admin_email: req.admin_email,
                 website_template: req.website_template,
-                first_product_name: state.first_offer || req.first_product_name,
+                first_product_name: req.first_product_name,
                 first_product_price: req.first_product_price,
                 domain_choice: req.domain_choice,
                 admin_name: req.admin_name,
                 admin_password: req.admin_password,
                 price_type: req.price_type,
-                location: state.location || req.location,
-                target_audience: state.target_audience || req.target_audience,
+                location: req.location,
+                target_audience: req.target_audience,
                 initial_products: req.initial_products,
               }),
             });
@@ -3904,7 +4009,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html";
+              window.location.href = "dashboard.html#unified-agent-feed-section";
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -3934,6 +4039,7 @@
           const imageUrlInput = document.getElementById("instant-image-url");
           const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
           if (!bioInput.trim()) {
+            delete generateStorefrontBtn.dataset.submitting;
             instantErrorEl.innerText = "Please tell us about your business.";
             instantErrorEl.style.display = "block";
             instantErrorEl.classList.add("animate-shake");
@@ -3955,67 +4061,135 @@
           window.generateStorefrontLoadingInterval = setInterval(() => {
             loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
             generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          }, 3000);
-
-
-          goToStep("step-loading");
+          }, 500);
 
           try {
-            const backendUrl =
-              window.location.protocol === "file:" ||
-              ["1420", "3000", "8081"].includes(window.location.port)
-                ? "http://127.0.0.1:18789"
-                : "";
-            const res = await fetch(
-              `${backendUrl}/api/v1/growth/zero-click-builder/generate`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": "e2e-tenant",
-                  "X-User-ID": "e2e-admin-user",
-                },
-                body: JSON.stringify({
-                  prompt: bioInput,
-                  image_url: imageUrl ? imageUrl : undefined
-                }),
-              },
-            );
+            let startReq = null;
+            let data = null;
+            const backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
 
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(
-                errData.error ||
-                  errData.message ||
-                  "Failed to generate storefront",
-              );
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+            } else {
+                // For web mode, hit the /intake endpoint directly
+                const intakeRes = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ description: bioInput, image_url: imageUrl ? imageUrl : undefined })
+                });
+
+                if (!intakeRes.ok) {
+                    throw new Error("Failed to process intake data. Please try again.");
+                }
+                data = await intakeRes.json();
             }
 
-            const data = await res.json();
+            if (!data) throw new Error("Empty response from AI assistant");
 
-            if (data.organization_id) {
-              localStorage.setItem("tenant_id", data.organization_id);
-              localStorage.setItem("tenant", data.organization_id);
-            }
-            if (data.user_id) {
-              localStorage.setItem("user_id", data.user_id);
-            }
+            startReq = {
+              business_type: data.business_type || "Other",
+              company_name: data.business_name || "My Store",
+              company_description: bioInput,
+              selling_categories: data.categories || ["Other"],
+              payment_pref: "online",
+              admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+              admin_name: document.getElementById("admin-name")?.value || "Owner",
+              admin_password: document.getElementById("admin-password")?.value || "password123",
+              website_template: "Modern",
+              first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
+              first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+              domain_choice: "subdomain",
+              price_type: "fixed",
+              location: data.location || "Global",
+              target_audience: data.target_audience || "Everyone",
+              initial_products: data.initial_products || [],
+              ai_agents: [],
+              ai_auto_respond: false,
+              deposit_percentage: data.deposit_percentage,
+              lead_time_days: data.lead_time_days
+            };
 
-            localStorage.removeItem("onboardingState");
-            localStorage.setItem("has_onboarded", "true");
+                        window.pendingOnboardingReq = startReq;
+            window.pendingImageUrl = imageUrl;
 
             if (window.generateStorefrontLoadingInterval) {
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            setTimeout(() => {
-              window.location.href = "success.html";
-            }, 1500);
-          } catch (err) {
-            console.error(err);
-            goToStep("step-instant");
-            const errorMsg = err.message || "Network Error: Failed to fetch";
+            await goToStep("step-loading");
+
+            const provisioningEl = document.getElementById("step-provisioning");
+            const catalogEl = document.getElementById("step-catalog");
+            const storefrontEl = document.getElementById("step-storefront");
+
+            if (provisioningEl) {
+              provisioningEl.style.opacity = "1";
+              provisioningEl.querySelector(".loading-dot").style.background = "#0066FF";
+            }
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const startData = await window.__TAURI__.core.invoke(
+                "start_onboarding",
+                { req: startReq }
+              );
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+              return;
+            }
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(startReq),
+            });
+
+            if (startRes.ok) {
+              const startData = await startRes.json().catch(() => ({}));
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background = "#0066FF";
+              }
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html#unified-agent-feed-section";
+            } else {
+              const errData = await startRes.json().catch(() => ({}));
+              throw new Error(errData.error || errData.message || "Failed to start onboarding");
+            }
+          } catch (error) {
+            console.error(error);
+            const errorMsg = error && error.message ? error.message : "Failed to generate business.";
             instantErrorEl.innerText = errorMsg;
             instantErrorEl.style.display = "block";
             instantErrorEl.style.color = "#FF3B30";
@@ -4027,7 +4201,8 @@
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            generateStorefrontBtn.innerHTML = "Next";
+            generateStorefrontBtn.innerHTML = "Generate My Workspace";
+            goToStep("step-initial");
           }
         });
       }
@@ -4058,15 +4233,15 @@
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
               .then(() => {
-                e.target.innerText = "Saved!";
+                e.target.innerText = "Draft Saved!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
                 }, 3000);
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4084,7 +4259,7 @@
             })
               .then((res) => {
                 if (res.ok) {
-                  e.target.innerText = "Saved!";
+                  e.target.innerText = "Draft Saved!";
                   setTimeout(() => {
                     e.target.innerText = originalText;
                     e.target.disabled = false;
@@ -4094,8 +4269,8 @@
                 }
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4122,7 +4297,7 @@
 
             const req = {
               business_type:
-                state.work_context || state.work_context || "Local Service",
+                state.work_context || "Local Service",
               company_name: state.business_name,
               company_description: state.tagline || "",
               selling_categories: state.categories ? [state.categories] : [],
@@ -4159,7 +4334,7 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "dashboard.html";
+                  window.location.href = "dashboard.html#unified-agent-feed-section";
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4201,7 +4376,7 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html";
+                    window.location.href = "dashboard.html#unified-agent-feed-section";
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(
@@ -4232,30 +4407,13 @@
         });
       }
 
-      // Enter key support for text, email, and password inputs
-      document
-        .querySelectorAll(
-          'input[type="text"], input[type="email"], input[type="password"]',
-        )
-        .forEach((input) => {
-          input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const step = e.target.closest(".step");
-              const nextBtn =
-                step.querySelector(".next-step-btn") ||
-                step.querySelector("#finish-btn");
-              if (nextBtn) nextBtn.click();
-            }
-          });
-        });
-    </script>
+      </script>
     <script>
 
       document.addEventListener("DOMContentLoaded", () => {
         // Hybrid Setup Health Check
-        fetch("/api/onboarding/setup-health?mode=standalone")
-          .then((res) => res.json())
+        window.__TAURI__.core.invoke("setup_health_check", { mode: "standalone" })
+
           .then((data) => {
             if (data.status === "error") {
               const errorDiv = document.createElement("div");
@@ -4269,6 +4427,32 @@
       });
 
       document.addEventListener("DOMContentLoaded", () => {
+
+      // Real-time input validation & state sync for seamless cross-device resumes
+      const realTimeFields = [
+        { inputId: 'business-name', errorId: 'name-error', stateKey: 'business_name' },
+        { inputId: 'business-tagline', errorId: null, stateKey: 'tagline' },
+        { inputId: 'first-offer', errorId: 'offer-error', stateKey: 'first_offer' },
+        { inputId: 'location-input', errorId: 'location-error', stateKey: 'location' },
+        { inputId: 'target-audience', errorId: 'target-audience-error', stateKey: 'target_audience' }
+      ];
+
+      realTimeFields.forEach(field => {
+        const el = document.getElementById(field.inputId);
+        const errEl = field.errorId ? document.getElementById(field.errorId) : null;
+        if (el) {
+          el.addEventListener('input', () => {
+            // Remove error styling instantly
+            if (errEl) errEl.style.display = 'none';
+            el.classList.remove('invalid-input');
+
+            // Sync to state and localStorage for cross-device resume
+            state[field.stateKey] = el.value;
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          });
+        }
+      });
+
         // Add keyboard navigation for context cards
         document.querySelectorAll(".context-card").forEach((card) => {
           card.addEventListener("keydown", function(e) {
@@ -4322,7 +4506,7 @@
               if (nextBtn) {
                 nextBtn.click();
               } else if (
-                activeStep.id === "step-instant" ||
+                activeStep.id === "step-initial" ||
                 activeStep.id === "step-template"
               ) {
                 const launchBtn = activeStep.querySelector(
@@ -4353,7 +4537,6 @@
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
             font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -4390,7 +4573,6 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        border-radius: 16px;
         box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
       }
       .toggle-info {
@@ -4453,12 +4635,13 @@
             background: rgba(22, 22, 26, 0.7);
             backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px !important;
         }
         .context-card, .toggle-row {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .context-card:hover {
           background: rgba(22, 22, 26, 0.7);
@@ -4471,7 +4654,7 @@
         }
             .ohc-tooltip {
                 background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
         }
@@ -4486,13 +4669,6 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              //
-              //
-              //
-              //
-              //
-              //
-              //
               console.error(e);
             });
         }
@@ -4628,7 +4804,6 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
         padding: 8px 12px;
-        border-radius: 16px;
         font-size: 13px;
         font-family: Outfit, sans-serif;
         z-index: 100000;
@@ -4653,13 +4828,6 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              //
-              //
-              //
-              //
-              //
-              //
-              //
               console.error(e);
             });
         }
@@ -4802,12 +4970,12 @@
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 
@@ -4876,6 +5044,7 @@
       initWalkthrough();
     </script>
 
+    <script src="help-widget.mjs" type="module"></script>
   </body>
 </html>
 
@@ -4889,16 +5058,15 @@
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(30px) saturate(210%);
     border-top: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 16px 16px 0 0;
     width: 100%;
     box-sizing: border-box;
   "
 >
   <a
-    href="/setup.html?ref=website-builder"
+    href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref=website-builder"
     id="dashboard-footer-viral-link"
     style="
-      color: #0066ff;
+      color: #0066FF;
       text-decoration: none;
       display: flex;
       align-items: center;
@@ -4908,10 +5076,9 @@
   >
     <span
       style="
-        background: #0066ff;
+        background: #0066FF;
         color: white;
         padding: 4px 8px;
-        border-radius: 16px;
         font-size: 10px;
         font-weight: 800;
       "
