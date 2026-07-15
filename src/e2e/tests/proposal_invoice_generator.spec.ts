@@ -14,7 +14,7 @@ test.describe('Agentic Proposal & Invoice Generator for Service Agencies', () =>
 
     // 1. Simulate the backend having autonomously drafted a proposal for an inquiry.
     // We mock the backend creating it by calling the draft_agent endpoint directly in test
-    const response = await page.request.post(`${e2eConfig.baseURL}/api/proposals/draft_agent`, {
+    const response = await page.request.post(`${e2eConfig.baseURL}/api/v1/proposals/draft_agent`, {
       data: {
         inquiry: "Can you design a new logo for ACME Corp?",
         customer_id: "test-customer-acme-123",

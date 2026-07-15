@@ -14,7 +14,7 @@ export default function NewProposalPage() {
     setProposal(null);
     setError(null);
     try {
-      const res = await fetch("/api/proposals/draft", {
+      const res = await fetch("/api/v1/proposals/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic }),

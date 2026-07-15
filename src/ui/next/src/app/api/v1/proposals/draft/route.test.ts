@@ -11,12 +11,12 @@ vi.mock("@/lib/auth/backendTransport", () => ({
 
 import { POST } from "./route";
 
-describe("POST /api/proposals/draft", () => {
+describe("POST /api/v1/proposals/draft", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
   it("preserves legacy JSON validation without forwarding inbound queries", async () => {
     const request = new Request(
-      "http://localhost/api/proposals/draft?tenant_id=attacker",
+      "http://localhost/api/v1/proposals/draft?tenant_id=attacker",
       { method: "POST", body: ' { "topic": "Launch" } ' },
     );
 
@@ -24,7 +24,7 @@ describe("POST /api/proposals/draft", () => {
 
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/proposals/draft",
+      "/api/v1/proposals/draft",
       {
         forwardQuery: false,
         requestContentType: "application/json",
