@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from '../../../../e2e/fixtures';
 
 test.describe('Website Builder Tool (E2E Validation)', () => {
 
