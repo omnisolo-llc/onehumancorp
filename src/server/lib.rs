@@ -7200,6 +7200,15 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
         }))
+        .route("/", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
+        }))
+        .route("/index.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
+        }))
+        .route("/login", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
+        }))
         .route("/changelog", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/changelog.html"))
         }))
