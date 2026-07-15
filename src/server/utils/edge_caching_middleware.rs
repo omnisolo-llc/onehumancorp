@@ -24,41 +24,81 @@ pub fn get_cdn_cache() -> std::sync::Arc<HybridCache<CachedResponse>> {
     CDN_CACHE.get_or_init(|| std::sync::Arc::new(HybridCache::new(None))).clone()
 }
 
+pub static LOCAL_EDGE_CACHE: OnceLock<std::sync::Arc<HybridCache<String>>> = OnceLock::new();
+pub fn get_edge_cache_local() -> std::sync::Arc<HybridCache<String>> {
+    LOCAL_EDGE_CACHE.get_or_init(|| {
+        let redis_client = if let Ok(url) = std::env::var("REDIS_URL") {
+            redis::Client::open(url.clone()).ok()
+        } else {
+            None
+        };
+        std::sync::Arc::new(HybridCache::new(redis_client))
+    }).clone()
+}
+
 pub async fn inject_inventory(
     mut html: String,
     tenant_id: &str,
     cache: std::sync::Arc<HybridCache<String>>,
 ) -> String {
+    let mut placeholders = Vec::new();
     let mut offset = 0;
+
+    // First pass: find all placeholders and their positions
     while let Some(start) = html[offset..].find("<!-- INVENTORY_STATUS_") {
         let actual_start = offset + start;
         let prefix_len = "<!-- INVENTORY_STATUS_".len();
         if let Some(end) = html[actual_start + prefix_len..].find(" -->") {
             let actual_end = actual_start + prefix_len + end;
-            let pid = &html[actual_start + prefix_len..actual_end];
-            let pid_str = pid.to_string();
-
-            let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
-
-            let mut inventory_count: i32 = 0;
-            if let Some(cached_val) = cache.get(&kv_key).await {
-                if let Ok(val) = cached_val.parse::<i32>() {
-                    inventory_count = val;
-                }
-            }
-
-            let replacement = if inventory_count <= 0 {
-                "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
-            } else {
-                ""
-            };
-
-            html.replace_range(actual_start..(actual_end + 4), replacement);
-            offset = actual_start + replacement.len();
+            let pid = html[actual_start + prefix_len..actual_end].to_string();
+            placeholders.push((actual_start, actual_end + 4, pid));
+            offset = actual_end + 4;
         } else {
             break;
         }
     }
+
+    if placeholders.is_empty() {
+        return html;
+    }
+
+    // Prepare futures for cache/db lookups
+    // Note: We bypass hitting the DB directly from middleware in tests due to circular deps.
+    // In production, `edge_caching_middleware` will fetch from the real cache
+    // since the inventory service populates it with a 30 day TTL.
+    // If it misses, it will temporarily default to 0 and get hydrated shortly after via Operations Agent.
+    let mut futures = Vec::new();
+
+    for (_, _, pid_str) in &placeholders {
+        let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
+        let cache_clone = cache.clone();
+
+        futures.push(async move {
+            let mut inventory_count: i32 = 0;
+            if let Some(cached_val) = cache_clone.get(&kv_key).await {
+                if let Ok(val) = cached_val.parse::<i32>() {
+                    inventory_count = val;
+                }
+            }
+            // Fallback lookup via an API call or other decoupled mechanism would go here
+            // We omit `sqlx` DB calls here to break the `server_utils -> server_lib` cycle in Bazel.
+            inventory_count
+        });
+    }
+
+    let results = futures::future::join_all(futures).await;
+
+    // Apply replacements from back to front to avoid shifting indices
+    for (i, (start, end, _)) in placeholders.into_iter().enumerate().rev() {
+        let inventory_count = results[i];
+        let replacement = if inventory_count <= 0 {
+            "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
+        } else {
+            ""
+        };
+        html.replace_range(start..end, replacement);
+    }
+
     html
 }
 
@@ -99,7 +139,7 @@ pub async fn edge_caching_middleware(
             // Hydrate inventory at the edge cache hit
             if let Some(tenant_id) = tenant_id_opt {
                 if let Ok(html_str) = String::from_utf8(body_bytes.clone()) {
-                    let edge_cache = crate::builder::edge::get_edge_cache();
+                    let edge_cache = get_edge_cache_local();
                     let hydrated_html = inject_inventory(html_str, &tenant_id, edge_cache).await;
                     body_bytes = hydrated_html.into_bytes();
                 }
@@ -204,7 +244,7 @@ pub async fn edge_caching_middleware(
 
         if let Some(tenant_id) = tenant_id_opt {
             if let Ok(html_str) = String::from_utf8(body_bytes.clone()) {
-                let edge_cache = crate::builder::edge::get_edge_cache();
+                let edge_cache = get_edge_cache_local();
                 let hydrated_html = inject_inventory(html_str, &tenant_id, edge_cache).await;
                 body_bytes = hydrated_html.into_bytes();
             }
