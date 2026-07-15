@@ -68,7 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
     const urlString = typeof url === 'string' ? url : url.toString();
-    if (urlString.includes('/api/assistant/tasks') && init?.method === 'POST') {
+    if (urlString.includes('/api/v1/assistant/tasks') && init?.method === 'POST') {
       return new Response(JSON.stringify({
         task: {
           id: 'task-new',
@@ -92,32 +92,32 @@ beforeEach(() => {
         },
       }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/share')) {
+    if (urlString.includes('/api/v1/assistant/share')) {
       return new Response(JSON.stringify({ share: { id: 'share-1', target: 'Share Link' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/previews')) {
+    if (urlString.includes('/api/v1/assistant/previews')) {
       return new Response(JSON.stringify({ preview: { artifactId: 'artifact-weekly' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/tasks')) {
+    if (urlString.includes('/api/v1/assistant/tasks')) {
       return new Response(JSON.stringify(tasksPayload), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    if (urlString.includes('/api/assistant/connectors')) {
+    if (urlString.includes('/api/v1/assistant/connectors')) {
       return new Response(JSON.stringify({ connectors: [{ id: 'connector-github', name: 'GitHub' }, { id: 'connector-gitlab', name: 'GitLab' }, { id: 'connector-slack', name: 'Slack' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/models')) {
+    if (urlString.includes('/api/v1/assistant/models')) {
       return new Response(JSON.stringify({ models: [{ id: 'model-1', customProtocol: true, capabilities: ['Model capabilities'] }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/settings')) {
+    if (urlString.includes('/api/v1/assistant/settings')) {
       return new Response(JSON.stringify({ settings: { compactMode: true, autoInstallLowRiskSkills: true, preventSleep: true, profile: { name: 'Test' }, version: 'Test', supportTickets: [{ screenshot: 'feedback.png' }], paritySummary: { total: 212 } } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/data')) {
+    if (urlString.includes('/api/v1/assistant/data')) {
       return new Response(JSON.stringify({ sharedFiles: [{ id: 'file-1', action: 'Copy Link' }, { id: 'file-2', action: 'Download' }, { id: 'file-3', action: 'Cancel Sharing' }], archivedTasks: [{ id: 'task-1', action: 'Unarchive Task' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/automations')) {
+    if (urlString.includes('/api/v1/assistant/automations')) {
       return new Response(JSON.stringify({ automations: [{ id: 'auto-1', schedule: 'Hourly' }, { id: 'auto-2', schedule: 'Daily' }, { id: 'auto-3', schedule: 'Weekly' }, { id: 'auto-4', schedule: 'One-time' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/parity')) {
+    if (urlString.includes('/api/v1/assistant/parity')) {
       return new Response(JSON.stringify({ summary: { total: '212', implemented: '212', remaining: '0' }, categories: [{name: 'Test', total: 1, implemented: 1}], gaps: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -192,10 +192,10 @@ test('submits a real task creation request and selects the returned task', async
   fireEvent.click(screen.getByRole('button', { name: 'Start Task' }));
 
   await waitFor(() => {
-    expect(global.fetch).toHaveBeenCalledWith('/api/assistant/tasks', expect.objectContaining({ method: 'POST' }));
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/assistant/tasks', expect.objectContaining({ method: 'POST' }));
   });
   const taskCall = (global.fetch as any).mock.calls.find(
-    ([url, init]: any[]) => url === '/api/assistant/tasks' && init?.method === 'POST',
+    ([url, init]: any[]) => url === '/api/v1/assistant/tasks' && init?.method === 'POST',
   );
   expect(JSON.parse(taskCall[1].body)).toMatchObject({
     prompt: 'Build a Q3 planning deck',
@@ -262,7 +262,7 @@ test('renders empty Assistant state without seeded demo records', async () => {
 test('shows resource error instead of connector demo records', async () => {
   global.fetch = vi.fn(async (url: RequestInfo | URL) => {
     const urlString = typeof url === 'string' ? url : url.toString();
-    if (urlString.includes('/api/assistant/tasks')) {
+    if (urlString.includes('/api/v1/assistant/tasks')) {
       return new Response(JSON.stringify({
         tasks: [],
         capabilities: {
@@ -272,10 +272,10 @@ test('shows resource error instead of connector demo records', async () => {
         },
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/settings')) {
+    if (urlString.includes('/api/v1/assistant/settings')) {
       return new Response(JSON.stringify({ settings: { agentName: 'Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/connectors')) {
+    if (urlString.includes('/api/v1/assistant/connectors')) {
       return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -293,7 +293,7 @@ test('shows resource error instead of connector demo records', async () => {
 test('renders empty Assistant state without seeded demo records', async () => {
   global.fetch = vi.fn(async (url: RequestInfo | URL) => {
     const urlString = typeof url === 'string' ? url : url.toString();
-    if (urlString.includes('/api/assistant/tasks')) {
+    if (urlString.includes('/api/v1/assistant/tasks')) {
       return new Response(JSON.stringify({
         tasks: [],
         capabilities: {
@@ -318,7 +318,7 @@ test('renders empty Assistant state without seeded demo records', async () => {
 test('shows resource error instead of connector demo records', async () => {
   global.fetch = vi.fn(async (url: RequestInfo | URL) => {
     const urlString = typeof url === 'string' ? url : url.toString();
-    if (urlString.includes('/api/assistant/tasks')) {
+    if (urlString.includes('/api/v1/assistant/tasks')) {
       return new Response(JSON.stringify({
         tasks: [],
         capabilities: {
@@ -328,10 +328,10 @@ test('shows resource error instead of connector demo records', async () => {
         },
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/settings')) {
+    if (urlString.includes('/api/v1/assistant/settings')) {
       return new Response(JSON.stringify({ settings: { agentName: 'Agent' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    if (urlString.includes('/api/assistant/connectors')) {
+    if (urlString.includes('/api/v1/assistant/connectors')) {
       return new Response(JSON.stringify({ error: 'Assistant backend unavailable' }), { status: 502, headers: { 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } });

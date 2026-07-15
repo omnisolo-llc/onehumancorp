@@ -197,12 +197,12 @@ describe("server-only authenticated backend transport", () => {
   it("resolves a body-derived backend path only after bounded parsing", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
       expect(String(input)).toBe(
-        "https://api.example.com/api/assistant/tasks/task-7/artifacts",
+        "https://api.example.com/api/v1/assistant/tasks/task-7/artifacts",
       );
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/assistant/artifacts", {
+    const input = await request(deps, "/api/v1/assistant/artifacts", {
       method: "POST",
       body: '{"taskId":"task-7"}',
       headers: { "content-type": "application/json" },
@@ -215,7 +215,7 @@ describe("server-only authenticated backend transport", () => {
       {
         resolveBackendPath: (body) => {
           const value = JSON.parse(new TextDecoder().decode(body));
-          return `/api/assistant/tasks/${value.taskId}/artifacts`;
+          return `/api/v1/assistant/tasks/${value.taskId}/artifacts`;
         },
       },
     );
@@ -226,11 +226,11 @@ describe("server-only authenticated backend transport", () => {
   it("does not resolve a body-derived path for an oversized request", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = { ...(await dependencies(fetchImpl)), requestLimitBytes: 8 };
-    const input = await request(deps, "/api/assistant/artifacts", {
+    const input = await request(deps, "/api/v1/assistant/artifacts", {
       method: "POST",
       body: '{"taskId":"task-7"}',
     });
-    const resolveBackendPath = vi.fn(() => "/api/assistant/tasks/task-7/artifacts");
+    const resolveBackendPath = vi.fn(() => "/api/v1/assistant/tasks/task-7/artifacts");
 
     const response = await proxyAuthenticatedRequest(input, "/unused", deps, {
       resolveBackendPath,

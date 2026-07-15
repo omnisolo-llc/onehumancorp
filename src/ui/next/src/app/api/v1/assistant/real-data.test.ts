@@ -19,7 +19,7 @@ describe('Assistant API Real Data Proxy Tests', () => {
   });
 
   test('tasks route does not fall back to demo data when backend is unavailable', async () => {
-    const response = await getTasks(new Request('http://localhost/api/assistant/tasks'));
+    const response = await getTasks(new Request('http://localhost/api/v1/assistant/tasks'));
     const data = await response.json();
     expect(response.status).toBe(502);
     expect(data.error).toMatch(/unavailable/i);
@@ -27,7 +27,7 @@ describe('Assistant API Real Data Proxy Tests', () => {
   });
 
   test('task mutation proxy fails honestly when backend is unavailable', async () => {
-    const request = new Request('http://localhost/api/assistant/tasks/123', {
+    const request = new Request('http://localhost/api/v1/assistant/tasks/123', {
       method: 'PATCH',
       body: JSON.stringify({ action: 'archive' }),
     });
@@ -38,14 +38,14 @@ describe('Assistant API Real Data Proxy Tests', () => {
   });
 
   test('memory route proxy fails honestly when backend is unavailable', async () => {
-    const response = await getMemory(new Request('http://localhost/api/assistant/memory'));
+    const response = await getMemory(new Request('http://localhost/api/v1/assistant/memory'));
     const data = await response.json();
     expect(response.status).toBe(502);
     expect(data.error).toMatch(/unavailable/i);
   });
 
   test('skills route proxy fails honestly when backend is unavailable', async () => {
-    const request = new Request('http://localhost/api/assistant/skills', {
+    const request = new Request('http://localhost/api/v1/assistant/skills', {
       method: 'PATCH',
       body: JSON.stringify({ action: 'install', name: 'Test' }),
     });
@@ -56,7 +56,7 @@ describe('Assistant API Real Data Proxy Tests', () => {
   });
 
   test('connectors route proxy fails honestly when backend is unavailable', async () => {
-    const request = new Request('http://localhost/api/assistant/connectors', {
+    const request = new Request('http://localhost/api/v1/assistant/connectors', {
       method: 'PATCH',
       body: JSON.stringify({ action: 'connect', name: 'Test' }),
     });

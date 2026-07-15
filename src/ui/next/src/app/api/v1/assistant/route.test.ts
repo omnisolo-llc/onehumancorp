@@ -150,7 +150,7 @@ describe('assistant API contract', () => {
   });
 
   test('lists seeded Agent tasks with artifacts and changes', async () => {
-    const response = await getTasks(getRequest('/api/assistant/tasks'));
+    const response = await getTasks(getRequest('/api/v1/assistant/tasks'));
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -236,7 +236,7 @@ describe('assistant API contract', () => {
   });
 
   test('creates a guarded assistant task with complete composer payload', async () => {
-    const response = await postTask(jsonRequest('http://localhost/api/assistant/tasks', {
+    const response = await postTask(jsonRequest('http://localhost/api/v1/assistant/tasks', {
       prompt: 'Research React 19 and create a slide deck with charts',
       workspace: 'Launch Room',
       mode: 'Plan',
@@ -276,7 +276,7 @@ describe('assistant API contract', () => {
   });
 
   test('creates local app tasks with code preview and app preview artifacts', async () => {
-    const response = await postTask(jsonRequest('http://localhost/api/assistant/tasks', {
+    const response = await postTask(jsonRequest('http://localhost/api/v1/assistant/tasks', {
       prompt: 'Build a Pomodoro timer app with start pause and reset buttons',
       workspace: 'Utilities',
       mode: 'Coding',
@@ -303,7 +303,7 @@ describe('assistant API contract', () => {
   });
 
   test('normalizes remote control messages into assistant tasks', async () => {
-    const response = await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
+    const response = await postRemote(jsonRequest('http://localhost/api/v1/assistant/remote', {
       platform: 'Slack',
       userId: 'U123',
       threadId: 'T456',
@@ -325,7 +325,7 @@ describe('assistant API contract', () => {
 
   test('accepts every Claw-style remote platform as task intake', async () => {
     for (const platform of ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot']) {
-      const response = await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
+      const response = await postRemote(jsonRequest('http://localhost/api/v1/assistant/remote', {
         platform,
         userId: `${platform}-user`,
         threadId: `${platform}-thread`,
@@ -340,7 +340,7 @@ describe('assistant API contract', () => {
   });
 
   test('creates scheduled automations using the same assistant task contract', async () => {
-    const response = await postAutomation(jsonRequest('http://localhost/api/assistant/automations', {
+    const response = await postAutomation(jsonRequest('http://localhost/api/v1/assistant/automations', {
       name: 'Weekly research brief',
       schedule: 'Every Monday 09:00',
       prompt: 'Research AI workstation updates and draft a summary',
@@ -372,7 +372,7 @@ describe('assistant API contract', () => {
       ['Daily 09:00', 'daily'],
       ['2026-06-08 15:00', 'one_time'],
     ]) {
-      const scheduleResponse = await postAutomation(jsonRequest('http://localhost/api/assistant/automations', {
+      const scheduleResponse = await postAutomation(jsonRequest('http://localhost/api/v1/assistant/automations', {
         name: `${scheduleKind} automation`,
         schedule,
         prompt: `Run ${scheduleKind} task`,
@@ -383,10 +383,10 @@ describe('assistant API contract', () => {
   });
 
   test('edits, imports, and forgets visible assistant memory', async () => {
-    const initial = await (await getMemory(getRequest('/api/assistant/memory'))).json();
+    const initial = await (await getMemory(getRequest('/api/v1/assistant/memory'))).json();
     expect(initial.memories.map((item: any) => item.content)).toContain('Prefer concise technical summaries with citations.');
 
-    const importResponse = await patchMemory(jsonRequest('http://localhost/api/assistant/memory', {
+    const importResponse = await patchMemory(jsonRequest('http://localhost/api/v1/assistant/memory', {
       action: 'import',
       content: 'Always generate spreadsheet outputs with a summary tab first.',
       scope: 'global',
@@ -399,7 +399,7 @@ describe('assistant API contract', () => {
     );
 
     const importedId = imported.memories.find((item: any) => item.content.startsWith('Always generate')).id;
-    const editResponse = await patchMemory(jsonRequest('http://localhost/api/assistant/memory', {
+    const editResponse = await patchMemory(jsonRequest('http://localhost/api/v1/assistant/memory', {
       action: 'edit',
       id: importedId,
       content: 'For spreadsheets, put the summary tab first.',
@@ -411,7 +411,7 @@ describe('assistant API contract', () => {
       ]),
     );
 
-    const forgetResponse = await patchMemory(jsonRequest('http://localhost/api/assistant/memory', {
+    const forgetResponse = await patchMemory(jsonRequest('http://localhost/api/v1/assistant/memory', {
       action: 'forget',
       id: importedId,
     }));
@@ -421,36 +421,36 @@ describe('assistant API contract', () => {
 
   test('manages task stop resume archive and approval actions', async () => {
     await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'approve_changes' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'approve_changes' }),
       taskContext('task-weekly-brief'),
     );
-    let body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
+    let body = await (await getTasks(getRequest('/api/v1/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').changes[0].approvalStatus).toBe('approved');
 
     await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'stop' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'stop' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
+    body = await (await getTasks(getRequest('/api/v1/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('blocked');
 
     await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'resume' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'resume' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
+    body = await (await getTasks(getRequest('/api/v1/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('running');
 
     await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'archive' }),
       taskContext('task-weekly-brief'),
     );
-    body = await (await getTasks(getRequest('/api/assistant/tasks'))).json();
+    body = await (await getTasks(getRequest('/api/v1/assistant/tasks'))).json();
     expect(body.tasks.find((task: any) => task.id === 'task-weekly-brief').status).toBe('archived');
   });
 
   test('manages skills connector status and data cleanup queues', async () => {
-    let skills = await (await getSkills(getRequest('/api/assistant/skills'))).json();
+    let skills = await (await getSkills(getRequest('/api/v1/assistant/skills'))).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'Web Research', status: 'installed' })]));
     expect(skills.skills).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Expert Ranking', category: 'Expert Center', status: 'available' }),
@@ -467,25 +467,25 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Frontend Design', category: 'Design', status: 'available' }),
     ]));
 
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+    skills = await (await patchSkills(patchRequest('http://localhost/api/v1/assistant/skills', {
       action: 'install',
       name: 'PDF Exporter',
       category: 'Artifacts',
     }))).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'PDF Exporter', status: 'installed' })]));
 
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+    skills = await (await patchSkills(patchRequest('http://localhost/api/v1/assistant/skills', {
       action: 'disable',
       name: 'PDF Exporter',
     }))).json();
     expect(skills.skills).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'PDF Exporter', status: 'disabled' })]));
 
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+    skills = await (await patchSkills(patchRequest('http://localhost/api/v1/assistant/skills', {
       action: 'update_all',
     }))).json();
     expect(skills.updateNotice).toContain('updated');
 
-    skills = await (await patchSkills(patchRequest('http://localhost/api/assistant/skills', {
+    skills = await (await patchSkills(patchRequest('http://localhost/api/v1/assistant/skills', {
       action: 'generate_custom',
       name: 'Folder Monitor Skill',
       description: 'Monitor a folder and process new files automatically.',
@@ -500,7 +500,7 @@ describe('assistant API contract', () => {
       status: 'generated',
     });
 
-    let connectors = await (await getConnectors(getRequest('/api/assistant/connectors'))).json();
+    let connectors = await (await getConnectors(getRequest('/api/v1/assistant/connectors'))).json();
     expect(connectors.connectors).toEqual(expect.arrayContaining([expect.objectContaining({ name: 'MCP Endpoint' })]));
     expect(connectors.connectors).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'GitHub', kind: 'repository', status: 'available' }),
@@ -520,7 +520,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'QQ Mail', kind: 'office' }),
     ]));
 
-    connectors = await (await patchConnectors(patchRequest('http://localhost/api/assistant/connectors', {
+    connectors = await (await patchConnectors(patchRequest('http://localhost/api/v1/assistant/connectors', {
       action: 'connect',
       name: 'Notion',
       kind: 'knowledge',
@@ -529,7 +529,7 @@ describe('assistant API contract', () => {
 
     let data = await (await getData()).json();
     expect(data.sharedFiles.length).toBeGreaterThan(0);
-    data = await (await patchData(patchRequest('http://localhost/api/assistant/data', {
+    data = await (await patchData(patchRequest('http://localhost/api/v1/assistant/data', {
       action: 'unshare',
       id: data.sharedFiles[0].id,
     }))).json();
@@ -548,7 +548,7 @@ describe('assistant API contract', () => {
 
   test('does not fabricate office export artifacts without the backend', async () => {
     for (const format of ['Document', 'Spreadsheet', 'Presentation', 'PDF', 'ZIP']) {
-      const response = await postArtifact(jsonRequest('http://localhost/api/assistant/artifacts', {
+      const response = await postArtifact(jsonRequest('http://localhost/api/v1/assistant/artifacts', {
         taskId: 'task-weekly-brief',
         outputFormat: format,
         title: `${format} Export`,
@@ -565,13 +565,13 @@ describe('assistant API contract', () => {
     expect(body.permissionProfile).toBe('Guarded');
     expect(body.authorizedFolders).toEqual(expect.arrayContaining(['/workspace/assistant']));
 
-    body = await (await patchPermissions(patchRequest('http://localhost/api/assistant/permissions', {
+    body = await (await patchPermissions(patchRequest('http://localhost/api/v1/assistant/permissions', {
       action: 'grant',
       folder: '/Users/me/Downloads',
     }))).json();
     expect(body.authorizedFolders).toContain('/Users/me/Downloads');
 
-    body = await (await patchPermissions(patchRequest('http://localhost/api/assistant/permissions', {
+    body = await (await patchPermissions(patchRequest('http://localhost/api/v1/assistant/permissions', {
       action: 'revoke',
       folder: '/Users/me/Downloads',
     }))).json();
@@ -579,7 +579,7 @@ describe('assistant API contract', () => {
   });
 
   test('does not fabricate local file operations without the backend', async () => {
-    const response = await postFileOperation(jsonRequest('http://localhost/api/assistant/files', {
+    const response = await postFileOperation(jsonRequest('http://localhost/api/v1/assistant/files', {
       operation: 'batch_convert',
       folder: '/Users/me/Downloads',
       sourcePattern: '*.png',
@@ -609,7 +609,7 @@ describe('assistant API contract', () => {
       }),
     ]));
 
-    body = await (await patchModels(patchRequest('http://localhost/api/assistant/models', {
+    body = await (await patchModels(patchRequest('http://localhost/api/v1/assistant/models', {
       action: 'upsert',
       provider: 'Custom OpenAI Compatible',
       modelId: 'agent-custom',
@@ -638,7 +638,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'MCP Endpoint', trusted: false }),
     ]));
 
-    body = await (await postMcp(jsonRequest('http://localhost/api/assistant/mcp', {
+    body = await (await postMcp(jsonRequest('http://localhost/api/v1/assistant/mcp', {
       name: 'Linear MCP',
       url: 'https://mcp.example.test/sse',
       headers: { Authorization: 'Bearer token' },
@@ -652,7 +652,7 @@ describe('assistant API contract', () => {
     });
     expect(body.server.features).toEqual(expect.arrayContaining(['Static Headers', 'Tool Progress']));
 
-    body = await (await patchMcp(patchRequest('http://localhost/api/assistant/mcp', {
+    body = await (await patchMcp(patchRequest('http://localhost/api/v1/assistant/mcp', {
       action: 'trust',
       id: body.server.id,
     }))).json();
@@ -660,7 +660,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Linear MCP', trusted: true, status: 'connected' }),
     ]));
 
-    body = await (await patchMcp(patchRequest('http://localhost/api/assistant/mcp', {
+    body = await (await patchMcp(patchRequest('http://localhost/api/v1/assistant/mcp', {
       action: 'try_tool',
       name: 'Linear MCP',
       tool: 'search_issues',
@@ -683,7 +683,7 @@ describe('assistant API contract', () => {
       expect.stringContaining('Research Strategist'),
     ]));
 
-    body = await (await postExperts(jsonRequest('http://localhost/api/assistant/experts', {
+    body = await (await postExperts(jsonRequest('http://localhost/api/v1/assistant/experts', {
       name: 'Sales Ops Analyst',
       domain: 'Revenue',
       description: 'Pipeline hygiene and forecast inspection.',
@@ -695,7 +695,7 @@ describe('assistant API contract', () => {
       visibility: 'private',
     });
 
-    body = await (await patchExperts(patchRequest('http://localhost/api/assistant/experts', {
+    body = await (await patchExperts(patchRequest('http://localhost/api/v1/assistant/experts', {
       action: 'summon',
       id: body.expert.id,
       taskId: 'task-weekly-brief',
@@ -715,7 +715,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ command: '/clear' }),
     ]));
 
-    body = await (await postCommand(jsonRequest('http://localhost/api/assistant/commands', {
+    body = await (await postCommand(jsonRequest('http://localhost/api/v1/assistant/commands', {
       command: '/summarize',
       taskId: 'task-weekly-brief',
     }))).json();
@@ -725,7 +725,7 @@ describe('assistant API contract', () => {
     });
     expect(body.task.messages.at(-1).content).toContain('Summary');
 
-    body = await (await postCommand(jsonRequest('http://localhost/api/assistant/commands', {
+    body = await (await postCommand(jsonRequest('http://localhost/api/v1/assistant/commands', {
       command: '/clear',
       taskId: 'task-weekly-brief',
     }))).json();
@@ -734,17 +734,17 @@ describe('assistant API contract', () => {
   });
 
   test('manages workspaces collapse pin archive filter sort and hard delete', async () => {
-    let body = await (await getWorkspaces(getRequest('/api/assistant/workspaces'))).json();
+    let body = await (await getWorkspaces(getRequest('/api/v1/assistant/workspaces'))).json();
     expect(body.workspaces).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Personal OS', memoryFile: 'MEMORY.md' }),
     ]));
 
-    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/v1/assistant/workspaces', {
       action: 'collapse_all',
     }))).json();
     expect(body.workspaces.every((workspace: any) => workspace.collapsed)).toBe(true);
 
-    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/v1/assistant/workspaces', {
       action: 'pin',
       name: 'Files',
     }))).json();
@@ -752,7 +752,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Files', pinned: true }),
     ]));
 
-    body = await (await patchWorkspaces(patchRequest('http://localhost/api/assistant/workspaces', {
+    body = await (await patchWorkspaces(patchRequest('http://localhost/api/v1/assistant/workspaces', {
       action: 'hard_delete',
       name: 'Files',
       confirm: 'DELETE',
@@ -767,7 +767,7 @@ describe('assistant API contract', () => {
     let body = await (await getShares()).json();
     expect(body.shares).toEqual([]);
 
-    body = await (await postShare(jsonRequest('http://localhost/api/assistant/share', {
+    body = await (await postShare(jsonRequest('http://localhost/api/v1/assistant/share', {
       taskId: 'task-weekly-brief',
       artifactId: 'artifact-weekly-brief',
       target: 'WeChat',
@@ -785,7 +785,7 @@ describe('assistant API contract', () => {
   });
 
   test('tracks remote uploaded files and attaches them to follow-up tasks', async () => {
-    let body = await (await postUpload(jsonRequest('http://localhost/api/assistant/uploads', {
+    let body = await (await postUpload(jsonRequest('http://localhost/api/v1/assistant/uploads', {
       platform: 'WeChat ClawBot',
       userId: 'wechat-user',
       filename: 'receipt.png',
@@ -804,7 +804,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ filename: 'receipt.png', previewUrl: expect.stringContaining('/assistant/uploads/') }),
     ]));
 
-    const remote = await (await postRemote(jsonRequest('http://localhost/api/assistant/remote', {
+    const remote = await (await postRemote(jsonRequest('http://localhost/api/v1/assistant/remote', {
       platform: 'WeChat ClawBot',
       userId: 'wechat-user',
       threadId: 'wechat-thread',
@@ -820,7 +820,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ artifactId: 'artifact-weekly-brief', autoRefresh: true }),
     ]));
 
-    body = await (await patchPreviews(patchRequest('http://localhost/api/assistant/previews', {
+    body = await (await patchPreviews(patchRequest('http://localhost/api/v1/assistant/previews', {
       action: 'open_external',
       artifactId: 'artifact-weekly-brief',
     }))).json();
@@ -840,7 +840,7 @@ describe('assistant API contract', () => {
     ]));
     expect(body.versionCache).toEqual(expect.objectContaining({ lastSyncedAt: expect.any(String) }));
 
-    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+    body = await (await patchPlugins(patchRequest('http://localhost/api/v1/assistant/plugins', {
       action: 'install',
       id: 'plugin-office-suite',
     }))).json();
@@ -854,7 +854,7 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Office Suite MCP', status: 'needs_trust' }),
     ]));
 
-    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+    body = await (await patchPlugins(patchRequest('http://localhost/api/v1/assistant/plugins', {
       action: 'update',
       id: 'plugin-office-suite',
       version: '1.1.0',
@@ -863,14 +863,14 @@ describe('assistant API contract', () => {
       expect.objectContaining({ id: 'plugin-office-suite', version: '1.1.0', updateAvailable: false }),
     ]));
 
-    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+    body = await (await patchPlugins(patchRequest('http://localhost/api/v1/assistant/plugins', {
       action: 'try',
       id: 'plugin-office-suite',
       taskId: 'task-weekly-brief',
     }))).json();
     expect(body.task.messages.at(-1).content).toContain('Office Suite');
 
-    body = await (await patchPlugins(patchRequest('http://localhost/api/assistant/plugins', {
+    body = await (await patchPlugins(patchRequest('http://localhost/api/v1/assistant/plugins', {
       action: 'uninstall',
       id: 'plugin-office-suite',
     }))).json();
@@ -881,7 +881,7 @@ describe('assistant API contract', () => {
   });
 
   test('runs one-time and temporary-workspace automations through pause resume run and delete lifecycle', async () => {
-    let body = await (await postAutomation(jsonRequest('http://localhost/api/assistant/automations', {
+    let body = await (await postAutomation(jsonRequest('http://localhost/api/v1/assistant/automations', {
       name: 'One-time invoice cleanup',
       schedule: '2026-06-08T09:00:00.000Z',
       prompt: 'Clean invoice attachments once',
@@ -898,7 +898,7 @@ describe('assistant API contract', () => {
     });
 
     const automationId = body.automation.id;
-    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+    body = await (await patchAutomation(patchRequest('http://localhost/api/v1/assistant/automations', {
       action: 'run_now',
       id: automationId,
     }))).json();
@@ -906,19 +906,19 @@ describe('assistant API contract', () => {
       expect.objectContaining({ status: 'completed' }),
     ]));
 
-    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+    body = await (await patchAutomation(patchRequest('http://localhost/api/v1/assistant/automations', {
       action: 'pause',
       id: automationId,
     }))).json();
     expect(body.automation.status).toBe('paused');
 
-    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+    body = await (await patchAutomation(patchRequest('http://localhost/api/v1/assistant/automations', {
       action: 'resume',
       id: automationId,
     }))).json();
     expect(body.automation.status).toBe('active');
 
-    body = await (await patchAutomation(patchRequest('http://localhost/api/assistant/automations', {
+    body = await (await patchAutomation(patchRequest('http://localhost/api/v1/assistant/automations', {
       action: 'delete',
       id: automationId,
     }))).json();
@@ -927,19 +927,19 @@ describe('assistant API contract', () => {
 
   test('supports task pin rename save to workspace archived rename and hard delete', async () => {
     let body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'pin' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'pin' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.pinned).toBe(true);
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename', title: 'Weekly operating review' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'rename', title: 'Weekly operating review' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.title).toBe('Weekly operating review');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', {
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', {
         action: 'save_to_workspace',
         workspace: 'Leadership',
         workDirectory: '/workspace/leadership',
@@ -949,31 +949,31 @@ describe('assistant API contract', () => {
     expect(body.task).toMatchObject({ workspace: 'Leadership', workDirectory: '/workspace/leadership' });
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'archive' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('archived');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'unarchive' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'unarchive' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('completed');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'archive' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'archive' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.status).toBe('archived');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'rename_archived', title: 'Archived review' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'rename_archived', title: 'Archived review' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.task.title).toBe('Archived review');
 
     body = await (await patchTaskAction(
-      patchRequest('http://localhost/api/assistant/tasks/task-weekly-brief', { action: 'hard_delete', confirm: 'DELETE' }),
+      patchRequest('http://localhost/api/v1/assistant/tasks/task-weekly-brief', { action: 'hard_delete', confirm: 'DELETE' }),
       taskContext('task-weekly-brief'),
     )).json();
     expect(body.deletedTask.id).toBe('task-weekly-brief');
@@ -1009,7 +1009,7 @@ describe('assistant API contract', () => {
       }),
     ]));
 
-    body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
+    body = await (await patchClaw(patchRequest('http://localhost/api/v1/assistant/claw', {
       action: 'connect',
       platform: 'Slack',
       credentials: { appId: 'A123', botToken: 'xoxb-token' },
@@ -1032,7 +1032,7 @@ describe('assistant API contract', () => {
       }),
     ]));
 
-    body = await (await patchClaw(patchRequest('http://localhost/api/assistant/claw', {
+    body = await (await patchClaw(patchRequest('http://localhost/api/v1/assistant/claw', {
       action: 'confirm_command',
       platform: 'WeChat ClawBot',
       commandId: 'cmd-danger-1',
@@ -1047,7 +1047,7 @@ describe('assistant API contract', () => {
     let body = await (await getApprovals()).json();
     expect(body.approvals).toEqual([]);
 
-    body = await (await postApproval(jsonRequest('http://localhost/api/assistant/approvals', {
+    body = await (await postApproval(jsonRequest('http://localhost/api/v1/assistant/approvals', {
       taskId: 'task-weekly-brief',
       action: 'external_send',
       summary: 'Send weekly brief to WeChat',
@@ -1060,7 +1060,7 @@ describe('assistant API contract', () => {
       status: 'pending',
     });
 
-    body = await (await patchApproval(patchRequest('http://localhost/api/assistant/approvals', {
+    body = await (await patchApproval(patchRequest('http://localhost/api/v1/assistant/approvals', {
       id: body.approval.id,
       decision: 'approve',
       reviewer: 'owner',
@@ -1101,7 +1101,7 @@ describe('assistant API contract', () => {
       }),
     });
 
-    body = await (await patchSettings(patchRequest('http://localhost/api/assistant/settings', {
+    body = await (await patchSettings(patchRequest('http://localhost/api/v1/assistant/settings', {
       fontSize: 'large',
       systemLanguage: 'en-US',
       contentFilter: 'hide_filtered_answer',
@@ -1116,7 +1116,7 @@ describe('assistant API contract', () => {
       preventSleep: true,
     });
 
-    body = await (await postSupport(jsonRequest('http://localhost/api/assistant/support', {
+    body = await (await postSupport(jsonRequest('http://localhost/api/v1/assistant/support', {
       kind: 'upload_logs',
       message: 'Investigate Claw reconnect issue',
       includeLogs: true,
@@ -1131,7 +1131,7 @@ describe('assistant API contract', () => {
   });
 
   test('manages share copy download and cancel sharing lifecycle', async () => {
-    let body = await (await postShare(jsonRequest('http://localhost/api/assistant/share', {
+    let body = await (await postShare(jsonRequest('http://localhost/api/v1/assistant/share', {
       taskId: 'task-weekly-brief',
       artifactId: 'artifact-weekly-brief',
       target: 'Share Link',
@@ -1141,7 +1141,7 @@ describe('assistant API contract', () => {
       shareUrl: expect.stringContaining('/assistant/share/'),
     });
 
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
+    body = await (await patchShare(patchRequest('http://localhost/api/v1/assistant/share', {
       action: 'copy_link',
       id: body.share.id,
     }))).json();
@@ -1151,13 +1151,13 @@ describe('assistant API contract', () => {
       shareUrl: expect.stringContaining('/assistant/share/'),
     });
 
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
+    body = await (await patchShare(patchRequest('http://localhost/api/v1/assistant/share', {
       action: 'download',
       id: body.share.id,
     }))).json();
     expect(body.share.downloadUrl).toContain('/assistant/download/');
 
-    body = await (await patchShare(patchRequest('http://localhost/api/assistant/share', {
+    body = await (await patchShare(patchRequest('http://localhost/api/v1/assistant/share', {
       action: 'revoke',
       id: body.share.id,
     }))).json();
@@ -1209,7 +1209,7 @@ describe('assistant API contract', () => {
     ]));
     expect(body.exploreActions).toEqual(expect.arrayContaining(['Try Task', 'Make My Version', 'Remix Agent', 'Share Exploration']));
 
-    body = await (await postExplore(jsonRequest('http://localhost/api/assistant/explore', {
+    body = await (await postExplore(jsonRequest('http://localhost/api/v1/assistant/explore', {
       templateId: 'explore-investor-update',
       workspace: 'Founder OS',
       ownerGoal: 'Prepare my own investor update every Friday',
@@ -1227,7 +1227,7 @@ describe('assistant API contract', () => {
     });
     expect(body.task.skills).toEqual(expect.arrayContaining(['Web Research', 'Document Writer']));
 
-    body = await (await patchExplore(patchRequest('http://localhost/api/assistant/explore', {
+    body = await (await patchExplore(patchRequest('http://localhost/api/v1/assistant/explore', {
       action: 'share',
       remixId: body.remix.id,
       target: 'Share Link',
@@ -1248,7 +1248,7 @@ describe('assistant API contract', () => {
       uploadedFiles: expect.arrayContaining(['workspace-notes.md']),
     });
 
-    body = await (await postCloud(jsonRequest('http://localhost/api/assistant/cloud', {
+    body = await (await postCloud(jsonRequest('http://localhost/api/v1/assistant/cloud', {
       prompt: 'Monitor competitors and prepare a launch brief',
       workspace: 'Launch Room',
       model: 'DeepSeek V3.2',
@@ -1269,19 +1269,19 @@ describe('assistant API contract', () => {
       model: 'DeepSeek V3.2',
     });
 
-    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+    body = await (await patchCloud(patchRequest('http://localhost/api/v1/assistant/cloud', {
       action: 'pause',
       id: body.session.id,
     }))).json();
     expect(body.session.status).toBe('paused');
 
-    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+    body = await (await patchCloud(patchRequest('http://localhost/api/v1/assistant/cloud', {
       action: 'resume',
       id: body.session.id,
     }))).json();
     expect(body.session.status).toBe('running');
 
-    body = await (await patchCloud(patchRequest('http://localhost/api/assistant/cloud', {
+    body = await (await patchCloud(patchRequest('http://localhost/api/v1/assistant/cloud', {
       action: 'cancel',
       id: body.session.id,
     }))).json();
@@ -1425,7 +1425,7 @@ describe('assistant API contract', () => {
   });
 
   test('billing route returns billing state', async () => {
-    const body = await (await getBilling(getRequest('/api/assistant/billing'))).json();
+    const body = await (await getBilling(getRequest('/api/v1/assistant/billing'))).json();
     expect(body.plan).toBe('Growth');
     expect(body.aiActionsUsed).toBe(145);
     expect(body.storageUsedGB).toBe(12.4);

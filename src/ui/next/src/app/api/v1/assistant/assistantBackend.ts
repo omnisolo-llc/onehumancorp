@@ -9,7 +9,7 @@ function validTaskId(value: unknown): string {
 }
 
 export function taskBackendPath(id: unknown, suffix = ""): string {
-  return `/api/assistant/tasks/${validTaskId(id)}${suffix}`;
+  return `/api/v1/assistant/tasks/${validTaskId(id)}${suffix}`;
 }
 
 export function taskBackendPathFromBody(

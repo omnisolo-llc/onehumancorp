@@ -8,10 +8,10 @@ import {
 
 describe("assistant backend helpers", () => {
   test("confines task identifiers used in backend paths", () => {
-    expect(taskBackendPath("task-7", "/artifacts")).toBe("/api/assistant/tasks/task-7/artifacts");
+    expect(taskBackendPath("task-7", "/artifacts")).toBe("/api/v1/assistant/tasks/task-7/artifacts");
     expect(() => taskBackendPath("../admin", "/artifacts")).toThrow("invalid task ID");
     expect(taskBackendPathFromBody("/files")(new TextEncoder().encode('{"taskId":"task-7"}'))).toBe(
-      "/api/assistant/tasks/task-7/files",
+      "/api/v1/assistant/tasks/task-7/files",
     );
   });
 
