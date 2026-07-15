@@ -234,6 +234,7 @@ rust_library(
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
+        "@crates//:url",
         "@crates//:urlencoding",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
@@ -248,6 +249,16 @@ rust_test(
     crate = ":server_api",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel_package"],
+    aliases = {
+        "//src/server/tools:server_tools": "server_tools",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:serial_test",
+        "@crates//:url",
+    ],
     env = {
         "RUST_TEST_THREADS": "1",
     },

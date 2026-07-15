@@ -42,6 +42,7 @@ async-nats = "0.47.0"
 tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
+url = "2.5.8"
 
 [build-dependencies]
 tonic-build = "0.12"
@@ -54,6 +55,7 @@ temp-env = "0.3.6"
 futures-util = "0.3.32"
 tauri-cli = "2"
 tower = "0.4"
+serial_test = "3.5.0"
 
 [dependencies.tokio]
 workspace = true

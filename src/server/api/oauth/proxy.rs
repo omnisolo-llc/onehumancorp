@@ -68,10 +68,13 @@ pub async fn handle_oauth_callback(
                     "Invalid tunnel_base_url: must be HTTPS or localhost.",
                 ).into_response();
             } else {
-                let stripped = tunnel_base_url.strip_prefix("https://").unwrap_or(&tunnel_base_url);
-                let host = stripped.split('/').next().unwrap_or(stripped).split(':').next().unwrap_or(stripped);
-                if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
-                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                if let Ok(parsed_url) = url::Url::parse(&tunnel_base_url) {
+                    let host = parsed_url.host_str().unwrap_or("");
+                    if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
+                        return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                    }
+                } else {
+                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url").into_response();
                 }
             }
 
@@ -120,6 +123,7 @@ mod tests {
     use super::*;
     use axum::extract::Query;
     use std::collections::HashMap;
+    use serial_test::serial;
 
 
 
@@ -130,6 +134,7 @@ mod tests {
 
 
     #[tokio::test]
+    #[serial]
     async fn test_valid_tunnel_id_secure_fragment_redirect() {
         let mut extra = HashMap::new();
         extra.insert("foo".to_string(), "bar".to_string());
@@ -161,6 +166,7 @@ mod tests {
 
 
     #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_path_traversal() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -173,6 +179,63 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
+    async fn test_invalid_tunnel_url_auth_bypass() {
+        unsafe { std::env::set_var("OHC_TUNNEL_BASE_URL", "https://user:pass@malicious.com#.ohc.network"); }
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+        unsafe { std::env::remove_var("OHC_TUNNEL_BASE_URL"); }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_invalid_tunnel_url_backslash_bypass() {
+        unsafe { std::env::set_var("OHC_TUNNEL_BASE_URL", "https://malicious.com\\@ohc.network"); }
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+        unsafe { std::env::remove_var("OHC_TUNNEL_BASE_URL"); }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_invalid_tunnel_url_query_bypass() {
+        unsafe { std::env::set_var("OHC_TUNNEL_BASE_URL", "https://malicious.com?.ohc.network"); }
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+        unsafe { std::env::remove_var("OHC_TUNNEL_BASE_URL"); }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_invalid_tunnel_url_fragment_bypass() {
+        unsafe { std::env::set_var("OHC_TUNNEL_BASE_URL", "https://malicious.com#.ohc.network"); }
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+        unsafe { std::env::remove_var("OHC_TUNNEL_BASE_URL"); }
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_url() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -185,6 +248,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_spaces() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -197,6 +261,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_empty() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -209,6 +274,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_hyphen_start() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -221,6 +287,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_invalid_tunnel_id_hyphen_end() {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
@@ -234,6 +301,7 @@ mod tests {
 
 
     #[tokio::test]
+    #[serial]
     async fn test_xss_in_callback_is_escaped() {
         let mut extra = HashMap::new();
         extra.insert("foo".to_string(), "bar\"<script>alert(1)</script>".to_string());
@@ -256,6 +324,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_oauth_callback_extra_query_params_escaping() {
         let mut extra = HashMap::new();
         extra.insert("token".to_string(), "abc+def".to_string());
