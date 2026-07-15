@@ -14,8 +14,8 @@ export async function GET() {
     };
 
     const [tasksRes, summariesRes] = await Promise.all([
-      fetch(`${backendUrl}/api/staff/tasks`, { headers }),
-      fetch(`${backendUrl}/api/staff/summaries`, { headers })
+      fetch(`${backendUrl}/api/v1/staff/tasks`, { headers }),
+      fetch(`${backendUrl}/api/v1/staff/summaries`, { headers })
     ]);
 
     let tasks = [];
@@ -45,7 +45,7 @@ export async function GET() {
 
     // Since we don't have a specific GET staff route implemented that fits this shape, we'll fetch from db using another route
     // or just return the active staff state directly from shifts
-    const staffRes = await fetch(`${backendUrl}/api/staff`, { headers });
+    const staffRes = await fetch(`${backendUrl}/api/v1/staff`, { headers });
     let staffList = [];
     if (staffRes.ok) {
         const staffData = await staffRes.json();

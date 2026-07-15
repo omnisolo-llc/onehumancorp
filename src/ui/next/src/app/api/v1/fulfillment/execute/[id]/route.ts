@@ -27,7 +27,7 @@ export async function POST(
   if (id === "." || id === ".." || !FULFILLMENT_ID.test(id)) {
     return invalidFulfillmentId();
   }
-  return proxyBackendRequest(request, `/api/fulfillment/execute/${id}`, {
+  return proxyBackendRequest(request, `/api/v1/fulfillment/execute/${id}`, {
     forwardQuery: false,
     requestContentType: "application/json",
     transformRequestBody: validateJsonRequestBody,

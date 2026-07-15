@@ -515,7 +515,7 @@ export class SyncManager {
       const fulfillmentActions = generalMutations.filter(m => m.type === 'fulfillment_action');
       for (const action of fulfillmentActions) {
         try {
-          const res = await fetch(`/api/fulfillment/execute/${action.payload.id}`, {
+          const res = await fetch(`/api/v1/fulfillment/execute/${action.payload.id}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

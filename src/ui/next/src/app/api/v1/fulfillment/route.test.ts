@@ -20,7 +20,7 @@ test("delegates GET without forwarding inbound queries", async () => {
   expect(response.status).toBe(200);
   expect(proxyBackendRequest).toHaveBeenCalledWith(
     request,
-    "/api/fulfillment",
+    "/api/v1/fulfillment",
     { forwardQuery: false },
   );
 });

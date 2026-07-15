@@ -14,13 +14,13 @@ import { POST } from "./route";
 
 const context = (id: string) => ({ params: Promise.resolve({ id }) });
 
-describe("POST /api/fulfillment/execute/[id]", () => {
+describe("POST /api/v1/fulfillment/execute/[id]", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
   it("preserves legacy JSON validation without forwarding inbound queries", async () => {
     const body = JSON.stringify({ action: "mark_ready" });
     const request = new Request(
-      "http://localhost/api/fulfillment/execute/ord-42?notify=true",
+      "http://localhost/api/v1/fulfillment/execute/ord-42?notify=true",
       { method: "POST", headers: { "content-type": "application/json" }, body },
     );
 
@@ -29,7 +29,7 @@ describe("POST /api/fulfillment/execute/[id]", () => {
     expect(response.status).toBe(200);
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/fulfillment/execute/ord-42",
+      "/api/v1/fulfillment/execute/ord-42",
       {
         forwardQuery: false,
         requestContentType: "application/json",
@@ -42,7 +42,7 @@ describe("POST /api/fulfillment/execute/[id]", () => {
     "rejects invalid fulfillment ID %j before proxying",
     async (id) => {
       const request = new Request(
-        "http://localhost/api/fulfillment/execute/invalid",
+        "http://localhost/api/v1/fulfillment/execute/invalid",
         { method: "POST", body: JSON.stringify({ action: "mark_ready" }) },
       );
 
