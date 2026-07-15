@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 type ConnectContext = {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export async function POST(req: Request, context: ConnectContext) {
