@@ -31,7 +31,7 @@ describe('PricingPage', () => {
     global.fetch = vi.fn();
 
     (global.fetch as any).mockImplementation(async (url) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
@@ -64,13 +64,13 @@ describe('PricingPage', () => {
   it('initiates checkout session when upgrading to Starter', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -95,7 +95,7 @@ describe('PricingPage', () => {
 
     // Wait for the async logic to finish
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,13 +108,13 @@ describe('PricingPage', () => {
 
   it('handles upgrade errors gracefully', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
         throw new Error('Network error');
       }
       return { ok: true, json: async () => ({}) };
@@ -169,13 +169,13 @@ describe('PricingPage', () => {
   it('initiates billing portal session for manage billing', async () => {
     const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ url: mockPortalUrl }),
@@ -198,7 +198,7 @@ describe('PricingPage', () => {
     });
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-billing-portal-session', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,13 +226,13 @@ describe('PricingPage', () => {
 
   it('handles manage billing portal errors gracefully', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
         throw new Error('Network error');
       }
       return { ok: true, json: async () => ({}) };
@@ -265,7 +265,7 @@ describe('PricingPage', () => {
 
   it('renders business plan upgrade states', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Business' }),
@@ -290,13 +290,13 @@ describe('PricingPage', () => {
   it('renders business plan handleUpgrade state', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -321,7 +321,7 @@ describe('PricingPage', () => {
 
     // Wait for the async logic to finish
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -335,13 +335,13 @@ describe('PricingPage', () => {
   it('renders pro plan handleUpgrade state', async () => {
     const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -366,7 +366,7 @@ describe('PricingPage', () => {
 
     // Wait for the async logic to finish
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -379,7 +379,7 @@ describe('PricingPage', () => {
 
   it('handles plan fetch errors gracefully', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
          throw new Error('Network plan error');
       }
       return { ok: true, json: async () => ({}) };
@@ -400,13 +400,13 @@ describe('PricingPage', () => {
 
   it('handles manage billing portal not ok gracefully', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
         return {
           ok: false,
           json: async () => ({})
@@ -442,13 +442,13 @@ describe('PricingPage', () => {
 
   it('handles upgrade not ok gracefully', async () => {
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
         return {
           ok: false,
           json: async () => ({})
@@ -484,7 +484,7 @@ describe('PricingPage', () => {
 
   it('updates the price when annual billing is toggled', async () => {
     (global.fetch as any).mockImplementation(async (url: string) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Free' }),

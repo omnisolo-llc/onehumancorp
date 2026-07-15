@@ -9,7 +9,7 @@ vi.mock("@/app/api/backendCatchAll", () => ({ proxyCurrentBackendPath }));
 import { GET } from "./route";
 
 test("uses the authenticated billing transport", async () => {
-  const request = new Request("http://localhost/api/billing/department-tier-usage");
+  const request = new Request("http://localhost/api/v1/billing/department-tier-usage");
 
   const response = await GET(request);
 

@@ -26,7 +26,7 @@ describe('MyPlanPage', () => {
     global.fetch = vi.fn();
 
     (global.fetch as any).mockImplementation(async (url) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({
@@ -63,7 +63,7 @@ describe('MyPlanPage', () => {
 
   it('renders soft limit reached message', async () => {
     (global.fetch as any).mockImplementation(async (url) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({
@@ -98,7 +98,7 @@ describe('MyPlanPage', () => {
 
   it('renders unlimited limits properly for 0 limits', async () => {
     (global.fetch as any).mockImplementation(async (url) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({
@@ -139,13 +139,13 @@ describe('MyPlanPage', () => {
     });
 
     (global.fetch as any).mockImplementation(async (url, options) => {
-      if (url === '/api/billing/my-plan') {
+      if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
         return portalPromise.then(() => ({
           ok: true,
           json: async () => ({ url: mockPortalUrl }),
@@ -170,7 +170,7 @@ describe('MyPlanPage', () => {
     });
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-billing-portal-session', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

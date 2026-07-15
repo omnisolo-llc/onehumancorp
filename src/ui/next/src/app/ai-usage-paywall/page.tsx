@@ -37,7 +37,7 @@ export default function AiUsagePaywallPage() {
           if (tenantId) headers['x-ohc-tenant-id'] = tenantId;
         }
 
-        const costRes = await fetch('/api/billing/cost-dashboard', { headers });
+        const costRes = await fetch('/api/v1/billing/cost-dashboard', { headers });
         if (costRes.ok) {
           const costData = await costRes.json();
           setData(costData);
