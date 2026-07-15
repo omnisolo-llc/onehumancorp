@@ -387,6 +387,7 @@ where
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/review-reward/embed", get(handle_review_reward_embed))
+
         .route("/review-reward/submit", post(handle_review_reward_submit))
         .route("/job-board/generate", post(handle_job_board_generate))
         .route("/referrals/generate", post(handle_referral_generate))
