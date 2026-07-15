@@ -170,6 +170,7 @@ impl Store {
                             if let Ok(metadata) = file.metadata() {
                                 let perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
+
                                     panic!("CRITICAL SECURITY ERROR: Insecure permissions on .ohc_jwt_secret. The secret might be compromised. System terminating.");
                                 }
                             }
@@ -208,6 +209,7 @@ impl Store {
                                 if let Ok(metadata) = file.metadata() {
                                     let perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
+
                                         panic!("CRITICAL SECURITY ERROR: Insecure permissions on .ohc_sqlite_key. The secret might be compromised. System terminating.");
                                     }
                                 }
