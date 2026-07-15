@@ -116,7 +116,7 @@
       "id": 1,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<h1 >Sandbox Observability Dashboard</h1>\n  <p >Full-Spectrum CPU, Memory, and IO tracking for Sandboxes</p>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<style>\n  .grafana-app {\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<h1 >Sandbox Observability Dashboard</h1>\n  <p >Full-Spectrum CPU, Memory, and IO tracking for Sandboxes</p>"
       },
       "title": "Aesthetic Injector",
       "transparent": true,
