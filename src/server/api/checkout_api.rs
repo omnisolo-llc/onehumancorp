@@ -58,6 +58,39 @@ pub async fn create_checkout_session_handler(
         }
     }
 
+    if let Some(cart) = &req_data.cart_payload {
+        if let Some(items) = cart.as_array() {
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            let lock_ttl = if req_data.r#type == "IN_PERSON" { 15 } else { 300 };
+
+            for item in items {
+                if let (Some(product), Some(quantity)) = (item.get("product"), item.get("quantity")) {
+                    if let (Some(product_id), Some(qty)) = (product.get("id").and_then(|i| i.as_str()), quantity.as_i64()) {
+                        match inventory_service.reserve_inventory(&tenant_id, product_id, qty as i32, lock_ttl).await {
+                            Ok(res) if !res.success => {
+                                let _ = db_tx.rollback().await;
+                                return (StatusCode::CONFLICT, Json(CreateCheckoutSessionResponse {
+                                    session_id: "".to_string(),
+                                    success: false,
+                                    error_message: Some(res.error_message),
+                                })).into_response()
+                            },
+                            Err(e) => {
+                                let _ = db_tx.rollback().await;
+                                return (StatusCode::INTERNAL_SERVER_ERROR, Json(CreateCheckoutSessionResponse {
+                                    session_id: "".to_string(),
+                                    success: false,
+                                    error_message: Some(e),
+                                })).into_response()
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     let query = sqlx::query(
         "INSERT INTO checkout_sessions (id, tenant_id, type, amount_cents, device_id, cart_payload, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
