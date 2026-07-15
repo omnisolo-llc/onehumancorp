@@ -55,7 +55,7 @@ test.describe('Quote Deposit Follow-up', () => {
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
     // MOCK API for patch to approve
-    await page.route('**/api/agent-feed/*', async route => {
+    await page.route('**/api/v1/agent-feed/*', async route => {
         await route.fulfill({ status: 200, json: { success: true } });
     });
 

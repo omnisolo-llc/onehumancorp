@@ -2803,7 +2803,7 @@
             let url, method, bodyPayload;
 
             if (isAgentFeed) {
-              url = '/api/agent-feed/' + encodeURIComponent(id) + '/state';
+              url = '/api/v1/agent-feed/' + encodeURIComponent(id) + '/state';
               method = 'PUT';
               let finalState = 'APPROVED';
               if (typeof state === 'boolean') {
@@ -2871,7 +2871,7 @@ window.handleTriageAction = async function(id, state) {
           }
 
           if (isAgentFeed) {
-             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
+             url = `/api/v1/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {

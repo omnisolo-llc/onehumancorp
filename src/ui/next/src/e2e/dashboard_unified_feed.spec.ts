@@ -15,7 +15,7 @@ test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', 
 
     const uniqueId = `e2e-ws-test-${Date.now()}`;
 
-    const resCreate = await page.request.post(`/api/agent-feed?tenant_id=${tenantId}`, {
+    const resCreate = await page.request.post(`/api/v1/agent-feed?tenant_id=${tenantId}`, {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'default'
@@ -30,7 +30,7 @@ test.describe('Real-Time Multi-Tenant Edge Notifications & Sync via WebSocket', 
     expect(resCreate.ok()).toBeTruthy();
     const createdItem = await resCreate.json();
 
-    const resUpdate = await page.request.put(`/api/agent-feed/${createdItem.id}/state`, {
+    const resUpdate = await page.request.put(`/api/v1/agent-feed/${createdItem.id}/state`, {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'default'
