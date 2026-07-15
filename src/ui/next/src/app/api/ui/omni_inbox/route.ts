@@ -1,5 +1,10 @@
-import { proxyBackendGet } from "../backendProxy";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function GET(req: Request) {
-  return proxyBackendGet(req, "/api/ui/omni_inbox");
+export const runtime = "nodejs";
+
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/ui/omni_inbox", {
+    forwardQuery: false,
+    suppressRequestBody: true,
+  });
 }

@@ -12,17 +12,12 @@ export default function KnowledgePage() {
 
   const fetchDocuments = async () => {
     try {
-      const token = localStorage.getItem("auth_token"); // ensure a token is sent in local dev
-      const res = await fetch("/api/memory", {
-        headers: {
-            "Authorization": token ? `Bearer ${token}` : ""
-        }
-      });
+      const res = await fetch("/api/memory");
       if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.map((m: any) => ({
+        const data = await res.json() as { memories?: any[] };
+        setDocuments((data.memories ?? []).map((m: any) => ({
           id: m.id,
-          name: m.source_type || "Document",
+          name: m.source || "Document",
           status: "Active",
           content: m.content
         })));
@@ -38,13 +33,10 @@ export default function KnowledgePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const token = localStorage.getItem("auth_token");
-      await fetch(`/api/memory/${id}`, {
+      const response = await fetch(`/api/memory/${id}`, {
           method: "DELETE",
-          headers: {
-              "Authorization": token ? `Bearer ${token}` : ""
-          }
       });
+      if (!response.ok) throw new Error("Failed to delete document");
       fetchDocuments();
     } catch (e) {
       console.error(e);
@@ -59,27 +51,17 @@ export default function KnowledgePage() {
     setIsReady(false);
 
     try {
-      let content = "";
+      if (file.size > 750_000) throw new Error("Document exceeds the 750 KB limit");
+      const content = await file.text();
 
-      if (file.type === "application/pdf") {
-          const reader = new FileReader();
-          content = await new Promise((resolve) => {
-              reader.onload = () => resolve((reader.result as string).split(",")[1]);
-              reader.readAsDataURL(file);
-          });
-      } else {
-          content = await file.text();
-      }
-
-      const token = localStorage.getItem("auth_token");
-      await fetch("/api/memory/upload", {
+      const response = await fetch("/api/memory/upload", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : ""
         },
         body: JSON.stringify({ content, source_type: file.name }),
       });
+      if (!response.ok) throw new Error("Failed to upload document");
       await fetchDocuments();
     } catch (error) {
       console.error(error);
@@ -106,7 +88,7 @@ export default function KnowledgePage() {
             ref={fileInputRef}
             onChange={handleUpload}
             className="hidden"
-            accept=".txt,.md,.csv,.pdf"
+            accept=".txt,.md,.csv"
           />
           <button
             onClick={() => fileInputRef.current?.click()}

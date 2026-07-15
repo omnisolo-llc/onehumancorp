@@ -68,6 +68,327 @@ pub fn get_redis_client() -> Option<redis::Client> {
     }).clone()
 }
 
+fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| {
+            !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system")
+        })
+        .map(str::to_string)
+}
+
+async fn invalidate_ui_omni_inbox_cache(tenant_id: &str) {
+    let cache = UI_OMNI_INBOX_CACHE
+        .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    for mobile_optimized in [false, true] {
+        cache
+            .invalidate(&format!(
+                "ui_omni_inbox:{}:mobile:{}",
+                tenant_id, mobile_optimized
+            ))
+            .await;
+    }
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OmniInboxActionPayload {
+    pub message_id: String,
+    pub approved: bool,
+    pub edited_reply: Option<String>,
+}
+
+struct OmniReplyDispatch {
+    source: String,
+    sender_id: String,
+    reply: String,
+    integration_id: String,
+    account_sid: String,
+    auth_token: String,
+    from_phone: String,
+}
+
+async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
+    if dispatch.integration_id == "whatsapp_cloud_api" {
+        use crate::integrations::meta::provider::MetaProvider;
+        let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
+        let to = dispatch
+            .sender_id
+            .strip_prefix("whatsapp:")
+            .unwrap_or(&dispatch.sender_id);
+        if let Err(error) = provider.send_message("whatsapp", to, &dispatch.reply).await {
+            tracing::error!("Failed to send approved WhatsApp reply: {error:?}");
+        }
+        return;
+    }
+
+    if dispatch.account_sid.is_empty()
+        || dispatch.auth_token.is_empty()
+        || dispatch.from_phone.is_empty()
+    {
+        tracing::error!("Cannot send approved Twilio reply: integration credentials are incomplete");
+        return;
+    }
+
+    use crate::integrations::twilio::provider::TwilioProvider;
+    let provider = TwilioProvider::new(dispatch.account_sid, dispatch.auth_token);
+    let result = if dispatch.source == "whatsapp" {
+        let to = if dispatch.sender_id.starts_with("whatsapp:") {
+            dispatch.sender_id
+        } else {
+            format!("whatsapp:{}", dispatch.sender_id)
+        };
+        provider
+            .send_whatsapp(&to, &dispatch.from_phone, &dispatch.reply)
+            .await
+    } else {
+        let to = dispatch
+            .sender_id
+            .strip_prefix("sms:")
+            .unwrap_or(&dispatch.sender_id);
+        provider.send_sms(to, &dispatch.from_phone, &dispatch.reply).await
+    };
+    if let Err(error) = result {
+        tracing::error!("Failed to send approved omni-inbox reply: {error:?}");
+    }
+}
+
+#[derive(Debug)]
+enum OmniInboxActionError {
+    NotFound,
+    Database(sqlx::Error),
+}
+
+impl From<sqlx::Error> for OmniInboxActionError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Database(error)
+    }
+}
+
+async fn apply_omni_inbox_action(
+    db: &crate::db::DB,
+    tenant_id: &str,
+    payload: &OmniInboxActionPayload,
+) -> Result<Option<OmniReplyDispatch>, OmniInboxActionError> {
+    let status = if payload.approved { "resolved" } else { "dismissed" };
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
+                "UPDATE omni_inbox_messages SET status = $1
+                 WHERE id = $2 AND tenant_id = $3
+                 RETURNING source, sender_id",
+            )
+            .bind(status)
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(OmniInboxActionError::NotFound)?;
+
+            let mut dispatch = None;
+            if payload.approved {
+                if let Some(reply) = payload.edited_reply.as_deref() {
+                    sqlx::query(
+                        "INSERT INTO inbox_messages
+                         (id, tenant_id, source, content, draft_reply, status)
+                         VALUES ($1, $2, $3, $4, '', 'sent')",
+                    )
+                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                    .bind(tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
+                        if source == "whatsapp" || source == "sms" {
+                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                                sqlx::query_as::<_, (String, String, String, String)>(
+                                    "SELECT integration_id, COALESCE(bot_token, ''),
+                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
+                                     FROM integration_credentials
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                       AND tenant_id = $1
+                                     ORDER BY CASE
+                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                     LIMIT 1",
+                                )
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await?
+                            {
+                                dispatch = Some(OmniReplyDispatch {
+                                    source,
+                                    sender_id,
+                                    reply: reply.to_string(),
+                                    integration_id,
+                                    account_sid,
+                                    auth_token,
+                                    from_phone,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            tx.commit().await?;
+            Ok(dispatch)
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = pool.begin().await?;
+            let updated = sqlx::query(
+                "UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(status)
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+            if updated.rows_affected() != 1 {
+                return Err(OmniInboxActionError::NotFound);
+            }
+            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
+                "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .fetch_one(&mut *tx)
+            .await?;
+
+            let mut dispatch = None;
+            if payload.approved {
+                if let Some(reply) = payload.edited_reply.as_deref() {
+                    sqlx::query(
+                        "INSERT INTO inbox_messages
+                         (id, tenant_id, source, content, draft_reply, status)
+                         VALUES (?, ?, ?, ?, '', 'sent')",
+                    )
+                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                    .bind(tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
+                        if source == "whatsapp" || source == "sms" {
+                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                                sqlx::query_as::<_, (String, String, String, String)>(
+                                    "SELECT integration_id, COALESCE(bot_token, ''),
+                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
+                                     FROM integration_credentials
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                       AND tenant_id = ?
+                                     ORDER BY CASE
+                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                     LIMIT 1",
+                                )
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await?
+                            {
+                                dispatch = Some(OmniReplyDispatch {
+                                    source,
+                                    sender_id,
+                                    reply: reply.to_string(),
+                                    integration_id,
+                                    account_sid,
+                                    auth_token,
+                                    from_phone,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            tx.commit().await?;
+            Ok(dispatch)
+        }
+    }
+}
+
+async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let items = if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await?.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect()
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await?.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect()
+            };
+            tx.commit().await?;
+            Ok(items)
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod triage_cache_tests {
     use super::*;
@@ -3066,83 +3387,17 @@ pub async fn list_ui_triage_handler(
 }
 
 
-async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&db.pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&db.pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
-                            "draft_reply": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            }
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
-                            "draft_reply": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            }
-        }
-    }
-}
 
 pub async fn list_ui_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let tenant_id = match strict_ui_claim_tenant(&claims) {
+        Some(tenant_id) => tenant_id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_omni_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -3173,186 +3428,49 @@ pub async fn list_ui_omni_inbox_handler(
     }
 }
 
-#[derive(serde::Deserialize)]
-pub struct OmniInboxActionPayload {
-    pub message_id: String,
-    pub approved: bool,
-    pub edited_reply: Option<String>,
-}
-
 pub async fn update_ui_omni_inbox_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<OmniInboxActionPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
-    let status = if payload.approved { "resolved" } else { "dismissed" };
-
-    // In a real system, we'd send the payload.edited_reply over the corresponding channel here.
-    // For now, we update the status in the DB.
-
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(status).bind(&payload.message_id).bind(&tenant_id)
-                .execute(&mut *tx).await {
-                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
-
-            if payload.approved {
-                if let Some(reply) = &payload.edited_reply {
-                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                    let _ = sqlx::query(
-                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'sent')"
-                    )
-                    .bind(&new_msg_id)
-                    .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(&mut *tx)
-                    .await;
-
-                    // Fetch source and sender_id
-                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
-                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2"
-                    )
-                    .bind(&payload.message_id)
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool).await;
-
-                    if let Ok((Some(source), Some(sender_id))) = msg_row {
-                        if source == "whatsapp" || source == "sms" {
-                            let tenant_id_clone = tenant_id.clone();
-                            let reply_clone = reply.clone();
-                            tokio::spawn(async move {
-                                let pool = crate::db::get_pool();
-                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool)
-                                    .await;
-
-                                if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
-                                    if integration_id == "whatsapp_cloud_api" {
-                                        use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
-                                        let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
-                                        let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
-                                    } else if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
-                                        }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-            let _ = tx.commit().await;
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
-                .bind(status).bind(&payload.message_id).bind(&tenant_id)
-                .execute(pool).await {
-                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
-
-            if payload.approved {
-                if let Some(reply) = &payload.edited_reply {
-                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                    let _ = sqlx::query(
-                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'sent')"
-                    )
-                    .bind(&new_msg_id)
-                    .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(pool)
-                    .await;
-
-                    // Fetch source and sender_id for sqlite
-                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
-                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?"
-                    )
-                    .bind(&payload.message_id)
-                    .bind(&tenant_id)
-                    .fetch_one(pool).await;
-
-                    if let Ok((Some(source), Some(sender_id))) = msg_row {
-                        if source == "whatsapp" || source == "sms" {
-                            let tenant_id_clone = tenant_id.clone();
-                            let reply_clone = reply.clone();
-                            let pool_clone = pool.clone();
-                            tokio::spawn(async move {
-                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = ? ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool_clone)
-                                    .await;
-
-                                if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
-                                    if integration_id == "whatsapp_cloud_api" {
-                                        use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
-                                        let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
-                                        let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
-                                    } else if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
-                                        }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
+    let tenant_id = match strict_ui_claim_tenant(&claims) {
+        Some(tenant_id) => tenant_id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+    if payload.message_id.is_empty()
+        || payload.message_id.len() > 200
+        || !payload
+            .message_id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+        || payload
+            .edited_reply
+            .as_ref()
+            .is_some_and(|reply| reply.chars().count() > 16_000)
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let dispatch = match apply_omni_inbox_action(db.as_ref(), &tenant_id, &payload).await {
+        Ok(dispatch) => dispatch,
+        Err(OmniInboxActionError::NotFound) => {
+            return axum::http::StatusCode::NOT_FOUND.into_response();
         }
+        Err(OmniInboxActionError::Database(error)) => {
+            tracing::error!("Failed to apply tenant-scoped omni-inbox action: {error:?}");
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    invalidate_ui_omni_inbox_cache(&tenant_id).await;
+    if let Some(dispatch) = dispatch {
+        tokio::spawn(dispatch_omni_reply(dispatch));
     }
 
-    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (
+        axum::http::StatusCode::OK,
+        axum::Json(serde_json::json!({"success": true})),
+    )
+        .into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -6455,8 +6573,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
-                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
-        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()).route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()).route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
@@ -6867,7 +6985,13 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
-        .nest("/api/assistant", api::assistant::router(db.clone()))
+        .nest(
+            "/api/assistant",
+            api::assistant::router(db.clone()).layer(axum::middleware::from_fn_with_state(
+                http_auth_store.clone(),
+                ::server_auth::strict_bearer_auth_middleware,
+            )),
+        )
         .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/staff", api::staff_mesh::router(db.clone()))
@@ -7171,7 +7295,10 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
-        .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
+        .nest(
+            "/api/memory",
+            api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
+        )
         .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
@@ -7390,6 +7517,52 @@ mod tests {
     use super::*;
     use crate::settings::Store;
 
+    async fn isolated_omni_postgres_pool(
+    ) -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
+        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+            .ok()
+            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+        if !database_url.starts_with("postgres") {
+            return None;
+        }
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+            .ok()?;
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let schema = format!("omni_test_{suffix}");
+        let role = format!("omni_role_{suffix}");
+        let password = format!("omni_password_{suffix}");
+        sqlx::query(&format!("CREATE ROLE {role} LOGIN PASSWORD '{password}'"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        sqlx::query(&format!("CREATE SCHEMA {schema} AUTHORIZATION {role}"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        let search_path = format!("SET search_path TO {schema}, public");
+        let options = database_url
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .ok()?
+            .username(&role)
+            .password(&password);
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(3)
+            .after_connect(move |connection, _| {
+                let search_path = search_path.clone();
+                Box::pin(async move {
+                    sqlx::query(&search_path).execute(connection).await?;
+                    Ok(())
+                })
+            })
+            .connect_with(options)
+            .await
+            .ok()?;
+        Some((admin, pool, schema, role))
+    }
+
     #[test]
     fn grpc_tls_config_requires_all_cloud_credentials() {
         assert_eq!(grpc_bind_host(true), "127.0.0.1");
@@ -7417,6 +7590,189 @@ mod tests {
             None,
         )
         .is_err());
+    }
+
+    #[test]
+    fn ui_inbox_tenant_requires_a_non_system_signed_claim() {
+        let mut claims = ::server_common::Claims {
+            sub: "user-a".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: Some("tenant-a".to_string()),
+            username: "user-a".to_string(),
+            email: "user-a@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "ui-inbox-tenant-test".to_string(),
+        };
+        assert_eq!(super::strict_ui_claim_tenant(&claims).as_deref(), Some("tenant-a"));
+        claims.organization_id = None;
+        assert_eq!(super::strict_ui_claim_tenant(&claims), None);
+        claims.organization_id = Some("system".to_string());
+        assert_eq!(super::strict_ui_claim_tenant(&claims), None);
+        assert!(
+            serde_json::from_value::<super::OmniInboxActionPayload>(serde_json::json!({
+                "message_id": "message-a",
+                "approved": true,
+                "tenant_id": "attacker"
+            }))
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_omni_inbox_read_and_action_are_tenant_scoped_under_rls() {
+        let Some((admin, pool, schema, role)) = isolated_omni_postgres_pool().await else {
+            return;
+        };
+        for statement in [
+            "CREATE TABLE omni_inbox_messages (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
+                original_content TEXT, draft_reply TEXT, status TEXT NOT NULL,
+                sender_id TEXT, customer_id TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+            "CREATE TABLE inbox_messages (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
+                content TEXT, draft_reply TEXT, status TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+            "CREATE TABLE integration_credentials (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, integration_id TEXT NOT NULL,
+                bot_token TEXT, api_token TEXT, from_phone TEXT
+             )",
+        ] {
+            sqlx::query(statement).execute(&pool).await.unwrap();
+        }
+        for table in [
+            "omni_inbox_messages",
+            "inbox_messages",
+            "integration_credentials",
+        ] {
+            for statement in [
+                format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"),
+                format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"),
+                format!(
+                    "CREATE POLICY tenant_isolation ON {table}
+                     USING (tenant_id = current_setting('app.current_tenant', true))
+                     WITH CHECK (tenant_id = current_setting('app.current_tenant', true))"
+                ),
+            ] {
+                sqlx::query(&statement).execute(&pool).await.unwrap();
+            }
+        }
+        for (tenant, message_id, content) in [
+            ("tenant-a", "message-a", "visible message"),
+            ("tenant-b", "message-b", "private message"),
+        ] {
+            let mut tx = pool.begin().await.unwrap();
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant)
+                .await
+                .unwrap();
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages
+                 (id, tenant_id, source, original_content, draft_reply, status, sender_id, customer_id)
+                 VALUES ($1, $2, 'sms', $3, '', 'unread', '+15550001111', 'customer-a')",
+            )
+            .bind(message_id)
+            .bind(tenant)
+            .bind(content)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+            if tenant == "tenant-a" {
+                sqlx::query(
+                    "INSERT INTO integration_credentials
+                     (id, tenant_id, integration_id, bot_token, api_token, from_phone)
+                     VALUES ('credential-a', $1, 'twilio', 'account-a', 'token-a', '+15550002222')",
+                )
+                .bind(tenant)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            }
+            tx.commit().await.unwrap();
+        }
+
+        let db = crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        };
+        let visible = super::load_ui_omni_inbox_from_db(&db, "tenant-a", false)
+            .await
+            .unwrap();
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0]["id"], "message-a");
+        assert!(!visible[0].to_string().contains("private message"));
+
+        let foreign = super::OmniInboxActionPayload {
+            message_id: "message-b".to_string(),
+            approved: true,
+            edited_reply: Some("tamper".to_string()),
+        };
+        assert!(matches!(
+            super::apply_omni_inbox_action(&db, "tenant-a", &foreign).await,
+            Err(super::OmniInboxActionError::NotFound)
+        ));
+        let owned = super::OmniInboxActionPayload {
+            message_id: "message-a".to_string(),
+            approved: true,
+            edited_reply: Some("approved reply".to_string()),
+        };
+        let dispatch = super::apply_omni_inbox_action(&db, "tenant-a", &owned)
+            .await
+            .unwrap();
+        assert!(dispatch.is_some());
+
+        let mut tenant_a_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_a_tx, "tenant-a")
+            .await
+            .unwrap();
+        let status: String = sqlx::query_scalar(
+            "SELECT status FROM omni_inbox_messages WHERE id = 'message-a' AND tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
+        let reply: String = sqlx::query_scalar(
+            "SELECT content FROM inbox_messages WHERE tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
+        tenant_a_tx.commit().await.unwrap();
+        assert_eq!(status, "resolved");
+        assert_eq!(reply, "approved reply");
+
+        let mut tenant_b_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_b_tx, "tenant-b")
+            .await
+            .unwrap();
+        let tenant_b_status: String = sqlx::query_scalar(
+            "SELECT status FROM omni_inbox_messages WHERE id = 'message-b' AND tenant_id = 'tenant-b'",
+        )
+        .fetch_one(&mut *tenant_b_tx)
+        .await
+        .unwrap();
+        let tenant_b_replies: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = 'tenant-b'")
+                .fetch_one(&mut *tenant_b_tx)
+                .await
+                .unwrap();
+        tenant_b_tx.commit().await.unwrap();
+        assert_eq!(tenant_b_status, "unread");
+        assert_eq!(tenant_b_replies, 0);
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query(&format!("DROP ROLE {role}"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        admin.close().await;
     }
 
     #[tokio::test]

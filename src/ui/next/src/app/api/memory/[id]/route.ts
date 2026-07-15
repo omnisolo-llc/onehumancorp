@@ -1,26 +1,26 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import {
+  forgetMemoryRequest,
+  invalidMemoryId,
+  memoryId,
+} from "../memoryPayload";
 
-const BACKEND_URL = process.env.API_URL || 'http://localhost:8081';
+export const runtime = "nodejs";
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  let id: string;
   try {
-    const authHeader = request.headers.get("Authorization");
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (authHeader) headers["Authorization"] = authHeader;
-
-    const res = await fetch(`${BACKEND_URL}/api/memory/${(await params).id}`, {
-      method: 'DELETE',
-      headers,
-    });
-
-    if (!res.ok) {
-        return NextResponse.json({ error: "Backend error" }, { status: res.status });
-    }
-    const data = await res.json();
-    return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    id = memoryId((await context.params).id);
+  } catch {
+    return invalidMemoryId();
   }
+  return proxyBackendRequest(request, "/api/assistant/memory", {
+    backendMethod: "PATCH",
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: forgetMemoryRequest(id),
+  });
 }

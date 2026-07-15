@@ -55,17 +55,27 @@ pub async fn strict_bearer_auth_middleware(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
 
-    let Some(token) = req
+    let mut authorization_values = req
         .headers()
-        .get(axum::http::header::AUTHORIZATION)
+        .get_all(axum::http::header::AUTHORIZATION)
+        .iter();
+    let token = authorization_values
+        .next()
+        .filter(|_| authorization_values.next().is_none())
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "))
-        .filter(|token| !token.is_empty() && token.len() <= MAX_ACCESS_TOKEN_BYTES)
-    else {
+        .filter(|token| {
+            !token.is_empty()
+                && token.len() <= MAX_ACCESS_TOKEN_BYTES
+                && !token
+                    .chars()
+                    .any(|character| character.is_whitespace() || character.is_ascii_control())
+        });
+    let Some(token) = token else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
 
-    let claims = match store.validate_token(token).await {
+    let mut claims = match store.validate_token(token).await {
         Ok(claims) => claims,
         Err(_) => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
     };
@@ -82,6 +92,7 @@ pub async fn strict_bearer_auth_middleware(
     };
 
     let user_id = claims.sub.clone();
+    claims.organization_id = Some(organization_id.clone());
     req.extensions_mut().insert(crate::orchestration::AuthInfo {
         org_id: organization_id.clone(),
         agent_id: user_id.clone(),
@@ -1649,6 +1660,33 @@ mod store_tests {
             .await
             .unwrap();
         assert_eq!(forged_only.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let duplicate = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("authorization", format!("Bearer {token}"))
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(duplicate.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let whitespace = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("authorization", "Bearer invalid token")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(whitespace.status(), axum::http::StatusCode::UNAUTHORIZED);
 
         let valid = app
             .oneshot(

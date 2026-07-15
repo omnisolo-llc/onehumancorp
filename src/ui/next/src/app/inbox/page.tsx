@@ -20,11 +20,6 @@ type Message = {
   created_at?: string;
 };
 
-function tenantId() {
-  if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-}
-
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
@@ -67,13 +62,13 @@ function formatStatus(status?: string) {
   return status || "Open";
 }
 
-function CustomerContextCard({ customerId, tenantId }: { customerId: string; tenantId: string }) {
+function CustomerContextCard({ customerId }: { customerId: string }) {
   const [summary, setSummary] = useState<any>(null);
 
   useEffect(() => {
     async function fetchSummary() {
       try {
-        const res = await fetch(`/api/memory/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/memory/summary/${customerId}`);
         if (res.ok) {
           const data = await res.json();
           setSummary(data);
@@ -83,7 +78,7 @@ function CustomerContextCard({ customerId, tenantId }: { customerId: string; ten
       }
     }
     fetchSummary();
-  }, [customerId, tenantId]);
+  }, [customerId]);
 
   if (!summary) return null;
   if (summary.total_interactions === 0 && summary.segments.length === 0) return null;
@@ -137,10 +132,7 @@ function InboxWorkspace({
   useEffect(() => {
     async function fetchApprovals() {
       try {
-        const token = localStorage.getItem("token") || "";
-        const res = await fetch(`/api/agents/approvals?limit=50`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/agents/approvals?limit=50`);
         if (res.ok) {
           const data = await res.json();
           setPendingApprovals(data.pending_approvals || []);
@@ -176,7 +168,6 @@ function InboxWorkspace({
         body: JSON.stringify({
           inquiry: message.content || "",
           customer_id: message.customer_id || message.sender_id || "unknown",
-          tenant_id: "t1" // Hardcoded fallback for now, normally from context
         }),
       });
       if (!res.ok) throw new Error("Failed to draft quote");
@@ -197,10 +188,9 @@ function InboxWorkspace({
     if (!manualReply.trim()) return;
     try {
       setActionStatus("Sending reply...");
-      const token = localStorage.getItem("token") || "";
       const res = await fetch(`/api/ui/omni_inbox/action`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message_id: inboxMessageId,
           approved: true,
@@ -244,7 +234,6 @@ function InboxWorkspace({
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
-      const token = localStorage.getItem("token") || "";
       const approval = pendingApprovals.find((a: any) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
@@ -261,7 +250,7 @@ function InboxWorkspace({
 
       const approveRes = await fetch(`/api/agents/approvals/${approval.id}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved: true })
       });
 
@@ -377,7 +366,7 @@ function InboxWorkspace({
                   )}
                 </div>
                 {selected.customer_id && (
-                  <CustomerContextCard customerId={selected.customer_id} tenantId={tenantId()} />
+                  <CustomerContextCard customerId={selected.customer_id} />
                 )}
                 <div className="mb-4">
                   <div className="flex items-center justify-between gap-3">
@@ -490,7 +479,7 @@ function ApiInboxFallback() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId())}`);
+        const res = await fetch(`/api/ui/omni_inbox`);
         if (!res.ok) throw new Error("Failed to load inbox messages");
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
