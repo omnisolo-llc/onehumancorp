@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
-import { useWalkthrough } from "../../components/help";
-import { WalkthroughTarget, InteractiveWalkthrough } from "../../components/Walkthrough";
+import { WalkthroughProvider, useWalkthrough } from "../../components/help";
+import { WalkthroughTarget, InteractiveWalkthrough, Step } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
 
@@ -29,7 +29,7 @@ export default function BuilderPage() {
   const [startY, setStartY] = useState(0);
   const [saveMessage, setSaveMessage] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -62,7 +62,7 @@ export default function BuilderPage() {
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
-          setWalkthroughSteps(data);
+          setWalkthroughSteps(data as Step[]);
         }
       })
       .catch((err) => console.error("Walkthrough fetch failed:", err));
