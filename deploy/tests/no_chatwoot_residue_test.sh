@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+sudo chmod -R 777 /tmp/node-compile-cache 2>/dev/null || true
+rm -rf /tmp/node-compile-cache 2>/dev/null || true
 set -euo pipefail
 
 scanner_error() {
