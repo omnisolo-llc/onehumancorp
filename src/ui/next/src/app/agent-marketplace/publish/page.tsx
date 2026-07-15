@@ -18,7 +18,7 @@ export default function PublishAgentPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/agents/marketplace', {
+      const res = await fetch('/api/v1/agents/marketplace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

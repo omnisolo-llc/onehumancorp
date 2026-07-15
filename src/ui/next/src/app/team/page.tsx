@@ -34,7 +34,7 @@ export default function TeamPage() {
   const fetchApprovals = async () => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-      const response = await fetch('/api/agents/approvals', {
+      const response = await fetch('/api/v1/agents/approvals', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -64,7 +64,7 @@ export default function TeamPage() {
         payload.edited_payload = editedPayload;
       }
 
-      const response = await fetch(`/api/agents/approvals/${id}`, {
+      const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export default function TeamPage() {
      try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
-      const response = await fetch(`/api/agents/approvals/${id}`, {
+      const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

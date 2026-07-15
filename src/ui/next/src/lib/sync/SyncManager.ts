@@ -443,7 +443,7 @@ export class SyncManager {
       const advisoryActions = generalMutations.filter(m => m.type === 'advisory_action');
       for (const action of advisoryActions) {
         try {
-          const res = await fetch(`/api/agents/approvals/${action.payload.id}`, {
+          const res = await fetch(`/api/v1/agents/approvals/${action.payload.id}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -23,7 +23,7 @@ export default function PydanticValidationPage() {
         throw new Error('Invalid JSON format in payload');
       }
 
-      const response = await fetch('/api/agents/pydantic', {
+      const response = await fetch('/api/v1/agents/pydantic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

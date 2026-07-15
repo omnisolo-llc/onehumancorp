@@ -20,7 +20,7 @@ export default function CrewAIPage() {
     setReport('');
 
     try {
-      const res = await fetch('/api/agents/crewai', {
+      const res = await fetch('/api/v1/agents/crewai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_description: task }),

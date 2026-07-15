@@ -49,7 +49,7 @@ describe('Publish Agent Page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Publish to Marketplace' }));
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/agents/marketplace', {
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/marketplace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

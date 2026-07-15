@@ -47,7 +47,7 @@ export default function TeamChatPage() {
     if (msg && msg.card && !msg.card.id.endsWith('-card')) {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-        await fetch(`/api/agents/approvals/${msg.card.id}`, {
+        await fetch(`/api/v1/agents/approvals/${msg.card.id}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function TeamChatPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-      const response = await fetch('/api/agents/chat', {
+      const response = await fetch('/api/v1/agents/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -132,7 +132,7 @@ function InboxWorkspace({
   useEffect(() => {
     async function fetchApprovals() {
       try {
-        const res = await fetch(`/api/agents/approvals?limit=50`);
+        const res = await fetch(`/api/v1/agents/approvals?limit=50`);
         if (res.ok) {
           const data = await res.json();
           setPendingApprovals(data.pending_approvals || []);
@@ -248,7 +248,7 @@ function InboxWorkspace({
         return;
       }
 
-      const approveRes = await fetch(`/api/agents/approvals/${approval.id}`, {
+      const approveRes = await fetch(`/api/v1/agents/approvals/${approval.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved: true })

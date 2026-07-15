@@ -21,7 +21,7 @@ describe('Agent Protocol UI', () => {
     expect(screen.getByText('Tasks')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/agents/protocol?method=ap_list_tasks');
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/protocol?method=ap_list_tasks');
     });
   });
 

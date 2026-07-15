@@ -45,7 +45,7 @@ export default function FeedPage() {
   const simulateInvoiceDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-invoice-draft', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-invoice-draft', { method: 'POST' });
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
@@ -59,7 +59,7 @@ export default function FeedPage() {
   const simulateInvoiceFollowup = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-invoice-followup', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-invoice-followup', { method: 'POST' });
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
@@ -246,7 +246,7 @@ export default function FeedPage() {
   const simulateBookingDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-booking-draft', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-booking-draft', { method: 'POST' });
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
@@ -260,7 +260,7 @@ export default function FeedPage() {
   const simulateDisputeDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-dispute-resolution', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-dispute-resolution', { method: 'POST' });
       // The websocket should pick it up, but we can also refetch
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
@@ -276,7 +276,7 @@ export default function FeedPage() {
   const simulatePromoterDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-promoter-draft', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-promoter-draft', { method: 'POST' });
       const res = await fetch('/api/agent-feed');
       const data = await res.json();
       setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
@@ -290,7 +290,7 @@ export default function FeedPage() {
   const simulateAmbassadorDraft = async () => {
     try {
       setLoading(true);
-      await fetch('/api/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
       // The websocket should pick it up, but we can also refetch
       const res = await fetch('/api/agent-feed');
       const data = await res.json();

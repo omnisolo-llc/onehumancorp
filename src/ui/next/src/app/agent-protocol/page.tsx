@@ -14,7 +14,7 @@ export default function AgentProtocolPage() {
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/agents/protocol?method=ap_list_tasks');
+      const res = await fetch('/api/v1/agents/protocol?method=ap_list_tasks');
       if (!res.ok) throw new Error('Failed to fetch tasks');
       const data = await res.json();
       setTasks(data.tasks || []);
@@ -27,7 +27,7 @@ export default function AgentProtocolPage() {
     if (!taskInput) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/agents/protocol', {
+      const res = await fetch('/api/v1/agents/protocol', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method: 'ap_create_task', params: { input: taskInput } }),
@@ -44,7 +44,7 @@ export default function AgentProtocolPage() {
 
   const fetchSteps = async (taskId: string) => {
     try {
-      const res = await fetch(`/api/agents/protocol?method=ap_list_steps&task_id=${taskId}`);
+      const res = await fetch(`/api/v1/agents/protocol?method=ap_list_steps&task_id=${taskId}`);
       if (!res.ok) throw new Error('Failed to fetch steps');
       const data = await res.json();
       setSteps(data.steps || []);
@@ -56,7 +56,7 @@ export default function AgentProtocolPage() {
 
   const fetchCheckpoints = async (taskId: string) => {
     try {
-      const res = await fetch(`/api/agents/protocol?method=ap_list_checkpoints&task_id=${taskId}`);
+      const res = await fetch(`/api/v1/agents/protocol?method=ap_list_checkpoints&task_id=${taskId}`);
       if (!res.ok) throw new Error('Failed to fetch checkpoints');
       const data = await res.json();
       setCheckpoints(data.checkpoints || []);
@@ -69,7 +69,7 @@ export default function AgentProtocolPage() {
   const restoreCheckpoint = async (taskId: string, checkpointId: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/agents/protocol', {
+      const res = await fetch('/api/v1/agents/protocol', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,7 +91,7 @@ export default function AgentProtocolPage() {
     if (!selectedTaskId) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/agents/protocol', {
+      const res = await fetch('/api/v1/agents/protocol', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

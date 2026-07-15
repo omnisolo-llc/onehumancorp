@@ -8,7 +8,7 @@ test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
     formData.append('email', 'carlos-handyman@example.com');
     formData.append('details', 'Need my kitchen faucet replaced, here is a pic');
 
-    const res = await request.post('/api/agents/client_intake?tenant=e2e-tenant', {
+    const res = await request.post('/api/v1/agents/client_intake?tenant=e2e-tenant', {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
