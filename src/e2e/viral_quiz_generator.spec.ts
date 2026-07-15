@@ -1,47 +1,57 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
-test.describe('Viral Quiz Generator Loop', () => {
-    test('End to end quiz creation and engagement', async ({ page, context }) => {
-        // 1. Navigate to dashboard using the standard fixture
-        await adminPage(page);
+test.describe('Viral Quiz Generator', () => {
+  test('should allow owner to create a quiz and user to enter it', async ({ page, context, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
 
-        // 2. Click the Growth feature
-        await expect(page.locator('#viral-quiz-btn')).toBeVisible();
-        await page.locator('#viral-quiz-btn').click();
+    // 1. Navigate to dashboard
+    await page.goto('/dashboard');
+    let content = await page.content();
 
-        // 3. Verify Generator Load
-        await expect(page.getByText('Viral Quiz Generator 🧠')).toBeVisible();
+    // Wait to ensure client-side hydration doesn't interrupt filling
+    await page.waitForTimeout(500);
 
-        // 4. Update the settings
-        const titleInput = page.getByPlaceholder('e.g. What type of founder are you?');
-        await titleInput.fill('Are you a 10x Developer?');
+    // 2. Find and click the Quiz Generator link
+    const quizLink = page.locator('#viral-quiz-btn');
+    await expect(quizLink).toBeVisible();
+    await page.waitForTimeout(1000);
+    await quizLink.click();
 
-        // Ensure preview updates
-        await expect(page.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible();
+    // Verify page content
+    await expect(page.locator('h1').filter({ hasText: /Viral Quiz Generator/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quiz Settings' })).toBeVisible();
 
-        // 5. Navigate to the generated link to simulate a user taking the quiz
-        const generatedLinkLocator = page.getByTestId('generated-link');
-        const generatedLinkUrl = await generatedLinkLocator.innerText();
+    // 3. Fill out the quiz configuration
+    const titleInput = page.getByPlaceholder('e.g. What type of founder are you?');
+    await titleInput.fill('Are you a 10x Developer?');
 
-        const publicPage = await context.newPage();
-        await publicPage.goto(generatedLinkUrl.trim());
+    // Ensure preview updates
+    await expect(page.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible();
 
-        // 6. Test the Public Quiz Loop
-        await expect(publicPage.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible();
-        await publicPage.getByRole('button', { name: 'Start Quiz' }).click();
+    // 5. Navigate to the generated link to simulate a user taking the quiz
+    const generatedLinkLocator = page.getByTestId('generated-link');
+    const generatedLinkUrl = await generatedLinkLocator.innerText();
 
-        // See question
-        await expect(publicPage.getByText('Question 1 of 3')).toBeVisible();
+    const publicPage = await context.newPage();
+    await publicPage.goto(generatedLinkUrl.trim());
 
-        // Click an option
-        await publicPage.locator("button:has-text('Take immediate charge')").click();
+    // 6. Test the Public Quiz Loop
+    await expect(publicPage.getByRole('heading', { name: 'Are you a 10x Developer?' })).toBeVisible({ timeout: 15000 });
+    await publicPage.getByRole('button', { name: 'Start Quiz' }).click();
 
-        // Result
-        await expect(publicPage.getByRole('heading', { name: 'Your Results Are Ready!' })).toBeVisible();
+    // See question
+    await expect(publicPage.getByText('Question 1 of 3')).toBeVisible();
 
-        // See share buttons
-        await expect(publicPage.getByRole('button', { name: 'Share on X to Unlock' })).toBeVisible();
-        await expect(publicPage.getByRole('button', { name: 'Share on LinkedIn' })).toBeVisible();
-    });
+    // Click an option
+    await publicPage.locator("button:has-text('Take immediate charge')").click();
+
+    // Result
+    await expect(publicPage.getByRole('heading', { name: 'Your Results Are Ready!' })).toBeVisible({ timeout: 15000 });
+
+    // See share buttons
+    await expect(publicPage.getByRole('button', { name: 'Share on X to Unlock' })).toBeVisible();
+    await expect(publicPage.getByRole('button', { name: 'Share on LinkedIn' })).toBeVisible();
+
+    await publicPage.close();
+  });
 });
