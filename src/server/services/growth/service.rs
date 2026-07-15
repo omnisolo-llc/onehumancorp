@@ -730,7 +730,7 @@ impl GrowthService for MyGrowthService {
             max: product_limit,
             soft_limit_reached,
             upgrade_message,
-            is_allowed: !soft_limit_reached,
+            is_allowed: true,
         };
         self.quota_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
