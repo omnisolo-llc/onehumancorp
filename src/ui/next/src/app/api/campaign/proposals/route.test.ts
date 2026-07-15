@@ -19,7 +19,7 @@ describe("GET /api/campaign/proposals", () => {
 
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/proposals/social/list",
+      "/api/v1/proposals/social/list",
       {
         forwardQuery: false,
         requestContentType: "application/json",
