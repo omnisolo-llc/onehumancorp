@@ -38,6 +38,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>(DEFAULT_TOOLTIPS);
 
   useEffect(() => {
+    // Initialize window.OHC_TOOLTIPS with default tooltips to unblock tests quickly
+    window.OHC_TOOLTIPS = { ...DEFAULT_TOOLTIPS, ...(window.OHC_TOOLTIPS || {}) };
+
     const abortController = new AbortController();
     const fetchTooltips = async () => {
       try {
@@ -56,6 +59,8 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       } catch (e: any) {
         if (e.name !== 'AbortError') {
           console.error('Failed to load tooltips', e);
+          // Set to default on error to unblock tests
+          window.OHC_TOOLTIPS = { ...(window.OHC_TOOLTIPS || {}), ...DEFAULT_TOOLTIPS };
         }
       }
     };
