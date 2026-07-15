@@ -21,14 +21,14 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.waitForLoadState('networkidle');
 
     // Simulate clicking through step 1
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('#step-initial button[data-next="step-context"]').click();
     await page.locator('label.context-card').filter({ hasText: 'Service' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Verify step 2
     await expect(page.getByRole('heading', { name: 'What\'s your category?' })).toBeVisible();
     await page.locator('#business-categories').selectOption('Plumbing');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Fill in Step 3
     await expect(page.getByRole('heading', { name: 'What\'s the name of your business?' })).toBeVisible();
@@ -74,9 +74,9 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     // If it didn't jump automatically, we just navigate to the step to verify the populated value.
     const isNameStepVisible = await newPage.getByRole('heading', { name: 'What\'s the name of your business?' }).isVisible();
     if (!isNameStepVisible) {
-        await newPage.getByRole('button', { name: 'Step-by-Step Setup' }).click();
-        await newPage.getByRole('button', { name: 'Next' }).click();
-        await newPage.getByRole('button', { name: 'Next' }).click();
+        await newPage.locator('#step-initial button[data-next="step-context"]').click();
+        await newPage.locator('.step.active .next-step-btn').click();
+        await newPage.locator('.step.active .next-step-btn').click();
     }
 
     await expect(newPage.locator('#business-name')).toHaveValue('Carlos Plumbing Tools');
@@ -106,16 +106,16 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     });
     await page.goto('http://mock/setup.html');
     // Navigate to step 5
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('#step-initial button[data-next="step-context"]').click();
     await page.locator('label.context-card').filter({ hasText: 'Local Service' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.locator('#business-categories').selectOption('Other');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.fill('#business-name', 'Test');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await expect(page.getByRole('heading', { name: 'Admin Credentials' })).toBeVisible();
     await page.fill('#admin-name', 'Test');
@@ -140,16 +140,16 @@ test.describe('Tauri Setup UI Cross Device State', () => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('#step-initial button[data-next="step-context"]').click();
     await page.locator('label.context-card').filter({ hasText: 'Local Service' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.locator('#business-categories').selectOption('Other');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.fill('#business-name', 'Test');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await page.fill('#admin-name', 'Test');
     await page.fill('#admin-email', 'test@example.com');
@@ -173,16 +173,16 @@ test.describe('Tauri Setup UI Cross Device State', () => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('#step-initial button[data-next="step-context"]').click();
     await page.locator('label.context-card').filter({ hasText: 'Service' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.locator('#business-categories').selectOption('Other');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.fill('#business-name', 'Final Test Biz');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await page.fill('#admin-name', 'Test');
     await page.fill('#admin-email', 'test@example.com');
     await page.fill('#admin-password', 'password123');
@@ -196,7 +196,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
 
     await expect(page.getByRole('heading', { name: 'Where will your business live?' })).toBeVisible();
     await page.fill('#domain-name', 'my-test-domain');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await expect(page.getByRole('heading', { name: 'Template Selection' })).toBeVisible();
     await page.locator('#template-selection').selectOption('Modern');
@@ -207,12 +207,12 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         body: JSON.stringify({ organization_id: 'test-org-123' })
       });
     });
-    await page.route('**/success.html*', async route => {
+    await page.route('**/dashboard.html*', async route => {
       await route.fulfill({ status: 200, body: 'Success' });
     });
     await page.getByTestId('finish-btn').click();
     // Finish setup redirects to success
-    await expect(page).toHaveURL(/.*success.html.*/);
+    await expect(page).toHaveURL(/.*dashboard.html.*/);
   });
 
   test('Setup UI Persona chips auto-fill the form correctly', async ({ page }) => {
@@ -229,14 +229,14 @@ test.describe('Tauri Setup UI Cross Device State', () => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
-    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
+    await page.locator('#step-initial button[data-next="step-context"]').click();
     await page.getByText('I\'m a Baker').click();
     await expect(page.locator('input[name="work_context"]:checked')).toHaveValue('Storefront');
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.locator('#business-categories')).toHaveValue('Home Baker');
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.locator('#business-name')).toHaveValue("Maya's Bakery");
   });
 
