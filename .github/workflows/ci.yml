@@ -135,6 +135,7 @@ jobs:
       - name: Free runner disk space
         if: startsWith(matrix.runner, 'ubuntu')
         run: |
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
@@ -284,6 +285,7 @@ jobs:
 
       - name: Free runner disk space
         run: |
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
@@ -360,6 +362,7 @@ jobs:
 
       - name: Free runner disk space
         run: |
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
@@ -477,6 +480,7 @@ jobs:
 
       - name: Free runner disk space
         run: |
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
@@ -605,6 +609,7 @@ jobs:
 
       - name: Free runner disk space
         run: |
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
