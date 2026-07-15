@@ -61,58 +61,6 @@ impl StorefrontRouter {
 }
 
 
-pub async fn inject_dynamic_inventory(
-    mut html: String,
-    tenant_id: Uuid,
-    pool: &PgPool,
-    cache: Arc<HybridCache<String>>,
-) -> String {
-    let mut offset = 0;
-    while let Some(start) = html[offset..].find("<!-- INVENTORY_STATUS_") {
-        let actual_start = offset + start;
-        let prefix_len = "<!-- INVENTORY_STATUS_".len();
-        if let Some(end) = html[actual_start + prefix_len..].find(" -->") {
-            let actual_end = actual_start + prefix_len + end;
-            let pid = &html[actual_start + prefix_len..actual_end];
-            let pid_str = pid.to_string();
-
-            let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
-
-            let mut inventory_count: i32 = 0;
-            if let Some(cached_val) = cache.get(&kv_key).await {
-                if let Ok(val) = cached_val.parse::<i32>() {
-                    inventory_count = val;
-                }
-            } else {
-                let db_res: Result<Option<i32>, _> = sqlx::query_scalar(
-                    "SELECT inventory_count FROM products WHERE tenant_id = $1 AND id = $2"
-                )
-                .bind(tenant_id.to_string())
-                .bind(&pid_str)
-                .fetch_optional(pool)
-                .await;
-
-                if let Ok(Some(count)) = db_res {
-                    inventory_count = count;
-                    cache.set(&kv_key, count.to_string(), std::time::Duration::from_secs(60)).await;
-                }
-            }
-
-            let replacement = if inventory_count <= 0 {
-                "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
-            } else {
-                ""
-            };
-
-            html.replace_range(actual_start..(actual_end + 4), replacement);
-
-            offset = actual_start + replacement.len();
-        } else {
-            break;
-        }
-    }
-    html
-}
 pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
@@ -125,8 +73,8 @@ pub async fn handle_edge_request_impl(
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
-    if let Some((mut cached_html, stale)) = cache.get_with_swr(&cache_key).await {
-        cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+    if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
+
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         std::hash::Hash::hash(&cached_html, &mut hasher);
         let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
@@ -207,8 +155,7 @@ pub async fn handle_edge_request_impl(
         ongoing.lock().await.remove(&cache_key);
     }
 
-    let (mut html, tags) = result?;
-    html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+    let (html, tags) = result?;
 
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     std::hash::Hash::hash(&html, &mut hasher);

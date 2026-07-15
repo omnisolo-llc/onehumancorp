@@ -43,7 +43,6 @@ pub async fn inject_dynamic_inventory(
             if let Some(ref tenant_id) = tenant_id_opt {
                 let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
 
-                // Fetch from Edge KV if redis_url is available
                 if let Ok(url) = std::env::var("REDIS_URL") {
                     if let Ok(client) = redis::Client::open(url) {
                         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
