@@ -611,6 +611,7 @@ pub async fn list_videos(
 
 
 #[derive(Serialize, Clone)]
+#[derive(Debug)]
 pub struct HelpArticleDetail {
     #[serde(rename = "title")]
     pub title: String,
@@ -1421,4 +1422,47 @@ mod tests {
         let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
         assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
+
+    #[tokio::test]
+    async fn test_get_article_handler_found() {
+        let res = get_article_handler(axum::extract::Path("getting-started-1".to_string())).await.unwrap();
+        assert_eq!(res.0.title, "Getting Started with Your Store");
+    }
+
+    #[tokio::test]
+    async fn test_get_article_handler_not_found() {
+        let res = get_article_handler(axum::extract::Path("non-existent-123".to_string())).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), axum::http::StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_get_api_docs_spec() {
+        let res = get_api_docs_spec().await;
+        assert!(res.0.get("openapi").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_walkthrough() {
+        let db_pool = crate::db::create_sqlite_pool_for_test().await;
+        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        sqlx::query("CREATE TABLE IF NOT EXISTS walkthrough_steps (tenant_id TEXT, page TEXT, selector TEXT, title TEXT, text TEXT, step_order INTEGER)")
+            .execute(&db_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO walkthrough_steps (tenant_id, page, selector, title, text, step_order) VALUES ('test-tenant', 'dashboard', '#step1', 'Step 1', 'Content 1', 1)")
+            .execute(&db_pool).await.unwrap();
+
+        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
+
+        let res = get_walkthrough(axum::extract::Extension(db), headers, axum::extract::Path("dashboard".to_string())).await.unwrap();
+        let steps = res.0;
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0].target_id, "#step1");
+        assert_eq!(steps[0].title, "Step 1");
+        assert_eq!(steps[0].content, "Content 1");
+    }
+
 }

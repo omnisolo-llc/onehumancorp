@@ -58,4 +58,55 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
     });
   });
+
+  it('renders loading state initially', () => {
+    // Mock fetch to not resolve immediately
+    global.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
+
+    const { container } = render(<ChangelogPage />);
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+  });
+
+  it('renders empty state when no changelog is returned', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve([]),
+      ok: true
+    }) as any;
+
+    render(<ChangelogPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No changelog available.')).toBeInTheDocument();
+    });
+  });
+
+  it('renders screenshot if provided', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve([{
+        version: "Version 1.0 (Latest)",
+        contentLines: [
+          "### 🌟 New Features",
+        ],
+        screenshot_url: "http://example.com/screenshot.png"
+      }]),
+      ok: true
+    }) as any;
+
+    render(<ChangelogPage />);
+
+    await waitFor(() => {
+      expect(screen.getByAltText('Version 1.0 (Latest) Screenshot')).toBeInTheDocument();
+    });
+  });
+
+  it('handles fetch errors gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network Error")) as any;
+
+    render(<ChangelogPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No changelog available.')).toBeInTheDocument();
+    });
+  });
+
 });

@@ -152,6 +152,19 @@ describe('TooltipRegistry', () => {
   });
 });
 
+
+  it('does not crash if TooltipProvider is empty', async () => {
+    const ui = (
+      <TooltipProvider>
+      </TooltipProvider>
+    );
+    await act(async () => {
+      render(ui);
+      await new Promise(r => setTimeout(r, 20));
+    });
+    expect(true).toBe(true);
+  });
+
 describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
