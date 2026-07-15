@@ -1,0 +1,79 @@
+
+
+{{- if and .Values.backend.autoscaling.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-backend-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-backend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 10m
+          memory: 64Mi
+        maxAllowed:
+          cpu: 500m
+          memory: 1Gi
+        controlledResources: ["cpu", "memory"]
+{{- end }}
+---
+{{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-core-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-core
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 10m
+          memory: 64Mi
+        maxAllowed:
+          cpu: 500m
+          memory: 1Gi
+        controlledResources: ["cpu", "memory"]
+{{- end }}
+---
+{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "ohc.fullname" . }}-powersync-vpa
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ohc.fullname" . }}-powersync
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 10m
+          memory: 64Mi
+        maxAllowed:
+          cpu: 500m
+          memory: 1Gi
+        controlledResources: ["cpu", "memory"]
+{{- end }}

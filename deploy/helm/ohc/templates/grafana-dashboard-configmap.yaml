@@ -25,7 +25,8 @@ data:
     .grafana-app .navbar-page-btn,
     .grafana-app .dashboard-container,
     .grafana-app .panel-container,
-    .grafana-app .grafana-tooltip {
+    .grafana-app .grafana-tooltip,
+    .panel-header {
       background: rgba(255, 255, 255, 0.65) !important;
       backdrop-filter: blur(30px) saturate(210%) !important;
       -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
@@ -43,7 +44,8 @@ data:
     body.theme-dark .grafana-app .navbar-page-btn,
     body.theme-dark .grafana-app .dashboard-container,
     body.theme-dark .grafana-app .panel-container,
-    body.theme-dark .grafana-app .grafana-tooltip {
+    body.theme-dark .grafana-app .grafana-tooltip,
+    body.theme-dark .panel-header {
       background: rgba(22, 22, 26, 0.7) !important;
       backdrop-filter: blur(30px) saturate(210%) !important;
       -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
@@ -53,7 +55,7 @@ data:
     }
 
     @media (prefers-color-scheme: dark) {
-      body, .main-view, .page-container, .panel-container, .sidemenu {
+      body, .main-view, .page-container, .panel-container, .sidemenu, .panel-header {
         background: rgba(22, 22, 26, 0.7) !important;
         backdrop-filter: blur(30px) saturate(210%) !important;
         -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
