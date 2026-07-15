@@ -9166,7 +9166,9 @@ dependencies = [
  "server_common",
  "server_config",
  "server_pricing",
+ "temp-env",
  "tokio",
+ "tower 0.4.13",
  "tracing",
  "urlencoding",
 ]

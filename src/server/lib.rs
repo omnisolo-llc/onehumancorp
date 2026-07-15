@@ -9,6 +9,7 @@ pub mod agents;
 use std::sync::RwLock;
 
 #[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ChatRequest {
     message: String,
 }
@@ -66,6 +67,22 @@ pub fn get_redis_client() -> Option<redis::Client> {
     REDIS_CLIENT.get_or_init(|| {
         std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
     }).clone()
+}
+
+async fn protected_bearer_auth_middleware(
+    axum::extract::State(store): axum::extract::State<std::sync::Arc<::server_auth::Store>>,
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    if ::server_utils::tenant_middleware::is_auth_bypass_path(req.uri().path()) {
+        return next.run(req).await;
+    }
+    ::server_auth::strict_bearer_auth_middleware(
+        axum::extract::State(store),
+        req,
+        next,
+    )
+    .await
 }
 
 fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
@@ -6573,8 +6590,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
-                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()).route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()).route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
@@ -6984,15 +7001,9 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
-        .nest(
-            "/api/assistant",
-            api::assistant::router(db.clone()).layer(axum::middleware::from_fn_with_state(
-                http_auth_store.clone(),
-                ::server_auth::strict_bearer_auth_middleware,
-            )),
-        )
-        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
+        .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/assistant", api::assistant::router(db.clone()))
+        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
@@ -7053,13 +7064,21 @@ async fn create_ui_bom_item_handler(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
+        .route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            protected_bearer_auth_middleware,
+        ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
@@ -7189,18 +7208,44 @@ async fn create_ui_bom_item_handler(
                 None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
             };
 
-            let query = req.message.to_lowercase();
+            let message = req.message.trim();
+            if message.is_empty() || message.chars().count() > 2_000 {
+                return axum::response::IntoResponse::into_response((
+                    axum::http::StatusCode::BAD_REQUEST,
+                    axum::Json(serde_json::json!({ "error": "invalid message" })),
+                ));
+            }
+            let query = message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
             let mut link_url = "/help_article.html?id=getting-started-1".to_string();
 
             let articles: Vec<crate::api::docs::HelpArticle> = match &db.store {
                 crate::db::DbStore::Postgres => {
-                    match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
+                    let mut tx = match db.pool.begin().await {
+                        Ok(tx) => tx,
+                        Err(_) => return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        )),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+                        return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        ));
+                    }
+                    let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
                         .bind(&tenant_id)
-                        .fetch_all(&db.pool)
-                        .await
-                    {
+                        .fetch_all(&mut *tx)
+                        .await;
+                    if tx.commit().await.is_err() {
+                        return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        ));
+                    }
+                    match result {
                         Ok(rows) => {
                             rows.into_iter().map(|row| {
                                 use sqlx::Row;
@@ -7283,7 +7328,10 @@ async fn create_ui_bom_item_handler(
                 "reply": reply,
                 "link": { "url": link_url, "title": link_title }
             })))
-        }))
+        }).route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            ::server_auth::strict_bearer_auth_middleware,
+        )))
         .merge(webhook_router)
         .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
@@ -7291,7 +7339,10 @@ async fn create_ui_bom_item_handler(
             tools: vec![],
             sub_agents: std::collections::HashMap::new(),
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
-        })))
+        })).layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            ::server_auth::strict_bearer_auth_middleware,
+        )))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
@@ -7299,7 +7350,10 @@ async fn create_ui_bom_item_handler(
             "/api/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
         )
-        .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
+        .nest(
+            "/api/inbox/action_required",
+            api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
+        )
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
@@ -7516,6 +7570,76 @@ pub mod crypto;
 mod tests {
     use super::*;
     use crate::settings::Store;
+
+    #[tokio::test]
+    async fn protected_http_routes_require_signed_bearer_identity() {
+        use axum::{body::Body, http::Request, routing::get, Router};
+        use tower::ServiceExt;
+
+        let auth_store = std::sync::Arc::new(::server_auth::Store::new());
+        let now = chrono::Utc::now();
+        let token = auth_store
+            .issue_token(&::server_auth::User {
+                id: "user-a".to_string(),
+                username: "user-a".to_string(),
+                email: "user-a@example.com".to_string(),
+                password_hash: String::new(),
+                roles: vec!["ADMIN".to_string()],
+                active: true,
+                organization_id: Some("tenant-a".to_string()),
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            })
+            .unwrap();
+        let app = Router::new()
+            .route("/api/protected", get(|| async { "ok" }))
+            .route("/api/v1/auth/login", get(|| async { "public" }))
+            .route_layer(axum::middleware::from_fn(
+                ::server_utils::tenant_middleware::tenant_middleware,
+            ))
+            .route_layer(axum::middleware::from_fn_with_state(
+                auth_store,
+                super::protected_bearer_auth_middleware,
+            ));
+
+        let forged = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/protected")
+                    .header("x-tenant-id", "attacker")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(forged.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let valid = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/protected?tenant_id=tenant-a")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(valid.status(), axum::http::StatusCode::OK);
+
+        let public = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/auth/login")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(public.status(), axum::http::StatusCode::OK);
+    }
 
     async fn isolated_omni_postgres_pool(
     ) -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {

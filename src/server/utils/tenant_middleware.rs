@@ -16,6 +16,38 @@ fn is_multitenant_mode() -> bool {
     ::server_config::get().multitenant
 }
 
+pub fn is_auth_bypass_path(path: &str) -> bool {
+    fn matches_prefix(path: &str, prefix: &str) -> bool {
+        path == prefix
+            || path
+                .strip_prefix(prefix)
+                .is_some_and(|suffix| suffix.starts_with('/'))
+    }
+
+    let fixed_prefix = [
+        "/api/public",
+        "/api/webhook",
+        "/api/v1/auth",
+        "/api/onboarding",
+        "/api/agents/webhook",
+        "/api/v1/webhook",
+        "/metrics",
+    ]
+    .into_iter()
+    .any(|prefix| matches_prefix(path, prefix));
+    let public_growth_embed = path.starts_with("/api/v1/growth/")
+        && (path.ends_with("/embed")
+            || path.ends_with("/embed.js")
+            || matches!(
+                path,
+                "/api/v1/growth/embed/widget" | "/api/v1/growth/embed.css"
+            ));
+
+    fixed_prefix
+        || public_growth_embed
+        || matches!(path, "/health" | "/healthz" | "/readyz")
+}
+
 pub async fn tenant_middleware(req: Request, next: Next) -> Response {
     // Unauthenticated/Whitelisted paths could be ignored here, but typically
     // auth middleware runs first. This middleware runs AFTER auth middleware.
@@ -23,12 +55,7 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
 
     // Some routes are explicitly public, we can whitelist them or just rely on Claims presence
     let path = req.uri().path();
-    if path.starts_with("/api/public") || path.starts_with("/api/webhook") {
-        return next.run(req).await;
-    }
-
-    let is_auth_bypass = path.starts_with("/api/v1/auth") || path.starts_with("/api/onboarding") || path.starts_with("/api/agents/webhook") || path.starts_with("/api/v1/webhook") || path.starts_with("/health") || path.starts_with("/metrics") || path.starts_with("/api/v1/growth/embed") || path.starts_with("/api/dev/");
-    if is_auth_bypass {
+    if is_auth_bypass_path(path) {
          return next.run(req).await;
     }
 
@@ -104,6 +131,16 @@ mod tests {
 
     async fn dummy_handler() -> &'static str {
         "ok"
+    }
+
+    #[test]
+    fn bypass_paths_require_exact_segment_boundaries() {
+        assert!(is_auth_bypass_path("/api/v1/auth/login"));
+        assert!(is_auth_bypass_path("/api/v1/growth/storefront/embed"));
+        assert!(is_auth_bypass_path("/healthz"));
+        assert!(!is_auth_bypass_path("/api/v1/authentication-data"));
+        assert!(!is_auth_bypass_path("/api/dev/seed"));
+        assert!(!is_auth_bypass_path("/api/v1/growth/upgrade-paywall"));
     }
 
     fn setup_router(_multitenant: bool) -> Router {

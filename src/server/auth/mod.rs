@@ -13,41 +13,6 @@ pub mod http;
 
 use std::collections::HashMap;
 
-pub async fn guest_auth_middleware(
-    mut req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    if ::server_config::get().multitenant {
-        return axum::response::Response::builder()
-            .status(axum::http::StatusCode::UNAUTHORIZED)
-            .body(axum::body::Body::from("Guest auth is not allowed in cloud mode"))
-            .expect("Failed to build response");
-    }
-
-    let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
-    let user_id = req.headers().get("x-user-id").and_then(|v| v.to_str().ok()).unwrap_or("test-user").to_string();
-
-    let now = chrono::Utc::now().timestamp();
-    req.extensions_mut().insert(::server_common::Claims {
-        sub: user_id.clone(),
-        exp: now + 3600,
-        iat: now,
-        organization_id: Some(tenant_id.clone()),
-        username: user_id.clone(),
-        email: format!("{}@localhost", user_id),
-        roles: vec!["ADMIN".to_string()],
-        session_id: None,
-        jti: "test-jti-uuid".to_string(),
-    });
-    req.extensions_mut().insert(crate::orchestration::AuthInfo {
-        org_id: tenant_id,
-        agent_id: user_id.clone(),
-        spiffe_id: format!("spiffe://onehumancorp.io/guest/{}", user_id),
-    });
-
-    next.run(req).await
-}
-
 pub async fn strict_bearer_auth_middleware(
     axum::extract::State(store): axum::extract::State<std::sync::Arc<Store>>,
     mut req: axum::extract::Request,

@@ -327,8 +327,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
-        .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
+        .route("/conversational-manager/chat", post(handle_conversational_chat))
+        .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -404,7 +404,7 @@ where
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
-        .route("/upgrade-paywall", get(handle_upgrade_paywall).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
+        .route("/upgrade-paywall", get(handle_upgrade_paywall))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
