@@ -7135,7 +7135,15 @@ async fn create_ui_bom_item_handler(
                 ),
             ),
         )
-        .nest("/api/v1/booking/proposed", api::booking::proposed::router())
+        .nest(
+            "/api/v1/booking/proposed",
+            api::booking::proposed::router().route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
 
 
