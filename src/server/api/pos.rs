@@ -17,6 +17,35 @@ fn pos_tenant(claims: Option<&Extension<::server_common::Claims>>) -> Option<Str
     claims.and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
 }
 
+async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
+    let pool = crate::db::get_pool();
+    let mut tx = pool.begin().await?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+    let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+        .bind(tenant_id)
+        .fetch_all(&mut *tx)
+        .await?;
+    tx.commit().await?;
+
+    Ok(rows.into_iter().map(|row| {
+        let mut order_json = json!({
+            "id": row.get::<String, _>("id"),
+            "total_amount": row.get::<f64, _>("total_amount"),
+            "status": row.get::<String, _>("status"),
+            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+            "items": [],
+            "customer_name": "Walk-in",
+        });
+        if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
+            order_json["notes"] = json!(notes);
+        }
+        if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
+            order_json["translated_notes"] = json!(translated);
+        }
+        order_json
+    }).collect())
+}
+
 pub fn pos_routes<S>(hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -258,30 +287,7 @@ async fn get_orders_handler(
         let tenant_id_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let pool = crate::db::get_pool();
-            let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
-                .bind(&tenant_id_bg)
-                .fetch_all(&pool)
-                .await
-                .unwrap_or_default();
-
-            let orders: Vec<Value> = rows.into_iter().map(|row| {
-                let mut order_json = json!({
-                    "id": row.get::<String, _>("id"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-                    "items": [],
-                    "customer_name": "Walk-in",
-                });
-                if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
-                    order_json["notes"] = json!(notes);
-                }
-                if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
-                    order_json["translated_notes"] = json!(translated);
-                }
-                order_json
-            }).collect();
+            let orders = fetch_pos_orders(&tenant_id_bg).await.unwrap_or_default();
             let result = json!({ "orders": orders });
             if let Some(c) = POS_ORDERS_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(5)).await;
@@ -290,31 +296,7 @@ async fn get_orders_handler(
         return Json(cached).into_response();
     }
 
-    let pool = crate::db::get_pool();
-
-    let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
-        .bind(&tenant_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default();
-
-    let orders: Vec<Value> = rows.into_iter().map(|row| {
-        let mut order_json = json!({
-            "id": row.get::<String, _>("id"),
-            "total_amount": row.get::<f64, _>("total_amount"),
-            "status": row.get::<String, _>("status"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
-            "items": [],
-            "customer_name": "Walk-in",
-        });
-        if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
-            order_json["notes"] = json!(notes);
-        }
-        if let Ok(Some(translated)) = row.try_get::<Option<String>, _>("translated_notes") {
-            order_json["translated_notes"] = json!(translated);
-        }
-        order_json
-    }).collect();
+    let orders = fetch_pos_orders(&tenant_id).await.unwrap_or_default();
 
     let result = json!({ "orders": orders });
     cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
@@ -330,12 +312,24 @@ async fn get_inventory_handler(
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
     let pool = crate::db::get_pool();
-
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
     let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default();
+        .fetch_all(&mut *tx)
+        .await;
+    let rows = match rows {
+        Ok(rows) => rows,
+        Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+    if tx.commit().await.is_err() {
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
     let inventory: Vec<Value> = rows.into_iter().map(|row| {
         json!({
