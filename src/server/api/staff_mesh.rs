@@ -950,7 +950,7 @@ mod tests {
             .method("POST")
             .uri("/staff")
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-spiffe-id", "spiffe://ohc.os/org/test_tenant/agent/test_agent")
             .body(Body::from(create_payload.to_string()))
             .unwrap();
 
@@ -970,7 +970,7 @@ mod tests {
             .method("POST")
             .uri(format!("/staff/{}/pin", staff_id))
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-spiffe-id", "spiffe://ohc.os/org/test_tenant/agent/test_agent")
             .body(Body::from(pin_payload.to_string()))
             .unwrap();
 
@@ -981,7 +981,7 @@ mod tests {
         let request = Request::builder()
             .method("GET")
             .uri("/staff")
-            .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-spiffe-id", "spiffe://ohc.os/org/test_tenant/agent/test_agent")
             .body(Body::empty())
             .unwrap();
 
@@ -1008,7 +1008,7 @@ mod tests {
             .method("POST")
             .uri("/timecard")
             .header("content-type", "application/json")
-            .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-spiffe-id", "spiffe://ohc.os/org/test_tenant/agent/test_agent")
             .body(Body::from(timecard_payload.to_string()))
             .unwrap();
 
