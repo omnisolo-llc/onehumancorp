@@ -7,12 +7,12 @@ vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
 
 import { GET } from "./route";
 
-describe("GET /api/campaign/proposals", () => {
+describe("GET /api/v1/campaign/proposals", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
   it("uses claims-backed identity without forwarding arbitrary inbound queries", async () => {
     const request = new Request(
-      "http://localhost/api/campaign/proposals?tenant_id=attacker&limit=9999",
+      "http://localhost/api/v1/campaign/proposals?tenant_id=attacker&limit=9999",
     );
 
     await GET(request);
