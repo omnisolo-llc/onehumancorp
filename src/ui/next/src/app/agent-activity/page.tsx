@@ -19,7 +19,7 @@ export default function AgentActivityPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await fetch('/api/ohc_job_queue');
+        const res = await fetch('/api/v1/ohc_job_queue');
         if (res.ok) {
           const data = await res.json();
           setJobs(data.jobs || []);
