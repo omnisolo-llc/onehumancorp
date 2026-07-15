@@ -39,7 +39,7 @@ test.describe('AI-Native Omnichannel Customer Context & Memory Graph', () => {
     const processRes = await request.post('/api/inbox/process');
     expect(processRes.ok()).toBeTruthy();
 
-    const summaryRes = await request.get(`/api/inbox/summary/${tenantId}/${customerId}`);
+    const summaryRes = await request.get(`/api/memory/summary/${tenantId}/${customerId}`);
     expect(summaryRes.ok()).toBeTruthy();
     const summary = await summaryRes.json();
 

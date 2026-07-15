@@ -17,7 +17,7 @@ function CustomerMemoryGraphContent() {
   useEffect(() => {
     const fetchMemoryGraph = async () => {
       try {
-        const res = await fetch(`/api/inbox/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/memory/summary/${tenantId}/${customerId}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
