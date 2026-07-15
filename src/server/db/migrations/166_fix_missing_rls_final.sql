@@ -1020,7 +1020,7 @@ src/server/db/migrations/108_inventory_agent_actions.sql-            CREATE POLI
 src/server/db/migrations/108_inventory_agent_actions.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/db/migrations/108_inventory_agent_actions.sql-            CREATE POLICY tenant_isolation_agent_action_requests ON agent_action_requests USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 -- Adding RLS for inventory_levels
-ALTER TABLE IF EXISTS inventory_levels ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
+
 ALTER TABLE IF EXISTS inventory_levels ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_inventory_levels ON inventory_levels;
 CREATE POLICY tenant_isolation_inventory_levels ON inventory_levels USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));

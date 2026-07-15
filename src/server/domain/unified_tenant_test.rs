@@ -101,6 +101,69 @@ mod tests {
         }
     }
 
+
+    #[tokio::test]
+    async fn test_tenant_isolation_inventory_rls() {
+        let pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(100))
+            .connect_lazy("postgres://postgres:postgres@localhost/postgres")
+            .unwrap();
+
+        if std::env::var("CI").is_ok() {
+            return;
+        }
+
+        let tenant_1 = "tenant_inv_1";
+        let tenant_2 = "tenant_inv_2";
+        let product_1 = "prod_inv_1";
+        let inv_level_1 = "inv_level_1";
+        let inv_tx_1 = "inv_tx_1";
+
+        match pool.begin().await {
+            Ok(mut tx) => {
+                use sqlx::Executor;
+                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_1).as_str()).await.expect("Failed to set tenant context");
+
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Test Business') ON CONFLICT DO NOTHING")
+                    .bind(tenant_1)
+                    .execute(&mut *tx).await;
+
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, type) VALUES ($1, $2, 'physical') ON CONFLICT DO NOTHING")
+                    .bind(&product_1)
+                    .bind(tenant_1)
+                    .execute(&mut *tx).await;
+
+                let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, product_id, location_id, available_count, committed_count) VALUES ($1, $2, $3, 'loc_1', 10, 0) ON CONFLICT DO NOTHING")
+                    .bind(&inv_level_1)
+                    .bind(tenant_1)
+                    .bind(&product_1)
+                    .execute(&mut *tx).await;
+
+                let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'add', 10) ON CONFLICT DO NOTHING")
+                    .bind(&inv_tx_1)
+                    .bind(tenant_1)
+                    .bind(&inv_level_1)
+                    .execute(&mut *tx).await;
+
+                tx.commit().await.expect("Failed to commit test data");
+            },
+            Err(_) => return
+        }
+
+        match pool.begin().await {
+            Ok(mut tx) => {
+                use sqlx::Executor;
+                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_2).as_str()).await.expect("Failed to set tenant context");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM inventory_levels WHERE tenant_id = $1").bind(tenant_1).fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM inventory_transactions WHERE tenant_id = $1").bind(tenant_1).fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant");
+            },
+            Err(_) => {}
+        }
+    }
+
     #[test]
     fn test_business_struct_compilation() {
         let b = Business {

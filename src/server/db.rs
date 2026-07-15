@@ -2026,14 +2026,24 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE IF NOT EXISTS inventory_levels (
+                                        CREATE TABLE IF NOT EXISTS inventory_levels (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        product_id TEXT,
-                        location TEXT NOT NULL, -- 'online' or 'in-store'
-                        quantity INT DEFAULT 0,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        location_id TEXT NOT NULL,
+                        available_count INT NOT NULL DEFAULT 0,
+                        committed_count INT NOT NULL DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        inventory_level_id TEXT,
+                        type TEXT NOT NULL,
+                        quantity_change INT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS inventory_predictions (
