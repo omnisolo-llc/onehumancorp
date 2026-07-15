@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-describe("POST /api/integrations/manychat/draft", () => {
+describe("POST /api/v1/integrations/manychat/send", () => {
   beforeEach(() => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
     global.fetch = vi.fn();
@@ -12,15 +12,18 @@ describe("POST /api/integrations/manychat/draft", () => {
     vi.restoreAllMocks();
   });
 
-  it("forwards ManyChat draft generation to the Rust backend", async () => {
-    const backendResponse = { draft: "Real ManyChat draft from backend." };
+  it("forwards outbound ManyChat messages to the Rust backend integration", async () => {
+    const backendResponse = { success: true, message_id: "msg_real_1" };
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => backendResponse,
     });
 
-    const body = { messages: [{ text: "Do you have vegan cakes?" }] };
-    const req = new Request("http://localhost/api/integrations/manychat/draft", {
+    const body = {
+      subscriber_id: "subscriber-1",
+      message: "Your order is ready.",
+    };
+    const req = new Request("http://localhost/api/v1/integrations/manychat/send", {
       method: "POST",
       headers: {
         authorization: "Bearer token",
@@ -34,7 +37,7 @@ describe("POST /api/integrations/manychat/draft", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/integrations/manychat/draft", {
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/integrations/manychat/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

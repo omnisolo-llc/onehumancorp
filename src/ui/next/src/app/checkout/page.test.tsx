@@ -180,7 +180,7 @@ beforeEach(() => {
     fireEvent.click(checkButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/checkout/delivery-quote', expect.objectContaining({
         method: 'POST'
       }));
       expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();

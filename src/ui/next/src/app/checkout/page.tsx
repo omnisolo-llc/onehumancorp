@@ -108,7 +108,7 @@ function CheckoutContent() {
     setIsCheckingDelivery(true);
     setDeliveryError(null);
     try {
-      const response = await fetch("/api/checkout/delivery-quote", {
+      const response = await fetch("/api/v1/checkout/delivery-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenant_id: tenant, deliveryAddress }),

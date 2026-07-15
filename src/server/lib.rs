@@ -6600,7 +6600,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
-        .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/v1/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
             let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
             let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
             let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
@@ -6608,7 +6608,7 @@ async fn create_ui_bom_item_handler(
                 "checkout_url": url
             }))
         }))
-        .route("/api/checkout/delivery-quote", axum::routing::post({
+        .route("/api/v1/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let settings = settings_store.get();
@@ -6630,8 +6630,8 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
-        .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
+        .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
