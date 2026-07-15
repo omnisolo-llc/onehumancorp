@@ -1,4 +1,4 @@
-use axum::{routing::get, Json, Router, extract::Extension, extract::Query};
+use axum::{Json, Router, extract::Extension, extract::Query, routing::get};
 use serde_json::json;
 use std::sync::OnceLock;
 
@@ -20,7 +20,13 @@ async fn list_jobs(
     Extension(db): Extension<std::sync::Arc<crate::db::DB>>,
     Query(query): Query<JobQueueQuery>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+    let tenant_id = claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system"))
+        .map(str::to_string)
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)?;
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ohc_job_queue:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -39,7 +45,8 @@ async fn list_jobs(
             let res = fetch_jobs(&db_bg, &tenant_id_bg, mobile_optimized).await;
             if let Ok(jobs) = res {
                 if let Some(c) = OHC_JOB_QUEUE_CACHE.get() {
-                    c.set(&cache_key_bg, jobs, std::time::Duration::from_secs(10)).await;
+                    c.set(&cache_key_bg, jobs, std::time::Duration::from_secs(10))
+                        .await;
                 }
             }
         });
@@ -48,17 +55,25 @@ async fn list_jobs(
 
     match fetch_jobs(&db, &tenant_id, mobile_optimized).await {
         Ok(jobs) => {
-            cache.set(&cache_key, jobs.clone(), std::time::Duration::from_secs(10)).await;
+            cache
+                .set(&cache_key, jobs.clone(), std::time::Duration::from_secs(10))
+                .await;
             Ok(Json(jobs))
-        },
+        }
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
-async fn fetch_jobs(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<serde_json::Value, sqlx::Error> {
+async fn fetch_jobs(
+    db: &crate::db::DB,
+    tenant_id: &str,
+    mobile_optimized: bool,
+) -> Result<serde_json::Value, sqlx::Error> {
     let mut response_jobs = Vec::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
             let query_str = if mobile_optimized {
                 r#"
                 SELECT id, job_type, status, created_at, updated_at
@@ -79,8 +94,9 @@ async fn fetch_jobs(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool)
 
             let jobs = sqlx::query(query_str)
                 .bind(tenant_id)
-                .fetch_all(&db.pool)
+                .fetch_all(&mut *tx)
                 .await?;
+            tx.commit().await?;
 
             for job in jobs {
                 use sqlx::Row;
@@ -103,7 +119,7 @@ async fn fetch_jobs(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool)
                     }));
                 }
             }
-        },
+        }
         crate::db::DbStore::Sqlite(pool) => {
             let query_str = if mobile_optimized {
                 r#"
