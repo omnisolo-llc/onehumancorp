@@ -460,7 +460,30 @@ impl Department for OperationsAgent {
             },
             "inventory.sync.conflict" => {
                 let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-                if msg.contains("Operations has drafted an email to the online customer") {
+                if msg.contains("Operations has drafted an email to the online customer") || msg.contains("Item marked sold out while offline") {
+                    // Handle sold out conflict
+                    if msg.contains("Item marked sold out while offline") {
+                        let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                        let _ = self.orchestrator.execute_action(
+                            DepartmentType::CustomerSuccess,
+                            format!("Draft out of stock apology for {}", product_id),
+                            event.tenant_id.clone(),
+                            ActionRisk::DraftForReview,
+                            event.payload.clone(),
+                        ).await;
+
+                        // Issue refund logic
+                        let _ = self.orchestrator.execute_action(
+                            DepartmentType::Finance,
+                            format!("Refund conflicting pre-orders for {}", product_id),
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            event.payload.clone(),
+                        ).await;
+                        return Ok(());
+                    }
+
                     msg.to_string()
                 } else {
                     let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");

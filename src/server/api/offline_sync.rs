@@ -662,6 +662,45 @@ pub async fn sync_events_handler(
                 }
             }
 
+            if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
+                let mut is_sold_out = false;
+                if let Some(sold_out_val) = event.payload.get("is_sold_out") {
+                    if let Some(b) = sold_out_val.as_bool() {
+                        is_sold_out = b;
+                    }
+                }
+                let update_res = sqlx::query(
+                    "UPDATE tenant_products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3"
+                )
+                .bind(is_sold_out)
+                .bind(&event.entity_id)
+                .bind(&tenant_id_clone)
+                .execute(&mut *tx)
+                .await;
+
+                if let Err(e) = update_res {
+                    tracing::error!("Failed to update tenant_products is_sold_out: {}", e);
+                    let _ = tx.rollback().await;
+                    return ("failed", 1);
+                }
+
+                // Check if any conflicting pre-orders were placed during offline window
+                if is_sold_out {
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id_clone)
+                    .bind(serde_json::json!({
+                        "product_id": &event.entity_id,
+                        "action": "sold_out_conflict_check",
+                        "message": "Item marked sold out while offline. Check for conflicting pre-orders."
+                    }).to_string())
+                    .execute(&mut *tx)
+                    .await;
+                }
+            }
+
             if is_conflict {
                 let res1 = sqlx::query(
                     "INSERT INTO sync_conflict_queue (id, tenant_id, event_id, entity_id, entity_type, base_version, current_version, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"

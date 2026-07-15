@@ -45,13 +45,13 @@ test.describe('Kitchen Command Center Offline Sync', () => {
     await expect(toggleButton).not.toHaveText(initialText);
 
     // Expect the Pending Sync indicator to show up
-    await expect(page.locator('text=Pending Sync')).toBeVisible();
+    await expect(page.locator('text=Offline - Changes saved locally')).toBeVisible();
 
     // Restore network
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
 
     // Expect offline badge to disappear (queue should process)
-    await expect(page.locator('text=Pending Sync')).toBeHidden({ timeout: 15000 });
+    await expect(page.locator('text=Offline - Changes saved locally')).toBeHidden({ timeout: 15000 });
   });
 });
