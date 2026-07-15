@@ -330,7 +330,6 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
-        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -1178,20 +1177,6 @@ async fn handle_send_receipt(
     state.hub.append_recent_event(msg);
 
     Json(SendReceiptResponse { success: true, message: generated })
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct ZeroClickGenerateRequest {
-    pub prompt: String,
-    #[serde(default)]
-    pub image_url: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct ZeroClickGenerateResponse {
-    pub organization_id: String,
-    pub user_id: String,
-    pub message: String,
 }
 
 #[derive(Deserialize)]
@@ -3191,29 +3176,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_zero_click_generate() {
-        let pool = setup_db().await;
-        let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
-
-        let req = ZeroClickGenerateRequest {
-            prompt: "I sell coffee".to_string(),
-            image_url: None,
-        };
-
-        // Note: the actual OnboardingAgent requires external API calls, but we can verify
-        // the endpoint compiles and runs, it might fail because of missing LLM keys in test.
-        // We just ensure we can invoke the handler without panic.
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
-            org_id: "test-tenant-zero".to_string(),
-            agent_id: "owner@test.com".to_string(),
-        };
-        let _ = handle_zero_click_generate(Extension(state), axum::extract::Extension(auth_info.clone()), Json(req)).await;
-    }
-
-    #[tokio::test]
     async fn test_create_and_get_team_invites() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -3422,37 +3384,6 @@ mod tests {
 
         assert!(res_json2.response.contains("noticed you have"), "Response should contain 'noticed you have', but was: {}", res_json2.response);
         assert_eq!(res_json2.draft_action.unwrap().action_type, "recover_abandoned_carts");
-    }
-
-    #[tokio::test]
-    async fn test_zero_click_generate() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
-
-        let req = ZeroClickGenerateRequest {
-            prompt: "I am a home baker selling cakes.".to_string(),
-            image_url: None,
-        };
-
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
-            org_id: "test-tenant-zero".to_string(),
-            agent_id: "owner@test.com".to_string(),
-        };
-
-        // When testing without an LLM mock configured, process_intake returns a mocked success
-        // which has business_name = "Mock Business" and 1 initial product.
-        let res = handle_zero_click_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
-
-        assert!(res.is_ok());
-        let response = res.unwrap().0;
-        assert!(!response.organization_id.is_empty());
-        assert!(!response.user_id.is_empty());
     }
 
     #[tokio::test]
@@ -4126,126 +4057,6 @@ fn escape_html(s: &str) -> String {
         }
     }
     escaped
-}
-
-pub async fn handle_zero_click_generate(
-    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-    axum::Json(req): axum::Json<ZeroClickGenerateRequest>,
-) -> Result<axum::Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
-    let db = std::sync::Arc::new(crate::db::DB {
-        pool: state.pool.clone(),
-        store: crate::db::DbStore::Postgres,
-    });
-    let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(
-        db.clone(),
-        state.hub.clone()
-    );
-
-    let mut combined_prompt = req.prompt.clone();
-    if let Some(image_url) = &req.image_url {
-        combined_prompt.push_str(&format!("\nImage provided: {}", image_url));
-    }
-
-    let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
-        tracing::error!("Intake error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let first_product = intake_data.initial_products.first();
-    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
-    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
-
-    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
-        business_type: if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type },
-        company_name: if intake_data.business_name.is_empty() { "My Store".to_string() } else { intake_data.business_name.clone() },
-        company_description: req.prompt.clone(),
-        selling_categories: if intake_data.categories.is_empty() { vec!["Other".to_string()] } else { intake_data.categories },
-        payment_pref: "online".to_string(),
-        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
-        admin_name: "Owner".to_string(),
-        admin_password: format!("{}!", uuid::Uuid::new_v4().to_string()),
-        website_template: "Modern".to_string(),
-        first_product_name,
-        first_product_price,
-        domain_choice: "subdomain".to_string(),
-        price_type: "fixed".to_string(),
-        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
-        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
-        initial_products: intake_data.initial_products.into_iter().map(|p| {
-            ::server_ohc::orchestration::IntakeProductProto {
-                name: p.name,
-                price: p.price,
-                description: p.description.unwrap_or_default(),
-                variants: p.variants.unwrap_or_default().into_iter().map(|v| {
-                    ::server_ohc::orchestration::IntakeProductVariantProto {
-                        name: v.name,
-                        price_modifier: v.price_modifier,
-                    }
-                }).collect(),
-            }
-        }).collect(),
-        ai_agents: vec![],
-        ai_auto_respond: false, deposit_percentage: intake_data.deposit_percentage, lead_time_days: intake_data.lead_time_days,
-    };
-
-    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
-        tracing::error!("Start onboarding error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
-    for task_title in tasks_to_insert {
-        let task_id = uuid::Uuid::new_v4().to_string();
-        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')")
-            .bind(&task_id)
-            .bind(&_start_res.organization_id)
-            .bind(&task_title)
-            .bind("Generated by zero-click builder to help you get started.")
-            .execute(&db.pool)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to seed task: {}", e);
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-    }
-
-    let customer_name = intake_data.sample_customer_name.unwrap_or_else(|| "Sample Customer".to_string());
-    let customer_email = intake_data.sample_customer_email.unwrap_or_else(|| "sample@example.com".to_string());
-    let customer_id = uuid::Uuid::new_v4();
-    sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
-        .bind(&customer_id)
-        .bind(&_start_res.organization_id)
-        .bind(&customer_name)
-        .bind(&customer_email)
-        .execute(&db.pool)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to seed customer: {}", e);
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-
-    let mut clean_name = String::new();
-    for c in intake_data.business_name.to_lowercase().chars() {
-        if c.is_ascii_alphanumeric() {
-            clean_name.push(c);
-        } else {
-            clean_name.push('-');
-        }
-    }
-    let clean_name = clean_name.trim_matches('-').to_string();
-
-    let _url = if clean_name.is_empty() {
-        "my-business.ohc.app".to_string()
-    } else {
-        format!("{}.ohc.app", clean_name)
-    };
-
-    Ok(axum::Json(ZeroClickGenerateResponse {
-        organization_id: _start_res.organization_id,
-        user_id: _start_res.user_id,
-        message: "Storefront generated successfully".to_string()
-    }))
 }
 
 #[derive(Deserialize)]

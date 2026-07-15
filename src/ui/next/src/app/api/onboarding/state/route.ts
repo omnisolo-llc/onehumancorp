@@ -1,52 +1,19 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { sanitizeOnboardingStateRequest } from "../statePayload";
 
-export async function GET(request: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
+export const runtime = "nodejs";
 
-  try {
-    const res = await fetch(`${backendUrl}/api/onboarding/state`, {
-      headers: {
-        'x-tenant-id': tenantId,
-        'x-user-id': userId
-      }
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    }
-
-    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
-  } catch (e) {
-    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
-  }
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/onboarding/state", {
+    forwardQuery: false,
+    suppressRequestBody: true,
+  });
 }
 
-export async function POST(request: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
-
-  try {
-    const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/onboarding/state`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-tenant-id': tenantId,
-        'x-user-id': userId
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (res.ok) {
-      return new NextResponse(null, { status: 200 });
-    }
-
-    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
-  } catch (e) {
-    return NextResponse.json({ error: 'Bad Gateway' }, { status: 502 });
-  }
+export function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/onboarding/state", {
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: sanitizeOnboardingStateRequest,
+  });
 }

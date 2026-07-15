@@ -158,62 +158,13 @@
 
       if (instantBuildBtn) {
         instantBuildBtn.addEventListener('click', () => {
-          mainView.style.display = 'none';
-          instantBuildView.style.display = 'block';
+          window.location.href = "setup.html?mode=instant-build";
         });
       }
 
-            if (generateStorefrontBtn) {
-        generateStorefrontBtn.addEventListener('click', async () => {
-          const prompt = document.getElementById('instant-bio').value;
-          if (!prompt.trim()) return;
-          generateStorefrontBtn.disabled = true;
-
-          instantBuildView.style.display = 'none';
-          loadingView.style.display = 'block';
-
-          setTimeout(() => {
-            stepProvisioning.style.opacity = '1';
-          }, 100);
-
-          try {
-             const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-             const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
-                 method: 'POST',
-                 headers: {
-                     'Content-Type': 'application/json',
-                     'X-Tenant-ID': 'e2e-tenant',
-                     'X-User-ID': 'e2e-admin-user'
-                 },
-                 body: JSON.stringify({ prompt: prompt })
-             });
-
-             if (!res.ok) {
-                 const errData = await res.json().catch(()=>({}));
-                 throw new Error(errData.error || errData.message || 'Failed to generate storefront');
-             }
-
-             const data = await res.json();
-
-             if (data.organization_id) {
-                 localStorage.setItem('tenant_id', data.organization_id);
-                 localStorage.setItem('tenant', data.organization_id);
-             }
-             if (data.user_id) {
-                 localStorage.setItem('user_id', data.user_id);
-             }
-
-             setTimeout(() => {
-               window.location.href = "dashboard.html";
-             }, 1500);
-
-          } catch (err) {
-              console.error(err);
-              generateStorefrontBtn.disabled = false;
-              loadingView.style.display = 'none';
-              instantBuildView.style.display = 'block';
-              alert(err.message || 'Failed to generate storefront');
-          }
+      if (generateStorefrontBtn) {
+        generateStorefrontBtn.addEventListener('click', () => {
+          window.location.href = "setup.html?mode=instant-build";
         });
       }
     </script>

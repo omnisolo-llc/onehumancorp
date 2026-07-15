@@ -86,7 +86,19 @@ describe('ZeroClickBuilderPage', () => {
     }, { timeout: 3000 });
 
     expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Launch My Store/i })).toBeInTheDocument();
+    const launch = screen.getByRole('button', { name: /Launch My Store/i });
+    expect(launch).toBeInTheDocument();
+    const startBody = JSON.parse(
+      String(vi.mocked(global.fetch).mock.calls[1]?.[1]?.body),
+    );
+    expect(startBody.admin_name).toBeUndefined();
+    expect(startBody.admin_email).toBeUndefined();
+    expect(startBody.admin_password).toBeUndefined();
+
+    fireEvent.click(launch);
+    expect(localStorage.getItem('tenant_id')).toBeNull();
+    expect(localStorage.getItem('tenant')).toBeNull();
+    expect(localStorage.getItem('user_id')).toBeNull();
   });
 
   it('renders Powered by OHC branding', () => {

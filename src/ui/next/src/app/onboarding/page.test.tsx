@@ -301,16 +301,6 @@ describe("OnboardingWizard", () => {
       screen.getByText("Website Template");
     });
 
-    // Fill in Account Setup fields
-    const nameInput2 = screen.getByPlaceholderText(/e.g. Maya Smith/i);
-    await user.type(nameInput2, "Maya Smith");
-
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    await user.type(emailInput, "maya@example.com");
-
-    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    await user.type(passwordInput, "mypassword123");
-
     const launchButton = screen.getAllByRole("button", { name: /Approve \& Publish/i }).pop()!;
     await user.click(launchButton);
 
@@ -320,28 +310,14 @@ describe("OnboardingWizard", () => {
       screen.getByText("maya-bakery.ohc.app");
     });
 
-    // Check that start API was called with the correct credentials
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/onboarding/start",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining('"admin_name":"Maya Smith"'),
-      }),
-    );
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/onboarding/start",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining('"admin_email":"maya@example.com"'),
-      }),
-    );
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/onboarding/start",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining('"admin_password":"mypassword123"'),
-      }),
-    );
+    const startCall = vi
+      .mocked(global.fetch)
+      .mock.calls.find(([url]) => url === "/api/onboarding/start");
+    expect(startCall).toBeDefined();
+    const startBody = JSON.parse(String(startCall?.[1]?.body));
+    expect(startBody.admin_name).toBeUndefined();
+    expect(startBody.admin_email).toBeUndefined();
+    expect(startBody.admin_password).toBeUndefined();
   });
 
   it("Step 1: Handles intake API failure", async () => {
@@ -438,9 +414,6 @@ describe("OnboardingWizard", () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
-        adminName: "Test Admin",
-        adminEmail: "test@example.com",
-        adminPassword: "Password123",
       });
     });
 
@@ -846,7 +819,9 @@ describe("OnboardingWizard", () => {
 
     // Start at Step 2
     act(() => {
-      useOnboardingStore.setState({ step: 2 });
+      useOnboardingStore.setState({
+        step: 2,
+      });
     });
 
     await renderOnboardingWizard();
@@ -872,11 +847,17 @@ describe("OnboardingWizard", () => {
         method: "POST",
       }),
     );
+    const draftRequest = vi
+      .mocked(global.fetch)
+      .mock.calls.find(
+        ([url, options]) =>
+          url === "/api/onboarding/draft" && options?.method === "POST",
+      );
+    expect(draftRequest).toBeDefined();
+    expect(String(draftRequest?.[1]?.body)).not.toContain("adminPassword");
   });
 
-  it("Step 3: Shows inline validation errors for admin fields", async () => {
-    const user = userEvent.setup({ delay: null });
-
+  it("Step 3 uses the authenticated session instead of collecting credentials", async () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
@@ -887,70 +868,13 @@ describe("OnboardingWizard", () => {
     });
 
     await renderOnboardingWizard();
-    if (screen.queryByRole("button", { name: "Start My Business" })) {
-      await user.click(
-        screen.getAllByRole("button", { name: "Start My Business" })[0],
-      );
-    }
 
-    const nameInput = screen.getByPlaceholderText(/e.g. Maya Smith/i);
-    const emailInput = screen.getByPlaceholderText(/you@example.com/i);
-    const passwordInput = screen.getByPlaceholderText(/••••••••/i);
-    // Test Admin Name Validation
-    await user.clear(nameInput);
-    await user.type(nameInput, "a");
-    await user.clear(nameInput);
-    await screen.findByText("Admin Name is required");
-
-    await user.type(nameInput, "Maya Smith");
-    await waitFor(() => {
-      expect(screen.queryByText("Admin Name is required")).toBeNull();
-    });
-
-    // Test Admin Email Validation
-    await user.clear(emailInput);
-    await user.type(emailInput, "invalidemail");
-    await screen.findByText("Please enter a valid email address");
-
-    await user.clear(emailInput);
-    // Workaround for clear not triggering empty string validation properly sometimes
-    await user.type(emailInput, "x");
-    await user.keyboard("{Backspace}");
-    await screen.findByText("Admin Email is required");
-
-    await user.type(emailInput, "maya@example.com");
-    await waitFor(() => {
-      expect(
-        screen.queryByText("Please enter a valid email address"),
-      ).toBeNull();
-      expect(screen.queryByText("Admin Email is required")).toBeNull();
-    });
-
-    // Test Admin Password Validation
-    await user.clear(passwordInput);
-    await user.type(passwordInput, "weak");
-    await screen.findByText(
-      "Password must be at least 8 characters and contain a number",
-    );
-
-    await user.clear(passwordInput);
-    await screen.findByText("Password is required");
-
-    await user.type(passwordInput, "mypassword123");
-    await waitFor(() => {
-      expect(
-        screen.queryByText(
-          "Password must be at least 8 characters and contain a number",
-        ),
-      ).toBeNull();
-      expect(screen.queryByText("Password is required")).toBeNull();
-    });
+    expect(screen.queryByLabelText("Admin Name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Admin Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Admin Password")).not.toBeInTheDocument();
     expect(
-      screen.queryByText(
-        "Password must be at least 8 characters and contain a number",
-      ),
-    ).toBeNull();
-    expect(screen.queryByText("Password is required")).toBeNull();
+      screen.getByRole("button", { name: /Approve & Publish/i }),
+    ).toBeEnabled();
   });
 
   it("Handles Save Draft button functionality", async () => {
@@ -1089,11 +1013,17 @@ describe("OnboardingWizard", () => {
 
     const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/start_zero_click'));
     expect(startZeroClickCall).toBeDefined();
+    expect(startZeroClickCall.url).toBe("/api/onboarding/start_zero_click");
+    expect(startZeroClickCall.options.headers).toEqual({
+      "Content-Type": "application/json",
+    });
     const startZeroBody = JSON.parse(startZeroClickCall.options.body);
     expect(startZeroBody.prompt).toContain("I consult startups in SF.");
 
     const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/launch'));
     expect(launchCall).toBeDefined();
+    expect(launchCall.url).toBe("/api/onboarding/launch");
+    expect(launchCall.options.headers).toBeUndefined();
   });
 
   it("Instant Build: displays error when API fails", async () => {
@@ -1217,9 +1147,6 @@ describe("OnboardingWizard", () => {
     act(() => {
       useOnboardingStore.setState({
         step: 3,
-        adminName: "Test Admin",
-        adminEmail: "test@example.com",
-        adminPassword: "Password123",
       });
     });
 
