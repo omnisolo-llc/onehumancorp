@@ -786,7 +786,7 @@ mod tests {
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-1/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/tenant-sync-1/agent/x".parse().unwrap());
 
         let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
@@ -830,7 +830,7 @@ mod tests {
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-2/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/tenant-sync-2/agent/x".parse().unwrap());
 
         // First call
         let response1 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req.clone())).await.into_response();
@@ -880,7 +880,7 @@ mod tests {
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-3/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/tenant-sync-3/agent/x".parse().unwrap());
 
         let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
@@ -949,7 +949,7 @@ mod tests {
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/tenant-offline/agent/x".parse().unwrap());
 
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
@@ -1073,7 +1073,7 @@ mod tests {
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-field-service/agent/x".parse().unwrap());
+        headers.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/tenant-field-service/agent/x".parse().unwrap());
 
         let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
