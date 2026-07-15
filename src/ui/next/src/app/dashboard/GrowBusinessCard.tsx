@@ -104,6 +104,13 @@ export function GrowBusinessCard() {
             >
               Event RSVP
             </Link>
+            <Link
+              id="viral-quiz-btn"
+              href="/viral-quiz-generator"
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Viral Quiz
+            </Link>
           </div>
         </div>
       </div>
