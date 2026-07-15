@@ -1,7 +1,6 @@
 "use client";
 import { AIPaywallWidget } from "../components/AIPaywallWidget";
 import { FloatingActionButton } from "./FAB";
-import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
@@ -376,7 +375,7 @@ export default function Dashboard() {
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
-      <VoiceAssistantFAB />
+
 
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />

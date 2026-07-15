@@ -350,7 +350,6 @@ function InboxWorkspace({
                   </div>
                 )}
           </section>
-
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
