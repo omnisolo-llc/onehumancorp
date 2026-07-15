@@ -73,7 +73,7 @@ describe('NeighborhoodPulseCard', () => {
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
-      if (url.includes('/api/mesh/v2/collective')) {
+      if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.resolve({
           json: () => Promise.resolve({ success: true })
         });
@@ -91,7 +91,7 @@ describe('NeighborhoodPulseCard', () => {
     fireEvent.click(inviteBtn);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/mesh/v2/collective', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/mesh/v2/collective', expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ action: 'invite', target_tenant_id: 'neighbor_one' })
       }));
@@ -106,7 +106,7 @@ describe('NeighborhoodPulseCard', () => {
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
-      if (url.includes('/api/mesh/v2/collective')) {
+      if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.resolve({
           json: () => Promise.resolve({ success: false })
         });
@@ -135,7 +135,7 @@ describe('NeighborhoodPulseCard', () => {
           json: () => Promise.resolve({ neighbors: ['neighbor_one'] })
         });
       }
-      if (url.includes('/api/mesh/v2/collective')) {
+      if (url.includes('/api/v1/mesh/v2/collective')) {
         return Promise.reject(new Error('Network down'));
       }
       return Promise.reject(new Error('not found'));

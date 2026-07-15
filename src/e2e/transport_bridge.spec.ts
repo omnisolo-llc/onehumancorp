@@ -14,7 +14,7 @@ test('Cloud-Standalone Mode Switching UI Visibility', async ({ page }) => {
 });
 
 test('Mission Context Synchronization Verification', async ({ request }) => {
-  const syncRes = await request.post('/api/mesh/v2/broadcast', {
+  const syncRes = await request.post('/api/v1/mesh/v2/broadcast', {
     data: {
       topic: 'mesh:state:handoff',
       message: {

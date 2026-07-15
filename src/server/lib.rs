@@ -6572,7 +6572,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true, "number": provisioned_number }))
             }
         }))
-        .route("/api/voice/incoming", axum::routing::post({
+        .route("/api/v1/voice/incoming", axum::routing::post({
             let settings_store = settings_store.clone();
             let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
             let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
@@ -7035,9 +7035,9 @@ async fn create_ui_bom_item_handler(
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/sync/ws", axum::routing::get(api::sync_gateway::ws_sync_handler))
-        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
-        .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
-        .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
+        .route("/api/v1/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
         .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
@@ -7098,7 +7098,6 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/sync", api::sync_gateway::router())
         .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
@@ -7156,7 +7155,7 @@ async fn create_ui_bom_item_handler(
 
 
 
-        .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
+        .route("/api/v1/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
         .route_layer(axum::middleware::from_fn_with_state(

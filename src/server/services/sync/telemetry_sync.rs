@@ -152,7 +152,7 @@ impl TelemetrySyncDaemon {
 
         let start = std::time::Instant::now();
 
-        let res = client.post(format!("{}/api/telemetry/sync", self.cloud_url))
+        let res = client.post(format!("{}/api/v1/telemetry/sync", self.cloud_url))
             .json(&batch)
             .send()
             .await;
@@ -220,7 +220,7 @@ mod tests {
 
         // Start a dummy mock server to accept telemetry and return 200 OK
         let mock_server = axum::Router::new()
-            .route("/api/telemetry/sync", axum::routing::post(|| async { axum::http::StatusCode::OK }));
+            .route("/api/v1/telemetry/sync", axum::routing::post(|| async { axum::http::StatusCode::OK }));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
