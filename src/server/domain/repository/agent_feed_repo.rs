@@ -177,12 +177,28 @@ impl AgentFeedRepository {
             }
         };
 
-        let items = sqlx::query_as::<_, AgentFeedItem>(query)
-        .bind(tenant_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.db.pool)
-        .await?;
+        let items = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let items = sqlx::query_as::<_, AgentFeedItem>(query)
+                    .bind(tenant_id)
+                    .bind(limit)
+                    .bind(offset)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                tx.commit().await?;
+                items
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query_as::<_, AgentFeedItem>(query)
+                    .bind(tenant_id)
+                    .bind(limit)
+                    .bind(offset)
+                    .fetch_all(pool)
+                    .await?
+            }
+        };
 
         Ok(items)
     }
