@@ -5,7 +5,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await loginAs(page, adminUser);
 
     // 1. Setup a draft quote by calling the API
-    const createQuoteRes = await page.request.post('/api/quotes', {
+    const createQuoteRes = await page.request.post('/api/v1/quotes', {
       headers: {
         'x-tenant-id': 'tenant-1'
       },
@@ -61,7 +61,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await page.waitForTimeout(2000);
 
     // 9. Verify the backend status via API
-    const getQuoteRes = await page.request.get(`/api/quotes?id=${quoteId}`, {
+    const getQuoteRes = await page.request.get(`/api/v1/quotes?id=${quoteId}`, {
       headers: {
         'x-tenant-id': 'tenant-1'
       }

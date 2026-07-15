@@ -254,7 +254,7 @@ export class SyncManager {
       const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
       for (const update of quoteUpdates) {
         try {
-          const res = await fetch(`/api/quotes?id=${update.quoteId}`, {
+          const res = await fetch(`/api/v1/quotes?id=${update.quoteId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
             body: JSON.stringify(update.payload)
@@ -273,7 +273,7 @@ export class SyncManager {
       const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
       for (const approval of quoteApprovals) {
         try {
-          const res = await fetch(`/api/quotes/${approval.quoteId}/approve`, {
+          const res = await fetch(`/api/v1/quotes/${approval.quoteId}/approve`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
           });

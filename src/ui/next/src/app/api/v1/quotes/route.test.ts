@@ -24,11 +24,11 @@ describe("authenticated quote routes", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
   test("maps legacy list, create, read, and update requests", async () => {
-    await GET(new Request("http://localhost/api/quotes"));
-    await POST(new Request("http://localhost/api/quotes", { method: "POST", body: "{}" }));
-    await GET(new Request("http://localhost/api/quotes?id=quote-7"));
+    await GET(new Request("http://localhost/api/v1/quotes"));
+    await POST(new Request("http://localhost/api/v1/quotes", { method: "POST", body: "{}" }));
+    await GET(new Request("http://localhost/api/v1/quotes?id=quote-7"));
     await POST(
-      new Request("http://localhost/api/quotes?id=quote-7", { method: "POST", body: "{}" }),
+      new Request("http://localhost/api/v1/quotes?id=quote-7", { method: "POST", body: "{}" }),
     );
 
     const validateLegacyQuoteBody = (
@@ -61,10 +61,10 @@ describe("authenticated quote routes", () => {
   });
 
   test("maps dynamic quote actions with confined IDs", async () => {
-    await getByPath(new Request("http://localhost/api/quotes/quote-7"), context("quote-7"));
-    await accept(new Request("http://localhost/api/quotes/quote-7/accept", { method: "POST" }), context("quote-7"));
+    await getByPath(new Request("http://localhost/api/v1/quotes/quote-7"), context("quote-7"));
+    await accept(new Request("http://localhost/api/v1/quotes/quote-7/accept", { method: "POST" }), context("quote-7"));
     await approve(
-      new Request("http://localhost/api/quotes/quote-7/approve", {
+      new Request("http://localhost/api/v1/quotes/quote-7/approve", {
         method: "PATCH",
         body: '{"attacker":"payload"}',
       }),
@@ -91,7 +91,7 @@ describe("authenticated quote routes", () => {
   });
 
   test("rejects injected quote IDs before transport", async () => {
-    const response = await GET(new Request("http://localhost/api/quotes?id=../admin"));
+    const response = await GET(new Request("http://localhost/api/v1/quotes?id=../admin"));
     expect(response.status).toBe(400);
     expect(proxyBackendRequest).not.toHaveBeenCalled();
   });

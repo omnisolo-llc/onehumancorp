@@ -247,7 +247,7 @@ describe("server-only authenticated backend transport", () => {
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/quotes?id=quote-7", {
+    const input = await request(deps, "/api/v1/quotes?id=quote-7", {
       method: "POST",
       body: '{"status":"SENT"}',
       headers: { "content-type": "application/json" },

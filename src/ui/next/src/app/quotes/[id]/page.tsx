@@ -35,7 +35,7 @@ export default function QuoteReviewPage() {
   useEffect(() => {
     async function fetchQuote() {
       try {
-        const res = await fetch(`/api/quotes/${id}`);
+        const res = await fetch(`/api/v1/quotes/${id}`);
         if (!res.ok) throw new Error('Failed to fetch quote');
         const data = await res.json();
         setQuote(data);
@@ -51,7 +51,7 @@ export default function QuoteReviewPage() {
   const handleSend = async () => {
     try {
       setSending(true);
-      const res = await fetch(`/api/quotes?id=${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...quote, status: 'SENT' }) });
+      const res = await fetch(`/api/v1/quotes?id=${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...quote, status: 'SENT' }) });
       if (!res.ok) throw new Error('Failed to send quote');
       const updated = await res.json();
       setQuote(updated);
@@ -82,7 +82,7 @@ export default function QuoteReviewPage() {
   const saveQuoteChanges = async () => {
     try {
       setSending(true);
-      const res = await fetch(`/api/quotes?id=${id}`, {
+      const res = await fetch(`/api/v1/quotes?id=${id}`, {
         method: 'POST', // Based on route.ts POST handles update if id is present
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(quote)

@@ -260,7 +260,7 @@ function FieldOpsJobsPageContent() {
     setDraftQuoteResult(null);
     try {
       const job = jobs.find(j => j.id === voiceQuoteJobId);
-      const res = await fetch("/api/quotes/draft_agent", {
+      const res = await fetch("/api/v1/quotes/draft_agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
