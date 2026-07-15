@@ -48,7 +48,7 @@ impl DepositFollowUpWorker {
                 .map_err(|e| e.to_string())?
                 .map(|r| {
                     (
-                        r.get::<Uuid, _>("id"),
+                        r.get::<String, _>("id"),
                         r.get::<String, _>("tenant_id"),
                         r.get::<String, _>("customer_name"),
                         r.get::<i64, _>("total_amount_cents")
@@ -73,7 +73,7 @@ impl DepositFollowUpWorker {
                 .map_err(|e| e.to_string())?
                 .map(|r| {
                     (
-                        Uuid::parse_str(&r.get::<String, _>("id")).unwrap_or_default(),
+                        r.get::<String, _>("id"),
                         r.get::<String, _>("tenant_id"),
                         r.get::<String, _>("customer_name"),
                         r.get::<i64, _>("total_amount_cents")

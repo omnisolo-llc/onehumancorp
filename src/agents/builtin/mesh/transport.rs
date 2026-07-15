@@ -5,6 +5,17 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 
 pub use crate::proto::hub::TeammateMeshEvent as Message;
+
+struct SubscriptionAbortOnDrop {
+    worker: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for SubscriptionAbortOnDrop {
+    fn drop(&mut self) {
+        self.worker.abort();
+    }
+}
+
 /// MeshTransport is the core interface for the Teammate Mesh APIs.
 /// It provides real-time bidirectional communication, distributed locking, and presence tracking.
 #[async_trait]
@@ -109,8 +120,10 @@ impl MeshTransport for InProcessTransport {
             }
         });
 
+        let abort_guard = Arc::new(SubscriptionAbortOnDrop { worker });
+        let abort_guard_clone = abort_guard.clone();
         let cancel = Box::new(move || {
-            worker.abort();
+            abort_guard_clone.worker.abort();
         });
 
         Ok(cancel)
@@ -383,8 +396,10 @@ impl MeshTransport for PgTransport {
             }
         });
 
+        let abort_guard = Arc::new(SubscriptionAbortOnDrop { worker });
+        let abort_guard_clone = abort_guard.clone();
         let cancel = Box::new(move || {
-            worker.abort();
+            abort_guard_clone.worker.abort();
         });
 
         Ok(cancel)
@@ -644,8 +659,10 @@ impl MeshTransport for SqliteTransport {
             }
         });
 
+        let abort_guard = Arc::new(SubscriptionAbortOnDrop { worker });
+        let abort_guard_clone = abort_guard.clone();
         let cancel = Box::new(move || {
-            worker.abort();
+            abort_guard_clone.worker.abort();
         });
 
         Ok(cancel)
@@ -787,8 +804,10 @@ impl MeshTransport for RedisPubSubTransport {
             }
         });
 
+        let abort_guard = Arc::new(SubscriptionAbortOnDrop { worker });
+        let abort_guard_clone = abort_guard.clone();
         let cancel = Box::new(move || {
-            worker.abort();
+            abort_guard_clone.worker.abort();
         });
 
         Ok(cancel)
