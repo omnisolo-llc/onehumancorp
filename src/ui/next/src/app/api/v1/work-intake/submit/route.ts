@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     // Notify backend of work intake
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
     try {
-      await fetch(`${backendUrl}/api/agents/webhook`, {
+      await fetch(`${backendUrl}/api/v1/agents/webhook`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

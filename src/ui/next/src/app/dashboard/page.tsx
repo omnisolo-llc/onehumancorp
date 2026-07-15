@@ -138,7 +138,7 @@ export default function Dashboard() {
   const handleApproveDraft = async (approvalId: string) => {
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+      const res = await fetch(`/api/v1/agents/approvals/${approvalId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ approved: true })

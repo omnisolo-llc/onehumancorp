@@ -11,7 +11,7 @@ export default function GooseMcpPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/agents/goose');
+      const res = await fetch('/api/v1/agents/goose');
       const data = await res.json();
       if (data.error) {
         setError(data.error);
@@ -33,7 +33,7 @@ export default function GooseMcpPage() {
 
   const handleExecute = async (id: string) => {
     try {
-      const res = await fetch('/api/agents/goose/execute', {
+      const res = await fetch('/api/v1/agents/goose/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,7 @@ export default function CodeNativeExecutionPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/agents/code-native', {
+      const response = await fetch('/api/v1/agents/code-native', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

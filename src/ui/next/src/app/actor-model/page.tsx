@@ -13,7 +13,7 @@ export default function ActorModelPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/agents/actor-model', {
+      const response = await fetch('/api/v1/agents/actor-model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
