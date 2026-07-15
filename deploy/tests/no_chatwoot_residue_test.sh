@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+echo "NODE_DISABLE_COMPILE_CACHE=1" >> "$GITHUB_ENV"
 sudo chmod -R 777 /tmp/node-compile-cache 2>/dev/null || true
 rm -rf /tmp/node-compile-cache 2>/dev/null || true
 set -euo pipefail
