@@ -24,6 +24,44 @@ pub fn get_cdn_cache() -> std::sync::Arc<HybridCache<CachedResponse>> {
     CDN_CACHE.get_or_init(|| std::sync::Arc::new(HybridCache::new(None))).clone()
 }
 
+pub async fn inject_inventory(
+    mut html: String,
+    tenant_id: &str,
+    cache: std::sync::Arc<HybridCache<String>>,
+) -> String {
+    let mut offset = 0;
+    while let Some(start) = html[offset..].find("<!-- INVENTORY_STATUS_") {
+        let actual_start = offset + start;
+        let prefix_len = "<!-- INVENTORY_STATUS_".len();
+        if let Some(end) = html[actual_start + prefix_len..].find(" -->") {
+            let actual_end = actual_start + prefix_len + end;
+            let pid = &html[actual_start + prefix_len..actual_end];
+            let pid_str = pid.to_string();
+
+            let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, pid_str);
+
+            let mut inventory_count: i32 = 0;
+            if let Some(cached_val) = cache.get(&kv_key).await {
+                if let Ok(val) = cached_val.parse::<i32>() {
+                    inventory_count = val;
+                }
+            }
+
+            let replacement = if inventory_count <= 0 {
+                "<span class=\"sold-out\" style=\"color: #E30000; font-weight: 600; font-size: 14px;\">Sold Out</span>"
+            } else {
+                ""
+            };
+
+            html.replace_range(actual_start..(actual_end + 4), replacement);
+            offset = actual_start + replacement.len();
+        } else {
+            break;
+        }
+    }
+    html
+}
+
 pub async fn edge_caching_middleware(
     req: Request,
     next: Next,
@@ -44,7 +82,30 @@ pub async fn edge_caching_middleware(
 
     if is_get && !bypass_cache {
         if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
-            let body = Body::from(cached.body);
+            let mut body_bytes = cached.body.clone();
+
+            // Extract tenant_id from headers
+            let mut tenant_id_opt = None;
+            for (k, v) in &cached.headers {
+                if k.eq_ignore_ascii_case("Surrogate-Key") || k.eq_ignore_ascii_case("Cache-Tag") {
+                    for tag in v.split(&[' ', ','][..]) {
+                        if tag.starts_with("tenant-id:") {
+                            tenant_id_opt = Some(tag.trim_start_matches("tenant-id:").to_string());
+                        }
+                    }
+                }
+            }
+
+            // Hydrate inventory at the edge cache hit
+            if let Some(tenant_id) = tenant_id_opt {
+                if let Ok(html_str) = String::from_utf8(body_bytes.clone()) {
+                    let edge_cache = crate::builder::edge::get_edge_cache();
+                    let hydrated_html = inject_inventory(html_str, &tenant_id, edge_cache).await;
+                    body_bytes = hydrated_html.into_bytes();
+                }
+            }
+
+            let body = Body::from(body_bytes);
             let mut response = Response::builder()
                 .status(cached.status)
                 .body(body)
@@ -126,7 +187,31 @@ pub async fn edge_caching_middleware(
         cdn_cache.set_with_tags(&cache_key, cached_response, tags_vec, std::time::Duration::from_secs(60)).await;
     }
 
-    let new_body = Body::from(bytes.to_vec());
+    let mut body_bytes = bytes.to_vec();
+
+    // Hydrate inventory on cache miss before sending response
+    if is_get && parts.status.is_success() {
+        let mut tenant_id_opt = None;
+        if let Some(surrogate) = parts.headers.get("Surrogate-Key").or_else(|| parts.headers.get("Cache-Tag")) {
+            if let Ok(s) = surrogate.to_str() {
+                for t in s.split(&[' ', ','][..]) {
+                    if t.starts_with("tenant-id:") {
+                        tenant_id_opt = Some(t.trim_start_matches("tenant-id:").to_string());
+                    }
+                }
+            }
+        }
+
+        if let Some(tenant_id) = tenant_id_opt {
+            if let Ok(html_str) = String::from_utf8(body_bytes.clone()) {
+                let edge_cache = crate::builder::edge::get_edge_cache();
+                let hydrated_html = inject_inventory(html_str, &tenant_id, edge_cache).await;
+                body_bytes = hydrated_html.into_bytes();
+            }
+        }
+    }
+
+    let new_body = Body::from(body_bytes);
     let new_response = Response::from_parts(parts, new_body);
     Ok(new_response.into_response())
 }

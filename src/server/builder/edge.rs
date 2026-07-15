@@ -125,8 +125,7 @@ pub async fn handle_edge_request_impl(
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
-    if let Some((mut cached_html, stale)) = cache.get_with_swr(&cache_key).await {
-        cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+    if let Some((cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         std::hash::Hash::hash(&cached_html, &mut hasher);
         let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
@@ -207,8 +206,7 @@ pub async fn handle_edge_request_impl(
         ongoing.lock().await.remove(&cache_key);
     }
 
-    let (mut html, tags) = result?;
-    html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+    let (html, tags) = result?;
 
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     std::hash::Hash::hash(&html, &mut hasher);

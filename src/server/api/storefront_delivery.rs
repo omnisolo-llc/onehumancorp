@@ -11,7 +11,7 @@ use uuid::Uuid;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use crate::utils::cache::HybridCache;
-use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
+use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation};
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -145,7 +145,7 @@ async fn get_storefront_product(
     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
 
     if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
-        let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+        let html = cached_html;
         let mut response = Html(html.clone()).into_response();
         set_storefront_headers(&mut response, &html, tenant_id, None);
 
@@ -183,7 +183,7 @@ async fn get_storefront_product(
     if is_generating {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
-            let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+            let html = cached_html;
             let mut response = Html(html.clone()).into_response();
         set_storefront_headers(&mut response, &html, tenant_id, None);
             return Ok(response);
@@ -198,7 +198,7 @@ async fn get_storefront_product(
     }
 
     if let Ok((html, tags)) = result {
-        let final_html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+        let final_html = html;
         let mut response = Html(final_html.clone()).into_response();
         set_storefront_headers(&mut response, &final_html, tenant_id, Some(tags));
         return Ok(response);

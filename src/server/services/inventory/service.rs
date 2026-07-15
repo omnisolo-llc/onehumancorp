@@ -385,11 +385,26 @@ impl InventoryService {
                             let invalidation_payload = serde_json::json!({
                                 "event": "inventory.updated",
                                 "tags": [
-                                    format!("tenant-id:{}", tenant_id),
-                                    format!("entity:product:{}", product_id)
+                                    format!("tenant-id:{}", tenant_id)
                                 ]
                             }).to_string();
                             let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                        }
+
+                        // Push inventory update directly to EDGE_CACHE KV
+                        let edge_cache = crate::builder::edge::get_edge_cache();
+                        let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, product_id);
+
+                        let pool = crate::db::get_pool();
+                        let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+                            .bind(product_id)
+                            .bind(tenant_id)
+                            .fetch_optional(&pool)
+                            .await
+                            .unwrap_or(None);
+
+                        if let Some(stock) = f_stock {
+                            edge_cache.set(&kv_key, stock.to_string(), std::time::Duration::from_secs(60)).await;
                         }
                     }
                 } else {
@@ -734,11 +749,17 @@ impl InventoryService {
                 let invalidation_payload = serde_json::json!({
                     "event": "inventory.updated",
                     "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
+                        format!("tenant-id:{}", tenant_id)
                     ]
                 }).to_string();
                 let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+            }
+
+            // Push inventory update directly to EDGE_CACHE KV
+            if let Some(new_stock) = update_result {
+                let edge_cache = crate::builder::edge::get_edge_cache();
+                let kv_key = format!("tenant:{}:product:{}:inventory", tenant_id, product_id);
+                edge_cache.set(&kv_key, new_stock.to_string(), std::time::Duration::from_secs(60)).await;
             }
         }
 
