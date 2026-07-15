@@ -11,7 +11,7 @@ test.describe('Quote Edit E2E', () => {
 
     // Make sure we have a mock quote created so we can interact with it in the dashboard.
     // Navigate to create a quote or rely on deterministic fixtures.
-    const createQuoteRes = await page.request.post('/api/quotes', {
+    const createQuoteRes = await page.request.post('/api/v1/quotes', {
       headers: {
         'x-tenant-id': 'tenant-1'
       },
