@@ -17,7 +17,7 @@ export async function DELETE(
   } catch {
     return invalidMemoryId();
   }
-  return proxyBackendRequest(request, "/api/assistant/memory", {
+  return proxyBackendRequest(request, "/api/v1/assistant/memory", {
     backendMethod: "PATCH",
     forwardQuery: false,
     requestContentType: "application/json",

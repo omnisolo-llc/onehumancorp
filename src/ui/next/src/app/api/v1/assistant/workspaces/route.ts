@@ -2,7 +2,7 @@ import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 import { privateJson } from "../assistantBackend";
 
 export async function GET(request: Request): Promise<Response> {
-  const response = await proxyBackendRequest(request, "/api/assistant/workspaces");
+  const response = await proxyBackendRequest(request, "/api/v1/assistant/workspaces");
   if (!response.ok) return response;
   const value = await response.json().catch(() => null);
   if (!Array.isArray(value)) {

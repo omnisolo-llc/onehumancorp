@@ -38,7 +38,7 @@ describe("authenticated memory backend routes", () => {
     await listMemory(request);
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/assistant/memory",
+      "/api/v1/assistant/memory",
       { forwardQuery: false, suppressRequestBody: true },
     );
   });
@@ -51,7 +51,7 @@ describe("authenticated memory backend routes", () => {
     const options = proxyBackendRequest.mock.calls[0][2];
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/assistant/memory",
+      "/api/v1/assistant/memory",
       expect.objectContaining({
         backendMethod: "PATCH",
         forwardQuery: false,
@@ -78,7 +78,7 @@ describe("authenticated memory backend routes", () => {
     const options = proxyBackendRequest.mock.calls[0][2];
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/assistant/memory",
+      "/api/v1/assistant/memory",
       expect.objectContaining({ backendMethod: "PATCH", forwardQuery: false }),
     );
     expect(
@@ -108,7 +108,7 @@ describe("authenticated memory backend routes", () => {
     const options = proxyBackendRequest.mock.calls[0][2];
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/assistant/memory/cross-session-search",
+      "/api/v1/assistant/memory/cross-session-search",
       expect.objectContaining({ forwardQuery: false }),
     );
     expect(

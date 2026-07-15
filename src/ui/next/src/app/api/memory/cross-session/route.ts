@@ -4,7 +4,7 @@ import { crossSessionMemoryRequest } from "../memoryPayload";
 export const runtime = "nodejs";
 
 export function POST(request: Request): Promise<Response> {
-  return proxyBackendRequest(request, "/api/assistant/memory/cross-session-search", {
+  return proxyBackendRequest(request, "/api/v1/assistant/memory/cross-session-search", {
     forwardQuery: false,
     requestContentType: "application/json",
     transformRequestBody: crossSessionMemoryRequest,

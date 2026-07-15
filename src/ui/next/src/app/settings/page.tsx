@@ -80,7 +80,7 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load delivery settings", e)),
 
-      fetch("/api/assistant/settings")
+      fetch("/api/v1/assistant/settings")
         .then(res => res.json())
         .then(data => {
           if (data?.settings?.agentName) {
@@ -229,7 +229,7 @@ export default function SettingsPage() {
   const handleAgentNameChange = async (value: string) => {
     setAgentName(value);
     try {
-      await fetch("/api/assistant/settings", {
+      await fetch("/api/v1/assistant/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentName: value }),
