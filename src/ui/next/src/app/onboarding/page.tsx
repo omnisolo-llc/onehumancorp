@@ -54,6 +54,7 @@ export default function OnboardingWizard() {
   const [chatInput, setChatInput] = useState("");
   const [chatImageUrl, setChatImageUrl] = useState("");
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const [showImageInput, setShowImageInput] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   useEffect(() => {
@@ -1181,24 +1182,25 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="flex flex-col gap-2 shrink-0">
-                  <input
-                    type="url"
-                    id="chat-image-url"
-                    value={chatImageUrl}
-                    onChange={(e) => setChatImageUrl(e.target.value)}
-                    className="glass-control rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
-                    placeholder="Image URL (Optional)"
-                    inputMode="url"
-                    autoComplete="url"
-                    enterKeyHint="next"
-                  />
+                  <div id="chat-image-container" style={{ display: showImageInput ? "block" : "none", width: "100%" }}>
+                    <input
+                      type="url"
+                      id="chat-image-url"
+                      value={chatImageUrl}
+                      onChange={(e) => setChatImageUrl(e.target.value)}
+                      className="glass-control rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                      placeholder="Image URL (Optional)"
+                      inputMode="url"
+                      autoComplete="url"
+                      enterKeyHint="next"
+                    />
+                  </div>
                   <div className="flex gap-2 w-full">
                     <button
                       id="chat-upload-btn"
                       className="glass-control rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
                       onClick={() => {
-                        const url = prompt("Enter image URL");
-                        if (url) setChatImageUrl(url);
+                        setShowImageInput(!showImageInput);
                       }}
                       title="Upload Image"
                       aria-label="Upload Image"
