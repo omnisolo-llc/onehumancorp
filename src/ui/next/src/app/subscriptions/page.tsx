@@ -69,7 +69,7 @@ export default function SubscriptionsPage() {
 
     async function loadOverview() {
       try {
-        const response = await fetch("/api/subscriptions", {
+        const response = await fetch("/api/v1/subscriptions", {
           signal: controller.signal,
         });
         if (!response.ok) {

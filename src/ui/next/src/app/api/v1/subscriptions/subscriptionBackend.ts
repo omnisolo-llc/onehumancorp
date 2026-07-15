@@ -9,7 +9,7 @@ export function subscriptionBackendPath(id: unknown, suffix = ""): string {
   ) {
     throw new Error("invalid subscription ID");
   }
-  return `/api/subscriptions/${id}${suffix}`;
+  return `/api/v1/subscriptions/${id}${suffix}`;
 }
 
 export function invalidSubscriptionId(): Response {

@@ -3,9 +3,9 @@ import { subscriptionBackendPath } from "./subscriptionBackend";
 
 describe("subscription backend paths", () => {
   test("confines subscription IDs", () => {
-    expect(subscriptionBackendPath("sub-7")).toBe("/api/subscriptions/sub-7");
+    expect(subscriptionBackendPath("sub-7")).toBe("/api/v1/subscriptions/sub-7");
     expect(subscriptionBackendPath("sub-7", "/action")).toBe(
-      "/api/subscriptions/sub-7/action",
+      "/api/v1/subscriptions/sub-7/action",
     );
     expect(() => subscriptionBackendPath("../admin")).toThrow("invalid subscription ID");
   });
