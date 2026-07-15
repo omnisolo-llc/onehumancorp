@@ -13,7 +13,7 @@ export const CFOAgentCard: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/finance/safe-to-spend');
+        const response = await fetch('/api/v1/payments/ledger/safe-to-spend');
         if (response.ok) {
           const json = await response.json();
           setData(json);
