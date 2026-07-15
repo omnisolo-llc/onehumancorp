@@ -1,5 +1,6 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Extension, State},
+    response::IntoResponse,
     routing::get,
     Json, Router,
 };
@@ -11,6 +12,10 @@ use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
 
 pub static POS_ORDERS_CACHE: OnceLock<HybridCache<Value>> = OnceLock::new();
+
+fn pos_tenant(claims: Option<&Extension<::server_common::Claims>>) -> Option<String> {
+    claims.and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
+}
 
 pub fn pos_routes<S>(hub: Arc<Hub>) -> Router<S>
 where
@@ -38,13 +43,15 @@ pub struct InventoryToggle {
 
 async fn post_orders_handler(
     State(_hub): State<Arc<Hub>>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(payloads): Json<Vec<serde_json::Value>>,
-) -> Json<Value> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+) -> impl axum::response::IntoResponse {
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if payloads.len() > 100 {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
 
     let pool = crate::db::get_pool();
     for payload in payloads {
@@ -55,10 +62,13 @@ async fn post_orders_handler(
 
             if !order_id.is_empty() && !status.is_empty() {
                 if let Ok(mut tx) = pool.begin().await {
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+                        continue;
+                    }
                     if !client_mutation_id.is_empty() {
                         let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
                             .bind(client_mutation_id)
-                            .bind(tenant_id)
+                            .bind(&tenant_id)
                             .fetch_one(&mut *tx)
                             .await
                             .unwrap_or((0,));
@@ -70,7 +80,7 @@ async fn post_orders_handler(
 
                         let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
                             .bind(client_mutation_id)
-                            .bind(tenant_id)
+                            .bind(&tenant_id)
                             .execute(&mut *tx)
                             .await;
                     }
@@ -78,7 +88,7 @@ async fn post_orders_handler(
                     let update_res = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(status)
                         .bind(order_id)
-                        .bind(tenant_id)
+                        .bind(&tenant_id)
                         .execute(&mut *tx)
                         .await;
 
@@ -93,7 +103,7 @@ async fn post_orders_handler(
     }
     let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
     cache.invalidate_by_tag("pos_orders").await;
-    Json(json!({"status": "ok"}))
+    Json(json!({"status": "ok"})).into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -105,13 +115,15 @@ pub struct InventoryAdjustment {
 
 async fn post_inventory_handler(
     axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     axum::Json(payloads): axum::Json<Vec<serde_json::Value>>,
-) -> Json<Value> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+) -> impl axum::response::IntoResponse {
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    if payloads.len() > 100 {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
 
     let pool = crate::db::get_pool();
     for payload in payloads {
@@ -124,10 +136,13 @@ async fn post_inventory_handler(
 
             if !item_id.is_empty() {
                 if let Ok(mut tx) = pool.begin().await {
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+                        continue;
+                    }
                     if !client_mutation_id.is_empty() {
                         let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
                             .bind(client_mutation_id)
-                            .bind(tenant_id)
+                            .bind(&tenant_id)
                             .fetch_one(&mut *tx)
                             .await
                             .unwrap_or((0,));
@@ -139,7 +154,7 @@ async fn post_inventory_handler(
 
                         let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
                             .bind(client_mutation_id)
-                            .bind(tenant_id)
+                            .bind(&tenant_id)
                             .execute(&mut *tx)
                             .await;
                     }
@@ -148,7 +163,7 @@ async fn post_inventory_handler(
                     let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
                         .bind(quantity_change)
                         .bind(item_id)
-                        .bind(tenant_id)
+                        .bind(&tenant_id)
                         .fetch_optional(&mut *tx)
                         .await;
 
@@ -160,7 +175,7 @@ async fn post_inventory_handler(
                          inv_lvl_id = uuid::Uuid::new_v4().to_string();
                          let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
                             .bind(&inv_lvl_id)
-                            .bind(tenant_id)
+                            .bind(&tenant_id)
                             .bind(item_id)
                             .bind(location_id)
                             .bind(quantity_change)
@@ -172,7 +187,7 @@ async fn post_inventory_handler(
                          let t_id = uuid::Uuid::new_v4().to_string();
                          let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
                              .bind(&t_id)
-                             .bind(tenant_id)
+                             .bind(&tenant_id)
                              .bind(&inv_lvl_id)
                              .bind(quantity_change)
                              .execute(&mut *tx)
@@ -184,7 +199,7 @@ async fn post_inventory_handler(
                         .bind(quantity_change)
                         .bind(is_sold_out)
                         .bind(item_id)
-                        .bind(tenant_id)
+                        .bind(&tenant_id)
                         .execute(&mut *tx)
                         .await;
 
@@ -223,25 +238,22 @@ async fn post_inventory_handler(
             }
         }
     }
-    Json(json!({"status": "ok"}))
-}
-
-#[derive(serde::Deserialize)]
-pub struct PosQuery {
-    pub tenant_id: Option<String>,
+    Json(json!({"status": "ok"})).into_response()
 }
 
 async fn get_orders_handler(
     State(_hub): State<Arc<Hub>>,
-    Query(query): Query<PosQuery>,
-) -> Json<Value> {
-    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+    claims: Option<Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let cache_key = format!("pos_orders:{}", tenant_id);
     let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return Json(cached);
+            return Json(cached).into_response();
         }
         let tenant_id_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
@@ -275,7 +287,7 @@ async fn get_orders_handler(
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(5)).await;
             }
         });
-        return Json(cached);
+        return Json(cached).into_response();
     }
 
     let pool = crate::db::get_pool();
@@ -307,14 +319,16 @@ async fn get_orders_handler(
     let result = json!({ "orders": orders });
     cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
 
-    Json(result)
+    Json(result).into_response()
 }
 
 async fn get_inventory_handler(
     State(_hub): State<Arc<Hub>>,
-    Query(query): Query<PosQuery>,
-) -> Json<Value> {
-    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+    claims: Option<Extension<::server_common::Claims>>,
+) -> impl axum::response::IntoResponse {
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let pool = crate::db::get_pool();
 
     let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
@@ -337,7 +351,7 @@ async fn get_inventory_handler(
         })
     }).collect();
 
-    Json(json!({ "inventory": inventory }))
+    Json(json!({ "inventory": inventory })).into_response()
 }
 
 #[cfg(test)]
@@ -421,18 +435,17 @@ pub struct TranslateNotesRequest {
 }
 
 pub async fn translate_order_notes_handler(
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(payload): Json<TranslateNotesRequest>,
 ) -> impl axum::response::IntoResponse {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
 
     let notes = payload.notes;
     // Call LLM translation helper if available
     let translated = match crate::api::agents::translation::translate_inbox_message_with_llm(
-        tenant_id,
+        &tenant_id,
         "kitchen",
         &notes,
         "Arabic",
@@ -449,5 +462,5 @@ pub async fn translate_order_notes_handler(
         }
     };
 
-    Json(json!({ "translatedNotes": translated }))
+    Json(json!({ "translatedNotes": translated })).into_response()
 }
