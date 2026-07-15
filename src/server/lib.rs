@@ -6347,7 +6347,7 @@ async fn create_ui_bom_item_handler(
         .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -6405,7 +6405,7 @@ async fn create_ui_bom_item_handler(
 
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" })).into_response()
         }))
-        .route("/api/settings/sms-confirm", axum::routing::post({
+        .route("/api/v1/settings/sms-confirm", axum::routing::post({
             let _settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6432,7 +6432,7 @@ async fn create_ui_bom_item_handler(
                 }
             }
         }))
-        .route("/api/settings/sms-preferences", axum::routing::post({
+        .route("/api/v1/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6448,7 +6448,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/delivery", axum::routing::get({
+        .route("/api/v1/settings/delivery", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6459,7 +6459,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/delivery", axum::routing::post({
+        .route("/api/v1/settings/delivery", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let enabled = req.get("delivery_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -6474,7 +6474,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/telemetry", axum::routing::get({
+        .route("/api/v1/settings/telemetry", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6483,7 +6483,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/telemetry", axum::routing::post({
+        .route("/api/v1/settings/telemetry", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let enabled = req.get("product_telemetry_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -6496,7 +6496,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/voice", axum::routing::get({
+        .route("/api/v1/settings/voice", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6508,7 +6508,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/voice", axum::routing::post({
+        .route("/api/v1/settings/voice", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let current_settings = settings_store.get();
@@ -6540,7 +6540,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/voice/provision", axum::routing::post({
+        .route("/api/v1/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let twilio_client = std::sync::Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
