@@ -18,11 +18,11 @@ test.describe('Onboarding Flow', () => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -117,11 +117,11 @@ test.describe('Onboarding Flow', () => {
 
     // explicitly fail draft API
     // Instead of just failing draft, we use the browser context offline mode for part of it
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.abort('failed');
     });
 
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

@@ -18,7 +18,7 @@ const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/growth/referrals/milestones/status',
   '/api/ui/dashboard/unified-feed',
   '/api/v1/walkthrough/dashboard',
-  '/api/onboarding/state',
+  '/api/v1/onboarding/state',
   '/api/ledger/accounts',
   '/api/user/usage',
   '/api/v1/growth/milestone/card',
@@ -38,7 +38,7 @@ const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/ui/bookings',
   '/api/v1/health',
   '/api/agents/marketplace',
-  '/api/onboarding/draft',
+  '/api/v1/onboarding/draft',
   '/agent-audit-dashboard',
   '/favicon.ico',
 ]);

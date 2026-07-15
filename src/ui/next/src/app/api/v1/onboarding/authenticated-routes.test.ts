@@ -30,10 +30,10 @@ import { POST as launch } from "./launch/route";
 import { POST as start } from "./start/route";
 import { POST as startZeroClick } from "./start_zero_click/route";
 import { GET as getState, POST as saveState } from "./state/route";
-import { POST as v1Chat } from "../v1/onboarding/chat/route";
-import { POST as v1Start } from "../v1/onboarding/start/route";
-import { POST as v1StartZeroClick } from "../v1/onboarding/start_zero_click/route";
-import { POST as legacyGrowthZeroClick } from "../v1/growth/zero-click-builder/generate/route";
+import { POST as v1Chat } from "./chat/route";
+import { POST as v1Start } from "./start/route";
+import { POST as v1StartZeroClick } from "./start_zero_click/route";
+import { POST as legacyGrowthZeroClick } from "../growth/zero-click-builder/generate/route";
 
 const jsonOptions = {
   forwardQuery: false,
@@ -44,36 +44,57 @@ const jsonOptions = {
 describe("authenticated onboarding backend routes", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
-  test.each([
-    ["chat", chat, "/api/onboarding/chat"],
-    ["intake", intake, "/api/onboarding/intake"],
-  ])("%s uses the fixed authenticated JSON contract", async (_name, route, path) => {
+  test("chat uses the authenticated messages-only contract", async () => {
     const request = new Request("http://localhost/route?tenant_id=attacker", {
       method: "POST",
       headers: { "content-type": "text/plain" },
       body: '{"messages":[]}',
     });
 
-    await route(request);
+    await chat(request);
 
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, path, jsonOptions);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/v1/onboarding/chat",
+      expect.objectContaining({
+        forwardQuery: false,
+        requestContentType: "application/json",
+        transformRequestBody: expect.any(Function),
+      }),
+    );
+  });
+
+  test("intake uses the fixed authenticated JSON contract", async () => {
+    const request = new Request("http://localhost/route?tenant_id=attacker", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: '{"messages":[]}',
+    });
+
+    await intake(request);
+
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/v1/onboarding/intake",
+      jsonOptions,
+    );
   });
 
   test.each([
     [
       "zero click",
       startZeroClick,
-      "/api/onboarding/start_zero_click",
+      "/api/v1/onboarding/start_zero_click",
     ],
     [
       "v1 zero click",
       v1StartZeroClick,
-      "/api/onboarding/start_zero_click",
+      "/api/v1/onboarding/start_zero_click",
     ],
     [
       "legacy growth zero click",
       legacyGrowthZeroClick,
-      "/api/onboarding/start_zero_click",
+      "/api/v1/onboarding/start_zero_click",
     ],
   ])("%s bounds input and strips browser authority", async (_name, route, path) => {
     const request = new Request("http://localhost/route?tenant_id=attacker", {
@@ -141,8 +162,8 @@ describe("authenticated onboarding backend routes", () => {
   });
 
   test.each([
-    ["draft", getDraft, "/api/onboarding/draft"],
-    ["state", getState, "/api/onboarding/state"],
+    ["draft", getDraft, "/api/v1/onboarding/draft"],
+    ["state", getState, "/api/v1/onboarding/state"],
   ])("GET %s suppresses queries and request bodies", async (_name, route, path) => {
     const request = new Request("http://localhost/route?tenant_id=attacker");
 
@@ -155,8 +176,8 @@ describe("authenticated onboarding backend routes", () => {
   });
 
   test.each([
-    ["draft", saveDraft, "/api/onboarding/draft"],
-    ["state", saveState, "/api/onboarding/state"],
+    ["draft", saveDraft, "/api/v1/onboarding/draft"],
+    ["state", saveState, "/api/v1/onboarding/state"],
   ])("POST %s strips authority and secret fields", async (_name, route, path) => {
     const request = new Request("http://localhost/route?tenant_id=attacker", {
       method: "POST",
@@ -206,7 +227,7 @@ describe("authenticated onboarding backend routes", () => {
 
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/onboarding/launch",
+      "/api/v1/onboarding/launch",
       { forwardQuery: false, suppressRequestBody: true },
     );
   });
@@ -221,7 +242,7 @@ describe("authenticated onboarding backend routes", () => {
 
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/onboarding/chat",
+      "/api/v1/onboarding/chat",
       expect.objectContaining({
         forwardQuery: false,
         requestContentType: "application/json",

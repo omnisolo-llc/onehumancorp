@@ -77,20 +77,20 @@ describe('WebsiteBuilderPage', () => {
     expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state');
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/state');
   });
 
   it('can follow the standard wizard flow', async () => {
     vi.useRealTimers();
     const originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/onboarding/start') {
+      if (url === '/api/v1/onboarding/start') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ organization_id: 'test-org-id' })
         });
       }
-      if (url === '/api/onboarding/state') {
+      if (url === '/api/v1/onboarding/state') {
           return Promise.resolve({
               ok: true,
               json: () => Promise.resolve({})
@@ -150,12 +150,12 @@ describe('WebsiteBuilderPage', () => {
     expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
 
     await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.any(Object));
+        expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.any(Object));
         expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
 
     const startCall = (global.fetch as any).mock.calls.find(
-      ([url]: [string]) => url === '/api/onboarding/start',
+      ([url]: [string]) => url === '/api/v1/onboarding/start',
     );
     const startRequest = JSON.parse(startCall[1].body);
     expect(startCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
@@ -178,7 +178,7 @@ describe('WebsiteBuilderPage', () => {
     // Mock the specific API call for instant build
     const originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/onboarding/intake') {
+      if (url === '/api/v1/onboarding/intake') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -188,7 +188,7 @@ describe('WebsiteBuilderPage', () => {
           })
         });
       }
-      if (url === '/api/onboarding/state') {
+      if (url === '/api/v1/onboarding/state') {
           return Promise.resolve({
               ok: true,
               json: () => Promise.resolve({})
@@ -230,7 +230,7 @@ describe('WebsiteBuilderPage', () => {
     });
     global.fetch = vi.fn().mockImplementation((url: string) =>
       Promise.resolve({
-        ok: url !== '/api/onboarding/start',
+        ok: url !== '/api/v1/onboarding/start',
         json: () => Promise.resolve({ error: 'rejected' }),
       }),
     );
@@ -357,7 +357,7 @@ describe('WebsiteBuilderPage', () => {
     });
 
     // Should have called fetch to start the store
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.objectContaining({
       method: 'POST',
       body: expect.stringContaining('"company_name":"My Business"')
     }));

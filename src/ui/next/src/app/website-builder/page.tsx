@@ -40,7 +40,7 @@ export default function WebsiteBuilderPage() {
     setStatus("generating"); // Just show some loading state or disable button
     try {
       const state = useWebsiteBuilderStore.getState();
-      const res = await fetch('/api/onboarding/draft', {
+      const res = await fetch('/api/v1/onboarding/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,10 +77,10 @@ export default function WebsiteBuilderPage() {
   // Read state from server on mount
   useEffect(() => {
     Promise.all([
-      fetch('/api/onboarding/draft')
+      fetch('/api/v1/onboarding/draft')
         .then(res => res.ok ? res.json() : null)
         .catch(() => null),
-      fetch('/api/onboarding/state')
+      fetch('/api/v1/onboarding/state')
         .then(res => res.ok ? res.json() : null)
         .catch(() => null)
     ])
@@ -151,7 +151,7 @@ export default function WebsiteBuilderPage() {
       };
 
       const timer = setTimeout(() => {
-        fetch('/api/onboarding/state', {
+        fetch('/api/v1/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ wizardState })
@@ -557,7 +557,7 @@ export default function WebsiteBuilderPage() {
                       onClick={async () => {
                         setStatus('generating');
                         try {
-                            const startRes = await fetch('/api/onboarding/start', {
+                            const startRes = await fetch('/api/v1/onboarding/start', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
@@ -633,7 +633,7 @@ export default function WebsiteBuilderPage() {
                         const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
                         try {
 
-                          const res = await fetch('/api/onboarding/intake', {
+                          const res = await fetch('/api/v1/onboarding/intake', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ description: bio }),
@@ -653,7 +653,7 @@ export default function WebsiteBuilderPage() {
                             const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
                             const inferredLocation = data.location || 'Unknown';
 
-                            const startRes = await fetch('/api/onboarding/start', {
+                            const startRes = await fetch('/api/v1/onboarding/start', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({

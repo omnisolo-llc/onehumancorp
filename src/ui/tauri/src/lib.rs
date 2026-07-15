@@ -352,9 +352,9 @@ async fn setup_health_check(mode: Option<String>) -> Result<serde_json::Value, S
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
 
     let url = if let Some(m) = mode {
-        format!("{}/api/onboarding/setup-health?mode={}", backend_url, m)
+        format!("{}/api/v1/onboarding/setup-health?mode={}", backend_url, m)
     } else {
-        format!("{}/api/onboarding/setup-health", backend_url)
+        format!("{}/api/v1/onboarding/setup-health", backend_url)
     };
 
     let request = reqwest::Client::builder()

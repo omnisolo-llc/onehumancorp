@@ -73,7 +73,7 @@ export default function StorefrontBuilderPage() {
       };
 
       const timer = setTimeout(() => {
-        fetch('/api/onboarding/state', {
+        fetch('/api/v1/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
           body: JSON.stringify(payload)
@@ -103,7 +103,7 @@ export default function StorefrontBuilderPage() {
         userId = crypto.randomUUID();
         localStorage.setItem('user_id', userId);
       }
-    fetch('/api/onboarding/state', {
+    fetch('/api/v1/onboarding/state', {
       headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
     })
     .then(res => res.json())

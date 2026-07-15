@@ -44,11 +44,11 @@ test.describe('Onboarding Keyboard Friction / Business Type mapping', () => {
     await page.locator('#template-selection').selectOption('Modern');
 
     let startRequestPromise = page.waitForRequest(request =>
-      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
+      request.url().includes('/api/v1/onboarding/start') && request.method() === 'POST'
     );
 
     // intercept start_onboarding response to prevent actual redirect so test completes faster
-    await page.route('**/api/onboarding/start', async (route) => {
+    await page.route('**/api/v1/onboarding/start', async (route) => {
       const body = JSON.parse(route.request().postData() || "{}");
       expect(body.business_type).toBe('Agency');
       route.fulfill({
