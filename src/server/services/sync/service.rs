@@ -463,7 +463,8 @@ mod tests {
             .connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc.local/org/org1/agent/agent1".parse().unwrap());
+        req.extensions_mut().insert(::server_auth::AuthInfo { spiffe_id: "spiffe://ohc.local/org/org1/agent/agent1".to_string(), org_id: "org1".to_string(), agent_id: "agent1".to_string() });
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);

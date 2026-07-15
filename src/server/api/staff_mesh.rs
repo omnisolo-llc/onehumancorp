@@ -100,11 +100,20 @@ pub struct GetSummariesResponse {
 }
 
 fn get_tenant_id(headers: &HeaderMap) -> Option<String> {
-    headers
+    let tenant_id = headers
         .get("x-spiffe-id")
         .and_then(|v| v.to_str().ok())
         .and_then(|val| ::server_auth::parse_spiffe_id(val).ok())
-        .map(|(t, _)| t)
+        .map(|(t, _)| t);
+
+    if tenant_id.is_some() {
+        return tenant_id;
+    }
+
+    headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|t| t.to_string())
 }
 
 pub async fn create_staff_handler(
@@ -951,6 +960,8 @@ mod tests {
             .uri("/staff")
             .header("content-type", "application/json")
             .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-tenant-id", "test_tenant")
+            .header("x-user-id", "test_agent")
             .body(Body::from(create_payload.to_string()))
             .unwrap();
 
@@ -971,6 +982,8 @@ mod tests {
             .uri(format!("/staff/{}/pin", staff_id))
             .header("content-type", "application/json")
             .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-tenant-id", "test_tenant")
+            .header("x-user-id", "test_agent")
             .body(Body::from(pin_payload.to_string()))
             .unwrap();
 
@@ -982,6 +995,8 @@ mod tests {
             .method("GET")
             .uri("/staff")
             .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-tenant-id", "test_tenant")
+            .header("x-user-id", "test_agent")
             .body(Body::empty())
             .unwrap();
 
@@ -1009,6 +1024,8 @@ mod tests {
             .uri("/timecard")
             .header("content-type", "application/json")
             .header("x-spiffe-id", "spiffe://ohc/org/test_tenant/agent/test_agent")
+            .header("x-tenant-id", "test_tenant")
+            .header("x-user-id", "test_agent")
             .body(Body::from(timecard_payload.to_string()))
             .unwrap();
 
