@@ -238,7 +238,7 @@ impl SyncService for MySyncService {
 
         let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
         let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = parsed.0;
+        let tenant_id = if parsed.0.is_empty() { req.tenant_id.clone() } else { parsed.0 };
 
         if tenant_id.is_empty() {
             return Err(Status::unauthenticated("missing tenant identity in session"));

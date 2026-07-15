@@ -265,6 +265,7 @@ mod tenant_aware_tool_schema_test {
             booking::booking_negotiate_time_tool(store.clone(), tenant.clone()),
             booking::booking_reschedule_tool(store.clone(), tenant.clone()),
             quote::generate_quote_tool(store, tenant),
+            escalate_to_human::escalate_to_human_tool(),
         ];
 
         for tool in &tools {

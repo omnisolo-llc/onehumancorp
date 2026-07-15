@@ -7,6 +7,7 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
+use prost::Message;
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -39,6 +40,10 @@ pub struct UnifiedThread {
     pub customer_id: Option<String>,
     pub channel: String,
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lock_owner_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lock_owner_type: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -212,6 +217,9 @@ pub fn router(db: Arc<DB>) -> Router {
             post(handle_unified_webhook),
         )
         .route("/api/ui/unified_inbox_feed", get(get_unified_feed))
+        .route("/api/inbox/handoff/request", post(request_handoff))
+        .route("/api/inbox/handoff/accept", post(accept_handoff))
+        .route("/api/inbox/handoff/summarize", post(summarize_context))
         .with_state(state)
 }
 
@@ -471,6 +479,8 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                         customer_id: row.try_get("customer_id").ok(),
                         channel: row.get("channel"),
                         status: row.get("status"),
+                        lock_owner_id: row.try_get("lock_owner_id").ok(),
+                        lock_owner_type: row.try_get("lock_owner_type").ok(),
                         created_at: row.try_get("created_at").unwrap_or_default(),
                         updated_at: row.try_get("updated_at").unwrap_or_default(),
                     })
@@ -489,6 +499,8 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                         customer_id: row.try_get("customer_id").ok(),
                         channel: row.get("channel"),
                         status: row.get("status"),
+                        lock_owner_id: row.try_get("lock_owner_id").ok(),
+                        lock_owner_type: row.try_get("lock_owner_type").ok(),
                         created_at: row.try_get("created_at").unwrap_or_default(),
                         updated_at: row.try_get("updated_at").unwrap_or_default(),
                     })
@@ -597,4 +609,195 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
     }
 
     feed_items
+}
+
+#[derive(Deserialize)]
+pub struct RequestHandoffPayload {
+    pub tenant_id: String,
+    pub thread_id: String,
+    pub agent_id: String,
+    pub summary: String,
+    pub reason: String,
+}
+
+#[derive(Serialize)]
+pub struct RequestHandoffResponse {
+    pub status: String,
+}
+
+pub async fn request_handoff(
+    State(state): State<AppState>,
+    Json(payload): Json<RequestHandoffPayload>,
+) -> impl IntoResponse {
+    let pool = &state.db.pool;
+
+    let update_result = sqlx::query(
+        "UPDATE unified_threads SET lock_owner_id = $1, lock_owner_type = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4",
+    )
+    .bind(&payload.agent_id)
+    .bind("agent")
+    .bind(&payload.thread_id)
+    .bind(&payload.tenant_id)
+    .execute(pool)
+    .await;
+
+    if update_result.is_err() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update thread lock").into_response();
+    }
+
+    let payload_json = serde_json::json!({
+        "summary": payload.summary,
+        "reason": payload.reason,
+        "thread_id": payload.thread_id,
+    });
+
+    let triage_id = Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, $4, $5, $6)"
+    )
+    .bind(triage_id)
+    .bind(&payload.tenant_id)
+    .bind(&payload.thread_id)
+    .bind("escalate_to_human")
+    .bind(payload_json.to_string())
+    .bind("pending")
+    .execute(pool)
+    .await;
+
+    if let Ok(mesh) = crate::orchestration::mesh::get_mesh_transport(&state.db.store).await {
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: payload.agent_id.clone(),
+            action: "handoff_requested".to_string(),
+            status: "pending".to_string(),
+            payload: payload_json.to_string().into_bytes(),
+            msg_id: Uuid::new_v4().to_string(),
+        };
+        let channel = format!("tenant:{}", payload.tenant_id);
+        let mut buf = Vec::new();
+        prost::Message::encode(&event, &mut buf).unwrap();
+        let _ = mesh.publish(&channel, buf).await;
+
+        let lock_key = format!("handoff:{}:{}", payload.tenant_id, payload.thread_id);
+        let _ = mesh.acquire_lock(&lock_key, &payload.agent_id, 60).await;
+    }
+
+    (
+        StatusCode::OK,
+        Json(RequestHandoffResponse {
+            status: "handoff_requested".to_string(),
+        }),
+    )
+        .into_response()
+}
+
+#[derive(Deserialize)]
+pub struct AcceptHandoffPayload {
+    pub tenant_id: String,
+    pub thread_id: String,
+    pub human_id: String,
+}
+
+#[derive(Serialize)]
+pub struct AcceptHandoffResponse {
+    pub status: String,
+}
+
+pub async fn accept_handoff(
+    State(state): State<AppState>,
+    Json(payload): Json<AcceptHandoffPayload>,
+) -> impl IntoResponse {
+    let pool = &state.db.pool;
+
+    let update_result = sqlx::query(
+        "UPDATE unified_threads SET lock_owner_id = $1, lock_owner_type = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4",
+    )
+    .bind(&payload.human_id)
+    .bind("human")
+    .bind(&payload.thread_id)
+    .bind(&payload.tenant_id)
+    .execute(pool)
+    .await;
+
+    if update_result.is_err() {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update thread lock").into_response();
+    }
+
+    if let Ok(mesh) = crate::orchestration::mesh::get_mesh_transport(&state.db.store).await {
+        let payload_json = serde_json::json!({
+            "human_id": payload.human_id,
+            "thread_id": payload.thread_id,
+        });
+
+        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: payload.human_id.clone(),
+            action: "handoff_accepted".to_string(),
+            status: "accepted".to_string(),
+            payload: payload_json.to_string().into_bytes(),
+            msg_id: Uuid::new_v4().to_string(),
+        };
+        let channel = format!("tenant:{}", payload.tenant_id);
+        let mut buf = Vec::new();
+        prost::Message::encode(&event, &mut buf).unwrap();
+        let _ = mesh.publish(&channel, buf).await;
+
+        let lock_key = format!("handoff:{}:{}", payload.tenant_id, payload.thread_id);
+        let _ = mesh.acquire_lock(&lock_key, &payload.human_id, 60).await;
+    }
+
+    (
+        StatusCode::OK,
+        Json(AcceptHandoffResponse {
+            status: "handoff_accepted".to_string(),
+        }),
+    )
+        .into_response()
+}
+
+#[derive(Deserialize)]
+pub struct AgentSummarizeContextPayload {
+    pub tenant_id: String,
+    pub thread_id: String,
+}
+
+#[derive(Serialize)]
+pub struct AgentSummarizeContextResponse {
+    pub summary: String,
+}
+
+pub async fn summarize_context(
+    State(state): State<AppState>,
+    Json(payload): Json<AgentSummarizeContextPayload>,
+) -> impl IntoResponse {
+    let pool = &state.db.pool;
+
+    let messages = sqlx::query(
+        "SELECT content, sender_type FROM unified_messages WHERE tenant_id = $1 AND thread_id = $2 ORDER BY created_at ASC LIMIT 20"
+    )
+    .bind(&payload.tenant_id)
+    .bind(&payload.thread_id)
+    .fetch_all(pool)
+    .await;
+
+    let mut context = String::new();
+    if let Ok(msgs) = messages {
+        for msg in msgs {
+            let content: String = msg.get("content");
+            let sender: String = msg.get("sender_type");
+            context.push_str(&format!("{}: {}\n", sender, content));
+        }
+    }
+
+    if context.is_empty() {
+        return (StatusCode::OK, Json(AgentSummarizeContextResponse { summary: "No messages to summarize.".to_string() })).into_response();
+    }
+
+    let truncated = if context.len() > 100 { format!("{}...", &context[..100]) } else { context.clone() };
+
+    (
+        StatusCode::OK,
+        Json(AgentSummarizeContextResponse {
+            summary: format!("Agent Summary: {}", truncated),
+        }),
+    )
+        .into_response()
 }
