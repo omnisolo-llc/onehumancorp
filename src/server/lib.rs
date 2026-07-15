@@ -7102,7 +7102,15 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()))
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))
-        .nest("/api/v1/booking/services", api::booking::create_service::router(db.clone()))
+        .nest(
+            "/api/v1/booking/services",
+            api::booking::create_service::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/booking/proposed", api::booking::proposed::router())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
 

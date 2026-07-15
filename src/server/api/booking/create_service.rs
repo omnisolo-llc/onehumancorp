@@ -1,15 +1,16 @@
-use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::db::DB;
+use axum::{
+    Router,
+    extract::{Extension, Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CreateServiceRequest {
     pub title: String,
     pub description: Option<String>,
@@ -34,13 +35,43 @@ where
 
 async fn handle_create_service(
     State(db): State<Arc<DB>>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(payload): Json<CreateServiceRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
-        Some(t) if !t.trim().is_empty() => t.to_string(),
-        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    let tenant_id = match claims
+        .as_ref()
+        .and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
+    {
+        Some(tenant_id) => tenant_id,
+        _ => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                axum::Json(serde_json::json!({"error": "unauthorized"})),
+            )
+                .into_response();
+        }
     };
+
+    if payload.title.trim().is_empty()
+        || payload.title.chars().count() > 200
+        || payload
+            .description
+            .as_ref()
+            .is_some_and(|description| description.chars().count() > 10_000)
+        || payload
+            .price_cents
+            .is_some_and(|price| !(0..=1_000_000_000).contains(&price))
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(CreateServiceResponse {
+                success: false,
+                service_id: None,
+                error: Some("invalid service fields".to_string()),
+            }),
+        )
+            .into_response();
+    }
 
     let service_id = uuid::Uuid::new_v4().to_string();
     let price = payload.price_cents.unwrap_or(0);
@@ -65,7 +96,20 @@ async fn handle_create_service(
                 }
             };
 
-            let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+            if let Err(error) =
+                crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
+            {
+                tracing::error!("failed to bind service tenant context: {error}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(CreateServiceResponse {
+                        success: false,
+                        service_id: None,
+                        error: Some("internal error".to_string()),
+                    }),
+                )
+                    .into_response();
+            }
 
             let res = sqlx::query(
                 r#"
@@ -93,7 +137,18 @@ async fn handle_create_service(
                 )
                     .into_response();
             }
-            let _ = tx.commit().await;
+            if let Err(error) = tx.commit().await {
+                tracing::error!("failed to commit service creation: {error}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(CreateServiceResponse {
+                        success: false,
+                        service_id: None,
+                        error: Some("internal error".to_string()),
+                    }),
+                )
+                    .into_response();
+            }
         }
         crate::db::DbStore::Sqlite(pool) => {
             let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES (?, 'Test Tenant', 'starter') ON CONFLICT (id) DO NOTHING")
@@ -146,8 +201,22 @@ mod tests {
     use super::*;
     use crate::db::DB;
     use axum::http::Request;
-    use tower::ServiceExt; // for `oneshot` and `ready`
     use serde_json::json;
+    use tower::ServiceExt; // for `oneshot` and `ready`
+
+    fn claims(tenant_id: &str) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "user-1".to_string(),
+            exp: 0,
+            iat: 0,
+            organization_id: Some(tenant_id.to_string()),
+            username: String::new(),
+            email: String::new(),
+            roles: vec![],
+            session_id: None,
+            jti: String::new(),
+        }
+    }
 
     #[tokio::test]
     async fn test_create_service_success() {
@@ -165,7 +234,7 @@ mod tests {
             pool: crate::db::get_pool(),
             store: crate::db::DbStore::Sqlite(pool),
         });
-        let app = router(db.clone());
+        let app = router(db.clone()).layer(axum::extract::Extension(claims("test-tenant-1")));
 
         let payload = json!({
             "title": "Test Service",
@@ -209,6 +278,35 @@ mod tests {
                 Request::builder()
                     .method("POST")
                     .uri("/")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(payload.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn test_create_service_does_not_trust_tenant_header() {
+        let pool = crate::db::create_sqlite_pool_for_test().await;
+        let db = Arc::new(DB {
+            pool: crate::db::get_pool(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
+        let app = router(db);
+        let payload = json!({
+            "title": "Untrusted service",
+            "price_cents": 5000,
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("x-tenant-id", "attacker-tenant")
                     .header("content-type", "application/json")
                     .body(axum::body::Body::from(payload.to_string()))
                     .unwrap(),
