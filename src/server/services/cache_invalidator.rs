@@ -135,6 +135,14 @@ mod tests {
         assert_eq!(event.tags[1], "entity:product:456");
     }
 
+
+    #[tokio::test]
+    async fn test_cache_invalidation_service() {
+        let service = CacheInvalidationService::new("http://mock-cdn.com".to_string());
+        let result = service.invalidate_tags(vec!["test-tag".to_string()]).await;
+        assert!(result.is_ok());
+    }
+
     #[tokio::test]
     async fn test_cache_invalidator_cache_invalidation() {
         // Here we test just the logic applied in the stream loop.
@@ -162,5 +170,28 @@ mod tests {
         futures::future::join_all(futures).await;
 
         assert_eq!(edge_cache.get("test_key").await, None);
+    }
+}
+
+
+pub struct CacheInvalidationService {
+    pub cdn_api_url: String,
+}
+
+impl CacheInvalidationService {
+    pub fn new(cdn_api_url: String) -> Self {
+        Self { cdn_api_url }
+    }
+
+    pub async fn invalidate_tags(&self, tags: Vec<String>) -> Result<(), String> {
+        // Mock CDN API call
+        for tag in &tags {
+            tracing::info!("Mocking CDN purge request for tag: {}", tag);
+            let _url = format!("{}/purge", self.cdn_api_url);
+
+            // Mock network call instead of actual post for now as requested.
+            // if let Err(e) = self.client.post(&url).body(tag.clone()).send().await { ... }
+        }
+        Ok(())
     }
 }
