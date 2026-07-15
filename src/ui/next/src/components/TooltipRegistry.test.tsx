@@ -153,6 +153,7 @@ describe('TooltipRegistry', () => {
 });
 
 
+describe('TooltipRegistry Empty Provider', () => {
   it('does not crash if TooltipProvider is empty', async () => {
     const ui = (
       <TooltipProvider>
@@ -164,6 +165,7 @@ describe('TooltipRegistry', () => {
     });
     expect(true).toBe(true);
   });
+});
 
 describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
