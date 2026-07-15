@@ -145,11 +145,11 @@ mod tests {
 
     fn setup_router(_multitenant: bool) -> Router {
         Router::new()
-            .route("/api/public/test", get(dummy_handler))
+            .route("/api/v1/public/test", get(dummy_handler))
             .route("/api/v1/auth/test", get(dummy_handler))
             .route("/health", get(dummy_handler))
-            .route("/api/protected", get(dummy_handler))
-            .route("/api/protected_with_query", get(dummy_handler))
+            .route("/api/v1/protected", get(dummy_handler))
+            .route("/api/v1/protected_with_query", get(dummy_handler))
             .layer(axum::middleware::from_fn(tenant_middleware))
     }
 
@@ -158,7 +158,7 @@ mod tests {
         let app = setup_router(true);
 
         let req = Request::builder()
-            .uri("/api/public/test")
+            .uri("/api/v1/public/test")
             .body(Body::empty())
             .unwrap();
 
@@ -197,7 +197,7 @@ mod tests {
         let app = setup_router(true);
 
         let req = Request::builder()
-            .uri("/api/protected")
+            .uri("/api/v1/protected")
             .body(Body::empty())
             .unwrap();
 
@@ -214,7 +214,7 @@ mod tests {
         let app = setup_router(true);
 
         let mut req = Request::builder()
-            .uri("/api/protected")
+            .uri("/api/v1/protected")
             .body(Body::empty())
             .unwrap();
 
@@ -241,7 +241,7 @@ mod tests {
 
             // Attempting to spoof `tenant_1` with URL encoding
             let mut req = Request::builder()
-                .uri("/api/protected_with_query?%74enant_id=tenant_2")
+                .uri("/api/v1/protected_with_query?%74enant_id=tenant_2")
                 .body(Body::empty())
                 .unwrap();
 
@@ -262,7 +262,7 @@ mod tests {
 
             // Another variant
             let mut req2 = Request::builder()
-                .uri("/api/protected_with_query?tenant_id=tenant_2%20")
+                .uri("/api/v1/protected_with_query?tenant_id=tenant_2%20")
                 .body(Body::empty())
                 .unwrap();
 

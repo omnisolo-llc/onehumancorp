@@ -7701,7 +7701,7 @@ mod tests {
             })
             .unwrap();
         let app = Router::new()
-            .route("/api/protected", get(|| async { "ok" }))
+            .route("/api/v1/protected", get(|| async { "ok" }))
             .route("/api/v1/auth/login", get(|| async { "public" }))
             .route_layer(axum::middleware::from_fn(
                 ::server_utils::tenant_middleware::tenant_middleware,
@@ -7715,7 +7715,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/api/protected")
+                    .uri("/api/v1/protected")
                     .header("x-tenant-id", "attacker")
                     .body(Body::empty())
                     .unwrap(),
@@ -7728,7 +7728,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/api/protected?tenant_id=tenant-a")
+                    .uri("/api/v1/protected?tenant_id=tenant-a")
                     .header("authorization", format!("Bearer {token}"))
                     .body(Body::empty())
                     .unwrap(),
