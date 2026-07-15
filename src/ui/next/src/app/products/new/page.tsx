@@ -105,7 +105,7 @@ function AutoCatalogContent() {
     setPublishingStep(1);
     setError(null);
     try {
-      const response = await fetch('/api/generate-offering', {
+      const response = await fetch('/api/v1/catalog/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptText }),

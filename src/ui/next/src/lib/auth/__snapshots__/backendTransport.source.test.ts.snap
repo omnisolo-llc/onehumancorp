@@ -4,8 +4,6 @@ exports[`protected backend transport source contract > keeps backend origin and 
 [
   "src/app/api/auto-catalog/route.ts: browser identity forwarding",
   "src/app/api/deerflow/run/route.ts: direct backend configuration",
-  "src/app/api/generate-offering/route.ts: direct backend configuration",
-  "src/app/api/generate-offering/route.ts: browser identity forwarding",
   "src/app/api/ui/prep-forecast/route.ts: direct backend configuration",
   "src/app/api/v1/booking/conversational_checkout/route.ts: direct backend configuration",
   "src/app/api/v1/booking/conversational_checkout/route.ts: browser identity forwarding",
