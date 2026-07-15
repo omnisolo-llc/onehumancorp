@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
+  const searchParams = request.nextUrl?.searchParams || new URL(request.url).searchParams;
   const tenant = searchParams.get('tenant') || 'default';
   const style = searchParams.get('style') || 'pill';
   const text = searchParams.get('text') || 'Powered by OHC';
