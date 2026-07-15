@@ -143,6 +143,8 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/storefront_v2.spec.ts",
     "//src/ui/next:src/e2e/viral_leaderboard_generator.spec.ts",
     "//src/ui/next:src/e2e/viral-post-generator.spec.ts",
+    "viral-unboxing-share.spec.ts",
+    "viral-embeddable-offer.spec.ts",
 ]
 
 # Shell script wrapper for running ALL playwright tests via docker compose
