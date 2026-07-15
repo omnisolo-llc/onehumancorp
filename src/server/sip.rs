@@ -1045,12 +1045,9 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present // Skip integration portion if no OHC_DATABASE_URL
         };
 
-        if let Ok(pool) = crate::db::secure_pg_pool_options()
-
-            .max_connections(1)
-            .connect(&database_url)
-            .await
-        {
+        let pool_opts = crate::db::secure_pg_pool_options()
+            .max_connections(1);
+        if let Ok(Ok(pool)) = tokio::time::timeout(std::time::Duration::from_secs(1), pool_opts.connect(&database_url)).await {
             let mut tx = pool.begin().await.unwrap();
 
             sqlx::query(
@@ -1234,12 +1231,9 @@ mod tests {
             Err(_) => return, // Skip test instead of failing silently when no db url is present
         };
 
-        if let Ok(pool) = crate::db::secure_pg_pool_options()
-
-            .max_connections(1)
-            .connect(&database_url)
-            .await
-        {
+        let pool_opts = crate::db::secure_pg_pool_options()
+            .max_connections(1);
+        if let Ok(Ok(pool)) = tokio::time::timeout(std::time::Duration::from_secs(1), pool_opts.connect(&database_url)).await {
             let mut tx = pool.begin().await.unwrap();
 
             sqlx::query(
