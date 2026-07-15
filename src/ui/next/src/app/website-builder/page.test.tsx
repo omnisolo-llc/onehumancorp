@@ -55,9 +55,6 @@ describe('WebsiteBuilderPage', () => {
       productName: '',
       productPrice: '',
       paymentMethod: '',
-      userName: '',
-      userEmail: '',
-      userPassword: '',
       template: '',
       bio: '',
       domainChoice: 'subdomain',
@@ -80,7 +77,7 @@ describe('WebsiteBuilderPage', () => {
     expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.any(Object));
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state');
   });
 
   it('can follow the standard wizard flow', async () => {
@@ -131,9 +128,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Online'));
 
     // Step 6
-    fireEvent.change(screen.getByPlaceholderText('e.g. Maya Smith'), { target: { value: 'Test User' } });
-    fireEvent.change(screen.getByPlaceholderText('you@email.com'), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'password123' } });
+    expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Next'));
 
     // Step 7
@@ -158,6 +153,24 @@ describe('WebsiteBuilderPage', () => {
         expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.any(Object));
         expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
+
+    const startCall = (global.fetch as any).mock.calls.find(
+      ([url]: [string]) => url === '/api/onboarding/start',
+    );
+    const startRequest = JSON.parse(startCall[1].body);
+    expect(startCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(startRequest).toEqual(expect.objectContaining({
+      company_name: 'My Shop',
+      company_description: expect.any(String),
+      selling_categories: ['physical'],
+      payment_pref: 'Online',
+      website_template: 'Modern',
+      domain_choice: 'subdomain',
+      target_audience: 'Customers',
+      ai_auto_respond: false,
+    }));
+    expect(startRequest.admin_password).toBeUndefined();
+    expect(startRequest.admin_email).toBeUndefined();
   });
 
   it('can follow the instant-build flow', async () => {
@@ -201,6 +214,34 @@ describe('WebsiteBuilderPage', () => {
     await waitFor(() => {
         expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     }, { timeout: 3500 });
+  });
+
+  it('never reports a rejected publication as live', async () => {
+    vi.useRealTimers();
+    useWebsiteBuilderStore.setState({
+      wizardStep: 9,
+      businessName: 'Rejected Shop',
+      businessType: 'Online Store',
+      productName: 'Product',
+      productPrice: '10.00',
+      paymentMethod: 'online',
+      template: 'Modern',
+      status: 'idle',
+    });
+    global.fetch = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: url !== '/api/onboarding/start',
+        json: () => Promise.resolve({ error: 'rejected' }),
+      }),
+    );
+
+    render(<WebsiteBuilderPage />);
+    fireEvent.click(await screen.findByText('Publish my business'));
+
+    await waitFor(() => {
+      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
+      expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
+    });
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {

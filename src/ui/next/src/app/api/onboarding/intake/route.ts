@@ -1,30 +1,14 @@
-import { NextResponse } from 'next/server';
+import {
+  proxyBackendRequest,
+  validateJsonRequestBody,
+} from "@/lib/auth/backendTransport";
 
-export async function POST(request: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
+export const runtime = "nodejs";
 
-  try {
-    const body = await request.json();
-
-    const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-tenant-id': tenantId,
-        'x-user-id': userId
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json(data);
-    }
-
-    return NextResponse.json({ error: 'Failed to process intake' }, { status: res.status });
-  } catch (e) {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
-  }
+export function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/onboarding/intake", {
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: validateJsonRequestBody,
+  });
 }

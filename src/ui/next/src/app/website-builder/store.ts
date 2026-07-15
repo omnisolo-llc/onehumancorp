@@ -10,9 +10,6 @@ interface WebsiteBuilderState {
   productName: string;
   productPrice: string;
   paymentMethod: string;
-  userName: string;
-  userEmail: string;
-  userPassword: string;
   template: string;
   bio: string;
   domainChoice: string;
@@ -26,9 +23,6 @@ interface WebsiteBuilderState {
   setProductName: (name: string) => void;
   setProductPrice: (price: string) => void;
   setPaymentMethod: (method: string) => void;
-  setUserName: (name: string) => void;
-  setUserEmail: (email: string) => void;
-  setUserPassword: (password: string) => void;
   setTemplate: (template: string) => void;
   setBio: (bio: string) => void;
   setDomainChoice: (domain: string) => void;
@@ -55,9 +49,6 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       productName: '',
       productPrice: '',
       paymentMethod: '',
-      userName: '',
-      userEmail: '',
-      userPassword: '',
       template: '',
       bio: '',
       domainChoice: 'subdomain',
@@ -71,9 +62,6 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
       setProductName: (productName) => set({ productName }),
       setProductPrice: (productPrice) => set({ productPrice }),
       setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
-      setUserName: (userName) => set({ userName }),
-      setUserEmail: (userEmail) => set({ userEmail }),
-      setUserPassword: (userPassword) => set({ userPassword }),
       setTemplate: (template) => set({ template }),
       setBio: (bio) => set({ bio }),
       setDomainChoice: (domainChoice) => set({ domainChoice }),
@@ -108,6 +96,17 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderState>()(
     }),
     {
       name: 'website-builder-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const legacy = (persistedState ?? {}) as Record<string, unknown>;
+        const {
+          userName: _userName,
+          userEmail: _userEmail,
+          userPassword: _userPassword,
+          ...safeState
+        } = legacy;
+        return safeState as unknown as WebsiteBuilderState;
+      },
     }
   )
 );

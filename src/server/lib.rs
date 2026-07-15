@@ -576,22 +576,20 @@ pub struct MyHubService {
     dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
-    onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>, viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>, viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
 
         let meter = opentelemetry::global::meter("ohc.orchestration.hub");
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, publish_counter, stream_counter }
     }
 }
 
@@ -2267,16 +2265,6 @@ async fn get_pending_approvals(
         Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
-    async fn start_onboarding(
-        &self,
-        request: Request<StartOnboardingRequest>,
-    ) -> Result<Response<StartOnboardingResponse>, Status> {
-        let req = request.into_inner();
-        match self.onboarding_agent.start_onboarding(req).await {
-            Ok(resp) => Ok(Response::new(resp)),
-            Err(e) => Err(Status::internal(e)),
-        }
-    }
 }
 
 pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
@@ -6886,7 +6874,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
-        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .nest("/api/onboarding", api::onboarding::router(
+            std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone())),
+            http_auth_store.clone(),
+        ).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
@@ -7219,7 +7210,7 @@ async fn create_ui_bom_item_handler(
 
 
     let viral_loop_tracker = std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
     let store = http_auth_store.clone();
     

@@ -17,9 +17,6 @@ interface OnboardingState {
   domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
-  adminName: string;
-  adminEmail: string;
-  adminPassword: string;
   aiAgents: string[];
   aiAutoRespond: boolean;
   isLoading: boolean;
@@ -41,9 +38,6 @@ interface OnboardingState {
   setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
-  setAdminName: (name: string) => void;
-  setAdminEmail: (email: string) => void;
-  setAdminPassword: (password: string) => void;
   setAiAgents: (agents: string[]) => void;
   setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
@@ -71,9 +65,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
-      adminName: '',
-      adminEmail: '',
-      adminPassword: '',
       aiAgents: [],
       aiAutoRespond: true,
       isLoading: false,
@@ -95,9 +86,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-      setAdminName: (adminName) => set({ adminName }),
-      setAdminEmail: (adminEmail) => set({ adminEmail }),
-      setAdminPassword: (adminPassword) => set({ adminPassword }),
       setAiAgents: (aiAgents) => set({ aiAgents }),
       setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
       setIsLoading: (isLoading) => set({ isLoading }),
@@ -108,6 +96,19 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'onboarding-storage-v4', // Upgraded structure for seamless cross-device resumes
+      version: 5,
+      migrate: (persistedState) => {
+        if (persistedState && typeof persistedState === 'object') {
+          const {
+            adminName: _adminName,
+            adminEmail: _adminEmail,
+            adminPassword: _adminPassword,
+            ...state
+          } = persistedState as Record<string, unknown>;
+          return state as unknown as OnboardingState;
+        }
+        return persistedState as OnboardingState;
+      },
     }
   )
 );

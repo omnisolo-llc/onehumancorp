@@ -276,8 +276,6 @@ service HubService {
   rpc Invite(InviteRequest) returns (InviteResponse);
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
-  rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
-
   rpc GetMyPlan(EmptyRequest) returns (MyPlanResponse);
   rpc GetCostDashboard(EmptyRequest) returns (CostDashboardResponse);
   rpc SelectPlan(SelectPlanRequest) returns (SelectPlanResponse);
@@ -307,18 +305,17 @@ message IntakeProductProto {
 }
 
 message StartOnboardingRequest {
+  reserved 6, 11, 12;
+  reserved "admin_email", "admin_name", "admin_password";
   string business_type = 1;
   string company_name = 2;
   string company_description = 3;
   repeated string selling_categories = 4;
   string payment_pref = 5;
-  string admin_email = 6;
   string website_template = 7;
   string first_product_name = 8;
   string first_product_price = 9;
   string domain_choice = 10;
-  string admin_name = 11;
-  string admin_password = 12;
   string price_type = 13;
   string location = 14;
   string target_audience = 15;

@@ -47,6 +47,49 @@ pub async fn guest_auth_middleware(
 
     next.run(req).await
 }
+
+pub async fn strict_bearer_auth_middleware(
+    axum::extract::State(store): axum::extract::State<std::sync::Arc<Store>>,
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    let Some(token) = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .filter(|token| !token.is_empty() && token.len() <= MAX_ACCESS_TOKEN_BYTES)
+    else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+    let Some(organization_id) = claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|organization_id| {
+            !organization_id.is_empty() && !organization_id.eq_ignore_ascii_case("system")
+        })
+        .map(str::to_string)
+    else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let user_id = claims.sub.clone();
+    req.extensions_mut().insert(crate::orchestration::AuthInfo {
+        org_id: organization_id.clone(),
+        agent_id: user_id.clone(),
+        spiffe_id: "spiffe://onehumancorp.io/web-session".to_string(),
+    });
+    req.extensions_mut().insert(claims);
+    next.run(req).await
+}
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -1563,6 +1606,68 @@ mod store_tests {
             user.id.clone(),
         );
         store
+    }
+
+    #[tokio::test]
+    async fn strict_bearer_auth_ignores_forged_headers_and_injects_validated_identity() {
+        use axum::{Json, Router, extract::Extension, routing::get};
+        use tower::ServiceExt;
+
+        let store = Arc::new(test_store_with_memory_user(true));
+        let token = store
+            .issue_token(&credential_test_user(true, Some("tenant-a")))
+            .unwrap();
+        let app = Router::new()
+            .route(
+                "/",
+                get(
+                    |Extension(claims): Extension<::server_common::Claims>,
+                     Extension(auth): Extension<crate::orchestration::AuthInfo>| async move {
+                        Json(serde_json::json!({
+                            "tenant": claims.organization_id,
+                            "user": auth.agent_id,
+                            "email": claims.email,
+                        }))
+                    },
+                ),
+            )
+            .layer(axum::middleware::from_fn_with_state(
+                store,
+                strict_bearer_auth_middleware,
+            ));
+
+        let forged_only = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("x-tenant-id", "attacker")
+                    .header("x-user-id", "attacker")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(forged_only.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let valid = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("authorization", format!("Bearer {token}"))
+                    .header("x-tenant-id", "attacker")
+                    .header("x-user-id", "attacker")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(valid.status(), axum::http::StatusCode::OK);
+        let body = axum::body::to_bytes(valid.into_body(), 4096).await.unwrap();
+        let identity: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(identity["tenant"], "tenant-a");
+        assert_eq!(identity["user"], "user-id");
+        assert_eq!(identity["email"], "alice@example.com");
     }
 
     #[test]
