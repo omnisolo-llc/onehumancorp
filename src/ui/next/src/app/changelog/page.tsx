@@ -41,6 +41,9 @@ function parseLinks(text: string): React.ReactNode {
 export default function ChangelogPage() {
   const [sections, setSections] = useState<ChangelogSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<string>("All");
+
+  const filters = ["All", "AI", "Store", "Payment", "App"];
 
   useEffect(() => {
     fetch("/api/changelog")
@@ -61,6 +64,23 @@ export default function ChangelogPage() {
         <h1 data-testid="changelog-title" className="text-3xl sm:text-4xl font-extrabold font-outfit text-gray-900 dark:text-gray-100 mb-8 text-center tracking-tight">
           Release Notes & Changelog
         </h1>
+        {/* Filter Bar */}
+        <div className="flex flex-wrap gap-3 justify-center mb-10">
+          {filters.map(filter => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={`px-5 py-2 rounded-full font-bold text-sm transition-all duration-200 shadow-sm backdrop-blur-md ${
+                activeFilter === filter
+                  ? "bg-blue-600 text-white border border-blue-700 shadow-md scale-105"
+                  : "bg-white/60 dark:bg-black/40 text-gray-700 dark:text-gray-300 border border-gray-200/50 hover:bg-white hover:shadow-md"
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+
         <div className="space-y-8">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -83,7 +103,12 @@ export default function ChangelogPage() {
                   {section.version}
                 </h2>
                 <div className="space-y-3">
-                  {section.contentLines.map((line, lidx) => {
+                  {section.contentLines.filter(line => {
+                    if (activeFilter === "All") return true;
+                    // For headers, keep them if the section has any matching content, otherwise we might drop headers.
+                    // For simplicity, just filter lines by keyword (case insensitive).
+                    return line.toLowerCase().includes(activeFilter.toLowerCase()) || line.startsWith("### ");
+                  }).map((line, lidx) => {
                     if (line.startsWith("### ")) {
                       return (
                         <h3
