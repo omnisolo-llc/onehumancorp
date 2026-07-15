@@ -27,6 +27,8 @@ impl ActionRequiredQueueRepo {
     }
 
     pub async fn get_pending_drafts(&self, tenant_id: Uuid) -> Result<Vec<ActionRequiredDraft>, sqlx::Error> {
+        let mut tx = self.db.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let records = sqlx::query_as::<_, ActionRequiredDraft>(
             r#"
             SELECT
@@ -41,21 +43,25 @@ impl ActionRequiredQueueRepo {
                 d.created_at
             FROM agent_draft d
             JOIN work_item w ON d.work_item_id = w.id
-            JOIN customer_profile p ON w.customer_id = p.id
+            JOIN customer_profile p ON w.customer_id = p.id AND p.tenant_id = w.tenant_id
             WHERE w.tenant_id = $1 AND d.status = 'DRAFT'
             ORDER BY d.created_at ASC
             "#
         )
         .bind(tenant_id)
-        .fetch_all(&self.db.pool)
+        .fetch_all(&mut *tx)
         .await?;
+
+        tx.commit().await?;
 
         Ok(records)
     }
 
-    pub async fn approve_draft(&self, draft_id: Uuid, tenant_id: Uuid) -> Result<(), sqlx::Error> {
+    pub async fn approve_draft(&self, draft_id: Uuid, tenant_id: Uuid) -> Result<bool, sqlx::Error> {
         // We verify the tenant_id through the join to ensure isolation
-        sqlx::query(
+        let mut tx = self.db.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
+        let result = sqlx::query(
             r#"
             UPDATE agent_draft
             SET status = 'APPROVED', updated_at = NOW()
@@ -66,15 +72,17 @@ impl ActionRequiredQueueRepo {
         )
         .bind(draft_id)
         .bind(tenant_id)
-        .execute(&self.db.pool)
+        .execute(&mut *tx)
         .await?;
-
-        Ok(())
+        tx.commit().await?;
+        Ok(result.rows_affected() == 1)
     }
 
-    pub async fn update_draft_response(&self, draft_id: Uuid, tenant_id: Uuid, new_response: &str) -> Result<(), sqlx::Error> {
+    pub async fn update_draft_response(&self, draft_id: Uuid, tenant_id: Uuid, new_response: &str) -> Result<bool, sqlx::Error> {
         // Multi-tenant isolation: we must ensure this draft belongs to a work_item that belongs to this tenant
-        sqlx::query(
+        let mut tx = self.db.pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
+        let result = sqlx::query(
             r#"
             UPDATE agent_draft
             SET response = $1, updated_at = NOW()
@@ -86,9 +94,9 @@ impl ActionRequiredQueueRepo {
         .bind(new_response)
         .bind(draft_id)
         .bind(tenant_id)
-        .execute(&self.db.pool)
+        .execute(&mut *tx)
         .await?;
-
-        Ok(())
+        tx.commit().await?;
+        Ok(result.rows_affected() == 1)
     }
 }
