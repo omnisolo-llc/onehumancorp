@@ -170,7 +170,7 @@ export default function AssistantPage() {
   const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/walkthrough/assistant")
+    fetch("/api/v1/walkthrough/assistant")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {

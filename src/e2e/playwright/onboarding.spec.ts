@@ -14,7 +14,7 @@ test.describe('Onboarding Flow', () => {
     });
 
     // Mock tooltips and API calls
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
@@ -111,7 +111,7 @@ test.describe('Onboarding Flow', () => {
     });
 
     // Mock tooltips and API calls
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 

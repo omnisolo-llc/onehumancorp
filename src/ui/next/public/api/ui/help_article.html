@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (window.__TAURI__ && window.__TAURI__.core) {
              article = await window.__TAURI__.core.invoke('get_help_article', { id: articleId });
           } else {
-             const res = await fetch(`/api/help/${articleId}`);
+             const res = await fetch(`/api/v1/help/${articleId}`);
              if (res.ok) {
                  article = await res.json();
              } else {
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",

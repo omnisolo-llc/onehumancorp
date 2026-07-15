@@ -17,7 +17,7 @@ export default function ApiDocsPage() {
 
   useEffect(() => {
     setMounted(true);
-    fetch('/api/api-docs-spec')
+    fetch('/api/v1/api-docs-spec')
       .then(async (res) => {
         if (!res.ok) {
            throw new Error("Failed to load API Documentation.");

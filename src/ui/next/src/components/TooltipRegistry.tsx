@@ -41,7 +41,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     const abortController = new AbortController();
     const fetchTooltips = async () => {
       try {
-        const response = await fetch("/api/tooltips", { signal: abortController.signal });
+        const response = await fetch("/api/v1/tooltips", { signal: abortController.signal });
         if (!response.ok) {
           throw new Error(`Failed to load tooltips, status: ${response.status}`);
         }

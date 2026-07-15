@@ -19,7 +19,7 @@ describe('QuoteReviewPage', () => {
     (useParams as any).mockReturnValue({ id: '123' });
     (useRouter as any).mockReturnValue(mockRouter);
     global.fetch = vi.fn((url) => {
-      if (url === '/api/tooltips') {
+      if (url === '/api/v1/tooltips') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({}),

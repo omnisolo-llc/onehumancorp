@@ -12,7 +12,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
       await route.fulfill({ contentType: 'text/html', body: htmlContent   });
   });
   // intercept tooltips
-  await page.route('**/api/tooltips', async route => {
+  await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
   });
 

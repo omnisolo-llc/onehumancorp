@@ -14,7 +14,7 @@ export default function POSTerminal() {
   const [walkthroughSteps, setWalkthroughSteps] = useState([]);
 
   useEffect(() => {
-    fetch("/api/walkthrough/pos")
+    fetch("/api/v1/walkthrough/pos")
       .then(res => res.json())
       .then(data => {
         setWalkthroughSteps(data || []);

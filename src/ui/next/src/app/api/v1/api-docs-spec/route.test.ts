@@ -3,7 +3,7 @@ const proxyBackendRequest = vi.hoisted(() => vi.fn(async () => Response.json({ o
 vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
 import { GET } from "./route";
 test("uses authenticated transport for API docs", async () => {
-  const request = new Request("http://localhost/api/api-docs-spec");
+  const request = new Request("http://localhost/api/v1/api-docs-spec");
   await GET(request);
-  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/api-docs-spec");
+  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/api-docs-spec");
 });

@@ -268,7 +268,7 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
 #[tauri::command]
 async fn get_help_articles() -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/help", backend_url);
+    let url = format!("{}/api/v1/help", backend_url);
 
     let request = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
@@ -288,7 +288,7 @@ async fn get_help_articles() -> Result<serde_json::Value, String> {
 #[tauri::command]
 async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/help/{}", backend_url, id);
+    let url = format!("{}/api/v1/help/{}", backend_url, id);
 
     let request = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
@@ -308,7 +308,7 @@ async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
 #[tauri::command]
 async fn get_help_videos() -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/videos", backend_url);
+    let url = format!("{}/api/v1/videos", backend_url);
 
     let request = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
@@ -329,7 +329,7 @@ async fn get_help_videos() -> Result<serde_json::Value, String> {
 #[tauri::command]
 async fn get_changelog() -> Result<serde_json::Value, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/changelog", backend_url);
+    let url = format!("{}/api/v1/changelog", backend_url);
 
     let request = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))

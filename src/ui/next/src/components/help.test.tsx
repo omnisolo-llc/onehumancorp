@@ -16,37 +16,37 @@ describe('HelpWidget', () => {
   beforeEach(() => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url.includes('/api/walkthrough/store-setup')) {
+      if (url.includes('/api/v1/walkthrough/store-setup')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([{ targetId: 'bio-input-tooltip', title: 'Test', content: 'Test Content' }])
         });
       }
-      if (url.includes('/api/walkthrough/pos')) {
+      if (url.includes('/api/v1/walkthrough/pos')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([{ targetId: 'pos-keypad', title: 'Mock Walkthrough', content: 'Mock Content' }])
         });
       }
-      if (url.includes('/api/walkthrough/assistant')) {
+      if (url.includes('/api/v1/walkthrough/assistant')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         });
       }
-      if (url.includes('/api/walkthrough/meeting-room')) {
+      if (url.includes('/api/v1/walkthrough/meeting-room')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(null) // test null fallback
         });
       }
-      if (url.includes('/api/help/search')) {
+      if (url.includes('/api/v1/help/search')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         });
       }
-      if (url.includes('/api/help')) {
+      if (url.includes('/api/v1/help')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
@@ -55,7 +55,7 @@ describe('HelpWidget', () => {
           ])
         });
       }
-      if (url.includes('/api/videos')) {
+      if (url.includes('/api/v1/videos')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
@@ -63,7 +63,7 @@ describe('HelpWidget', () => {
           ])
         });
       }
-      if (url.includes('/api/changelog')) {
+      if (url.includes('/api/v1/changelog')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
@@ -118,7 +118,7 @@ describe('HelpWidget', () => {
 
     const tourBtn = screen.getByText('Tour: Set up your store');
     await user.click(tourBtn);
-    expect(global.fetch).toHaveBeenCalledWith('/api/walkthrough/store-setup');
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/walkthrough/store-setup');
 
     // Test fallback behavior
     await user.click(helpBtn);

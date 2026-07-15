@@ -2,6 +2,11 @@ use axum::{extract::Query, Json};
 
 use serde::{Deserialize, Serialize};
 
+fn docs_tenant(claims: &::server_common::Claims) -> Result<String, axum::http::StatusCode> {
+    ::server_common::auth_utils::signed_tenant_id(claims)
+        .ok_or(axum::http::StatusCode::UNAUTHORIZED)
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct HelpArticle {
     pub category: String,
@@ -40,22 +45,30 @@ pub struct WalkthroughStep {
 
 pub async fn get_walkthrough(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Path(page): axum::extract::Path<String>
 ) -> Result<Json<Vec<WalkthroughStep>>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
 
     let steps = match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT selector, title, text FROM walkthrough_steps WHERE tenant_id = $1 AND page = $2 ORDER BY step_order ASC")
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return Ok(Json(vec![])),
+            };
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .is_err()
+            {
+                return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+            }
+            let result = sqlx::query("SELECT selector, title, text FROM walkthrough_steps WHERE tenant_id = $1 AND page = $2 ORDER BY step_order ASC")
                 .bind(tenant_id.to_string())
                 .bind(page.clone())
-                .fetch_all(&db.pool)
-                .await
-            {
+                .fetch_all(&mut *tx)
+                .await;
+            let _ = tx.commit().await;
+            match result {
                 Ok(rows) => {
                     rows.into_iter().map(|row| {
                         use sqlx::Row;
@@ -112,19 +125,28 @@ pub async fn get_walkthrough(
 
 pub async fn get_tooltips(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
     let mut tooltips = std::collections::HashMap::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id.to_string())
-                .fetch_all(&db.pool)
+            let mut tx = db.pool.begin().await.map_err(|e| {
+                tracing::error!("Failed to start tooltip transaction: {}", e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
-            {
+                .map_err(|e| {
+                    tracing::error!("Failed to set tooltip tenant context: {}", e);
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
+                .bind(tenant_id.to_string())
+                .fetch_all(&mut *tx)
+                .await;
+            let _ = tx.commit().await;
+            match result {
                 Ok(rows) => {
                     for row in rows {
                         use sqlx::Row;
@@ -196,20 +218,36 @@ pub struct SuccessResponse {
 
 pub async fn update_tooltip(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<TooltipPayload>
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
-                .execute(&db.pool)
+            let mut tx = db.pool.begin().await.map_err(|e| {
+                tracing::error!("Failed to start tooltip transaction: {}", e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
-            {
-                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                .map_err(|e| {
+                    tracing::error!("Failed to set tooltip tenant context: {}", e);
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            let result = sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text")
+                .bind(payload.id)
+                .bind(tenant_id)
+                .bind(payload.text)
+                .execute(&mut *tx)
+                .await;
+            match result {
+                Ok(_) => {
+                    tx.commit().await.map_err(|e| {
+                        tracing::error!("Failed to commit tooltip update: {}", e);
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                    Ok(Json(SuccessResponse { success: true }))
+                }
                 Err(e) => {
                     tracing::error!("Failed to update tooltip: {}", e);
                     Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
@@ -234,21 +272,34 @@ pub async fn update_tooltip(
 pub async fn delete_tooltip(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Path(id): axum::extract::Path<String>,
-    headers: axum::http::HeaderMap
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("DELETE FROM tooltips WHERE id = $1 AND tenant_id = $2")
+            let mut tx = db.pool.begin().await.map_err(|e| {
+                tracing::error!("Failed to start tooltip transaction: {}", e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to set tooltip tenant context: {}", e);
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+            let result = sqlx::query("DELETE FROM tooltips WHERE id = $1 AND tenant_id = $2")
                 .bind(id.clone())
                 .bind(tenant_id)
-                .execute(&db.pool)
-                .await
-            {
-                Ok(_) => Ok(Json(SuccessResponse { success: true })),
+                .execute(&mut *tx)
+                .await;
+            match result {
+                Ok(_) => {
+                    tx.commit().await.map_err(|e| {
+                        tracing::error!("Failed to commit tooltip deletion: {}", e);
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                    Ok(Json(SuccessResponse { success: true }))
+                }
                 Err(e) => {
                     tracing::error!("Failed to delete tooltip: {}", e);
                     Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
@@ -336,13 +387,10 @@ static DOCS_VIDEOS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache
 
 pub async fn list_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Query(query): Query<DocsQuery>
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
 
     let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
     let cache_key = format!("docs:articles:all:{}", tenant_id);
@@ -354,11 +402,22 @@ pub async fn list_articles(
         let t_id = tenant_id.to_string();
         articles = match &db_clone.store {
             crate::db::DbStore::Postgres => {
-                match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
-                    .bind(t_id.clone())
-                    .fetch_all(&db_clone.pool)
+                let mut tx = match db_clone.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => return Ok(Json(vec![])),
+                };
+                if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
                     .await
+                    .is_err()
                 {
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
+                let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
+                    .bind(t_id.clone())
+                    .fetch_all(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+                match result {
                     Ok(rows) => {
                         rows.into_iter().map(|row| {
                             use sqlx::Row;
@@ -422,13 +481,10 @@ pub async fn list_articles(
 
 pub async fn search_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Query(query): Query<SearchQuery>
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
 
     let q = query.q.to_lowercase();
     let cache_key = format!("docs:articles:search:{}:{}", tenant_id, q);
@@ -443,12 +499,23 @@ pub async fn search_articles(
         let query_str = format!("%{}%", q);
         articles = match &db_clone.store {
             crate::db::DbStore::Postgres => {
-                match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
+                let mut tx = match db_clone.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => return Ok(Json(vec![])),
+                };
+                if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
+                    .await
+                    .is_err()
+                {
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
+                let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
                     .bind(t_id.clone())
                     .bind(query_str.clone())
-                    .fetch_all(&db_clone.pool)
-                    .await
-                {
+                    .fetch_all(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+                match result {
                     Ok(rows) => {
                         rows.into_iter().map(|row| {
                             use sqlx::Row;
@@ -518,13 +585,10 @@ pub async fn search_articles(
 
 pub async fn list_videos(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-    headers: axum::http::HeaderMap,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     Query(query): Query<DocsQuery>
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
-    let tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("default");
+    let tenant_id = docs_tenant(&claims)?;
 
     let cache = DOCS_VIDEOS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
     let cache_key = format!("docs:videos:all:{}", tenant_id);
@@ -536,11 +600,22 @@ pub async fn list_videos(
         let t_id = tenant_id.to_string();
         videos = match &db_clone.store {
             crate::db::DbStore::Postgres => {
-                match sqlx::query("SELECT id, title, duration, video_url FROM video_tutorials WHERE tenant_id = $1 ORDER BY id ASC")
-                    .bind(t_id.clone())
-                    .fetch_all(&db_clone.pool)
+                let mut tx = match db_clone.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => return Ok(Json(vec![])),
+                };
+                if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
                     .await
+                    .is_err()
                 {
+                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                }
+                let result = sqlx::query("SELECT id, title, duration, video_url FROM video_tutorials WHERE tenant_id = $1 ORDER BY id ASC")
+                    .bind(t_id.clone())
+                    .fetch_all(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+                match result {
                     Ok(rows) => {
                         rows.into_iter().map(|row| {
                             use sqlx::Row;
@@ -832,7 +907,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             }
         ],
         "paths": {
-            "/api/help": {
+            "/api/v1/help": {
                 "get": {
                     "summary": "Get Help Articles",
                     "description": "Retrieves a list of available help articles for the Help Center.",
@@ -859,7 +934,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/tooltips": {
+            "/api/v1/tooltips": {
                 "get": {
                     "summary": "Get Tooltips Registry",
                     "description": "Retrieves the key-value dictionary of all UI tooltips.",
@@ -880,7 +955,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                 }
             },
 
-            "/api/tooltips/{id}": {
+            "/api/v1/tooltips/{id}": {
                 "delete": {
                     "summary": "Delete a Tooltip",
                     "description": "Deletes a tooltip by its element ID.",
@@ -912,7 +987,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/help/search": {
+            "/api/v1/help/search": {
                 "get": {
                     "summary": "Search Help Articles",
                     "description": "Searches for help articles by query.",
@@ -950,7 +1025,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/videos": {
+            "/api/v1/videos": {
                 "get": {
                     "summary": "Get Video Tutorials",
                     "description": "Retrieves a list of available video tutorials.",
@@ -978,7 +1053,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/changelog": {
+            "/api/v1/changelog": {
                 "get": {
                     "summary": "Get Release Notes and Changelog",
                     "description": "Retrieves the release notes and changelog.",
@@ -1245,7 +1320,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/videos": {
+            "/api/v1/videos": {
                 "get": {
                     "summary": "Get video tutorials",
                     "description": "Retrieves a list of video tutorial metadata for the Help Center.",
@@ -1318,36 +1393,48 @@ mod tests {
     use super::*;
     use axum::extract::Json as AxumJson;
 
+    fn claims(tenant_id: &str) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "test-user".to_string(), exp: 0, iat: 0,
+            organization_id: Some(tenant_id.to_string()), username: String::new(),
+            email: String::new(), roles: vec![], session_id: None, jti: String::new(),
+        }
+    }
+
+    async fn docs_test_db() -> std::sync::Arc<crate::db::DB> {
+        let sqlite = crate::db::create_sqlite_pool_for_test().await;
+        std::sync::Arc::new(crate::db::DB {
+            pool: crate::db::create_dummy_pg_pool().await,
+            store: crate::db::DbStore::Sqlite(sqlite),
+        })
+    }
+
 
     #[tokio::test]
     async fn test_list_articles() {
-        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
-        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
-        let res = list_articles(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
+        let db = docs_test_db().await;
+        let res = list_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_found() {
-        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
-        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
-        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await.unwrap();
+        let db = docs_test_db().await;
+        let res = search_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_not_found() {
-        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
-        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
-        let res = search_articles(axum::extract::Extension(db), headers, axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await.unwrap();
+        let db = docs_test_db().await;
+        let res = search_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await.unwrap();
         assert!(res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_list_videos() {
-        let mut headers = axum::http::HeaderMap::new(); headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("default"));
-        let db = std::sync::Arc::new(crate::db::DB { pool: crate::db::create_dummy_pg_pool().await, store: crate::db::DbStore::Postgres });
-        let res = list_videos(axum::extract::Extension(db), headers, axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
+        let db = docs_test_db().await;
+        let res = list_videos(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
         assert!(!res.0.is_empty());
     }
 
@@ -1374,13 +1461,11 @@ mod tests {
         };
 
         // Update the tooltip
-        let mut headers = axum::http::HeaderMap::new();
-        headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
-        let res = update_tooltip(axum::extract::Extension(db.clone()), headers.clone(), AxumJson(payload)).await.unwrap();
+        let res = update_tooltip(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant")), AxumJson(payload)).await.unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the update
-        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
+        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
         let tooltips = tooltips_res.0;
 
         assert_eq!(
@@ -1402,23 +1487,20 @@ mod tests {
             .await
             .unwrap();
 
-        let mut headers = axum::http::HeaderMap::new();
-        headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
-
         // Verify it exists
-        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), headers.clone()).await.unwrap();
+        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
         assert_eq!(tooltips_res.0.get("delete-test-id").map(|s| s.as_str()), Some("Tooltip to delete"));
 
         // Delete the tooltip
         let res = delete_tooltip(
             axum::extract::Extension(db.clone()),
             axum::extract::Path("delete-test-id".to_string()),
-            headers.clone(),
+            axum::extract::Extension(claims("test-tenant")),
         ).await.unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the deletion
-        let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), headers).await.unwrap();
+        let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
         assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
 }

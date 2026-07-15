@@ -4,7 +4,7 @@ export function helpArticleBackendPath(id: unknown): string {
   if (typeof id !== "string" || !ARTICLE_ID.test(id)) {
     throw new Error("invalid article ID");
   }
-  return `/api/help/${id}`;
+  return `/api/v1/help/${id}`;
 }
 
 export function invalidArticleId(): Response {

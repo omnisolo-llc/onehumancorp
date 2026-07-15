@@ -11,8 +11,8 @@ vi.mock('swagger-ui-react', () => {
     default: (props: any) => (
       <div data-testid="swagger-ui-mock">
         Mocked Swagger UI
-        {props.spec?.paths?.['/api/help'] && <span>HasHelpPath</span>}
-        {props.spec?.paths?.['/api/tooltips'] && <span>HasTooltipsPath</span>}
+        {props.spec?.paths?.['/api/v1/help'] && <span>HasHelpPath</span>}
+        {props.spec?.paths?.['/api/v1/tooltips'] && <span>HasTooltipsPath</span>}
       </div>
     )
   };
@@ -21,7 +21,7 @@ vi.mock('swagger-ui-react', () => {
 describe('ApiDocsPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ paths: { '/api/help': {}, '/api/tooltips': {} } }),
+      json: () => Promise.resolve({ paths: { '/api/v1/help': {}, '/api/v1/tooltips': {} } }),
       ok: true
     }) as any;
   });

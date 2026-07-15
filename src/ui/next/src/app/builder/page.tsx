@@ -58,7 +58,7 @@ export default function BuilderPage() {
   const [tenantId, setTenantId] = useState("storefront");
 
   useEffect(() => {
-    fetch("/api/walkthrough/store-setup")
+    fetch("/api/v1/walkthrough/store-setup")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {

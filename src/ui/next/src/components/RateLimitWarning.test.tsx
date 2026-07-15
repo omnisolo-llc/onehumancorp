@@ -12,7 +12,7 @@ describe('RateLimitWarning', () => {
     originalFetch = global.fetch;
     // Mock fetch for tests BEFORE importing
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/tooltips') {
+      if (url === '/api/v1/tooltips') {
         return Promise.resolve(new Response(JSON.stringify({ "test-id": "Tooltip text" })));
       }
       return Promise.resolve(new Response('{}'));
