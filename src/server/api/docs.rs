@@ -178,6 +178,8 @@ pub async fn get_tooltips(
         tooltips.insert("help-advanced-toggle-tooltip".to_string(), "Show advanced developer options.".to_string());
         tooltips.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
         tooltips.insert("checkout-pay-tooltip".to_string(), "Click to process your payment.".to_string());
+        tooltips.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
+        tooltips.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
     }
 
     Ok(Json(tooltips))
