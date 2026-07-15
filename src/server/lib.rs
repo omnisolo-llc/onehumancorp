@@ -3462,7 +3462,7 @@ pub async fn update_ui_omni_inbox_action_handler(
                                         let provider = TwilioProvider::new(account_sid, auth_token);
 
                                         if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials"); // pii-safe
                                             return;
                                         }
                                         let twilio_from = from_phone;
@@ -3535,7 +3535,7 @@ pub async fn update_ui_omni_inbox_action_handler(
                                         let provider = TwilioProvider::new(account_sid, auth_token);
 
                                         if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials"); // pii-safe
                                             return;
                                         }
                                         let twilio_from = from_phone;

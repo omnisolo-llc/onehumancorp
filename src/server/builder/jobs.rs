@@ -124,7 +124,7 @@ async fn execute_publish_site_job(
     let cache_key_full = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
     match crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, cache_key_full.clone(), cache.clone()).await {
         Ok(_) => info!("Agentic SEO Pre-rendering: Successfully pre-rendered and pushed to edge cache: {}", cache_key_full),
-        Err(e) => tracing::error!("Agentic SEO Pre-rendering: Failed to pre-render edge cache for {}: {}", cache_key_full, e),
+        Err(e) => tracing::error!("Agentic SEO Pre-rendering: Failed to pre-render edge cache for {}: {}", cache_key_full, e), // pii-safe
     }
 
     let site = super::db::list_sites(pool, tenant_id)

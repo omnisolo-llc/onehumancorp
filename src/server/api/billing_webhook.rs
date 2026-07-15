@@ -411,7 +411,7 @@ pub async fn stripe_webhook_handler(
                                     .bind(0.0)
                                     .execute(&mut *tx)
                                     .await {
-                                    tracing::error!("Failed to insert ledger_accounts: {}", e);
+                                    tracing::error!("Failed to insert ledger_accounts: {}", e); // pii-safe
                                 } else {
                                     let entry_id = uuid::Uuid::new_v4().to_string();
                                     if let Err(e) = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
@@ -430,7 +430,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(account_id)
                                             .execute(&mut *tx)
                                             .await {
-                                            tracing::error!("Failed to update ledger_accounts balance: {}", e);
+                                            tracing::error!("Failed to update ledger_accounts balance: {}", e); // pii-safe
                                         }
                                     }
                                 }

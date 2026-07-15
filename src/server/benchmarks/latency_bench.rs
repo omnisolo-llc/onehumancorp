@@ -1587,8 +1587,8 @@ pub async fn bench_ai_token_efficiency() {
 
     assert_eq!(reduced_1, reduced_2);
 
-    tracing::info!("  - reduce_tokens first call (Miss): {:?}", duration_1);
-    tracing::info!("  - reduce_tokens second call (Hit): {:?}", duration_2);
+    tracing::info!("  - reduce_tokens first call (Miss): {:?}", duration_1); // pii-safe
+    tracing::info!("  - reduce_tokens second call (Hit): {:?}", duration_2); // pii-safe
     if duration_2 < duration_1 {
         tracing::info!("    (AI Token Efficiency verified: cache reduced execution time)");
     }
