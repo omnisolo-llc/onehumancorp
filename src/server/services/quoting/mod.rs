@@ -32,6 +32,7 @@ pub struct Quote {
     pub stripe_payment_link: Option<String>,
     pub proposed_slot_id: Option<String>,
     pub service_id: Option<String>,
+    pub unstructured_context: Option<String>,
 }
 
 
@@ -62,6 +63,7 @@ pub struct CreateQuoteReq {
     pub status: String,
     pub line_items: Vec<QuoteLineItemReq>,
     pub proposed_slot_id: Option<String>,
+    pub unstructured_context: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -358,6 +360,7 @@ Task: Extract the scope of work and identify the closest matching service from t
             }
         ],
         proposed_slot_id,
+        unstructured_context: Some(request.message.clone()),
     };
 
     // 3. Create the quote
@@ -405,7 +408,7 @@ async fn create_quote(
     let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
     let quote = sqlx::query_as::<_, Quote>(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, proposed_slot_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, proposed_slot_id, unstructured_context) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"
     )
     .bind(quote_id)
     .bind(&tenant_id)
@@ -414,6 +417,7 @@ async fn create_quote(
     .bind(total_amount_cents)
     .bind(required_deposit_cents)
     .bind(payload.proposed_slot_id)
+    .bind(&payload.unstructured_context)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
@@ -526,6 +530,7 @@ mod tests {
             stripe_payment_link: Some("http://stripe.com".to_string()),
             proposed_slot_id: Some("slot-1".to_string()),
             service_id: Some("srv-1".to_string()),
+            unstructured_context: None,
         };
         let serialized = serde_json::to_string(&quote).unwrap();
         assert!(serialized.contains("total_amount_cents"));
