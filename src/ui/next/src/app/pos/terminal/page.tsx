@@ -168,17 +168,23 @@ export default function POSTerminal() {
 
   const loadDashboard = async () => {
     if (isOffline) {
-       // Just load something empty for now
-       setInventory([]);
+       const cached = localStorage.getItem('ohc_pos_catalog_cache');
+       if (cached) {
+           setInventory(JSON.parse(cached));
+       } else {
+           setInventory([]);
+       }
        return;
     }
     try {
       const res = await fetch('/api/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
       const data = await res.json();
       setInventory(data.inventory || []);
+      localStorage.setItem('ohc_pos_catalog_cache', JSON.stringify(data.inventory || []));
     } catch (e) {
       console.error("Failed to load inventory", e);
-      setInventory([]);
+      const cached = localStorage.getItem('ohc_pos_catalog_cache');
+      setInventory(cached ? JSON.parse(cached) : []);
     }
   };
 
@@ -250,21 +256,29 @@ export default function POSTerminal() {
   };
 
   const handleOptimisticReserve = (productId: string) => {
-    setInventory(prev => prev.map(p => {
-      if (p.id === productId) {
-        return { ...p, stock: p.stock - 1 };
-      }
-      return p;
-    }));
+    setInventory(prev => {
+      const updated = prev.map(p => {
+        if (p.id === productId) {
+          return { ...p, stock: p.stock - 1 };
+        }
+        return p;
+      });
+      localStorage.setItem('ohc_pos_catalog_cache', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleOptimisticRollback = (productId: string) => {
-    setInventory(prev => prev.map(p => {
-      if (p.id === productId) {
-        return { ...p, stock: p.stock + 1 };
-      }
-      return p;
-    }));
+    setInventory(prev => {
+      const updated = prev.map(p => {
+        if (p.id === productId) {
+          return { ...p, stock: p.stock + 1 };
+        }
+        return p;
+      });
+      localStorage.setItem('ohc_pos_catalog_cache', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleQuickCharge = async () => {

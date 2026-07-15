@@ -151,6 +151,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        return;
     }
 
+    if (onOptimisticReserve) onOptimisticReserve();
     setStatus('Waiting for card tap...');
 
     // We must create an intent first by calling the backend
@@ -199,9 +200,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                 if (onSuccess) onSuccess();
             } else {
                 setStatus('Failed to capture intent');
+                if (onOptimisticRollback) onOptimisticRollback();
             }
         } catch (e) {
             setStatus('Failed to capture intent');
+            if (onOptimisticRollback) onOptimisticRollback();
         }
       }
     }
