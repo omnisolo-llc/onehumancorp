@@ -6659,7 +6659,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
-        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
+        .route("/api/v1/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
             let store = http_auth_store.clone();
             axum::middleware::from_fn(
                 move |req: axum::extract::Request, next: axum::middleware::Next| {
@@ -7453,13 +7453,13 @@ async fn create_ui_bom_item_handler(
         )))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
-        .nest("/api/inbox", inbox_webhook_router)
+        .nest("/api/v1/inbox", inbox_webhook_router)
         .nest(
-            "/api/memory",
+            "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
         )
         .nest(
-            "/api/inbox/action_required",
+            "/api/v1/inbox/action_required",
             api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
         )
         .merge(twilio_webhook_router)

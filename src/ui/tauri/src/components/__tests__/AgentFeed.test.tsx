@@ -120,7 +120,7 @@ describe('AgentFeed', () => {
         fireEvent.click(approveButton);
 
         // Verify API was called correctly
-        expect(global.fetch).toHaveBeenCalledWith('/api/inbox/action_required/draft-1/approve', {
+        expect(global.fetch).toHaveBeenCalledWith('/api/v1/inbox/action_required/draft-1/approve', {
             method: 'POST'
         });
 

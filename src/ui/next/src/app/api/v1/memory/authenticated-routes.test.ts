@@ -34,7 +34,7 @@ describe("authenticated memory backend routes", () => {
   beforeEach(() => proxyBackendRequest.mockClear());
 
   test("list uses the canonical assistant memory endpoint", async () => {
-    const request = new Request("http://localhost/api/memory?tenant_id=attacker");
+    const request = new Request("http://localhost/api/v1/memory?tenant_id=attacker");
     await listMemory(request);
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
@@ -44,7 +44,7 @@ describe("authenticated memory backend routes", () => {
   });
 
   test("delete validates the id and emits the typed forget mutation", async () => {
-    const request = new Request("http://localhost/api/memory/memory-1", {
+    const request = new Request("http://localhost/api/v1/memory/memory-1", {
       method: "DELETE",
     });
     await forgetMemory(request, { params: Promise.resolve({ id: "memory-1" }) });
@@ -70,7 +70,7 @@ describe("authenticated memory backend routes", () => {
   });
 
   test("upload preserves bounded source metadata and strips extra fields", async () => {
-    const request = new Request("http://localhost/api/memory/upload", {
+    const request = new Request("http://localhost/api/v1/memory/upload", {
       method: "POST",
       body: "{}",
     });
@@ -100,7 +100,7 @@ describe("authenticated memory backend routes", () => {
   });
 
   test("cross-session search strips session authority and bounds inputs", async () => {
-    const request = new Request("http://localhost/api/memory/cross-session", {
+    const request = new Request("http://localhost/api/v1/memory/cross-session", {
       method: "POST",
       body: "{}",
     });
@@ -124,13 +124,13 @@ describe("authenticated memory backend routes", () => {
   });
 
   test("customer summary derives tenant server-side", async () => {
-    const request = new Request("http://localhost/api/memory/summary/customer-1");
+    const request = new Request("http://localhost/api/v1/memory/summary/customer-1");
     await customerSummary(request, {
       params: Promise.resolve({ customerId: "customer-1" }),
     });
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
-      "/api/memory/summary/customer-1",
+      "/api/v1/memory/summary/customer-1",
       { forwardQuery: false, suppressRequestBody: true },
     );
   });

@@ -12,7 +12,7 @@ test.describe('Omni Inbox Webhook and API', () => {
       message: 'Hello, do you have vegan cakes?',
     };
 
-    const webhookRes = await request.post('/api/inbox/webhook', {
+    const webhookRes = await request.post('/api/v1/inbox/webhook', {
       data: payload,
     });
 
@@ -25,8 +25,8 @@ test.describe('Omni Inbox Webhook and API', () => {
     // Give it a moment to process the event
     await new Promise(r => setTimeout(r, 1000));
 
-    // Test GET /api/inbox/conversations/:tenant_id
-    const convRes = await request.get(`/api/inbox/conversations/${tenantId}`);
+    // Test GET /api/v1/inbox/conversations/:tenant_id
+    const convRes = await request.get(`/api/v1/inbox/conversations/${tenantId}`);
     expect(convRes.ok()).toBeTruthy();
     const convJson = await convRes.json();
 
@@ -34,7 +34,7 @@ test.describe('Omni Inbox Webhook and API', () => {
 
     // Due to standalone testing lacking unified_threads insertion in the simple webhook test endpoint,
     // we query a mock conversation to test the format or check that the system doesn't crash
-    const msgRes = await request.get(`/api/inbox/messages/${tenantId}/conv_123`);
+    const msgRes = await request.get(`/api/v1/inbox/messages/${tenantId}/conv_123`);
     expect(msgRes.ok()).toBeTruthy();
     const msgJson = await msgRes.json();
     expect(Array.isArray(msgJson)).toBeTruthy();
