@@ -21,9 +21,9 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
 
     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-    expect(reserveRes.ok()).toBe(true);
+    expect(reserveRes.ok()).toBeTruthy();
     const lockData = await reserveRes.json();
-    expect(lockData.success).toBe(true);
+    expect(lockData.success).toBeTruthy();
 
     // Simulate Online User (User A) attempting checkout for the same item
     const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
@@ -41,7 +41,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
     // It should fail gracefully
     const lockData2 = await reserveRes2.json();
-    expect(lockData2.success).toBe(false);
+    expect(lockData2.success).toBeFalsy();
     expect(lockData2.error_message).toContain('another customer');
 
     // POS (User B) completes checkout
@@ -58,7 +58,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
 
-    expect(commitRes.ok()).toBe(true);
+    expect(commitRes.ok()).toBeTruthy();
   });
 
   test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
@@ -88,9 +88,9 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
 
     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-    expect(reserveRes.ok()).toBe(true);
+    expect(reserveRes.ok()).toBeTruthy();
     const lockData = await reserveRes.json();
-    expect(lockData.success).toBe(true);
+    expect(lockData.success).toBeTruthy();
 
     // 2. Navigate to checkout page for the locked product
     await page.goto(`/checkout?product_id=${productId}&quantity=1`);
@@ -134,9 +134,9 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     });
 
     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-    expect(reserveRes.ok()).toBe(true);
+    expect(reserveRes.ok()).toBeTruthy();
     const lockData = await reserveRes.json();
-    expect(lockData.success).toBe(true);
+    expect(lockData.success).toBeTruthy();
 
     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
         data: {
@@ -153,7 +153,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
 
     const commitData = await commitRes.json();
-    expect(commitData.success).toBe(true);
+    expect(commitData.success).toBeTruthy();
   });
 
   test('Operations Agent generates a Restock notification in the owner feed when item sells out', async ({ page }) => {
@@ -203,9 +203,9 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     });
 
     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-    expect(reserveRes.ok()).toBe(true);
+    expect(reserveRes.ok()).toBeTruthy();
     const lockData = await reserveRes.json();
-    expect(lockData.success).toBe(true);
+    expect(lockData.success).toBeTruthy();
 
     // POS (User B) completes checkout
     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
@@ -221,7 +221,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
 
-    expect(commitRes.ok()).toBe(true);
+    expect(commitRes.ok()).toBeTruthy();
 
     await page.waitForTimeout(5000);
 
