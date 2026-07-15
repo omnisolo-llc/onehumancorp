@@ -1,15 +1,16 @@
-use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::db::DB;
+use axum::{
+    Router,
+    extract::{Extension, Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ReserveRequest {
     pub customer_id: Option<String>,
     pub service_id: String,
@@ -25,6 +26,32 @@ pub struct ReserveResponse {
     pub checkout_url: Option<String>,
 }
 
+fn reservation_window(
+    start_time: &str,
+    end_time: &str,
+) -> Option<(chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)> {
+    let start_time = chrono::DateTime::parse_from_rfc3339(start_time)
+        .ok()?
+        .with_timezone(&chrono::Utc);
+    let end_time = chrono::DateTime::parse_from_rfc3339(end_time)
+        .ok()?
+        .with_timezone(&chrono::Utc);
+    (end_time > start_time && end_time - start_time <= chrono::Duration::hours(24))
+        .then_some((start_time, end_time))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reservation_window_rejects_inverted_and_oversized_ranges() {
+        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-15T11:00:00Z",).is_some());
+        assert!(reservation_window("2026-07-15T11:00:00Z", "2026-07-15T10:00:00Z",).is_none());
+        assert!(reservation_window("2026-07-15T10:00:00Z", "2026-07-17T10:00:01Z",).is_none());
+    }
+}
+
 pub fn router<S>(db: Arc<DB>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -36,12 +63,48 @@ where
 
 async fn handle_reserve(
     State(db): State<Arc<DB>>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(payload): Json<ReserveRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
-        Some(t) if !t.trim().is_empty() => t.to_string(),
-        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    let tenant_id = match claims
+        .as_ref()
+        .and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
+    {
+        Some(tenant_id) => tenant_id,
+        _ => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                axum::Json(serde_json::json!({"error": "unauthorized"})),
+            )
+                .into_response();
+        }
+    };
+    if payload.service_id.trim().is_empty() || payload.service_id.chars().count() > 128 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid service_id"})),
+        )
+            .into_response();
+    }
+    let Some((st, et)) = reservation_window(&payload.start_time, &payload.end_time) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid reservation window"})),
+        )
+            .into_response();
+    };
+    let c_id = match payload.customer_id.as_deref() {
+        Some(customer_id) => match uuid::Uuid::parse_str(customer_id) {
+            Ok(customer_id) => Some(customer_id),
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": "invalid customer_id"})),
+                )
+                    .into_response();
+            }
+        },
+        None => None,
     };
 
     let pool = db.pool.clone();
@@ -63,43 +126,70 @@ async fn handle_reserve(
         }
     };
 
-    let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    let st = match chrono::DateTime::parse_from_rfc3339(&payload.start_time) {
-        Ok(d) => d.with_timezone(&chrono::Utc),
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ReserveResponse {
-                    success: false,
-                    booking_id: None,
-                    error: Some("invalid start_time format".to_string()),
-                    checkout_url: None,
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    let et = match chrono::DateTime::parse_from_rfc3339(&payload.end_time) {
-        Ok(d) => d.with_timezone(&chrono::Utc),
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ReserveResponse {
-                    success: false,
-                    booking_id: None,
-                    error: Some("invalid end_time format".to_string()),
-                    checkout_url: None,
-                }),
-            )
-                .into_response();
-        }
-    };
+    if let Err(error) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        tracing::error!("failed to bind reservation tenant context: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
+    }
 
     let booking_id = uuid::Uuid::new_v4().to_string();
 
-    let c_id = payload.customer_id.and_then(|c| uuid::Uuid::parse_str(&c).ok());
+    let price = match sqlx::query_scalar::<_, i64>(
+        "SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2",
+    )
+    .bind(&payload.service_id)
+    .bind(&tenant_id)
+    .fetch_optional(&mut *tx)
+    .await
+    {
+        Ok(Some(price)) => price,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({"error": "service not found"})),
+            )
+                .into_response();
+        }
+        Err(error) => {
+            tracing::error!("failed to load reservation service: {error}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    };
+
+    let claimed_slot = sqlx::query(
+        "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4 AND is_available = true RETURNING id",
+    )
+    .bind(&tenant_id)
+    .bind(&payload.service_id)
+    .bind(st)
+    .bind(et)
+    .fetch_optional(&mut *tx)
+    .await;
+    match claimed_slot {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({"error": "slot unavailable"})),
+            )
+                .into_response();
+        }
+        Err(error) => {
+            tracing::error!("failed to claim reservation slot: {error}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    }
 
     let res = sqlx::query(
         r#"
@@ -130,28 +220,13 @@ async fn handle_reserve(
             .into_response();
     }
 
-    // Attempt to mark block as booked
-    let _ = sqlx::query(
-        r#"
-        UPDATE availability_blocks SET is_available = false
-        WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4
-        "#,
-    )
-    .bind(&tenant_id)
-    .bind(&payload.service_id)
-    .bind(st)
-    .bind(et)
-    .execute(&mut *tx)
-    .await;
-
-
-    // Add feed item
+    // Add feed item within the same transaction as the reservation.
     let feed_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query(
+    let feed_result = sqlx::query(
         r#"
         INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
         VALUES ($1, $2, 'booking_request', 'new', $3)
-        "#
+        "#,
     )
     .bind(&feed_id)
     .bind(&tenant_id)
@@ -163,28 +238,24 @@ async fn handle_reserve(
     }))
     .execute(&mut *tx)
     .await;
-
-    let _ = tx.commit().await;
-
-
-
-    // Check if deposit is required
-    let mut requires_deposit = false;
-    if let Ok(Some(price)) = sqlx::query_scalar::<_, i64>(
-        "SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2"
-    )
-    .bind(&payload.service_id)
-    .bind(&tenant_id)
-    .fetch_optional(&pool)
-    .await
-    {
-        if price > 0 {
-            requires_deposit = true;
-        }
+    if let Err(error) = feed_result {
+        tracing::error!("failed to create booking feed item: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
+    }
+    if let Err(error) = tx.commit().await {
+        tracing::error!("failed to commit reservation: {error}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "internal error"})),
+        )
+            .into_response();
     }
 
-
-    let checkout_url = if requires_deposit {
+    let checkout_url = if price > 0 {
         Some(format!("/api/v1/booking/deposit?booking_id={}", booking_id))
     } else {
         None
