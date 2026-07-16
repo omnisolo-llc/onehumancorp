@@ -440,7 +440,7 @@ Your response:",
             .await
     }
 
-    pub(crate) async fn save_onboarding_system_state(
+    pub async fn save_onboarding_system_state(
         &self,
         tenant_id: &str,
         user_id: &str,

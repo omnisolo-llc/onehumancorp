@@ -144,6 +144,7 @@ rust_library(
     ],
     compile_data = [
         "//:CHANGELOG.md",
+        "//src/server/migrations",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -228,7 +229,7 @@ rust_library(
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tokio",
-        "@crates//:tower",
+        "@crates//:tower-0.4.13",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",

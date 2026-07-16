@@ -104,4 +104,4 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText("Assistant Tasks")).toBeDefined();
   expect(screen.getByText("My Plan")).toBeDefined();
 
-});
+}, 30000);

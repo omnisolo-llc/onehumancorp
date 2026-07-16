@@ -633,15 +633,21 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().to_string_lossy().to_string();
 
-        // Initialize a dummy cargo project
-        std::process::Command::new("cargo")
+        let init_res = std::process::Command::new("cargo")
             .arg("init")
             .arg("--lib")
             .arg("--name")
             .arg("test_project")
             .current_dir(&path)
-            .output()
-            .unwrap();
+            .output();
+
+        match init_res {
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
+                println!("Skipping test: cargo binary not found in PATH");
+                return;
+            }
+            res => { res.unwrap(); }
+        }
 
         let guide = CargoTestGuide {
             workspace_path: Some(path.clone()),
