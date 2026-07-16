@@ -21,7 +21,7 @@ export default function PaymentLedger() {
 
   const fetchBalance = async () => {
     try {
-      const res = await fetch("/api/ledger/balance");
+      const res = await fetch("/api/v1/payments/ledger/balance");
       if (res.ok) {
         const data = await res.json();
         setRevenue(data.total_revenue);
@@ -34,7 +34,7 @@ export default function PaymentLedger() {
   const handleRequestPayment = async () => {
     setStatus("Processing...");
     try {
-      const intentRes = await fetch("/api/payments/intent", {
+      const intentRes = await fetch("/api/v1/payments/ledger/intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

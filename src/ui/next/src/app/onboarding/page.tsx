@@ -34,9 +34,6 @@ export default function OnboardingWizard() {
     domainChoice,
     firstProductName,
     firstProductPrice,
-    adminName,
-    adminEmail,
-    adminPassword,
     aiAgents,
     aiAutoRespond,
     isLoading,
@@ -106,21 +103,6 @@ export default function OnboardingWizard() {
   };
 
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
-    const tenantId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("tenant_id") ||
-          localStorage.getItem("tenant") ||
-          "storefront"
-        : "storefront";
-    let userId = "guest";
-    if (typeof localStorage !== "undefined") {
-      userId = localStorage.getItem("user_id") || "";
-      if (!userId) {
-        userId = crypto.randomUUID();
-        localStorage.setItem("user_id", userId);
-      }
-    }
-
     const wizardState = {
       step,
       chatStep,
@@ -137,9 +119,6 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
-      adminName,
-      adminEmail,
-      adminPassword,
       aiAgents,
       aiAutoRespond,
       instantImageUrl,
@@ -147,12 +126,10 @@ export default function OnboardingWizard() {
     };
 
     try {
-      await fetchWithRetry("/api/onboarding/state", {
+      await fetchWithRetry("/api/v1/onboarding/state", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId,
-          "X-User-ID": userId,
         },
         body: JSON.stringify({ wizardState }),
       });
@@ -187,21 +164,6 @@ export default function OnboardingWizard() {
     updateState({ error: "" });
 
     try {
-      const tenantId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("tenant_id") ||
-            localStorage.getItem("tenant") ||
-            "storefront"
-          : "storefront";
-      let userId = "guest";
-      if (typeof localStorage !== "undefined") {
-        userId = localStorage.getItem("user_id") || "";
-        if (!userId) {
-          userId = crypto.randomUUID();
-          localStorage.setItem("user_id", userId);
-        }
-      }
-
       const wizardState = {
         step,
         chatStep,
@@ -218,20 +180,15 @@ export default function OnboardingWizard() {
         domainChoice,
         firstProductName,
         firstProductPrice,
-        adminName,
-        adminEmail,
-        adminPassword,
         aiAgents,
         aiAutoRespond,
         instantImageUrl,
       };
 
-      const res = await fetchWithRetry("/api/onboarding/draft", {
+      const res = await fetchWithRetry("/api/v1/onboarding/draft", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId,
-          "X-User-ID": userId,
         },
         body: JSON.stringify({ step, ...wizardState }),
       });
@@ -248,30 +205,11 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    const tenantId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("tenant_id") ||
-          localStorage.getItem("tenant") ||
-          "storefront"
-        : "storefront";
-    let userId = "guest";
-    if (typeof localStorage !== "undefined") {
-      userId = localStorage.getItem("user_id") || "";
-      if (!userId) {
-        userId = crypto.randomUUID();
-        localStorage.setItem("user_id", userId);
-      }
-    }
-
     Promise.all([
-      fetchWithRetry("/api/onboarding/draft", {
-        headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
-      })
+      fetchWithRetry("/api/v1/onboarding/draft", {})
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
-      fetchWithRetry("/api/onboarding/state", {
-        headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
-      })
+      fetchWithRetry("/api/v1/onboarding/state", {})
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
     ])
@@ -307,12 +245,6 @@ export default function OnboardingWizard() {
             updateState({ firstProductName: data.firstProductName });
           if (data.firstProductPrice !== undefined)
             updateState({ firstProductPrice: data.firstProductPrice });
-          if (data.adminName !== undefined)
-            updateState({ adminName: data.adminName });
-          if (data.adminEmail !== undefined)
-            updateState({ adminEmail: data.adminEmail });
-          if (data.adminPassword !== undefined)
-            updateState({ adminPassword: data.adminPassword });
           if (data.domainChoice !== undefined)
             updateState({ domainChoice: data.domainChoice });
           if (data.aiAgents !== undefined)
@@ -345,21 +277,6 @@ export default function OnboardingWizard() {
     )
       return;
 
-    const tenantId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("tenant_id") ||
-          localStorage.getItem("tenant") ||
-          "storefront"
-        : "storefront";
-    let userId = "guest";
-    if (typeof localStorage !== "undefined") {
-      userId = localStorage.getItem("user_id") || "";
-      if (!userId) {
-        userId = crypto.randomUUID();
-        localStorage.setItem("user_id", userId);
-      }
-    }
-
     const wizardState = {
       step,
       chatStep,
@@ -376,21 +293,16 @@ export default function OnboardingWizard() {
       domainChoice,
       firstProductName,
       firstProductPrice,
-      adminName,
-      adminEmail,
-      adminPassword,
       aiAgents,
       aiAutoRespond,
       instantImageUrl,
     };
 
     const timer = setTimeout(() => {
-      fetchWithRetry("/api/onboarding/state", {
+      fetchWithRetry("/api/v1/onboarding/state", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId,
-          "X-User-ID": userId,
         },
         body: JSON.stringify({ step, ...wizardState }),
       }).catch((err) => console.error("Failed to sync onboarding state", err));
@@ -412,9 +324,6 @@ export default function OnboardingWizard() {
     domainChoice,
     firstProductName,
     firstProductPrice,
-    adminName,
-    adminEmail,
-    adminPassword,
     aiAgents,
     aiAutoRespond,
     isLoaded,
@@ -426,30 +335,13 @@ export default function OnboardingWizard() {
     updateState({ error: "" });
 
     try {
-      const tenantId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("tenant_id") ||
-            localStorage.getItem("tenant") ||
-            "storefront"
-          : "storefront";
-      let userId = "guest";
-      if (typeof localStorage !== "undefined") {
-        userId = localStorage.getItem("user_id") || "";
-        if (!userId) {
-          userId = crypto.randomUUID();
-          localStorage.setItem("user_id", userId);
-        }
-      }
-
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       updateState({ bio: combinedDescription });
 
-      const intakeRes = await fetchWithRetry("/api/onboarding/intake", {
+      const intakeRes = await fetchWithRetry("/api/v1/onboarding/intake", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId,
-          "X-User-ID": userId,
         },
         body: JSON.stringify({ description: combinedDescription }),
       });
@@ -543,14 +435,7 @@ export default function OnboardingWizard() {
     updateState({ isLoading: true });
 
     try {
-      const backendUrl =
-        typeof window !== "undefined" &&
-        (window.location.origin.includes("localhost") ||
-          window.location.protocol === "file:")
-          ? "http://127.0.0.1:18789"
-          : "";
-
-      const res = await fetchWithRetry(`${backendUrl}/api/onboarding/chat`, {
+      const res = await fetchWithRetry("/api/v1/onboarding/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newHistory }),
@@ -568,21 +453,6 @@ export default function OnboardingWizard() {
         updateState({ step: 4 });
         syncStateToBackend({ step: 4 });
         const intakeData = data.intake_data;
-        const tenantId =
-          typeof localStorage !== "undefined"
-            ? localStorage.getItem("tenant_id") ||
-              localStorage.getItem("tenant") ||
-              "storefront"
-            : "storefront";
-        let userId = "guest";
-        if (typeof localStorage !== "undefined") {
-          userId = localStorage.getItem("user_id") || "";
-          if (!userId) {
-            userId = crypto.randomUUID();
-            localStorage.setItem("user_id", userId);
-          }
-        }
-
         // Pre-fill state values so we don't need to manually type everything
         updateState({
           businessName: intakeData.business_name || "My Business",
@@ -604,70 +474,40 @@ export default function OnboardingWizard() {
         updateState({ location: intakeData.location || "" });
         updateState({ targetAudience: intakeData.target_audience || "" });
 
-        // Let the normal handleStartOnboarding function take over if admin details are missing
-        if (!adminEmail.trim() || !adminPassword.trim()) {
-          updateState({ step: 3 });
-          syncStateToBackend({
-            step: 3,
-            firstProductName:
-              intakeData.initial_products?.[0]?.name || "First Product",
-            firstProductPrice:
-              intakeData.initial_products?.[0]?.price || "0.00",
-          });
-          updateState({ isLoading: false });
-          return;
-        }
-
-        const startRes = await fetchWithRetry(
-          `${backendUrl}/api/onboarding/start`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Tenant-ID": tenantId,
-              "X-User-ID": userId,
-            },
-            body: JSON.stringify({
-              business_type: intakeData.business_type || "Online Store",
-              company_name: intakeData.business_name || "My Business",
-              company_description: newHistory.map((m) => m.content).join(" "),
-              selling_categories: intakeData.categories || ["physical"],
-              payment_pref: "online",
-              admin_email: adminEmail,
-              admin_name: adminName || intakeData.business_name || "Admin",
-              admin_password: adminPassword,
-              website_template: "auto",
-              first_product_name:
-                intakeData.initial_products?.[0]?.name || "First Product",
-              first_product_price:
-                typeof intakeData.initial_products?.[0]?.price === "number"
-                  ? String(intakeData.initial_products[0].price)
-                  : intakeData.initial_products?.[0]?.price || "0.00",
-              domain_choice: "subdomain",
-              price_type: "fixed",
-              location: intakeData.location || "",
-              target_audience: intakeData.target_audience || "",
-              ai_agents: [],
-              ai_auto_respond: true,
-              initial_products: intakeData.initial_products || [],
-            }),
+        const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            business_type: intakeData.business_type || "Online Store",
+            company_name: intakeData.business_name || "My Business",
+            company_description: newHistory.map((m) => m.content).join(" "),
+            selling_categories: intakeData.categories || ["physical"],
+            payment_pref: "online",
+            website_template: "auto",
+            first_product_name:
+              intakeData.initial_products?.[0]?.name || "First Product",
+            first_product_price:
+              typeof intakeData.initial_products?.[0]?.price === "number"
+                ? String(intakeData.initial_products[0].price)
+                : intakeData.initial_products?.[0]?.price || "0.00",
+            domain_choice: "subdomain",
+            price_type: "fixed",
+            location: intakeData.location || "",
+            target_audience: intakeData.target_audience || "",
+            ai_agents: [],
+            ai_auto_respond: true,
+            initial_products: intakeData.initial_products || [],
+          }),
+        });
 
         const result = await startRes.json();
         updateState({ startResult: result });
 
-        if (result.organization_id) {
-          localStorage.setItem("tenant_id", result.organization_id);
-          localStorage.setItem("tenant", result.organization_id);
-        }
-        const launchRes = await fetchWithRetry(
-          `${backendUrl}/api/onboarding/launch`,
-          {
-            method: "POST",
-            headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
-          },
-        );
+        const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
+          method: "POST",
+        });
         if (!launchRes.ok) throw new Error("Launch failed");
         updateState({ step: 5 });
         syncStateToBackend({ step: 5 });
@@ -697,39 +537,16 @@ export default function OnboardingWizard() {
     updateState({ error: "" });
 
     try {
-      const backendUrl =
-        typeof window !== "undefined" &&
-        (window.location.origin.includes("localhost") ||
-          window.location.protocol === "file:")
-          ? "http://127.0.0.1:18789"
-          : "";
-      const tenantId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("tenant_id") ||
-            localStorage.getItem("tenant") ||
-            "storefront"
-          : "storefront";
-      let userId = "guest";
-      if (typeof localStorage !== "undefined") {
-        userId = localStorage.getItem("user_id") || "";
-        if (!userId) {
-          userId = crypto.randomUUID();
-          localStorage.setItem("user_id", userId);
-        }
-      }
-
       // Navigate to the loading state immediately
       updateState({ step: 4 });
       syncStateToBackend({ step: 4 });
 
       const startRes = await fetchWithRetry(
-        `${backendUrl}/api/onboarding/start_zero_click`,
+        "/api/v1/onboarding/start_zero_click",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Tenant-ID": tenantId,
-            "X-User-ID": userId,
           },
           body: JSON.stringify({
             prompt: bio,
@@ -760,18 +577,10 @@ export default function OnboardingWizard() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       updateState({ startResult: result });
       localStorage.setItem("has_onboarded", "true");
-      if (result.organization_id) {
-        localStorage.setItem("tenant_id", result.organization_id);
-        localStorage.setItem("tenant", result.organization_id);
-      }
 
-      const launchRes = await fetchWithRetry(
-        `${backendUrl}/api/onboarding/launch`,
-        {
-          method: "POST",
-          headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
-        },
-      );
+      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
+        method: "POST",
+      });
       if (!launchRes.ok) throw new Error("Launch failed");
       updateState({ step: 5 });
       syncStateToBackend({ step: 5 });
@@ -795,52 +604,16 @@ export default function OnboardingWizard() {
   };
 
   const handleStartOnboarding = async () => {
-    const errors: Record<string, string> = {};
-    if (!adminName.trim()) {
-      errors.adminName = "Admin Name is required";
-    }
-    if (!adminEmail.trim()) {
-      errors.adminEmail = "Admin Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail)) {
-      errors.adminEmail = "Please enter a valid email address";
-    }
-    if (!adminPassword.trim()) {
-      errors.adminPassword = "Password is required";
-    } else if (adminPassword.length < 8 || !/\d/.test(adminPassword)) {
-      errors.adminPassword =
-        "Password must be at least 8 characters and contain a number";
-    }
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
     setValidationErrors({});
     updateState({ isLoading: true });
     updateState({ error: "" });
     updateState({ step: 4 });
     syncStateToBackend({ step: 4 }); // Go to loading screen
     try {
-      const tenantId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("tenant_id") ||
-            localStorage.getItem("tenant") ||
-            "storefront"
-          : "storefront";
-      let userId = "guest";
-      if (typeof localStorage !== "undefined") {
-        userId = localStorage.getItem("user_id") || "";
-        if (!userId) {
-          userId = crypto.randomUUID();
-          localStorage.setItem("user_id", userId);
-        }
-      }
-
-      const startRes = await fetchWithRetry("/api/onboarding/start", {
+      const startRes = await fetchWithRetry("/api/v1/onboarding/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Tenant-ID": tenantId,
-          "X-User-ID": userId,
         },
         body: JSON.stringify({
           business_type: businessType,
@@ -848,10 +621,6 @@ export default function OnboardingWizard() {
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
           payment_pref: "online",
-          admin_email: adminEmail,
-          admin_name:
-            adminName || (businessName ? businessName + " Admin" : "Admin"),
-          admin_password: adminPassword,
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
@@ -881,13 +650,8 @@ export default function OnboardingWizard() {
 
       updateState({ startResult: result });
       localStorage.setItem("has_onboarded", "true");
-      if (result.organization_id) {
-        localStorage.setItem("tenant_id", result.organization_id);
-        localStorage.setItem("tenant", result.organization_id);
-      }
-      const launchRes = await fetchWithRetry("/api/onboarding/launch", {
+      const launchRes = await fetchWithRetry("/api/v1/onboarding/launch", {
         method: "POST",
-        headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
       });
       if (!launchRes.ok) throw new Error("Launch failed");
       updateState({ step: 5 });
@@ -2104,128 +1868,6 @@ export default function OnboardingWizard() {
                       <span className="text-[10px] opacity-70">
                         your-name.com
                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
-                    Account Setup
-                  </label>
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
-                        Admin Name
-                      </label>
-                      <input
-                        type="text"
-                        autoCapitalize="words"
-                        autoComplete="name"
-                        value={adminName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateState({ adminName: val });
-                          if (!val.trim()) {
-                            setValidationErrors((prev) => ({
-                              ...prev,
-                              adminName: "Admin Name is required",
-                            }));
-                          } else {
-                            setValidationErrors((prev) => {
-                              const { adminName, ...rest } = prev;
-                              return rest;
-                            });
-                          }
-                        }}
-                        placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                        inputMode="text"
-                        enterKeyHint="next"
-                      />
-                      {validationErrors.adminName && (
-                        <p className="text-[#FF3B30] text-xs mt-1">
-                          {validationErrors.adminName}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
-                        Admin Email
-                      </label>
-                      <input
-                        type="email"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        inputMode="email"
-                        enterKeyHint="next"
-                        value={adminEmail}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateState({ adminEmail: val });
-                          if (!val.trim()) {
-                            setValidationErrors((prev) => ({
-                              ...prev,
-                              adminEmail: "Admin Email is required",
-                            }));
-                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                            setValidationErrors((prev) => ({
-                              ...prev,
-                              adminEmail: "Please enter a valid email address",
-                            }));
-                          } else {
-                            setValidationErrors((prev) => {
-                              const { adminEmail, ...rest } = prev;
-                              return rest;
-                            });
-                          }
-                        }}
-                        placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                      />
-                      {validationErrors.adminEmail && (
-                        <p className="text-[#FF3B30] text-xs mt-1">
-                          {validationErrors.adminEmail}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
-                        Admin Password
-                      </label>
-                      <input
-                        type="password"
-                        enterKeyHint="done"
-                        autoComplete="new-password"
-                        value={adminPassword}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateState({ adminPassword: val });
-                          if (!val.trim()) {
-                            setValidationErrors((prev) => ({
-                              ...prev,
-                              adminPassword: "Password is required",
-                            }));
-                          } else if (val.length < 8 || !/\d/.test(val)) {
-                            setValidationErrors((prev) => ({
-                              ...prev,
-                              adminPassword:
-                                "Password must be at least 8 characters and contain a number",
-                            }));
-                          } else {
-                            setValidationErrors((prev) => {
-                              const { adminPassword, ...rest } = prev;
-                              return rest;
-                            });
-                          }
-                        }}
-                        placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                      />
-                      {validationErrors.adminPassword && (
-                        <p className="text-[#FF3B30] text-xs mt-1">
-                          {validationErrors.adminPassword}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>

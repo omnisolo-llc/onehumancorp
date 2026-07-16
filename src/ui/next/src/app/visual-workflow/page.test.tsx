@@ -62,7 +62,7 @@ describe("VisualWorkflowPage", () => {
     fireEvent.click(screen.getByText("Run Workflow"));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/workflow/run", expect.any(Object));
+      expect(global.fetch).toHaveBeenCalledWith("/api/v1/workflow/run", expect.any(Object));
       expect(screen.getByText(/mocked result/)).toBeInTheDocument();
     });
   });

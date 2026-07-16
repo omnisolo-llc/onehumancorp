@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { VoiceAssistant } from "../../components/VoiceAssistant";
 import { Omnibox } from "./Omnibox";
+import { LogoutButton } from "./LogoutButton";
 
 type StatusItem = {
   label: string;
@@ -215,6 +216,7 @@ export function AppShell({
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>
+            <LogoutButton />
             <VoiceAssistant />
           </div>
         </header>

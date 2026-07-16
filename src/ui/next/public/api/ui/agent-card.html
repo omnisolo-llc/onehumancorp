@@ -452,7 +452,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",

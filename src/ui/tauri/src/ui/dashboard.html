@@ -2803,7 +2803,7 @@
             let url, method, bodyPayload;
 
             if (isAgentFeed) {
-              url = '/api/agent-feed/' + encodeURIComponent(id) + '/state';
+              url = '/api/v1/agent-feed/' + encodeURIComponent(id) + '/state';
               method = 'PUT';
               let finalState = 'APPROVED';
               if (typeof state === 'boolean') {
@@ -2871,7 +2871,7 @@ window.handleTriageAction = async function(id, state) {
           }
 
           if (isAgentFeed) {
-             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
+             url = `/api/v1/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
@@ -3042,7 +3042,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -3700,7 +3700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             document.getElementById(tab.getAttribute('data-target')).classList.add('active');
             if (tab.getAttribute("data-target") === "tab-videos") {
-                fetch("/api/videos").then(r => r.json()).then(data => {
+                fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const list = widget.querySelector("#video-list") || document.getElementById("video-list");
                     let html = "";
                     data.forEach(v => {
@@ -3749,7 +3749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.value = '';
 
         try {
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/v1/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -3784,7 +3784,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //

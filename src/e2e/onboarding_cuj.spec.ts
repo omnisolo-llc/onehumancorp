@@ -14,15 +14,15 @@ test.describe('Onboarding Wizard CUJ', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

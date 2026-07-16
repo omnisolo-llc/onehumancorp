@@ -3,7 +3,7 @@
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
     window.OHC_TOOLTIPS = {};
-    fetch("/api/tooltips").then(r => r.json()).then(data => {
+    fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
         Object.assign(window.OHC_TOOLTIPS, data);
     }).catch(e => {
         console.error(e);
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(tab.getAttribute("data-target")).classList.add("active");
 
             if (tab.getAttribute("data-target") === "tab-videos") {
-                fetch("/api/videos").then(r => r.json()).then(data => {
+                fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
@@ -595,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.value = '';
 
         try {
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/v1/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

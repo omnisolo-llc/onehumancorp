@@ -16,7 +16,7 @@ export const PUBLIC_ROUTE_ENTRIES = [
     reason: "exchange bounded credentials for an encrypted web session",
     owner: "authentication",
     api: {
-      bodyLimitBytes: 8192,
+      bodyLimitBytes: 4096,
       rateLimitPolicy: "next-source-and-rust-account",
       tenantSource: "validated-organization-field",
       replayPolicy: "non-idempotent-credential-exchange",

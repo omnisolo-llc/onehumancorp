@@ -138,7 +138,7 @@ export default function Dashboard() {
   const handleApproveDraft = async (approvalId: string) => {
     try {
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+      const res = await fetch(`/api/v1/agents/approvals/${approvalId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ approved: true })
@@ -152,7 +152,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetch("/api/walkthrough/dashboard")
+    fetch("/api/v1/walkthrough/dashboard")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
@@ -232,7 +232,7 @@ export default function Dashboard() {
             return res.json();
           });
 
-        const onboardingPromise = fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+        const onboardingPromise = fetch(`/api/v1/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 

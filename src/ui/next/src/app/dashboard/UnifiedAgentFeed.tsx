@@ -196,7 +196,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         if (!unifiedData) {
           const unifiedRes = await fetch(
-            `/api/agent-feed?tenant_id=${tenant}`,
+            `/api/v1/agent-feed?tenant_id=${tenant}`,
             {
               headers: {
                 "x-tenant-id": tenant,
@@ -615,7 +615,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     ) {
       const tenant = tenantId();
       const res = await fetch(
-        `/api/triage/action?tenant_id=${encodeURIComponent(tenant)}`,
+        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenant)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -629,7 +629,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
 
     const tenant = tenantId();
-    const res = await fetch(`/api/agent-feed/${id}`, {
+    const res = await fetch(`/api/v1/agent-feed/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

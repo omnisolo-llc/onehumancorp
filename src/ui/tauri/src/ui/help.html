@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -627,8 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
              // Fallback for playwright test environment
              const [articlesRes, videosRes] = await Promise.all([
-                 fetch('/api/help').then(r => r.json()).catch(() => []),
-                 fetch('/api/videos').then(r => r.json()).catch(() => [])
+                 fetch('/api/v1/help').then(r => r.json()).catch(() => []),
+                 fetch('/api/v1/videos').then(r => r.json()).catch(() => [])
              ]);
              allArticles = articlesRes || [];
              allVideos = videosRes || [];
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         (a.category && a.category.toLowerCase().includes(lowerQuery))
                     );
                 } else {
-                    const searchRes = await fetch('/api/help/search?q=' + encodeURIComponent(lowerQuery));
+                    const searchRes = await fetch('/api/v1/help/search?q=' + encodeURIComponent(lowerQuery));
                     if (searchRes.ok) {
                         filteredArticles = await searchRes.json();
                     } else {
@@ -823,7 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -1323,7 +1323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             document.getElementById(tab.getAttribute('data-target')).classList.add('active');
             if (tab.getAttribute("data-target") === "tab-videos") {
-                fetch("/api/videos").then(r => r.json()).then(data => {
+                fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     vl.innerHTML = "";
                     if (!data || data.length === 0) {
@@ -1370,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.value = '';
 
         try {
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/v1/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1404,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             //
             //
             //

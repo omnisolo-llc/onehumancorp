@@ -271,7 +271,7 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
-            .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
+            .route("/api/v1/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -336,7 +336,7 @@ mod tests {
         let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
-            .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
+            .route("/api/v1/mesh/v2/direct", axum::routing::post(direct_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -352,7 +352,7 @@ mod tests {
         });
 
         let client = reqwest::Client::new();
-        let url = format!("http://{}/api/mesh/v2/direct", addr);
+        let url = format!("http://{}/api/v1/mesh/v2/direct", addr);
 
         let req_body = DirectRequest {
             target_agent_id: "agent-1".to_string(),
@@ -370,7 +370,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc.local/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 
@@ -379,7 +379,7 @@ mod tests {
         let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
 
         let app = Router::new()
-            .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
+            .route("/api/v1/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -395,7 +395,7 @@ mod tests {
         });
 
         let client = reqwest::Client::new();
-        let url = format!("http://{}/api/mesh/v2/mailbox", addr);
+        let url = format!("http://{}/api/v1/mesh/v2/mailbox", addr);
 
         let req_body = MailboxRequest {
             mailbox_id: "mailbox-1".to_string(),
@@ -413,7 +413,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc.local/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 }

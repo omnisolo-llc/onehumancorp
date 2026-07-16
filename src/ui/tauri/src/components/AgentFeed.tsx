@@ -11,7 +11,7 @@ export const AgentFeed: React.FC = () => {
     const fetchDrafts = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/inbox/action_required');
+            const response = await fetch('/api/v1/inbox/action_required');
             if (!response.ok) {
                 throw new Error('Failed to fetch action required drafts');
             }
@@ -31,7 +31,7 @@ export const AgentFeed: React.FC = () => {
 
     const handleApprove = async (id: string) => {
         try {
-            const response = await fetch(`/api/inbox/action_required/${id}/approve`, {
+            const response = await fetch(`/api/v1/inbox/action_required/${id}/approve`, {
                 method: 'POST',
             });
             if (response.ok) {

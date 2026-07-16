@@ -31,7 +31,7 @@ export default function ApprovalInbox({
     const newValue = !reviewAll;
     setReviewAll(newValue);
     try {
-      await fetch(`/api/agents/settings/${departmentId}`, {
+      await fetch(`/api/v1/agents/settings/${departmentId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

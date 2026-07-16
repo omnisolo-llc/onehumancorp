@@ -15,10 +15,10 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
     await page.setViewportSize({ width: 1440, height: 900   });
@@ -68,14 +68,14 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
     // Make sure finish btn is visible before interacting
     await expect(page.getByTestId('finish-btn')).toBeVisible();
     // Intercept backend call
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ organization_id: 'test-org-123' })
         });
       });
-    await page.route('**/api/onboarding/state', async route => {
+    await page.route('**/api/v1/onboarding/state', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
     // Click Save Draft
@@ -92,7 +92,7 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
   test('should support 375px mobile view without horizontal scroll and minimum 44px touch targets', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812   });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
@@ -130,12 +130,12 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
 
     // Mock backend returning a newer state
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({
            step: 4,
            businessName: 'Backend Bakery',
@@ -175,10 +175,10 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
     await page.goto('http://mock/setup.html');
@@ -213,15 +213,15 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent   });
       });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({})   });
       });
     await page.goto('http://mock/setup.html');
     // Intercept backend call with failure
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -325,7 +325,7 @@ test.describe('OHC Setup Wizard Dark Mode', () => {
 })();
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
-    await page.route('**/api/tooltips', async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
+    await page.route('**/api/v1/tooltips', async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
   });
 
   test('should render Dark Mode Translucent Glass styling correctly', async ({ page }) => {

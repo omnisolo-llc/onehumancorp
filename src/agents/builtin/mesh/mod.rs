@@ -495,39 +495,37 @@ mod tests {
         let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let mesh = TeammateMeshClient::new(transport.clone());
 
-        let transport_clone = transport.clone();
-        tokio::spawn(async move {
-            let _ = transport_clone
-                .subscribe(
-                    "test_ack_topic",
-                    Box::new({
-                        let t = transport_clone.clone();
-                        move |msg: crate::mesh::transport::Message| {
-                            use prost::Message as ProstMessage;
-                            let dispatch =
-                                crate::proto::interop::JobDispatch::decode(&msg.payload[..])
-                                    .unwrap();
-                            let ack_topic = format!("system:job_ack:{}", dispatch.job_id);
-                            let t_clone = t.clone();
-                            tokio::spawn(async move {
-                                let _ = t_clone
-                                    .publish(
-                                        &ack_topic,
-                                        crate::mesh::transport::Message {
-                                            agent_id: "test".to_string(),
-                                            action: ack_topic.clone(),
-                                            status: "ok".to_string(),
-                                            payload: b"ack".to_vec(),
-                                            msg_id: uuid::Uuid::new_v4().to_string(),
-                                        },
-                                    )
-                                    .await;
-                            });
-                        }
-                    }),
-                )
-                .await;
-        });
+        let responder_transport = transport.clone();
+        let _responder = responder_transport
+            .subscribe(
+                "test_ack_topic",
+                Box::new({
+                    let transport = responder_transport.clone();
+                    move |msg: crate::mesh::transport::Message| {
+                        use prost::Message as ProstMessage;
+                        let dispatch =
+                            crate::proto::interop::JobDispatch::decode(&msg.payload[..]).unwrap();
+                        let ack_topic = format!("system:job_ack:{}", dispatch.job_id);
+                        let transport = transport.clone();
+                        tokio::spawn(async move {
+                            let _ = transport
+                                .publish(
+                                    &ack_topic,
+                                    crate::mesh::transport::Message {
+                                        agent_id: "test".to_string(),
+                                        action: ack_topic.clone(),
+                                        status: "ok".to_string(),
+                                        payload: b"ack".to_vec(),
+                                        msg_id: uuid::Uuid::new_v4().to_string(),
+                                    },
+                                )
+                                .await;
+                        });
+                    }
+                }),
+            )
+            .await
+            .unwrap();
 
         sleep(Duration::from_millis(50)).await;
         let result = mesh

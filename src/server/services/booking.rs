@@ -1976,6 +1976,8 @@ impl BookingService {
         estimated_value: f64,
     ) -> Result<ProposedBooking, sqlx::Error> {
         let pool = get_pool();
+        let mut tx = pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let id = Uuid::new_v4();
         let now = Utc::now().timestamp();
 
@@ -1995,8 +1997,9 @@ impl BookingService {
         .bind("pending")
         .bind(now)
         .bind(now)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
 
         Ok(ProposedBooking {
             id,
@@ -2017,6 +2020,8 @@ impl BookingService {
         tenant_id: Uuid,
     ) -> Result<ProposedBooking, sqlx::Error> {
         let pool = get_pool();
+        let mut tx = pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let now = Utc::now().timestamp();
 
         let row = sqlx::query(
@@ -2030,8 +2035,9 @@ impl BookingService {
         .bind(now)
         .bind(id)
         .bind(tenant_id)
-        .fetch_one(&pool)
+        .fetch_one(&mut *tx)
         .await?;
+        tx.commit().await?;
 
         Ok(ProposedBooking {
             id,
@@ -2049,6 +2055,8 @@ impl BookingService {
 
     pub async fn get_proposed_bookings(tenant_id: Uuid) -> Result<Vec<ProposedBooking>, sqlx::Error> {
         let pool = get_pool();
+        let mut tx = pool.begin().await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
 
         let rows = sqlx::query(
             r#"
@@ -2059,8 +2067,9 @@ impl BookingService {
             "#,
         )
         .bind(tenant_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await?;
+        tx.commit().await?;
 
         let mut bookings = Vec::new();
         for row in rows {

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 uuid = { version = "1", features = ["v4", "serde"] }
 server_harness = { path = "../harness" }
-opentelemetry = "0.27"
+opentelemetry = "0.32"
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }

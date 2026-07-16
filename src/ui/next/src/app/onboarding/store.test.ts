@@ -91,4 +91,29 @@ describe('useOnboardingStore', () => {
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
   });
+
+  it('never persists the administrator password', () => {
+    useOnboardingStore.getState().setStep(2);
+
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
+    expect(storedState.state.adminPassword).toBeUndefined();
+    expect(JSON.stringify(storedState)).not.toContain('NeverPersist123');
+  });
+
+  it('purges administrator passwords from legacy persisted state', async () => {
+    localStorage.setItem(
+      'onboarding-storage-v4',
+      JSON.stringify({
+        state: { step: 2, adminPassword: 'LegacySecret123' },
+        version: 4,
+      }),
+    );
+
+    await useOnboardingStore.persist.rehydrate();
+
+    expect(useOnboardingStore.getState()).not.toHaveProperty('adminPassword');
+    expect(localStorage.getItem('onboarding-storage-v4')).not.toContain(
+      'LegacySecret123',
+    );
+  });
 });

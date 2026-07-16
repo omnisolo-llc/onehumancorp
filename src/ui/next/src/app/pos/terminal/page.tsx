@@ -14,7 +14,7 @@ export default function POSTerminal() {
   const [walkthroughSteps, setWalkthroughSteps] = useState([]);
 
   useEffect(() => {
-    fetch("/api/walkthrough/pos")
+    fetch("/api/v1/walkthrough/pos")
       .then(res => res.json())
       .then(data => {
         setWalkthroughSteps(data || []);
@@ -173,7 +173,7 @@ export default function POSTerminal() {
        return;
     }
     try {
-      const res = await fetch('/api/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
+      const res = await fetch('/api/v1/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
       const data = await res.json();
       setInventory(data.inventory || []);
     } catch (e) {

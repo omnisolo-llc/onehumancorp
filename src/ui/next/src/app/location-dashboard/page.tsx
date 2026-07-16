@@ -33,7 +33,7 @@ export default function LocationManagerDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/location/dashboard');
+        const response = await fetch('/api/v1/location/dashboard');
         if (response.ok) {
           const data = await response.json();
           setTasks(data.tasks || []);
@@ -54,7 +54,7 @@ export default function LocationManagerDashboard() {
 
     const draftEscalation = async () => {
       try {
-        const response = await fetch('/api/agent/draft-escalation', {
+        const response = await fetch('/api/v1/agent/draft-escalation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ alertId: alert.id, context: alert.message })
@@ -74,7 +74,7 @@ export default function LocationManagerDashboard() {
 
   const submitEscalation = async () => {
     try {
-      await fetch('/api/location/escalate', {
+      await fetch('/api/v1/location/escalate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

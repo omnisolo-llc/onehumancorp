@@ -135,9 +135,9 @@ export default function AgentsPage() {
     async function fetchAll() {
       try {
         const [approvalsRes, feedRes, workflowsRes] = await Promise.all([
-          fetch('/api/agents/approvals'),
-          fetch('/api/agents/approvals/activity'),
-          fetch('/api/agents/workflows'),
+          fetch('/api/v1/agents/approvals'),
+          fetch('/api/v1/agents/approvals/activity'),
+          fetch('/api/v1/agents/workflows'),
         ]);
 
         const [approvalsData, feedData, workflowsData] = await Promise.all([
@@ -192,7 +192,7 @@ export default function AgentsPage() {
     setRunError('');
     setRunMessage('');
     try {
-      const res = await fetch('/api/agents/hire', {
+      const res = await fetch('/api/v1/agents/hire', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -240,7 +240,7 @@ export default function AgentsPage() {
   }
   async function decideApproval(id: string, approved: boolean) {
     try {
-      const res = await fetch(`/api/agents/approvals/${id}`, {
+      const res = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved }),
@@ -1322,7 +1322,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     try {
       const parsedTask = JSON.parse(task);
       if (parsedTask.nodes && parsedTask.version) {
-        const wfRes = await fetch('/api/workflow/run', {
+        const wfRes = await fetch('/api/v1/workflow/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(parsedTask),
@@ -1349,7 +1349,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     }
 
     // 2. Fallback to standard ohc_review_branch workflow task string
-    const res = await fetch('/api/agents/workflows', {
+    const res = await fetch('/api/v1/agents/workflows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, task }),

@@ -7,6 +7,76 @@ use ::server_utils::cache::HybridCache;
 
 pub static ONBOARDING_STATE_AGENT_CACHE: OnceLock<HybridCache<serde_json::Value>> = OnceLock::new();
 
+const USER_ONBOARDING_STATE_FIELDS: &[&str] = &[
+    "step",
+    "chatStep",
+    "businessDescription",
+    "businessGoal",
+    "bio",
+    "businessName",
+    "whatYouSell",
+    "location",
+    "targetAudience",
+    "businessType",
+    "categories",
+    "websiteTemplate",
+    "domainChoice",
+    "firstProductName",
+    "firstProductPrice",
+    "aiAgents",
+    "aiAutoRespond",
+    "instantImageUrl",
+    "skipped",
+    "error",
+];
+
+const SYSTEM_ONBOARDING_STATE_FIELDS: &[&str] = &[
+    "onboarding_goal_seconds",
+    "unified_storefront",
+    "enable_booking",
+    "enable_menu",
+    "enable_pre_order",
+    "enable_ecommerce",
+    "enable_subscriptions",
+    "generated_modules",
+    "storefront_status",
+    "policies_status",
+    "artifacts",
+    "updated_at",
+    "status",
+];
+
+fn sanitize_onboarding_object(
+    value: &serde_json::Value,
+    allow_system_fields: bool,
+) -> serde_json::Value {
+    let Some(input) = value.as_object() else {
+        return serde_json::json!({});
+    };
+    let mut output = serde_json::Map::new();
+    for (name, field) in input {
+        if name == "wizardState" {
+            output.insert(
+                name.clone(),
+                sanitize_onboarding_object(field, allow_system_fields),
+            );
+        } else if USER_ONBOARDING_STATE_FIELDS.contains(&name.as_str())
+            || (allow_system_fields && SYSTEM_ONBOARDING_STATE_FIELDS.contains(&name.as_str()))
+        {
+            output.insert(name.clone(), field.clone());
+        }
+    }
+    serde_json::Value::Object(output)
+}
+
+fn sanitize_onboarding_state(value: &serde_json::Value) -> serde_json::Value {
+    sanitize_onboarding_object(value, false)
+}
+
+fn sanitize_stored_onboarding_state(value: &serde_json::Value) -> serde_json::Value {
+    sanitize_onboarding_object(value, true)
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntakeData {
     pub location: Option<String>,
@@ -366,6 +436,29 @@ Your response:",
 
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
+        self.save_onboarding_state_internal(tenant_id, user_id, current_step, state_json, false)
+            .await
+    }
+
+    pub async fn save_onboarding_system_state(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+        current_step: i32,
+        state_json: &serde_json::Value,
+    ) -> Result<(), String> {
+        self.save_onboarding_state_internal(tenant_id, user_id, current_step, state_json, true)
+            .await
+    }
+
+    async fn save_onboarding_state_internal(
+        &self,
+        tenant_id: &str,
+        user_id: &str,
+        current_step: i32,
+        state_json: &serde_json::Value,
+        allow_system_fields: bool,
+    ) -> Result<(), String> {
         tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id); // pii-safe
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
@@ -382,17 +475,22 @@ Your response:",
         let (mut merged_state, prev_step) = if let Some(record) = row {
             let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
             let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
-            (existing_json, existing_step)
+            (sanitize_stored_onboarding_state(&existing_json), existing_step)
         } else {
             (serde_json::json!({}), 0)
         };
 
-        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), state_json.as_object()) {
+        let sanitized_state = if allow_system_fields {
+            sanitize_stored_onboarding_state(state_json)
+        } else {
+            sanitize_onboarding_state(state_json)
+        };
+        if let (Some(existing_obj), Some(new_obj)) = (merged_state.as_object_mut(), sanitized_state.as_object()) {
             for (k, v) in new_obj {
                 existing_obj.insert(k.clone(), v.clone());
             }
         } else {
-            merged_state = state_json.clone();
+            merged_state = sanitized_state;
         }
 
         let new_step = std::cmp::max(prev_step, current_step);
@@ -410,7 +508,7 @@ Your response:",
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
+        let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
         tracing::debug!("Onboarding cache invalidated for tenant_id={} user_id={}", tenant_id, user_id);
         tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key); // pii-safe
@@ -426,10 +524,11 @@ Your response:",
     }
 
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
-        let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
+        let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
         tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key); // pii-safe
         if let Some(cached_state) = cache.get(&cache_key).await {
+            let cached_state = sanitize_stored_onboarding_state(&cached_state);
             tracing::debug!("Onboarding cache hit for tenant_id={} user_id={}", tenant_id, user_id);
             tracing::debug!("Cache hit for onboarding state key: {}", cache_key); // pii-safe
             return Ok(cached_state);
@@ -451,7 +550,8 @@ Your response:",
         .map_err(|e| e.to_string())?;
 
         let state = if let Some(record) = row {
-            let mut state: serde_json::Value = record.get("state_json");
+            let stored_state: serde_json::Value = record.get("state_json");
+            let mut state = sanitize_stored_onboarding_state(&stored_state);
             let current_step: i32 = record.get("current_step");
             if let Some(obj) = state.as_object_mut() {
                 obj.insert("step".to_string(), serde_json::json!(current_step));
@@ -470,33 +570,50 @@ Your response:",
         Ok(state)
     }
 
-    pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
-        static EMAIL_REGEX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-        let email_regex = EMAIL_REGEX.get_or_init(|| regex::Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").unwrap());
-
-        if req.admin_email.trim().is_empty() || !email_regex.is_match(&req.admin_email) {
-            return Err("Please enter a valid email address".to_string());
+    pub async fn start_onboarding_for_identity(
+        &self,
+        req: StartOnboardingRequest,
+        organization_id: &str,
+        user_id: &str,
+    ) -> Result<StartOnboardingResponse, String> {
+        let organization_id = organization_id.trim();
+        let user_id = user_id.trim();
+        if organization_id.is_empty() || user_id.is_empty() {
+            return Err("Authenticated organization and user are required".to_string());
         }
+        self.start_onboarding_internal(
+            req,
+            organization_id.to_string(),
+            user_id.to_string(),
+        )
+        .await
+    }
 
-        let has_number = req.admin_password.chars().any(|c| c.is_numeric());
-        if req.admin_password.trim().is_empty() || req.admin_password.len() < 8 || !has_number {
-            return Err("Password must be at least 8 characters and contain a number".to_string());
-        }
-
+    async fn start_onboarding_internal(
+        &self,
+        req: StartOnboardingRequest,
+        org_id: String,
+        user_id: String,
+    ) -> Result<StartOnboardingResponse, String> {
         let start_time = std::time::Instant::now();
-        let org_id = format!("org-{}", uuid::Uuid::new_v4());
-
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-        // Use organization id as tenant id if not provided
-        let _tenant_id = org_id.clone();
-        let domain_choice = req.domain_choice.clone();
+        let identity_is_active = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND tenant_id = $2 AND active = TRUE)",
+        )
+        .bind(&user_id)
+        .bind(&org_id)
+        .fetch_one(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        if !identity_is_active {
+            return Err(
+                "Authenticated user is not an active member of the organization".to_string(),
+            );
+        }
 
-        let user_id = format!("usr-{}", uuid::Uuid::new_v4());
-        let email = req.admin_email.clone();
-        let username = if req.admin_name.is_empty() { email.clone() } else { req.admin_name.clone() };
-        let password = req.admin_password.clone();
+        let domain_choice = req.domain_choice.clone();
         let location = req.location.clone();
 
         let req_first_product_name = req.first_product_name.clone();
@@ -649,21 +766,11 @@ Your response:",
             Ok::<(), String>(())
         });
 
-        let hash_future = tokio::task::spawn(async move {
-            if !password.is_empty() {
-                tokio::task::spawn_blocking(move || {
-                    bcrypt::hash(&password, if cfg!(test) { 4 } else { bcrypt::DEFAULT_COST }).map_err(|e| format!("Failed to hash password: {}", e))
-                }).await.map_err(|e| e.to_string())?
-            } else {
-                Ok("".to_string())
-            }
-        });
-
-        let (product_res_res, seed_res_res, events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, events_res_res) =
+            tokio::join!(product_future, seed_future, publish_events_future);
 
         let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
-        let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
 
         let events_res = events_res_res.unwrap_or_else(|e| Err(e.to_string()));
         if let Err(e) = events_res {
@@ -672,45 +779,19 @@ Your response:",
 
         product_res?;
         seed_res?;
-        let password_hash = hash_res?;
 
-        let roles_json = serde_json::to_string(&vec!["admin"]).unwrap_or_default();
-        let now = chrono::Utc::now();
-        let oidc_subject = "";
-
-        sqlx::query(
-            r#"
-            INSERT INTO tenants (id, name, tier, subdomain)
-            VALUES ($1, $2, 'free', $3)
-            ON CONFLICT (id) DO UPDATE SET subdomain = EXCLUDED.subdomain
-            "#
+        let updated = sqlx::query(
+            "UPDATE tenants SET name = $1, subdomain = $2 WHERE id = $3",
         )
-        .bind(&org_id)
         .bind(&company_name)
         .bind(&domain_choice)
-        .execute(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        sqlx::query(
-            r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            "#
-        )
-        .bind(&user_id)
-        .bind(&username)
-        .bind(&email)
-        .bind(&password_hash)
-        .bind(&roles_json)
-        .bind(true)
         .bind(&org_id)
-        .bind(&oidc_subject)
-        .bind(now)
-        .bind(now)
         .execute(&self.db.pool)
         .await
         .map_err(|e| e.to_string())?;
+        if updated.rows_affected() != 1 {
+            return Err("Authenticated organization was not found".to_string());
+        }
 
         let flags_json = onboarding_feature_state(&req, &company_name, &business_type, &location);
 
@@ -735,16 +816,8 @@ Your response:",
             tracing::error!("Failed to create initial feed item: {}", e);
         }
 
-        sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4)"
-        )
-        .bind(&org_id)
-        .bind(&user_id)
-        .bind(1)
-        .bind(flags_json)
-        .execute(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
+        self.save_onboarding_state_internal(&org_id, &user_id, 1, &flags_json, true)
+            .await?;
 
         crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
         Ok(StartOnboardingResponse {
@@ -2897,18 +2970,22 @@ Your response:",
 
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
             let status = if ai_auto_respond { "ACTIVE" } else { "IDLE" };
-            let query = sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            let query = sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status, provider_type) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status, provider_type = EXCLUDED.provider_type WHERE agents.tenant_id = EXCLUDED.tenant_id")
                 .bind(id)
+                .bind(org_id.to_string())
                 .bind(name)
                 .bind(role)
-                .bind(org_id.to_string())
                 .bind(status)
-                .bind("builtin")
-                .bind(true);
+                .bind("builtin");
 
             let pool = self.db.pool.clone();
             futures.push(tokio::spawn(async move {
-                query.execute(&pool).await.map_err(|e| e.to_string())
+                let result = query.execute(&pool).await.map_err(|e| e.to_string())?;
+                if result.rows_affected() == 1 {
+                    Ok(())
+                } else {
+                    Err("Agent identity belongs to another tenant".to_string())
+                }
             }));
         }
 
@@ -2995,13 +3072,73 @@ mod tests {
     use crate::db::DB;
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
+    static TEST_MIGRATIONS: tokio::sync::OnceCell<Result<(), String>> =
+        tokio::sync::OnceCell::const_new();
+
+    #[test]
+    fn onboarding_state_sanitizer_removes_secrets_authority_and_unknown_fields() {
+        let sanitized = sanitize_onboarding_state(&serde_json::json!({
+            "step": 2,
+            "status": "launched",
+            "tenant_id": "attacker",
+            "adminPassword": "TopSecret123",
+            "wizardState": {
+                "businessName": "Bakery",
+                "admin_password": "NestedSecret123",
+                "unknown": true
+            }
+        }));
+
+        assert_eq!(
+            sanitized,
+            serde_json::json!({
+                "step": 2,
+                "wizardState": { "businessName": "Bakery" }
+            })
+        );
+    }
+
     async fn setup_test_db() -> Option<Arc<DB>> {
         let _ = std::env::var("OHC_DATABASE_URL").ok()?;
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
         let db = Arc::new(DB::new().await.ok()?);
+        TEST_MIGRATIONS
+            .get_or_init(|| async { db.run_migrations().await.map_err(|error| error.to_string()) })
+            .await
+            .as_ref()
+            .ok()?;
         Some(db)
+    }
+
+    async fn start_authenticated_test_onboarding(
+        agent: &OnboardingAgent,
+        request: StartOnboardingRequest,
+    ) -> Result<StartOnboardingResponse, String> {
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let tenant_id = format!("onboarding-test-tenant-{suffix}");
+        let user_id = format!("onboarding-test-user-{suffix}");
+        sqlx::query(
+            "INSERT INTO tenants (id, name, tier) VALUES ($1, 'Before onboarding', 'free')",
+        )
+        .bind(&tenant_id)
+        .execute(&agent.db.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+        sqlx::query(
+            "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject) VALUES ($1, $2, $3, '', ARRAY['ADMIN'], TRUE, $4, '')",
+        )
+        .bind(&user_id)
+        .bind(format!("owner-{suffix}"))
+        .bind(format!("owner-{suffix}@example.com"))
+        .bind(&tenant_id)
+        .execute(&agent.db.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+        agent
+            .start_onboarding_for_identity(request, &tenant_id, &user_id)
+            .await
     }
 
     #[tokio::test]
@@ -3035,7 +3172,7 @@ mod tests {
         dashboard_cache.set(&dashboard_cache_key, dashboard_resp.clone(), std::time::Duration::from_secs(3600)).await;
 
         // Prime the agent cache
-        let agent_cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
+        let agent_cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
         let agent_cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(hub.redis_client.clone()));
         agent_cache.set(&agent_cache_key, state1.clone(), std::time::Duration::from_secs(3600)).await;
 
@@ -3068,9 +3205,6 @@ mod tests {
             company_description: "A test store".to_string(),
             selling_categories: vec!["physical".to_string(), "digital".to_string()],
             payment_pref: "online".to_string(),
-            admin_email: "admin@test.com".to_string(),
-            admin_name: "Admin User".to_string(),
-            admin_password: "password123".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Cake".to_string(),
             first_product_price: "25.00".to_string(),
@@ -3087,7 +3221,7 @@ mod tests {
         assert_eq!(req_categories.len(), 2);
         assert_eq!(req_categories[0], "physical");
 
-        let res = agent.start_onboarding(req).await;
+        let res = start_authenticated_test_onboarding(&agent, req).await;
         assert!(res.is_ok());
         let resp = res.unwrap();
         assert!(resp.success);
@@ -3095,7 +3229,7 @@ mod tests {
 
         let org_id = resp.organization_id;
         use sqlx::Row;
-        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE organization_id = $1 AND is_default = TRUE")
+        let agents = sqlx::query("SELECT id, name, role FROM agents WHERE tenant_id = $1")
             .bind(&org_id)
             .fetch_all(&agent.db.pool)
             .await
@@ -3108,16 +3242,142 @@ mod tests {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
 
-        let users = sqlx::query("SELECT username, email, roles FROM users WHERE organization_id = $1")
+        let users = sqlx::query("SELECT roles FROM users WHERE tenant_id = $1")
             .bind(&org_id)
             .fetch_all(&agent.db.pool)
             .await
             .unwrap();
 
         assert_eq!(users.len(), 1);
-        assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
-        assert_eq!(users[0].get::<String, _>("username"), "Admin User");
-        assert!(users[0].get::<String, _>("roles").contains("admin"));
+        assert!(users[0]
+            .get::<Vec<String>, _>("roles")
+            .iter()
+            .any(|role| role.eq_ignore_ascii_case("admin")));
+    }
+
+    #[tokio::test]
+    async fn authenticated_onboarding_reuses_the_claims_tenant_and_user() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let tenant_id = format!("onboarding-tenant-{suffix}");
+        let user_id = format!("onboarding-user-{suffix}");
+
+        sqlx::query(
+            "INSERT INTO tenants (id, name, tier) VALUES ($1, 'Before onboarding', 'free')",
+        )
+        .bind(&tenant_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject) VALUES ($1, $2, $3, '', ARRAY['ADMIN'], TRUE, $4, '')",
+        )
+        .bind(&user_id)
+        .bind(format!("owner-{suffix}"))
+        .bind(format!("owner-{suffix}@example.com"))
+        .bind(&tenant_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
+        let request = StartOnboardingRequest {
+            business_type: "Online Store".to_string(),
+            company_name: "Claims Bakery".to_string(),
+            company_description: "Cakes".to_string(),
+            selling_categories: vec!["physical".to_string()],
+            payment_pref: "online".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Cake".to_string(),
+            first_product_price: "25.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: "City".to_string(),
+            target_audience: "Families".to_string(),
+            initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
+            deposit_percentage: None,
+            lead_time_days: None,
+        };
+
+        let response = agent
+            .start_onboarding_for_identity(request, &tenant_id, &user_id)
+            .await
+            .unwrap();
+
+        assert_eq!(response.organization_id, tenant_id);
+        assert_eq!(response.user_id, user_id);
+        let user_count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM users WHERE tenant_id = $1",
+        )
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(user_count, 1);
+        let tenant_name = sqlx::query_scalar::<_, String>(
+            "SELECT name FROM tenants WHERE id = $1",
+        )
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(tenant_name, "Claims Bakery");
+
+        let other_tenant_id = format!("onboarding-other-tenant-{suffix}");
+        sqlx::query(
+            "INSERT INTO tenants (id, name, tier) VALUES ($1, 'Other tenant', 'free')",
+        )
+        .bind(&other_tenant_id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
+        let cross_tenant_request = StartOnboardingRequest {
+            business_type: "Online Store".to_string(),
+            company_name: "Unauthorized Bakery".to_string(),
+            company_description: "Cakes".to_string(),
+            selling_categories: vec!["physical".to_string()],
+            payment_pref: "online".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: String::new(),
+            first_product_price: String::new(),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: "City".to_string(),
+            target_audience: "Families".to_string(),
+            initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
+            deposit_percentage: None,
+            lead_time_days: None,
+        };
+        let cross_tenant_result = agent
+            .start_onboarding_for_identity(
+                cross_tenant_request,
+                &other_tenant_id,
+                &user_id,
+            )
+            .await;
+        assert_eq!(
+            cross_tenant_result,
+            Err("Authenticated user is not an active member of the organization".to_string())
+        );
+
+        let other_tenant_name = sqlx::query_scalar::<_, String>(
+            "SELECT name FROM tenants WHERE id = $1",
+        )
+        .bind(&other_tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(other_tenant_name, "Other tenant");
     }
 
 
@@ -3150,9 +3410,6 @@ mod tests {
             company_description: input.to_string(),
             selling_categories: data.categories,
             payment_pref: "online".to_string(),
-            admin_email: "test@example.com".to_string(),
-            admin_name: "Test Admin".to_string(),
-            admin_password: "password".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Cake".to_string(),
             first_product_price: "45.00".to_string(),
@@ -3177,7 +3434,7 @@ mod tests {
             ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
-        let start_res = agent.start_onboarding(req).await;
+        let start_res = start_authenticated_test_onboarding(&agent, req).await;
         assert!(start_res.is_ok());
 
         let resp = start_res.unwrap();
@@ -3242,9 +3499,6 @@ mod tests {
             company_description: "Cakes and classes".to_string(),
             selling_categories: vec!["physical".to_string(), "services".to_string()],
             payment_pref: "online".to_string(),
-            admin_email: "owner@example.com".to_string(),
-            admin_name: "Owner".to_string(),
-            admin_password: "password123".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Celebration Cake".to_string(),
             first_product_price: "45.00".to_string(),
@@ -3288,9 +3542,6 @@ mod tests {
             company_description: "A test service".to_string(),
             selling_categories: vec![],
             payment_pref: "online".to_string(),
-            admin_email: "service@test.com".to_string(),
-            admin_name: "Service Admin".to_string(),
-            admin_password: "password123".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Consultation".to_string(),
             first_product_price: "100.00".to_string(),
@@ -3303,7 +3554,9 @@ mod tests {
             ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
-        let res_service = agent.start_onboarding(req_service).await.unwrap();
+        let res_service = start_authenticated_test_onboarding(&agent, req_service)
+            .await
+            .unwrap();
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
@@ -3316,7 +3569,7 @@ mod tests {
         let state_json_service: serde_json::Value = row_service.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
         assert_eq!(state_json_service.get("enable_booking").and_then(|v| v.as_bool()), Some(true));
 
-        let agents_service = sqlx::query("SELECT role FROM agents WHERE organization_id = $1 AND role = 'The Salesperson'")
+        let agents_service = sqlx::query("SELECT role FROM agents WHERE tenant_id = $1 AND role = 'The Salesperson'")
             .bind(&org_id_service)
             .fetch_all(&agent.db.pool)
             .await
@@ -3330,9 +3583,6 @@ mod tests {
             company_description: "A test food cart".to_string(),
             selling_categories: vec![],
             payment_pref: "online".to_string(),
-            admin_email: "food@test.com".to_string(),
-            admin_name: "Food Admin".to_string(),
-            admin_password: "password123".to_string(),
             website_template: "Modern".to_string(),
             first_product_name: "Taco".to_string(),
             first_product_price: "5.00".to_string(),
@@ -3345,7 +3595,9 @@ mod tests {
             ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
-        let res_food = agent.start_onboarding(req_food).await.unwrap();
+        let res_food = start_authenticated_test_onboarding(&agent, req_food)
+            .await
+            .unwrap();
         let org_id_food = res_food.organization_id;
 
         let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")

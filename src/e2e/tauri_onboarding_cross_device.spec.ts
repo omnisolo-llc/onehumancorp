@@ -10,10 +10,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     // 1. Initial browser context
@@ -46,10 +46,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await newPage.route('**/api/tooltips', async route => {
+    await newPage.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await newPage.route('**/api/onboarding/draft', async route => {
+    await newPage.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({
           step: 3,
           work_context: "Local Service",
@@ -98,10 +98,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
@@ -133,10 +133,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
@@ -166,10 +166,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');
@@ -200,7 +200,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
 
     await expect(page.getByRole('heading', { name: 'Template Selection' })).toBeVisible();
     await page.locator('#template-selection').selectOption('Modern');
-        await page.route('**/api/onboarding/start', async route => {
+        await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -222,10 +222,10 @@ test.describe('Tauri Setup UI Cross Device State', () => {
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
     // intercept tooltips
-    await page.route('**/api/tooltips', async route => {
+    await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    await page.route('**/api/onboarding/draft', async route => {
+    await page.route('**/api/v1/onboarding/draft', async route => {
        await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
     await page.goto('http://mock/setup.html');

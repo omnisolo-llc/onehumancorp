@@ -6,7 +6,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
 
   test('Customer receives instant edge price updates and owner approves', async ({ page, request }) => {
     // 1. Setup tenant & pricing rules
-    await request.post('http://127.0.0.1:8081/api/onboarding/start', {
+    await request.post('http://127.0.0.1:8081/api/v1/onboarding/start', {
       data: {
         organization_id: tenantId,
         business_type: 'Service',

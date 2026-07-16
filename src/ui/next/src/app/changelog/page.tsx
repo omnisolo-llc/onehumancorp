@@ -43,7 +43,7 @@ export default function ChangelogPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/changelog")
+    fetch("/api/v1/changelog")
       .then((res) => res.json())
       .then((data) => {
         setSections(data);

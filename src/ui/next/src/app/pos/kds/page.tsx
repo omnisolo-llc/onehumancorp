@@ -32,7 +32,7 @@ export default function KDSPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const ordersRes = await fetch('/api/pos/orders');
+        const ordersRes = await fetch('/api/v1/pos/orders');
         const ordersData = await ordersRes.json();
         setOrders(ordersData);
         if (typeof window !== 'undefined') {
@@ -47,7 +47,7 @@ export default function KDSPage() {
       }
 
       try {
-        const invRes = await fetch('/api/pos/inventory');
+        const invRes = await fetch('/api/v1/pos/inventory');
         const invData = await invRes.json();
         setInventory(invData);
         if (typeof window !== 'undefined') {

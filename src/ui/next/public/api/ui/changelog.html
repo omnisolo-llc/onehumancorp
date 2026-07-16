@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
@@ -486,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         messages.appendChild(aiMsg);
         messages.scrollTop = messages.scrollHeight;
 
-        fetch("/api/chat", {
+        fetch("/api/v1/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: text })
@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (window.__TAURI__ && window.__TAURI__.core) {
              data = await window.__TAURI__.core.invoke('get_changelog', {});
           } else {
-             const res = await fetch(`/api/changelog`);
+             const res = await fetch(`/api/v1/changelog`);
              if (res.ok) data = await res.json();
           }
 
@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",

@@ -590,9 +590,12 @@ async fn simulate_invoice_followup(
 
 async fn simulate_autonomous_booking_quote(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    headers: axum::http::HeaderMap,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = headers.get("x-test-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("test_tenant").to_string();
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
 
     let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 

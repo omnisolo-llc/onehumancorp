@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings/delivery")
+      fetch("/api/v1/settings/delivery")
         .then(res => res.json())
         .then(data => {
            setDeliverySettings({
@@ -80,7 +80,7 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load delivery settings", e)),
 
-      fetch("/api/assistant/settings")
+      fetch("/api/v1/assistant/settings")
         .then(res => res.json())
         .then(data => {
           if (data?.settings?.agentName) {
@@ -89,7 +89,7 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load assistant settings", e)),
 
-      fetch("/api/settings/voice")
+      fetch("/api/v1/settings/voice")
         .then(res => res.json())
         .then(data => {
           if (data) {
@@ -103,7 +103,7 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load voice settings", e)),
 
-      fetch("/api/settings/telemetry")
+      fetch("/api/v1/settings/telemetry")
         .then(res => res.json())
         .then(data => {
           if (data && data.product_telemetry_enabled !== undefined) {
@@ -134,7 +134,7 @@ export default function SettingsPage() {
     const newSettings = { ...deliverySettings, [key]: value };
     setDeliverySettings(newSettings);
     try {
-      await fetch("/api/settings/delivery", {
+      await fetch("/api/v1/settings/delivery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSettings),
@@ -147,7 +147,7 @@ export default function SettingsPage() {
   const handleTelemetryChange = async (checked: boolean) => {
     setProductTelemetryEnabled(checked);
     try {
-      await fetch("/api/settings/telemetry", {
+      await fetch("/api/v1/settings/telemetry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_telemetry_enabled: checked }),
@@ -160,7 +160,7 @@ export default function SettingsPage() {
   const handleVerify = async () => {
     setIsVerifying(true);
     try {
-      const res = await fetch("/api/settings/sms-verify", {
+      const res = await fetch("/api/v1/settings/sms-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
@@ -179,7 +179,7 @@ export default function SettingsPage() {
 
   const handleConfirm = async () => {
     try {
-      const res = await fetch("/api/settings/sms-confirm", {
+      const res = await fetch("/api/v1/settings/sms-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, otp }),
@@ -200,7 +200,7 @@ export default function SettingsPage() {
     setPreferences(newPrefs);
     if (isVerified) {
       try {
-        await fetch("/api/settings/sms-preferences", {
+        await fetch("/api/v1/settings/sms-preferences", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone, ...newPrefs }),
@@ -216,7 +216,7 @@ export default function SettingsPage() {
     setVoiceSettings(newSettings);
 
     try {
-      await fetch("/api/settings/voice", {
+      await fetch("/api/v1/settings/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSettings),
@@ -229,7 +229,7 @@ export default function SettingsPage() {
   const handleAgentNameChange = async (value: string) => {
     setAgentName(value);
     try {
-      await fetch("/api/assistant/settings", {
+      await fetch("/api/v1/assistant/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentName: value }),
@@ -241,7 +241,7 @@ export default function SettingsPage() {
 
   const handleProvisionVoiceNumber = async () => {
     try {
-      const res = await fetch("/api/settings/voice/provision", {
+      const res = await fetch("/api/v1/settings/voice/provision", {
         method: "POST",
       });
       if (res.ok) {

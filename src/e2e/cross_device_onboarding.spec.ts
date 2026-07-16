@@ -10,7 +10,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
         const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
-    await page.route('**/api/onboarding/state', async route => {
+    await page.route('**/api/v1/onboarding/state', async route => {
         if (route.request().method() === 'POST') {
             const body = JSON.parse(route.request().postData());
             serverState = body.wizardState;
@@ -49,7 +49,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
         const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
-    await newPage.route('**/api/onboarding/state', async route => {
+    await newPage.route('**/api/v1/onboarding/state', async route => {
         if (route.request().method() === 'POST') {
             const body = JSON.parse(route.request().postData());
             serverState = body.wizardState;

@@ -96,7 +96,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
 
 
   test('should verify mobile_optimized trims help payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/help?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/help?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();

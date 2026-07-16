@@ -11,6 +11,12 @@ exports_files(glob([
 ]))
 
 filegroup(
+    name = "auth_limits",
+    srcs = ["src/lib/auth/authLimits.json"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "next_e2e_specs",
     srcs = glob([
         "e2e/*.spec.ts",
@@ -51,15 +57,18 @@ sh_test(
     srcs = ["bazel_vitest_test.sh"],
     data = glob([
         "src/**/*.css",
+        "src/**/*.snap",
         "src/**/*.ts",
         "src/**/*.tsx",
-    ]) + [
+    ], allow_empty = True) + [
         "next-env.d.ts",
+        "next.config.mjs",
         "package.json",
         "package-lock.json",
         "tsconfig.json",
         "vitest.config.mts",
         "vitest.setup.ts",
+        ":auth_limits",
         ":node_modules",
         "//deploy:hybrid_telemetry_dashboard_mirrors",
         "//src/server/monitoring:dashboards",

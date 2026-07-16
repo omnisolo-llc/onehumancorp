@@ -73,7 +73,7 @@ beforeEach(() => {
     fireEvent.click(payButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
             'Authorization': 'Bearer fake-token'
@@ -96,7 +96,7 @@ beforeEach(() => {
           json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
         });
       }
-      if (url === '/api/billing/create-checkout-session') {
+      if (url === '/api/v1/billing/create-checkout-session') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit' }),
@@ -116,7 +116,7 @@ beforeEach(() => {
     fireEvent.click(payButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
         method: 'POST'
       }));
       expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit');
@@ -136,7 +136,7 @@ beforeEach(() => {
           json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
         });
       }
-      if (url === '/api/billing/create-checkout-session') {
+      if (url === '/api/v1/billing/create-checkout-session') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit-sub' }),
@@ -154,7 +154,7 @@ beforeEach(() => {
     fireEvent.click(payButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('"is_subscription":true')
       }));
@@ -180,7 +180,7 @@ beforeEach(() => {
     fireEvent.click(checkButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/checkout/delivery-quote', expect.objectContaining({
         method: 'POST'
       }));
       expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();

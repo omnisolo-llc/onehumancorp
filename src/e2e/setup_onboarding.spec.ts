@@ -12,7 +12,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
       await route.fulfill({ contentType: 'text/html', body: htmlContent   });
   });
   // intercept tooltips
-  await page.route('**/api/tooltips', async route => {
+  await page.route('**/api/v1/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({})   });
   });
 
@@ -111,7 +111,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // via Playwright `route` fulfillment at `http://mock/setup.html` instead of through the Next.js server.
   // We'll mock the start endpoint since this is an offline pure UI interaction test on the mocked HTML payload.
 
-  await page.route('**/api/onboarding/start', async route => {
+  await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({ organization_id: "e2e-tenant", user_id: "e2e-admin-user" }) });
   });
 

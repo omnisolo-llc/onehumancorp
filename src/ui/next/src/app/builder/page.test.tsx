@@ -14,7 +14,7 @@ vi.mock('../../components/help', () => ({
 describe('BuilderPage V2', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === "/api/walkthrough/store-setup") {
+      if (url === "/api/v1/walkthrough/store-setup") {
          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });

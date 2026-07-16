@@ -88,17 +88,17 @@ const sections: [Section, string][] = [
 ];
 
 const resourceConfig: Partial<Record<Section, { title: string; endpoint: string; rootKeys: string[] }>> = {
-  automations: { title: 'Automations', endpoint: '/api/assistant/automations', rootKeys: ['automations'] },
-  memory: { title: 'Memory', endpoint: '/api/assistant/memory', rootKeys: ['memories'] },
-  skills: { title: 'Skills', endpoint: '/api/assistant/skills', rootKeys: ['skills'] },
-  connectors: { title: 'Connectors', endpoint: '/api/assistant/connectors', rootKeys: ['connectors'] },
-  data: { title: 'Data', endpoint: '/api/assistant/data', rootKeys: ['sharedFiles', 'archivedTasks', 'unshareQueue'] },
-  cloud: { title: 'Cloud', endpoint: '/api/assistant/cloud', rootKeys: ['sessions'] },
-  billing: { title: 'Billing', endpoint: '/api/assistant/billing', rootKeys: [] },
-  permissions: { title: 'Permissions', endpoint: '/api/assistant/permissions', rootKeys: ['authorizedFolders', 'rules'] },
-  models: { title: 'Models', endpoint: '/api/assistant/models', rootKeys: ['models', 'runtime'] },
-  system: { title: 'System', endpoint: '/api/assistant/settings', rootKeys: ['settings'] },
-  parity: { title: 'Parity Audit', endpoint: '/api/assistant/parity', rootKeys: ['summary', 'categories'] },
+  automations: { title: 'Automations', endpoint: '/api/v1/assistant/automations', rootKeys: ['automations'] },
+  memory: { title: 'Memory', endpoint: '/api/v1/assistant/memory', rootKeys: ['memories'] },
+  skills: { title: 'Skills', endpoint: '/api/v1/assistant/skills', rootKeys: ['skills'] },
+  connectors: { title: 'Connectors', endpoint: '/api/v1/assistant/connectors', rootKeys: ['connectors'] },
+  data: { title: 'Data', endpoint: '/api/v1/assistant/data', rootKeys: ['sharedFiles', 'archivedTasks', 'unshareQueue'] },
+  cloud: { title: 'Cloud', endpoint: '/api/v1/assistant/cloud', rootKeys: ['sessions'] },
+  billing: { title: 'Billing', endpoint: '/api/v1/assistant/billing', rootKeys: [] },
+  permissions: { title: 'Permissions', endpoint: '/api/v1/assistant/permissions', rootKeys: ['authorizedFolders', 'rules'] },
+  models: { title: 'Models', endpoint: '/api/v1/assistant/models', rootKeys: ['models', 'runtime'] },
+  system: { title: 'System', endpoint: '/api/v1/assistant/settings', rootKeys: ['settings'] },
+  parity: { title: 'Parity Audit', endpoint: '/api/v1/assistant/parity', rootKeys: ['summary', 'categories'] },
 };
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
@@ -170,7 +170,7 @@ export default function AssistantPage() {
   const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/walkthrough/assistant")
+    fetch("/api/v1/walkthrough/assistant")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {
@@ -183,7 +183,7 @@ export default function AssistantPage() {
 
     async function loadTasks() {
       try {
-        const response = await fetch('/api/assistant/tasks');
+        const response = await fetch('/api/v1/assistant/tasks');
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Assistant tasks unavailable');
         if (!mounted) return;
@@ -204,7 +204,7 @@ export default function AssistantPage() {
 
     async function loadSettings() {
       try {
-        const response = await fetch('/api/assistant/settings');
+        const response = await fetch('/api/v1/assistant/settings');
         const data = await response.json().catch(() => ({}));
         if (mounted && response.ok && data.settings?.agentName) {
           setAgentName(data.settings.agentName);
@@ -286,7 +286,7 @@ export default function AssistantPage() {
     setActionNotice('');
 
     try {
-      const response = await fetch('/api/assistant/tasks', {
+      const response = await fetch('/api/v1/assistant/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -319,12 +319,12 @@ export default function AssistantPage() {
     const artifact = activeTask.artifacts[0];
     const request =
       action === 'share'
-        ? fetch('/api/assistant/share', {
+        ? fetch('/api/v1/assistant/share', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ taskId: activeTask.id, artifactId: artifact.id, target: 'Share Link' }),
           })
-        : fetch('/api/assistant/previews', {
+        : fetch('/api/v1/assistant/previews', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'open_external', artifactId: artifact.id }),
@@ -620,7 +620,7 @@ function ConversationPage({ task }: { task?: AssistantTask }) {
                 <div className="mt-4 flex gap-3">
                   <button onClick={async () => {
                       if (!task) return;
-                      await fetch(`/api/assistant/tasks/${task.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve_action' }) });
+                      await fetch(`/api/v1/assistant/tasks/${task.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve_action' }) });
                   }} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm">
                     Approve & Execute
                   </button>

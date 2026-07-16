@@ -1252,7 +1252,7 @@ impl MeshTransport for MeshOverlayTransport {
                 // 3. Fallback to HTTP
                 if !success
                     && let Some(http_url) = &peer.http_url {
-                        let url = format!("{}/api/mesh/v2/direct", http_url);
+                        let url = format!("{}/api/v1/mesh/v2/direct", http_url);
                         let payload = serde_json::json!({
                             "target_agent_id": peer.id,
                             "message": {

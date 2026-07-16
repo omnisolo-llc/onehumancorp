@@ -20,9 +20,6 @@ export default function WebsiteBuilderPage() {
     productName, setProductName,
     productPrice, setProductPrice,
     paymentMethod, setPaymentMethod,
-    userName, setUserName,
-    userEmail, setUserEmail,
-    userPassword, setUserPassword,
     template, setTemplate,
     bio, setBio,
     domainChoice, setDomainChoice,
@@ -36,7 +33,6 @@ export default function WebsiteBuilderPage() {
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -44,20 +40,9 @@ export default function WebsiteBuilderPage() {
     setStatus("generating"); // Just show some loading state or disable button
     try {
       const state = useWebsiteBuilderStore.getState();
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-            let user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-      if (!user && typeof localStorage !== 'undefined') {
-        user = crypto.randomUUID();
-        localStorage.setItem('user_id', user);
-      }
-
-      const res = await fetch('/api/onboarding/draft', {
+      const res = await fetch('/api/v1/onboarding/draft', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-tenant-id': tenant,
-          'x-user-id': user
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wizardState: state
         })
@@ -91,19 +76,11 @@ export default function WebsiteBuilderPage() {
 
   // Read state from server on mount
   useEffect(() => {
-    const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-    setTenantId(tenantIdStr);
-          let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-      if (!userId && typeof localStorage !== 'undefined') {
-        userId = crypto.randomUUID();
-        localStorage.setItem('user_id', userId);
-      }
-
     Promise.all([
-      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+      fetch('/api/v1/onboarding/draft')
         .then(res => res.ok ? res.json() : null)
         .catch(() => null),
-      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+      fetch('/api/v1/onboarding/state')
         .then(res => res.ok ? res.json() : null)
         .catch(() => null)
     ])
@@ -138,13 +115,10 @@ export default function WebsiteBuilderPage() {
           if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
           if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
           if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
-          if (data.wizardState.productName !== undefined) setProductName(data.wizardState.productName);
-          if (data.wizardState.productPrice !== undefined) setProductPrice(data.wizardState.productPrice);
+          if (data.wizardState.firstProductName !== undefined) setProductName(data.wizardState.firstProductName);
+          if (data.wizardState.firstProductPrice !== undefined) setProductPrice(data.wizardState.firstProductPrice);
           if (data.wizardState.paymentMethod !== undefined) setPaymentMethod(data.wizardState.paymentMethod);
-          if (data.wizardState.userName !== undefined) setUserName(data.wizardState.userName);
-          if (data.wizardState.userEmail !== undefined) setUserEmail(data.wizardState.userEmail);
-          if (data.wizardState.userPassword !== undefined) setUserPassword(data.wizardState.userPassword);
-          if (data.wizardState.template !== undefined) setTemplate(data.wizardState.template);
+          if (data.wizardState.websiteTemplate !== undefined) setTemplate(data.wizardState.websiteTemplate);
           if (data.wizardState.bio !== undefined) setBio(data.wizardState.bio);
           if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
           if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
@@ -163,48 +137,30 @@ export default function WebsiteBuilderPage() {
     if (!isLoaded) return;
     // Only save if there's actual state
     if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
-      const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-            let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-      if (!userId && typeof localStorage !== 'undefined') {
-        userId = crypto.randomUUID();
-        localStorage.setItem('user_id', userId);
-      }
-
       const wizardState = {
         step: wizardStep,
         businessName,
         businessType,
-        hasPhysicalProducts,
-        hasDigitalProducts,
-        productName,
-        productPrice,
-        paymentMethod,
-        userName,
-        userEmail,
-        userPassword,
-        template,
+        firstProductName: productName,
+        firstProductPrice: productPrice,
+        websiteTemplate: template,
         bio,
         domainChoice,
         aiAgents,
         aiAutoRespond
       };
 
-      const payload = {
-        builderState: { bio, blocks, status },
-        wizardState
-      };
-
       const timer = setTimeout(() => {
-        fetch('/api/onboarding/state', {
+        fetch('/api/v1/onboarding/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId },
-          body: JSON.stringify(payload)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wizardState })
         }).catch(err => console.error('Failed to sync builder state', err));
       }, 1000); // debounce 1s
 
       return () => clearTimeout(timer);
     }
-  }, [wizardStep, businessName, businessType, hasPhysicalProducts, hasDigitalProducts, productName, productPrice, paymentMethod, userName, userEmail, userPassword, template, bio, domainChoice, aiAgents, aiAutoRespond, blocks, status]);
+  }, [wizardStep, businessName, businessType, productName, productPrice, template, bio, domainChoice, aiAgents, aiAutoRespond]);
 
 
 
@@ -513,38 +469,15 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === 6 && (
                 <>
-                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Create your account</h1>
+                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Your secure account is ready</h1>
+                  <p className="text-sm text-gray-500 dark:text-[#a1a1a6]">We’ll publish this business under your signed-in workspace.</p>
                   <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    <input
-                      type="text"
-                      className="w-full min-h-[54px] glass-control p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
-                      placeholder="e.g. Maya Smith"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                    />
-                    <input
-                      type="email"
-                      className="w-full min-h-[54px] glass-control p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
-                      placeholder="you@email.com"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
-                    />
-                    <input
-                      type="password"
-                      className="w-full min-h-[54px] glass-control p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
-                      placeholder="Password"
-                      value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
-                    />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim() || !userEmail.includes('@') || userPassword.length < 8}
-                      className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
                     </button>
-                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-[#FF3B30] text-xs text-center mt-1">Please enter a valid email address.</p>}
-                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-[#FF3B30] text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
@@ -623,28 +556,28 @@ export default function WebsiteBuilderPage() {
                       className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={async () => {
                         setStatus('generating');
-                        const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                                                let userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-                        if (!userIdStr && typeof localStorage !== 'undefined') {
-                            userIdStr = crypto.randomUUID();
-                            localStorage.setItem('user_id', userIdStr);
-                        }
                         try {
-                            const startRes = await fetch('/api/onboarding/start', {
+                            const startRes = await fetch('/api/v1/onboarding/start', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                              headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
                                 company_name: businessName || 'My Business',
-                                admin_email: userEmail || 'admin@example.com',
-                                admin_name: userName || 'Admin',
-                                admin_password: userPassword || '',
                                 business_type: businessType || 'Online Store',
+                                company_description: bio || `${businessName || 'My Business'} storefront`,
+                                selling_categories: [
+                                  ...(hasPhysicalProducts ? ['physical'] : []),
+                                  ...(hasDigitalProducts ? ['digital'] : []),
+                                ],
+                                payment_pref: paymentMethod || 'online',
+                                website_template: template || 'Modern',
                                 first_product_name: productName || 'First Product',
                                 first_product_price: productPrice || '10.00',
-                                price_type: hasPhysicalProducts ? 'physical' : 'digital',
+                                domain_choice: domainChoice || 'subdomain',
+                                price_type: 'fixed',
                                 location: 'Unknown',
+                                target_audience: 'Customers',
                                 ai_agents: aiAgents.length > 0 ? aiAgents : ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                                auto_respond: aiAutoRespond,
+                                ai_auto_respond: aiAutoRespond,
                                 initial_products: []
                               })
                             });
@@ -652,15 +585,11 @@ export default function WebsiteBuilderPage() {
                             if (!startRes.ok) {
                                 throw new Error('Failed to start');
                             }
-                            const startData = await startRes.json();
-                            if (startData.organization_id) {
-                                localStorage.setItem('tenant_id', startData.organization_id);
-                                localStorage.setItem('tenant', startData.organization_id);
-                            }
+                            await startRes.json();
                             setStatus('live');
                         } catch (err) {
                           console.error(err);
-                          setStatus('live'); // Fail open for the wizard flow so users don't get stuck just like the instant-build fallback
+                          setStatus('draft');
                         }
                       }}
                     >
@@ -697,35 +626,22 @@ export default function WebsiteBuilderPage() {
                           setProductName('First Product');
                           setProductPrice('10.00');
 
-                          // Do not start store in fallback
-                          setStatus('live');
+                          setStatus('draft');
                         };
                         const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
                         const controller = new AbortController();
                         const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
-                        const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                                                let userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-                        if (!userIdStr && typeof localStorage !== 'undefined') {
-                            userIdStr = crypto.randomUUID();
-                            localStorage.setItem('user_id', userIdStr);
-                        }
                         try {
 
-                          const res = await fetch('/api/onboarding/intake', {
+                          const res = await fetch('/api/v1/onboarding/intake', {
                             method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'X-Tenant-ID': tenantIdStr,
-                              'X-User-ID': userIdStr,
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ description: bio }),
                             signal: controller.signal,
                           });
 
                           const data = await res.json();
                           if (res.ok) {
-                            completed = true;
-                            window.clearTimeout(safetyTimeout);
                             setBusinessName(data.business_name || 'My Business');
                             setBusinessType(data.business_type || 'Online Store');
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
@@ -737,21 +653,24 @@ export default function WebsiteBuilderPage() {
                             const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
                             const inferredLocation = data.location || 'Unknown';
 
-                            const startRes = await fetch('/api/onboarding/start', {
+                            const startRes = await fetch('/api/v1/onboarding/start', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                              headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
                                 company_name: inferredBusinessName,
-                                admin_email: userEmail || 'admin@example.com',
-                                admin_name: userName || 'Admin',
-                                admin_password: userPassword || '',
                                 business_type: inferredBusinessType,
+                                company_description: bio,
+                                selling_categories: data.categories || ['physical'],
+                                payment_pref: 'online',
+                                website_template: 'Modern',
                                 first_product_name: inferredProductName,
                                 first_product_price: inferredProductPrice,
-                                price_type: 'physical',
+                                domain_choice: 'subdomain',
+                                price_type: 'fixed',
                                 location: inferredLocation,
+                                target_audience: data.target_audience || 'Customers',
                                 ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                                auto_respond: true,
+                                ai_auto_respond: true,
                                 initial_products: data.initial_products || []
                               })
                             });
@@ -759,11 +678,10 @@ export default function WebsiteBuilderPage() {
                             if (!startRes.ok) {
                                 throw new Error('Failed to start');
                             }
-                            const startData = await startRes.json();
-                            if (startData.organization_id) {
-                                localStorage.setItem('tenant_id', startData.organization_id);
-                                localStorage.setItem('tenant', startData.organization_id);
-                            }
+                            await startRes.json();
+                            if (completed) return;
+                            completed = true;
+                            window.clearTimeout(safetyTimeout);
                             setStatus('live');
                           } else {
                             console.error('Failed to generate storefront:', data);
@@ -869,7 +787,7 @@ export default function WebsiteBuilderPage() {
             </DraggableBlock>
           ))}
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
-          <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
+          <SmartBlock type="PoweredBy" props={{ tenantId: "ohc", isPremium: false }} />
           <div className="text-center mt-4 mb-8">
             <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
           </div>

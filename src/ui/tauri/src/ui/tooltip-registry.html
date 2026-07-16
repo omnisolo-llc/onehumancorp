@@ -116,7 +116,7 @@
 
         async function loadTooltips() {
             try {
-                const res = await fetch('/api/tooltips');
+                const res = await fetch('/api/v1/tooltips');
                 if (!res.ok) throw new Error('Network error');
                 const data = await res.json();
                 const tbody = document.getElementById('registry-body');
@@ -148,7 +148,7 @@
                 btn.disabled = true;
             }
             try {
-                const res = await fetch('/api/tooltips/' + id, { method: 'DELETE' });
+                const res = await fetch('/api/v1/tooltips/' + id, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Failed to delete');
                 showToast("Tooltip deleted successfully");
                 await loadTooltips();
@@ -172,7 +172,7 @@
                 btn.disabled = true;
             }
             try {
-                const res = await fetch('/api/tooltips', {
+                const res = await fetch('/api/v1/tooltips', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, text })
                 });
@@ -203,7 +203,7 @@
             }
 
             try {
-                const res = await fetch('/api/tooltips', {
+                const res = await fetch('/api/v1/tooltips', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, text })
                 });

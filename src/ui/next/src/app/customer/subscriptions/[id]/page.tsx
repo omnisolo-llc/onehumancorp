@@ -16,7 +16,7 @@ export default function CustomerSubscriptionPortal() {
     const fetchSubscription = async () => {
       try {
         const tenantId = localStorage.getItem("tenant_id") || "default";
-        const res = await fetch(`/api/subscriptions/${subscriptionId}`, {
+        const res = await fetch(`/api/v1/subscriptions/${subscriptionId}`, {
           headers: { "x-tenant-id": tenantId }
         });
         if (res.ok) {
@@ -38,7 +38,7 @@ export default function CustomerSubscriptionPortal() {
 
     try {
       const tenantId = localStorage.getItem("tenant_id") || "default";
-      const res = await fetch(`/api/subscriptions/${subscriptionId}/action`, {
+      const res = await fetch(`/api/v1/subscriptions/${subscriptionId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,7 +70,7 @@ export default function CustomerSubscriptionPortal() {
 
         // Re-fetch to get correct nextDeliveryDate if skipped
         if (action === 'skip') {
-           const refresh = await fetch(`/api/subscriptions/${subscriptionId}`, {
+           const refresh = await fetch(`/api/v1/subscriptions/${subscriptionId}`, {
               headers: { "x-tenant-id": tenantId }
            });
            if (refresh.ok) {

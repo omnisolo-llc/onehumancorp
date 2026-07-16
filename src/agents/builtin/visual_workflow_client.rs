@@ -88,7 +88,7 @@ pub async fn handle_workflow_validate(
 
 pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {
     Router::new()
-        .route("/api/workflow/run", post(handle_workflow_run))
+        .route("/api/v1/workflow/run", post(handle_workflow_run))
         .with_state(state)
 }
 
@@ -173,7 +173,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/api/workflow/run")
+                    .uri("/api/v1/workflow/run")
                     .header("Content-Type", "application/json")
                     .body(Body::from(req_body))
                     .unwrap(),

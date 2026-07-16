@@ -38,7 +38,7 @@ export default function ProposalReviewPage() {
   useEffect(() => {
     async function fetchProposal() {
       try {
-        const res = await fetch(`/api/proposals/${id}`);
+        const res = await fetch(`/api/v1/proposals/${id}`);
         if (!res.ok) throw new Error('Failed to fetch proposal');
         const json = await res.json();
         setData(json);
@@ -54,7 +54,7 @@ export default function ProposalReviewPage() {
   const handleApprove = async () => {
     try {
       setApproving(true);
-      const res = await fetch(`/api/proposals/${id}/approve`, { method: 'POST' });
+      const res = await fetch(`/api/v1/proposals/${id}/approve`, { method: 'POST' });
       if (!res.ok) throw new Error('Failed to approve proposal');
       const updated = await res.json();
       setData(updated);

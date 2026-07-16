@@ -13,9 +13,9 @@ export default function ManagerDashboard() {
     async function fetchData() {
       try {
         const [shiftsRes, escalationsRes, tasksRes] = await Promise.all([
-          fetch('/api/staff/shifts'),
-          fetch('/api/staff/escalations'),
-          fetch('/api/staff/tasks')
+          fetch('/api/v1/staff/shifts'),
+          fetch('/api/v1/staff/escalations'),
+          fetch('/api/v1/staff/tasks')
         ]);
 
         if (shiftsRes.ok) {
@@ -41,8 +41,8 @@ export default function ManagerDashboard() {
 
   const simulateEvent = async () => {
     try {
-      await fetch('/api/staff/simulate-event', { method: 'POST' });
-      const res = await fetch('/api/staff/tasks');
+      await fetch('/api/v1/staff/simulate-event', { method: 'POST' });
+      const res = await fetch('/api/v1/staff/tasks');
       if (res.ok) {
         const data = await res.json();
         setTasks(data.tasks || []);
@@ -54,7 +54,7 @@ export default function ManagerDashboard() {
 
   const generateSummary = async () => {
     try {
-      await fetch('/api/staff/generate-summary', { method: 'POST' });
+      await fetch('/api/v1/staff/generate-summary', { method: 'POST' });
       alert("Shift Summary Generated!");
     } catch (err) {
       console.error(err);

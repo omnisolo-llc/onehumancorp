@@ -13,7 +13,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
   useEffect(() => {
     const fetchNeighbors = async () => {
       try {
-        const response = await fetch('/api/mesh/v2/collective?action=getNearby');
+        const response = await fetch('/api/v1/mesh/v2/collective?action=getNearby');
         const data = await response.json();
         if (data.neighbors) {
           setNeighbors(data.neighbors.map((id: string) => ({ id, name: id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) })));
@@ -29,7 +29,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
 
   const handleInvite = async (targetId: string) => {
     try {
-      const response = await fetch('/api/mesh/v2/collective', {
+      const response = await fetch('/api/v1/mesh/v2/collective', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'invite', target_tenant_id: targetId })

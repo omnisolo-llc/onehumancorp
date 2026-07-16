@@ -134,7 +134,7 @@ async fn handle_rpc(
             .clone()
             .unwrap_or_else(|| serde_json::json!({}));
         let client = reqwest::Client::new();
-        let url = "http://localhost:18789/api/workflow/run".to_string();
+        let url = "http://localhost:18789/api/v1/workflow/run".to_string();
         match client.post(&url).json(&workflow_req).send().await {
             Ok(res) => {
                 let body = res.json::<serde_json::Value>().await.unwrap_or_default();

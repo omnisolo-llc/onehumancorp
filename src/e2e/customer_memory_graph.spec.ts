@@ -23,7 +23,7 @@ test.describe('AI-Native Omnichannel Customer Context & Memory Graph', () => {
     // In a real E2E, we'd navigate to the UI to create a customer.
     // For now, we will verify the API endpoints respond correctly (even if with a 500 due to missing FK).
 
-    const ingestRes = await request.post('/api/inbox/ingest', {
+    const ingestRes = await request.post('/api/v1/inbox/ingest', {
       data: {
         tenant_id: tenantId,
         customer_id: customerId,
@@ -36,10 +36,10 @@ test.describe('AI-Native Omnichannel Customer Context & Memory Graph', () => {
     // If it was a 404, the route isn't wired up. 500 means the DB tried to insert.
     expect([200, 500]).toContain(ingestRes.status());
 
-    const processRes = await request.post('/api/inbox/process');
+    const processRes = await request.post('/api/v1/inbox/process');
     expect(processRes.ok()).toBeTruthy();
 
-    const summaryRes = await request.get(`/api/inbox/summary/${tenantId}/${customerId}`);
+    const summaryRes = await request.get(`/api/v1/inbox/summary/${tenantId}/${customerId}`);
     expect(summaryRes.ok()).toBeTruthy();
     const summary = await summaryRes.json();
 

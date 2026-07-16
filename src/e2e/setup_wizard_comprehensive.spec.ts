@@ -24,7 +24,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeVisible();
 
-    await page.route('**/api/onboarding/start', async route => {
+    await page.route('**/api/v1/onboarding/start', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

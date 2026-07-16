@@ -93,7 +93,7 @@ export default function UnifiedFeed() {
           "x-user-id": userId,
         };
       }
-      const res = await fetch("/api/agent-feed", {
+      const res = await fetch("/api/v1/agent-feed", {
         headers,
       });
       if (!res.ok) {
@@ -192,7 +192,7 @@ export default function UnifiedFeed() {
         };
       }
 
-      const res = await fetch(`/api/agent-feed/${itemId}`, {
+      const res = await fetch(`/api/v1/agent-feed/${itemId}`, {
         method: "PUT",
         headers,
         body: JSON.stringify(payload),

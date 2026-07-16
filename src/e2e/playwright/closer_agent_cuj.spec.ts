@@ -45,7 +45,7 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
       lifecycle_state: 'PENDING'
     };
 
-    const feedRes = await request.post('/api/agent-feed', {
+    const feedRes = await request.post('/api/v1/agent-feed', {
       headers: {
         'x-tenant-id': adminUser.tenantId
       },

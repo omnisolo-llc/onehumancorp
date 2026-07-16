@@ -18,14 +18,13 @@ export default function CrossSessionRecall() {
     setResults([]);
 
     try {
-      const res = await fetch("/api/memory/cross-session", {
+      const res = await fetch("/api/v1/memory/cross-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           query,
-          session_id: "global",
           limit: 10,
           summarize,
         }),
@@ -58,7 +57,7 @@ export default function CrossSessionRecall() {
             Cross-Session Recall
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Search across all historical interactions and instantly synthesize customer context using Hermes FTS5 Agent mechanics.
+            Search the signed workspace&apos;s task history with tenant-isolated recall.
           </p>
         </header>
 
@@ -84,7 +83,7 @@ export default function CrossSessionRecall() {
                 onChange={(e) => setSummarize(e.target.checked)}
                 className="w-5 h-5 text-[#0066FF] rounded border-gray-300 focus:ring-[#0066FF]"
               />
-              <span className="text-sm font-medium">LLM Summarize</span>
+              <span className="text-sm font-medium">Condense results</span>
             </label>
             <button
               type="submit"
@@ -120,7 +119,7 @@ export default function CrossSessionRecall() {
             <h2 className="text-xl font-semibold border-b border-gray-200 dark:border-gray-700 pb-2">Results</h2>
             {summarize ? (
               <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-6 shadow-sm rounded-xl">
-                 <h3 className="text-sm font-bold text-[#0066FF] mb-3 uppercase tracking-wider">AI Synthesis</h3>
+                 <h3 className="text-sm font-bold text-[#0066FF] mb-3 uppercase tracking-wider">Condensed results</h3>
                  <div className="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                    {results[0]}
                  </div>

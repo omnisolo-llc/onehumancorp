@@ -19,7 +19,7 @@ test.describe('Documentation UI Components', () => {
 
     test('Help Widget API fetches tooltips successfully', async ({ request }) => {
         // Test backend endpoint directly
-        const response = await request.get('/api/tooltips');
+        const response = await request.get('/api/v1/tooltips');
         expect(response.ok()).toBeTruthy();
 
         const data = await response.json();

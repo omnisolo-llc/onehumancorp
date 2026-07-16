@@ -1,13 +1,13 @@
-use axum::{
-    extract::{State, Json, Path},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::get,
-    Router,
-};
-use std::sync::Arc;
-use serde::Serialize;
 use crate::db::DB;
+use axum::{
+    Router,
+    extract::{Extension, Json, Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::get,
+};
+use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct AvailableSlotsResponse {
@@ -32,13 +32,29 @@ where
 
 async fn handle_get_available_slots(
     State(db): State<Arc<DB>>,
-    headers: axum::http::HeaderMap,
+    claims: Option<Extension<::server_common::Claims>>,
     Path(service_id): Path<String>,
 ) -> impl IntoResponse {
-    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
-        Some(t) if !t.trim().is_empty() => t.to_string(),
-        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    let tenant_id = match claims
+        .as_ref()
+        .and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
+    {
+        Some(tenant_id) => tenant_id,
+        _ => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                axum::Json(serde_json::json!({"error": "unauthorized"})),
+            )
+                .into_response();
+        }
     };
+    if service_id.trim().is_empty() || service_id.chars().count() > 128 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid service_id"})),
+        )
+            .into_response();
+    }
 
     let slots = match db.query_available_slots(&tenant_id, &service_id).await {
         Ok(s) => s,
@@ -63,6 +79,9 @@ async fn handle_get_available_slots(
 
     (
         StatusCode::OK,
-        Json(AvailableSlotsResponse { slots: response_slots }),
-    ).into_response()
+        Json(AvailableSlotsResponse {
+            slots: response_slots,
+        }),
+    )
+        .into_response()
 }

@@ -20,7 +20,7 @@ export default function KitchenView() {
         // Fetch active orders (simulate using pos orders or ui orders if backend supports it)
         // Here we try to fetch orders via POS endpoint which might exist.
         // We'll just try to get anything, if fails, we show empty state correctly without fake data.
-        const ordersRes = await fetch("/api/pos/orders", {
+        const ordersRes = await fetch("/api/v1/pos/orders", {
           headers: { "x-tenant-id": tenantId }
         });
         if (ordersRes.ok) {
@@ -30,7 +30,7 @@ export default function KitchenView() {
         }
 
         // Fetch products/menu via inventory
-        const menuRes = await fetch("/api/pos/inventory", {
+        const menuRes = await fetch("/api/v1/pos/inventory", {
            headers: { "x-tenant-id": tenantId }
         });
         if (menuRes.ok) {

@@ -14,7 +14,7 @@ function CustomerProposalViewContent() {
         if (!proposalId) return;
         async function fetchQuote() {
             try {
-                const res = await fetch(`/api/quotes/${proposalId}`);
+                const res = await fetch(`/api/v1/quotes/${proposalId}`);
                 if (!res.ok) throw new Error('Failed to fetch proposal');
                 const data = await res.json();
                 setQuote(data);
@@ -29,7 +29,7 @@ function CustomerProposalViewContent() {
         if (!proposalId) return;
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/quotes/${proposalId}/accept`, { method: 'POST' });
+            const res = await fetch(`/api/v1/quotes/${proposalId}/accept`, { method: 'POST' });
             if (!res.ok) throw new Error('Failed to accept proposal');
             const data = await res.json();
             if (data.stripe_payment_link) {

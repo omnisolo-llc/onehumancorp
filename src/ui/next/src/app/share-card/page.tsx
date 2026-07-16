@@ -1,7 +1,7 @@
 import { Metadata, ResolvingMetadata } from 'next';
 
 type Props = {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 const defaultTargetUrl = '/onboarding';
@@ -27,10 +27,11 @@ export async function generateMetadata(
   { searchParams }: Props,
   _parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const title = typeof searchParams.title === 'string' ? searchParams.title : 'One Human Corp';
-  const description = typeof searchParams.description === 'string' ? searchParams.description : 'Launch your business online instantly with OHC!';
-  const image = typeof searchParams.image === 'string' ? searchParams.image : undefined;
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : defaultTargetUrl;
+  const resolvedSearchParams = await searchParams;
+  const title = typeof resolvedSearchParams.title === 'string' ? resolvedSearchParams.title : 'One Human Corp';
+  const description = typeof resolvedSearchParams.description === 'string' ? resolvedSearchParams.description : 'Launch your business online instantly with OHC!';
+  const image = typeof resolvedSearchParams.image === 'string' ? resolvedSearchParams.image : undefined;
+  const urlParam = typeof resolvedSearchParams.url === 'string' ? resolvedSearchParams.url : defaultTargetUrl;
   const targetUrl = normalizeShareTarget(urlParam);
 
   return {
@@ -52,8 +53,9 @@ export async function generateMetadata(
   };
 }
 
-export default function ShareCardPage({ searchParams }: Props) {
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : defaultTargetUrl;
+export default async function ShareCardPage({ searchParams }: Props) {
+  const resolvedSearchParams = await searchParams;
+  const urlParam = typeof resolvedSearchParams.url === 'string' ? resolvedSearchParams.url : defaultTargetUrl;
   const targetUrl = normalizeShareTarget(urlParam);
 
   // Sanitize for safe HTML injection

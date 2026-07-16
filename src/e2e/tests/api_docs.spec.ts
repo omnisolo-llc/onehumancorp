@@ -4,7 +4,7 @@ import { adminPage } from '../fixtures';
 test.describe('API Docs Page', () => {
   test('loads correctly and displays Swagger UI with correct styling', async ({ page }) => {
     // Intercept the API call to return a mock spec
-    await page.route('/api/api-docs-spec', async (route) => {
+    await page.route('/api/v1/api-docs-spec', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

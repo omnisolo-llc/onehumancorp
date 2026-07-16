@@ -37,7 +37,7 @@ export default function Integrations() {
   useEffect(() => {
     async function loadIntegrations() {
       try {
-        const res = await fetch("/api/integrations");
+        const res = await fetch("/api/v1/integrations");
         if (res.ok) {
           const data = await res.json();
           if (data && data.success && Array.isArray(data.integrations)) {
@@ -103,7 +103,7 @@ export default function Integrations() {
     }
     setStatusMessage(`Connecting ${integration?.name || id}...`);
     try {
-      const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
+      const res = await fetch(`/api/v1/integrations/${id}/connect`, { method: "POST" });
       if (!res.ok) {
         setStatusMessage(`Unable to start ${integration?.name || id} connection.`);
         return;
@@ -134,7 +134,7 @@ export default function Integrations() {
 
   const saveWhatsAppIntegration = async () => {
     try {
-      const res = await fetch(`/api/integrations/whatsapp/connect`, {
+      const res = await fetch(`/api/v1/integrations/whatsapp/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -191,7 +191,7 @@ export default function Integrations() {
     try {
       // Simulate Meta Embedded Signup flow or use actual FB SDK if available
       const doBackendConnect = async (token?: string, displayPhoneNumber?: string) => {
-        const res = await fetch(`/api/integrations/whatsapp_cloud_api/connect`, {
+        const res = await fetch(`/api/v1/integrations/whatsapp_cloud_api/connect`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

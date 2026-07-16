@@ -71,13 +71,6 @@ export default function ZeroClickBuilderPage() {
               <div className="flex flex-col gap-4 pt-4">
                 <button
                   onClick={() => {
-                    if (generatedStore.organization_id) {
-                      localStorage.setItem('tenant_id', generatedStore.organization_id);
-                      localStorage.setItem('tenant', generatedStore.organization_id);
-                    }
-                    if (generatedStore.user_id) {
-                      localStorage.setItem('user_id', generatedStore.user_id);
-                    }
                     router.push('/dashboard');
                   }}
                   className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"

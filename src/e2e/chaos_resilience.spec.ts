@@ -72,7 +72,7 @@ test.describe("Chaos Engineering Validation - Triage Resilience", () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Mock API to return a 503 Service Unavailable for triage items (simulating a Redis or AI provider drop)
-    await page.route('/api/triage/pending*', async (route) => {
+    await page.route('/api/v1/triage/pending*', async (route) => {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',

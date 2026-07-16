@@ -13,7 +13,7 @@ export default function LangGraphPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/agents/langgraph', {
+      const response = await fetch('/api/v1/agents/langgraph', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),

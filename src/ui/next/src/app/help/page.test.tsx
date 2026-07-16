@@ -10,13 +10,13 @@ import userEvent from '@testing-library/user-event';
 describe('HelpCenterPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/tooltips') {
+      if (url === '/api/v1/tooltips') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ "test-id": "Tooltip text" })
         });
       }
-      if (url === '/api/help') {
+      if (url === '/api/v1/help') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
@@ -26,7 +26,7 @@ describe('HelpCenterPage', () => {
           ])
         });
       }
-      if (typeof url === 'string' && url.includes('/api/help/search')) {
+      if (typeof url === 'string' && url.includes('/api/v1/help/search')) {
         const urlObj = new URL('http://localhost' + url);
         const q = urlObj.searchParams.get('q')?.toLowerCase() || '';
         const allArticles = [
@@ -42,7 +42,7 @@ describe('HelpCenterPage', () => {
           json: () => Promise.resolve(results)
         });
       }
-      if (url === '/api/videos') {
+      if (url === '/api/v1/videos') {
         return Promise.resolve({
           json: () => Promise.resolve([
             { id: 1, title: "How to set up your first store easily", duration: "1:20" },

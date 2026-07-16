@@ -48,7 +48,7 @@ export default function HelpCenterPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
+    const url = debouncedSearchQuery.trim() ? `/api/v1/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/v1/help';
     setIsLoading(true); setIsError(false); fetch(url)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch");
@@ -63,7 +63,7 @@ export default function HelpCenterPage() {
 
   useEffect(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    const fetchUrl = isMobile ? '/api/videos?mobile_optimized=true' : '/api/videos';
+    const fetchUrl = isMobile ? '/api/v1/videos?mobile_optimized=true' : '/api/v1/videos';
     fetch(fetchUrl)
       .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))

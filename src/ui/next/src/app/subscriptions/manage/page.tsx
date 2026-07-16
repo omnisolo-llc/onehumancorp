@@ -17,7 +17,7 @@ function SubscriptionsPortalContent() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/billing/create-billing-portal-session", {
+      const response = await fetch("/api/v1/billing/create-billing-portal-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

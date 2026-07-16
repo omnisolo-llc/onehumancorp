@@ -8,7 +8,7 @@ export default function AgentTerminalPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch('/api/terminal/backend')
+    fetch('/api/v1/payments/terminal/backend')
       .then((res) => res.json())
       .then((data) => {
         if (data.backend) {
@@ -20,7 +20,7 @@ export default function AgentTerminalPage() {
   const handleBackendChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newBackend = e.target.value;
     setBackend(newBackend);
-    await fetch('/api/terminal/backend', {
+    await fetch('/api/v1/payments/terminal/backend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ backend: newBackend }),
@@ -37,7 +37,7 @@ export default function AgentTerminalPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/terminal/session/start', {
+      const res = await fetch('/api/v1/payments/terminal/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command, backend }),

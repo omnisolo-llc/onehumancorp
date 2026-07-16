@@ -44,7 +44,7 @@ export default function SmartPricingPage() {
 
       // Simulate real backend mutation loop silently if enabled
       if (enabled) {
-        fetch("/api/agents/approvals/simulate-smart-pricing", {
+        fetch("/api/v1/agents/approvals/simulate-smart-pricing", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token") || ""}`,

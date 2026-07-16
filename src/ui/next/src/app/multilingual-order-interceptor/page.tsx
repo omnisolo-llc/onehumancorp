@@ -44,7 +44,7 @@ export default function MultilingualOrderInterceptor() {
     const handleConfirm = async () => {
         if (!interceptedOrder) return;
         try {
-            const res = await fetch('/api/agent-feed', {
+            const res = await fetch('/api/v1/agent-feed', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

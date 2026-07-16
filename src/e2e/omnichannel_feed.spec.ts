@@ -32,7 +32,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
   // Test 3: Action Card Interaction
   test('action card interaction and editing', async ({ request, page }) => {
     const tenantId = 'e2e-tenant-interaction';
-    await request.post('/api/inbox/webhook', {
+    await request.post('/api/v1/inbox/webhook', {
       data: { tenant_id: tenantId, source: 'instagram', sender_id: 'user_1', message: 'Test interaction?' }
     });
 
@@ -67,7 +67,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
     const senderId = 'customer_ig_123';
     const messageText = 'Do you have the vegan chocolate cake available today?';
 
-    const response = await request.post('/api/inbox/webhook', {
+    const response = await request.post('/api/v1/inbox/webhook', {
       data: { tenant_id: tenantId, source: source, sender_id: senderId, message: messageText }
     });
     expect([200, 500]).toContain(response.status());

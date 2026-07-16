@@ -6,7 +6,7 @@ test.describe('Draft Quote Action Card CUJ', () => {
   test('Owner sees draft quote suggestion and approves it on 375px mobile viewport', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
     // 1. Simulate the SalesAgent drafting a quote
-    await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+    await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
       headers: {
         'x-tenant-id': 'tenant-1',
         'x-user-id': 'default'
@@ -59,7 +59,7 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
 
     test('Mobile view layout constraints are respected', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -74,7 +74,7 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
 
     test('Edit modal closes correctly on reject', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -89,7 +89,7 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
 
     test('Price formatting validates input correctly', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -105,7 +105,7 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
 
     test('Approving without editing maintains suggested values', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });

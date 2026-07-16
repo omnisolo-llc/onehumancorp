@@ -78,15 +78,31 @@ async fn test_setup_health_check_endpoint() {
         store: crate::db::DbStore::Postgres,
     };
     let agent = Arc::new(OnboardingAgent::new(Arc::new(db), hub));
+    let auth_store = Arc::new(crate::auth::Store::new());
+    let now = chrono::Utc::now();
+    let token = auth_store
+        .issue_token(&crate::auth::User {
+            id: "health-user".to_string(),
+            username: "health-user".to_string(),
+            email: "health@example.com".to_string(),
+            password_hash: String::new(),
+            roles: vec![crate::auth::ROLE_ADMIN.to_string()],
+            active: true,
+            organization_id: Some("health-tenant".to_string()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        })
+        .unwrap();
 
     let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
 
     // We need to provide the MeshTransport state because the router expects it
-    let app = crate::api::onboarding::router(agent).with_state(transport);
+    let app = crate::api::onboarding::router(agent, auth_store).with_state(transport);
 
     // Test standalone (should pass since we provisioned it)
     let response = app.clone()
-        .oneshot(Request::builder().uri("/setup-health?mode=standalone").body(Body::empty()).unwrap())
+        .oneshot(Request::builder().uri("/setup-health?mode=standalone").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -97,7 +113,7 @@ async fn test_setup_health_check_endpoint() {
 
     // Test cloud (should fail since we didn't provision it)
     let response = app.clone()
-        .oneshot(Request::builder().uri("/setup-health?mode=cloud").body(Body::empty()).unwrap())
+        .oneshot(Request::builder().uri("/setup-health?mode=cloud").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
         .await
         .unwrap();
 

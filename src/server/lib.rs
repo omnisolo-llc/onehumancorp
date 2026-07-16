@@ -9,6 +9,7 @@ pub mod agents;
 use std::sync::RwLock;
 
 #[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ChatRequest {
     message: String,
 }
@@ -66,6 +67,343 @@ pub fn get_redis_client() -> Option<redis::Client> {
     REDIS_CLIENT.get_or_init(|| {
         std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
     }).clone()
+}
+
+async fn protected_bearer_auth_middleware(
+    axum::extract::State(store): axum::extract::State<std::sync::Arc<::server_auth::Store>>,
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    if ::server_utils::tenant_middleware::is_auth_bypass_path(req.uri().path()) {
+        return next.run(req).await;
+    }
+    ::server_auth::strict_bearer_auth_middleware(
+        axum::extract::State(store),
+        req,
+        next,
+    )
+    .await
+}
+
+fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| {
+            !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system")
+        })
+        .map(str::to_string)
+}
+
+async fn invalidate_ui_omni_inbox_cache(tenant_id: &str) {
+    let cache = UI_OMNI_INBOX_CACHE
+        .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    for mobile_optimized in [false, true] {
+        cache
+            .invalidate(&format!(
+                "ui_omni_inbox:{}:mobile:{}",
+                tenant_id, mobile_optimized
+            ))
+            .await;
+    }
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OmniInboxActionPayload {
+    pub message_id: String,
+    pub approved: bool,
+    pub edited_reply: Option<String>,
+}
+
+struct OmniReplyDispatch {
+    source: String,
+    sender_id: String,
+    reply: String,
+    integration_id: String,
+    account_sid: String,
+    auth_token: String,
+    from_phone: String,
+}
+
+async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
+    if dispatch.integration_id == "whatsapp_cloud_api" {
+        use crate::integrations::meta::provider::MetaProvider;
+        let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
+        let to = dispatch
+            .sender_id
+            .strip_prefix("whatsapp:")
+            .unwrap_or(&dispatch.sender_id);
+        if let Err(error) = provider.send_message("whatsapp", to, &dispatch.reply).await {
+            tracing::error!("Failed to send approved WhatsApp reply: {error:?}");
+        }
+        return;
+    }
+
+    if dispatch.account_sid.is_empty()
+        || dispatch.auth_token.is_empty()
+        || dispatch.from_phone.is_empty()
+    {
+        tracing::error!("Cannot send approved Twilio reply: integration credentials are incomplete");
+        return;
+    }
+
+    use crate::integrations::twilio::provider::TwilioProvider;
+    let provider = TwilioProvider::new(dispatch.account_sid, dispatch.auth_token);
+    let result = if dispatch.source == "whatsapp" {
+        let to = if dispatch.sender_id.starts_with("whatsapp:") {
+            dispatch.sender_id
+        } else {
+            format!("whatsapp:{}", dispatch.sender_id)
+        };
+        provider
+            .send_whatsapp(&to, &dispatch.from_phone, &dispatch.reply)
+            .await
+    } else {
+        let to = dispatch
+            .sender_id
+            .strip_prefix("sms:")
+            .unwrap_or(&dispatch.sender_id);
+        provider.send_sms(to, &dispatch.from_phone, &dispatch.reply).await
+    };
+    if let Err(error) = result {
+        tracing::error!("Failed to send approved omni-inbox reply: {error:?}");
+    }
+}
+
+#[derive(Debug)]
+enum OmniInboxActionError {
+    NotFound,
+    Database(sqlx::Error),
+}
+
+impl From<sqlx::Error> for OmniInboxActionError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Database(error)
+    }
+}
+
+async fn apply_omni_inbox_action(
+    db: &crate::db::DB,
+    tenant_id: &str,
+    payload: &OmniInboxActionPayload,
+) -> Result<Option<OmniReplyDispatch>, OmniInboxActionError> {
+    let status = if payload.approved { "resolved" } else { "dismissed" };
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
+                "UPDATE omni_inbox_messages SET status = $1
+                 WHERE id = $2 AND tenant_id = $3
+                 RETURNING source, sender_id",
+            )
+            .bind(status)
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(OmniInboxActionError::NotFound)?;
+
+            let mut dispatch = None;
+            if payload.approved {
+                if let Some(reply) = payload.edited_reply.as_deref() {
+                    sqlx::query(
+                        "INSERT INTO inbox_messages
+                         (id, tenant_id, source, content, draft_reply, status)
+                         VALUES ($1, $2, $3, $4, '', 'sent')",
+                    )
+                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                    .bind(tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
+                        if source == "whatsapp" || source == "sms" {
+                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                                sqlx::query_as::<_, (String, String, String, String)>(
+                                    "SELECT integration_id, COALESCE(bot_token, ''),
+                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
+                                     FROM integration_credentials
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                       AND tenant_id = $1
+                                     ORDER BY CASE
+                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                     LIMIT 1",
+                                )
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await?
+                            {
+                                dispatch = Some(OmniReplyDispatch {
+                                    source,
+                                    sender_id,
+                                    reply: reply.to_string(),
+                                    integration_id,
+                                    account_sid,
+                                    auth_token,
+                                    from_phone,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            tx.commit().await?;
+            Ok(dispatch)
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = pool.begin().await?;
+            let updated = sqlx::query(
+                "UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(status)
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+            if updated.rows_affected() != 1 {
+                return Err(OmniInboxActionError::NotFound);
+            }
+            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
+                "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?",
+            )
+            .bind(&payload.message_id)
+            .bind(tenant_id)
+            .fetch_one(&mut *tx)
+            .await?;
+
+            let mut dispatch = None;
+            if payload.approved {
+                if let Some(reply) = payload.edited_reply.as_deref() {
+                    sqlx::query(
+                        "INSERT INTO inbox_messages
+                         (id, tenant_id, source, content, draft_reply, status)
+                         VALUES (?, ?, ?, ?, '', 'sent')",
+                    )
+                    .bind(format!("msg-{}", uuid::Uuid::new_v4()))
+                    .bind(tenant_id)
+                    .bind("Omni Inbox Action")
+                    .bind(reply)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    if let (Some(source), Some(sender_id)) = (source, sender_id) {
+                        if source == "whatsapp" || source == "sms" {
+                            if let Some((integration_id, account_sid, auth_token, from_phone)) =
+                                sqlx::query_as::<_, (String, String, String, String)>(
+                                    "SELECT integration_id, COALESCE(bot_token, ''),
+                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
+                                     FROM integration_credentials
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                       AND tenant_id = ?
+                                     ORDER BY CASE
+                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                     LIMIT 1",
+                                )
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await?
+                            {
+                                dispatch = Some(OmniReplyDispatch {
+                                    source,
+                                    sender_id,
+                                    reply: reply.to_string(),
+                                    integration_id,
+                                    account_sid,
+                                    auth_token,
+                                    from_phone,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            tx.commit().await?;
+            Ok(dispatch)
+        }
+    }
+}
+
+async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let items = if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await?.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect()
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(&mut *tx)
+                    .await?.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect()
+            };
+            tx.commit().await?;
+            Ok(items)
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            if mobile_optimized {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            } else {
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await.map(|rows| rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "original_content": row.get::<String, _>("original_content"),
+                            "draft_reply": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "customer_id": row.get::<String, _>("customer_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }).collect())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -576,46 +914,21 @@ pub struct MyHubService {
     dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     invite_tracker: Arc<crate::services::growth::invites::InviteTracker>,
     viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
-    onboarding_agent: crate::services::onboarding::onboarding_agent::OnboardingAgent,
     publish_counter: opentelemetry::metrics::Counter<u64>,
     stream_counter: opentelemetry::metrics::Counter<u64>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, db: Arc<crate::db::DB>, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>, viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Self {
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool, dept_orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>, viral_loop_tracker: Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Self {
         let invite_repo = Arc::new(crate::services::growth::invites::InviteRepository::new(pool));
         let invite_tracker = Arc::new(crate::services::growth::invites::InviteTracker::new(invite_repo));
-        let onboarding_agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub.clone());
 
         let meter = opentelemetry::global::meter("ohc.orchestration.hub");
         let publish_counter = meter.u64_counter("hub.mesh_events.published").build();
         let stream_counter = meter.u64_counter("hub.mesh_events.stream_started").build();
 
-        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, onboarding_agent, publish_counter, stream_counter }
+        MyHubService { hub, dept_orchestrator, invite_tracker, viral_loop_tracker, publish_counter, stream_counter }
     }
-}
-
-#[derive(serde::Deserialize)]
-struct HttpLoginRequest {
-    username: String,
-    password: String,
-    organization_id: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct HttpLoginUser {
-    id: String,
-    username: String,
-    email: String,
-    roles: Vec<String>,
-    organization_id: String,
-}
-
-#[derive(serde::Serialize)]
-struct HttpLoginResponse {
-    token: String,
-    expires_at: i64,
-    user: HttpLoginUser,
 }
 
 #[derive(serde::Serialize)]
@@ -740,186 +1053,6 @@ async fn http_metrics_handler(
     (
         StatusCode::OK,
         axum::Json(metrics),
-    )
-        .into_response()
-}
-
-async fn http_login_handler(
-    db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
-    payload: HttpLoginRequest,
-) -> axum::response::Response {
-    use axum::http::StatusCode;
-    use axum::response::IntoResponse;
-
-    let username = payload.username.trim();
-    if username.is_empty() || payload.password.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            axum::Json(HttpErrorResponse { error: "username and password are required".to_string() }),
-        )
-            .into_response();
-    }
-
-    let tenant_id = payload
-        .organization_id
-        .filter(|id| !id.trim().is_empty())
-        .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
-        .unwrap_or_else(|| "e2e-tenant".to_string());
-
-    let mut tx = match db.pool.begin().await {
-        Ok(tx) => tx,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to start login transaction");
-            tracing::error!("failed to start login transaction: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        ::server_telemetry::record_error_signal("[bug] failed to set tenant context for login");
-        tracing::error!("failed to set tenant context for login: {}", e); // pii-safe
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-        )
-            .into_response();
-    }
-
-    let row = match sqlx::query(
-        r#"
-        SELECT id, username, email, password_hash, roles, tenant_id
-        FROM users
-        WHERE tenant_id = $1 AND (username = $2 OR email = $2) AND active = TRUE
-        LIMIT 1
-        "#,
-    )
-    .bind(&tenant_id)
-    .bind(username)
-    .fetch_optional(&mut *tx)
-    .await
-    {
-        Ok(row) => row,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to query login user");
-            tracing::error!("failed to query login user: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    let Some(row) = row else {
-        return (
-            StatusCode::UNAUTHORIZED,
-            axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
-        )
-            .into_response();
-    };
-
-    let password_hash: String = row.get("password_hash");
-
-    let is_valid = {
-        let password = payload.password.clone();
-        let hash = password_hash.clone();
-        match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
-            Ok(res) => res,
-            Err(e) => {
-                ::server_telemetry::record_error_signal("[bug] spawn_blocking failed for bcrypt");
-                tracing::error!("spawn_blocking failed for bcrypt: {}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-                )
-                    .into_response();
-            }
-        }
-    };
-
-    match is_valid {
-        Ok(true) => {}
-        Ok(false) => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                axum::Json(HttpErrorResponse { error: "invalid credentials".to_string() }),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[security] failed to verify auth credential");
-            tracing::error!("failed to verify auth credential: {}", e); // pii-safe
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    }
-
-    let id: String = row.get("id");
-    let email: String = row.get("email");
-    let username: String = row.get("username");
-    let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
-    let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
-    let issued_at = chrono::Utc::now().timestamp();
-    let user = ::server_auth::User {
-        id: id.clone(),
-        username: username.clone(),
-        email: email.clone(),
-        password_hash: "".to_string(),
-        roles: roles.clone(),
-        active: true,
-        organization_id: Some(tenant_id.clone()),
-        created_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        updated_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        oidc_subject: None,
-    };
-
-    let token = match store.issue_token(&user) {
-        Ok(t) => t,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] failed to issue login token");
-            tracing::error!("failed to issue login token: {}", e); // pii-safe
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
-    let _claims = ::server_common::Claims {
-        sub: id.clone(),
-        exp: expires_at,
-        iat: issued_at,
-        organization_id: Some(tenant_id.clone()),
-        username: username.clone(),
-        email: email.clone(),
-        roles: roles.clone(),
-        session_id: None,
-        jti: uuid::Uuid::new_v4().to_string(),
-    };
-    // token issued above via store
-
-    (
-        StatusCode::OK,
-        axum::Json(HttpLoginResponse {
-            token,
-            expires_at,
-            user: HttpLoginUser {
-                id,
-                username,
-                email,
-                roles,
-                organization_id: tenant_id,
-            },
-        }),
     )
         .into_response()
 }
@@ -2470,16 +2603,6 @@ async fn get_pending_approvals(
         Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
-    async fn start_onboarding(
-        &self,
-        request: Request<StartOnboardingRequest>,
-    ) -> Result<Response<StartOnboardingResponse>, Status> {
-        let req = request.into_inner();
-        match self.onboarding_agent.start_onboarding(req).await {
-            Ok(resp) => Ok(Response::new(resp)),
-            Err(e) => Err(Status::internal(e)),
-        }
-    }
 }
 
 pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
@@ -3032,7 +3155,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
-    let db_for_login = db.clone();
+    let auth_repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> =
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(
+                crate::auth::postgres_store::PgUserRepository::new(db.pool.clone()),
+            ),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(
+                crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone()),
+            ),
+        };
+    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_repo(auth_repo));
+    let http_auth_router = crate::auth::http::router(http_auth_store.clone()).map_err(|error| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, error)
+    })?;
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
     (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
@@ -3109,11 +3244,13 @@ pub struct TriageActionPayload {
 
 pub async fn create_ui_triage_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<CreateTriageItemPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -3234,10 +3371,13 @@ pub async fn create_ui_triage_item_handler(
 
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -3269,83 +3409,17 @@ pub async fn list_ui_triage_handler(
 }
 
 
-async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&db.pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&db.pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
-                            "draft_reply": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            }
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "source": row.get::<String, _>("source"),
-                            "original_content": row.get::<String, _>("original_content"),
-                            "draft_reply": row.get::<String, _>("draft_reply"),
-                            "status": row.get::<String, _>("status"),
-                            "sender_id": row.get::<String, _>("sender_id"),
-                            "customer_id": row.get::<String, _>("customer_id"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-            }
-        }
-    }
-}
 
 pub async fn list_ui_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let tenant_id = match strict_ui_claim_tenant(&claims) {
+        Some(tenant_id) => tenant_id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_omni_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -3376,186 +3450,49 @@ pub async fn list_ui_omni_inbox_handler(
     }
 }
 
-#[derive(serde::Deserialize)]
-pub struct OmniInboxActionPayload {
-    pub message_id: String,
-    pub approved: bool,
-    pub edited_reply: Option<String>,
-}
-
 pub async fn update_ui_omni_inbox_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<OmniInboxActionPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
-    let status = if payload.approved { "resolved" } else { "dismissed" };
-
-    // In a real system, we'd send the payload.edited_reply over the corresponding channel here.
-    // For now, we update the status in the DB.
-
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let mut tx = match db.pool.begin().await {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-                }
-            };
-            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                tracing::error!("Failed to set org context: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(status).bind(&payload.message_id).bind(&tenant_id)
-                .execute(&mut *tx).await {
-                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
-
-            if payload.approved {
-                if let Some(reply) = &payload.edited_reply {
-                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                    let _ = sqlx::query(
-                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'sent')"
-                    )
-                    .bind(&new_msg_id)
-                    .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(&mut *tx)
-                    .await;
-
-                    // Fetch source and sender_id
-                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
-                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2"
-                    )
-                    .bind(&payload.message_id)
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool).await;
-
-                    if let Ok((Some(source), Some(sender_id))) = msg_row {
-                        if source == "whatsapp" || source == "sms" {
-                            let tenant_id_clone = tenant_id.clone();
-                            let reply_clone = reply.clone();
-                            tokio::spawn(async move {
-                                let pool = crate::db::get_pool();
-                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool)
-                                    .await;
-
-                                if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
-                                    if integration_id == "whatsapp_cloud_api" {
-                                        use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
-                                        let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
-                                        let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
-                                    } else if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
-                                        }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-            let _ = tx.commit().await;
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
-                .bind(status).bind(&payload.message_id).bind(&tenant_id)
-                .execute(pool).await {
-                tracing::error!("Failed to update omni_inbox_message: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
-            }
-
-            let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            cache.invalidate(&format!("ui_omni_inbox:{}", tenant_id)).await;
-
-            if payload.approved {
-                if let Some(reply) = &payload.edited_reply {
-                    let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                    let _ = sqlx::query(
-                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'sent')"
-                    )
-                    .bind(&new_msg_id)
-                    .bind(&tenant_id)
-                    .bind("Omni Inbox Action")
-                    .bind(reply)
-                    .execute(pool)
-                    .await;
-
-                    // Fetch source and sender_id for sqlite
-                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
-                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?"
-                    )
-                    .bind(&payload.message_id)
-                    .bind(&tenant_id)
-                    .fetch_one(pool).await;
-
-                    if let Ok((Some(source), Some(sender_id))) = msg_row {
-                        if source == "whatsapp" || source == "sms" {
-                            let tenant_id_clone = tenant_id.clone();
-                            let reply_clone = reply.clone();
-                            let pool_clone = pool.clone();
-                            tokio::spawn(async move {
-                                let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = ? ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
-                                    .bind(&tenant_id_clone)
-                                    .fetch_one(&pool_clone)
-                                    .await;
-
-                                if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
-                                    if integration_id == "whatsapp_cloud_api" {
-                                        use crate::integrations::meta::provider::MetaProvider;
-                                        let provider = MetaProvider::new(auth_token, Some(from_phone.clone()));
-                                        let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
-                                        let _ = provider.send_message("whatsapp", &to, &reply_clone).await;
-                                    } else if !account_sid.is_empty() && !auth_token.is_empty() {
-                                        use crate::integrations::twilio::provider::TwilioProvider;
-                                        let provider = TwilioProvider::new(account_sid, auth_token);
-
-                                        if from_phone.is_empty() {
-                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
-                                            return;
-                                        }
-                                        let twilio_from = from_phone;
-                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                                        if source == "whatsapp" {
-                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
-                                        } else {
-                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
+    let tenant_id = match strict_ui_claim_tenant(&claims) {
+        Some(tenant_id) => tenant_id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+    if payload.message_id.is_empty()
+        || payload.message_id.len() > 200
+        || !payload
+            .message_id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+        || payload
+            .edited_reply
+            .as_ref()
+            .is_some_and(|reply| reply.chars().count() > 16_000)
+    {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let dispatch = match apply_omni_inbox_action(db.as_ref(), &tenant_id, &payload).await {
+        Ok(dispatch) => dispatch,
+        Err(OmniInboxActionError::NotFound) => {
+            return axum::http::StatusCode::NOT_FOUND.into_response();
         }
+        Err(OmniInboxActionError::Database(error)) => {
+            tracing::error!("Failed to apply tenant-scoped omni-inbox action: {error:?}"); // pii-safe
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+    invalidate_ui_omni_inbox_cache(&tenant_id).await;
+    if let Some(dispatch) = dispatch {
+        tokio::spawn(dispatch_omni_reply(dispatch));
     }
 
-    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (
+        axum::http::StatusCode::OK,
+        axum::Json(serde_json::json!({"success": true})),
+    )
+        .into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -3567,10 +3504,12 @@ pub struct MockOmniInboxPayload {
 
 pub async fn simulate_ui_triage_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let item_id = format!("triage-{}", uuid::Uuid::new_v4());
     let action_id = format!("act-{}", uuid::Uuid::new_v4());
 
@@ -3706,13 +3645,16 @@ pub async fn simulate_invoice_followup_handler(
 
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
 
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+
 
 ) -> axum::response::Response {
 
     use axum::response::IntoResponse;
 
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
 
     let item_id = format!("inv-fup-{}", uuid::Uuid::new_v4());
 
@@ -3860,10 +3802,12 @@ pub async fn simulate_invoice_followup_handler(
 
 pub async fn simulate_agent_feed_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
 
     match &db.store {
@@ -4005,11 +3949,13 @@ pub async fn simulate_agent_feed_item_handler(
 
 pub async fn mock_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<MockOmniInboxPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let id = format!("mock-{}", uuid::Uuid::new_v4());
 
     // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
@@ -4033,11 +3979,13 @@ pub async fn mock_omni_inbox_handler(
 
 pub async fn update_ui_triage_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Json(payload): axum::extract::Json<TriageActionPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
@@ -4745,10 +4693,13 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
 async fn ui_dashboard_analytics_briefing_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_analytics_briefing:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -4797,6 +4748,7 @@ struct AnalyticsChatRequest {
 
 async fn ui_dashboard_analytics_chat_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
     axum::Json(payload): axum::Json<AnalyticsChatRequest>,
 ) -> axum::response::Response {
@@ -4804,7 +4756,9 @@ async fn ui_dashboard_analytics_chat_handler(
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let text = payload.message.to_lowercase();
 
@@ -5730,10 +5684,13 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
 
 async fn ui_dashboard_unified_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
@@ -5826,10 +5783,13 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
 
 async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
@@ -5854,10 +5814,13 @@ static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCac
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -5888,10 +5851,13 @@ pub async fn list_ui_priority_tasks_handler(
 
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6073,10 +6039,13 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
 
 async fn list_ui_bookings_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_bookings:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6109,10 +6078,13 @@ async fn list_ui_bookings_handler(
 
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6146,10 +6118,13 @@ async fn list_ui_inbox_handler(
 
 async fn ui_dashboard_metrics_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6200,10 +6175,13 @@ async fn ui_dashboard_metrics_handler(
 
 async fn list_ui_supply_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -6236,11 +6214,13 @@ async fn list_ui_supply_handler(
 
 async fn create_ui_supply_vendor_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
     if name.is_empty() {
         return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "name is required"}))).into_response();
@@ -6263,11 +6243,13 @@ async fn create_ui_supply_vendor_handler(
 
 async fn create_ui_raw_material_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("").trim();
     let current_quantity = payload.get("current_quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
     let reorder_threshold = payload.get("reorder_threshold").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
@@ -6291,11 +6273,13 @@ async fn create_ui_raw_material_handler(
 
 async fn create_ui_bom_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<serde_json::Value>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
     let finished_good_id = payload.get("finished_good_id").and_then(|v| v.as_str()).unwrap_or("").trim();
     let raw_material_id = payload.get("raw_material_id").and_then(|v| v.as_str()).unwrap_or("").trim();
     let quantity_required = payload.get("quantity_required").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
@@ -6363,7 +6347,7 @@ async fn create_ui_bom_item_handler(
         .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -6421,7 +6405,7 @@ async fn create_ui_bom_item_handler(
 
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" })).into_response()
         }))
-        .route("/api/settings/sms-confirm", axum::routing::post({
+        .route("/api/v1/settings/sms-confirm", axum::routing::post({
             let _settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6448,7 +6432,7 @@ async fn create_ui_bom_item_handler(
                 }
             }
         }))
-        .route("/api/settings/sms-preferences", axum::routing::post({
+        .route("/api/v1/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6464,7 +6448,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/delivery", axum::routing::get({
+        .route("/api/v1/settings/delivery", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6475,7 +6459,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/delivery", axum::routing::post({
+        .route("/api/v1/settings/delivery", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let enabled = req.get("delivery_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -6490,7 +6474,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/telemetry", axum::routing::get({
+        .route("/api/v1/settings/telemetry", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6499,7 +6483,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/telemetry", axum::routing::post({
+        .route("/api/v1/settings/telemetry", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let enabled = req.get("product_telemetry_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -6512,7 +6496,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/voice", axum::routing::get({
+        .route("/api/v1/settings/voice", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let settings = settings_store.get();
@@ -6524,7 +6508,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/settings/voice", axum::routing::post({
+        .route("/api/v1/settings/voice", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let current_settings = settings_store.get();
@@ -6556,7 +6540,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
-        .route("/api/settings/voice/provision", axum::routing::post({
+        .route("/api/v1/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
                 let twilio_client = std::sync::Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
@@ -6588,7 +6572,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true, "number": provisioned_number }))
             }
         }))
-        .route("/api/voice/incoming", axum::routing::post({
+        .route("/api/v1/voice/incoming", axum::routing::post({
             let settings_store = settings_store.clone();
             let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
             let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
@@ -6616,7 +6600,7 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
-        .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/v1/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
             let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
             let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
             let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
@@ -6624,7 +6608,7 @@ async fn create_ui_bom_item_handler(
                 "checkout_url": url
             }))
         }))
-        .route("/api/checkout/delivery-quote", axum::routing::post({
+        .route("/api/v1/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let settings = settings_store.get();
@@ -6646,8 +6630,8 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
-        .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
-        .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
+        .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
@@ -6665,28 +6649,23 @@ async fn create_ui_bom_item_handler(
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+        .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
-        .route("/api/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+        .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
-        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
-            let db_for_auth = db.clone();
+        .route("/api/v1/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
+            let store = http_auth_store.clone();
             axum::middleware::from_fn(
                 move |req: axum::extract::Request, next: axum::middleware::Next| {
-                    let db = db_for_auth.clone();
+                    let store = store.clone();
                     async move {
                         use axum::response::IntoResponse;
-                        let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                        };
-                        let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                         let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
                         let token = match auth_header {
                             Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
@@ -7026,31 +7005,14 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
-            "/api/v1/auth/login",
-            axum::routing::post({
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
-                    let db = db_for_login.clone();
-                    let store = store.clone();
-                    async move { http_login_handler(db, store, payload).await }
-                }
-            }),
-        )
-        .route(
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                    draft_reply_handler(db, store, headers, payload).await
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| {
+                    let db = db.clone();
+                    let store = store.clone();
+                    async move { draft_reply_handler(db, store, headers, payload).await }
                 }
             }),
         )
@@ -7059,12 +7021,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| {
+                    let db = db.clone(); let store = store.clone();
+                    async move { http_metrics_handler(db, store, headers, payload).await }
+                }
             }),
         )
         .route("/api/v1/sync/events", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
@@ -7074,42 +7035,51 @@ async fn create_ui_bom_item_handler(
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/sync/ws", axum::routing::get(api::sync_gateway::ws_sync_handler))
-        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
-        .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
-        .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
+        .route("/api/v1/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
+        .route("/api/v1/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
         .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
             "/api/v1/advisory/insights",
             axum::routing::get({
                 let db = db.clone();
-                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-                move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+                let store = http_auth_store.clone();
+                move |headers: axum::http::HeaderMap| {
+                    let db = db.clone(); let store = store.clone();
+                    async move { advisory_insights_handler(db, store, headers).await }
+                }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
-        .nest("/api/assistant", api::assistant::router(db.clone()))
-        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
-        .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
-        .nest("/api/staff", api::staff_mesh::router(db.clone()))
+        .nest("/api/v1/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/v1/assistant", api::assistant::router(db.clone()))
+        .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
+        .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
+        .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
-        .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
-        .nest("/api/agents", api::agents::hire::router(hub.clone()))
-        .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
+        .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
+        .nest("/api/v1/agents", api::agents::hire::router(hub.clone()))
+        .nest("/api/v1/onboarding", api::onboarding::router(
+            std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone())),
+            http_auth_store.clone(),
+        ).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
-        .nest("/api/pos", api::pos::pos_routes(hub.clone()))
-        .nest("/api/v1/pos", api::pos::pos_routes(hub.clone()))
+        .nest(
+            "/api/v1/pos",
+            api::pos::pos_routes(hub.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
         .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
 
@@ -7118,52 +7088,109 @@ async fn create_ui_bom_item_handler(
             semantic_router: semantic_router.clone(),
         }))
 
-        .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
-        .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
-        .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
+        .nest("/api/v1/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/v1/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
+        .nest("/api/v1/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
-        .nest("/api/agents/pydantic", api::agents::pydantic::router())
-        .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
+        .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
-        .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/sync", api::sync_gateway::router())
-        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
-        .nest("/api/proposals", api::proposals::router().with_state(db.pool.clone()))
-        .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()))
-        .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
-        .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))
-        .nest("/api/v1/booking/services", api::booking::create_service::router(db.clone()))
-        .nest("/api/v1/booking/proposed", api::booking::proposed::router())
-        .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/booking/request",
+            api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .nest(
+            "/api/v1/booking/reserve",
+            api::booking::reserve::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .nest(
+            "/api/v1/booking/available_slots",
+            api::booking::available_slots::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .nest(
+            "/api/v1/booking/services",
+            api::booking::create_service::router(db.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .nest(
+            "/api/v1/booking/proposed",
+            api::booking::proposed::router().route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .nest("/api/v1/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
 
 
 
 
-        .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
+        .route("/api/v1/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
+        .route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            protected_bearer_auth_middleware,
+        ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(crate::api::docs::list_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos).layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
-        .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
-        .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
+        .route("/api/v1/help", axum::routing::get(crate::api::docs::list_articles)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
+        .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/tooltips", axum::routing::post(crate::api::docs::update_tooltip)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/videos", axum::routing::get(crate::api::docs::list_videos)
+            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog))
+        .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))
@@ -7279,28 +7306,54 @@ async fn create_ui_bom_item_handler(
         .route("/social-share-widget.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
         }))
-                .route("/api/chat", axum::routing::post(|
+                .route("/api/v1/chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-            headers: axum::http::HeaderMap,
+            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
             axum::Json(req): axum::Json<ChatRequest>
         | async move {
-            let tenant_id = headers
-                .get("x-tenant-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("default");
+            let tenant_id = match claims.organization_id {
+                Some(organization_id) => organization_id,
+                None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
+            };
 
-            let query = req.message.to_lowercase();
+            let message = req.message.trim();
+            if message.is_empty() || message.chars().count() > 2_000 {
+                return axum::response::IntoResponse::into_response((
+                    axum::http::StatusCode::BAD_REQUEST,
+                    axum::Json(serde_json::json!({ "error": "invalid message" })),
+                ));
+            }
+            let query = message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
             let mut link_url = "/help_article.html?id=getting-started-1".to_string();
 
             let articles: Vec<crate::api::docs::HelpArticle> = match &db.store {
                 crate::db::DbStore::Postgres => {
-                    match sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
-                        .bind(tenant_id.to_string())
-                        .fetch_all(&db.pool)
-                        .await
-                    {
+                    let mut tx = match db.pool.begin().await {
+                        Ok(tx) => tx,
+                        Err(_) => return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        )),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
+                        return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        ));
+                    }
+                    let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1")
+                        .bind(&tenant_id)
+                        .fetch_all(&mut *tx)
+                        .await;
+                    if tx.commit().await.is_err() {
+                        return axum::response::IntoResponse::into_response((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            axum::Json(serde_json::json!({ "error": "help unavailable" })),
+                        ));
+                    }
+                    match result {
                         Ok(rows) => {
                             rows.into_iter().map(|row| {
                                 use sqlx::Row;
@@ -7317,7 +7370,7 @@ async fn create_ui_bom_item_handler(
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ?")
-                        .bind(tenant_id.to_string())
+                        .bind(&tenant_id)
                         .fetch_all(pool)
                         .await
                     {
@@ -7379,11 +7432,14 @@ async fn create_ui_bom_item_handler(
                 }
             }
 
-            axum::Json(serde_json::json!({
+            axum::response::IntoResponse::into_response(axum::Json(serde_json::json!({
                 "reply": reply,
                 "link": { "url": link_url, "title": link_title }
-            }))
-        }))
+            })))
+        }).route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            ::server_auth::strict_bearer_auth_middleware,
+        )))
         .merge(webhook_router)
         .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
@@ -7391,16 +7447,26 @@ async fn create_ui_bom_item_handler(
             tools: vec![],
             sub_agents: std::collections::HashMap::new(),
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
-        })))
+        })).layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(),
+            ::server_auth::strict_bearer_auth_middleware,
+        )))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
-        .nest("/api/inbox", inbox_webhook_router)
-        .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
-        .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
+        .nest("/api/v1/inbox", inbox_webhook_router)
+        .nest(
+            "/api/v1/memory",
+            api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
+        )
+        .nest(
+            "/api/v1/inbox/action_required",
+            api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
+        )
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
         .merge(health_router)
+        .merge(http_auth_router)
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")
@@ -7411,7 +7477,12 @@ async fn create_ui_bom_item_handler(
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
-        if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+        if let Err(e) = axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+        )
+        .await
+        {
             ::server_telemetry::record_error_signal("[bug] Mesh server error");
             tracing::trace!("Mesh server error: {}", e);
         }
@@ -7428,13 +7499,9 @@ async fn create_ui_bom_item_handler(
 
 
     let viral_loop_tracker = std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
-    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
-                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
-                };
-                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
+    let store = http_auth_store.clone();
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::is_telemetry_enabled() {
@@ -7612,6 +7679,122 @@ mod tests {
     use super::*;
     use crate::settings::Store;
 
+    #[tokio::test]
+    async fn protected_http_routes_require_signed_bearer_identity() {
+        use axum::{body::Body, http::Request, routing::get, Router};
+        use tower::ServiceExt;
+
+        let auth_store = std::sync::Arc::new(::server_auth::Store::new());
+        let now = chrono::Utc::now();
+        let token = auth_store
+            .issue_token(&::server_auth::User {
+                id: "user-a".to_string(),
+                username: "user-a".to_string(),
+                email: "user-a@example.com".to_string(),
+                password_hash: String::new(),
+                roles: vec!["ADMIN".to_string()],
+                active: true,
+                organization_id: Some("tenant-a".to_string()),
+                created_at: now,
+                updated_at: now,
+                oidc_subject: None,
+            })
+            .unwrap();
+        let app = Router::new()
+            .route("/api/v1/protected", get(|| async { "ok" }))
+            .route("/api/v1/auth/login", get(|| async { "public" }))
+            .route_layer(axum::middleware::from_fn(
+                ::server_utils::tenant_middleware::tenant_middleware,
+            ))
+            .route_layer(axum::middleware::from_fn_with_state(
+                auth_store,
+                super::protected_bearer_auth_middleware,
+            ));
+
+        let forged = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/protected")
+                    .header("x-tenant-id", "attacker")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(forged.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let valid = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/protected?tenant_id=tenant-a")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(valid.status(), axum::http::StatusCode::OK);
+
+        let public = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/v1/auth/login")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(public.status(), axum::http::StatusCode::OK);
+    }
+
+    async fn isolated_omni_postgres_pool(
+    ) -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
+        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+            .ok()
+            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+        if !database_url.starts_with("postgres") {
+            return None;
+        }
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&database_url)
+            .await
+            .ok()?;
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let schema = format!("omni_test_{suffix}");
+        let role = format!("omni_role_{suffix}");
+        let password = format!("omni_password_{suffix}");
+        sqlx::query(&format!("CREATE ROLE {role} LOGIN PASSWORD '{password}'"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        sqlx::query(&format!("CREATE SCHEMA {schema} AUTHORIZATION {role}"))
+            .execute(&admin)
+            .await
+            .ok()?;
+        let search_path = format!("SET search_path TO {schema}, public");
+        let options = database_url
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .ok()?
+            .username(&role)
+            .password(&password);
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(3)
+            .after_connect(move |connection, _| {
+                let search_path = search_path.clone();
+                Box::pin(async move {
+                    sqlx::query(&search_path).execute(connection).await?;
+                    Ok(())
+                })
+            })
+            .connect_with(options)
+            .await
+            .ok()?;
+        Some((admin, pool, schema, role))
+    }
+
     #[test]
     fn grpc_tls_config_requires_all_cloud_credentials() {
         assert_eq!(grpc_bind_host(true), "127.0.0.1");
@@ -7639,6 +7822,189 @@ mod tests {
             None,
         )
         .is_err());
+    }
+
+    #[test]
+    fn ui_inbox_tenant_requires_a_non_system_signed_claim() {
+        let mut claims = ::server_common::Claims {
+            sub: "user-a".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: Some("tenant-a".to_string()),
+            username: "user-a".to_string(),
+            email: "user-a@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "ui-inbox-tenant-test".to_string(),
+        };
+        assert_eq!(super::strict_ui_claim_tenant(&claims).as_deref(), Some("tenant-a"));
+        claims.organization_id = None;
+        assert_eq!(super::strict_ui_claim_tenant(&claims), None);
+        claims.organization_id = Some("system".to_string());
+        assert_eq!(super::strict_ui_claim_tenant(&claims), None);
+        assert!(
+            serde_json::from_value::<super::OmniInboxActionPayload>(serde_json::json!({
+                "message_id": "message-a",
+                "approved": true,
+                "tenant_id": "attacker"
+            }))
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_omni_inbox_read_and_action_are_tenant_scoped_under_rls() {
+        let Some((admin, pool, schema, role)) = isolated_omni_postgres_pool().await else {
+            return;
+        };
+        for statement in [
+            "CREATE TABLE omni_inbox_messages (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
+                original_content TEXT, draft_reply TEXT, status TEXT NOT NULL,
+                sender_id TEXT, customer_id TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+            "CREATE TABLE inbox_messages (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
+                content TEXT, draft_reply TEXT, status TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+             )",
+            "CREATE TABLE integration_credentials (
+                id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, integration_id TEXT NOT NULL,
+                bot_token TEXT, api_token TEXT, from_phone TEXT
+             )",
+        ] {
+            sqlx::query(statement).execute(&pool).await.unwrap();
+        }
+        for table in [
+            "omni_inbox_messages",
+            "inbox_messages",
+            "integration_credentials",
+        ] {
+            for statement in [
+                format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"),
+                format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"),
+                format!(
+                    "CREATE POLICY tenant_isolation ON {table}
+                     USING (tenant_id = current_setting('app.current_tenant', true))
+                     WITH CHECK (tenant_id = current_setting('app.current_tenant', true))"
+                ),
+            ] {
+                sqlx::query(&statement).execute(&pool).await.unwrap();
+            }
+        }
+        for (tenant, message_id, content) in [
+            ("tenant-a", "message-a", "visible message"),
+            ("tenant-b", "message-b", "private message"),
+        ] {
+            let mut tx = pool.begin().await.unwrap();
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant)
+                .await
+                .unwrap();
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages
+                 (id, tenant_id, source, original_content, draft_reply, status, sender_id, customer_id)
+                 VALUES ($1, $2, 'sms', $3, '', 'unread', '+15550001111', 'customer-a')",
+            )
+            .bind(message_id)
+            .bind(tenant)
+            .bind(content)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+            if tenant == "tenant-a" {
+                sqlx::query(
+                    "INSERT INTO integration_credentials
+                     (id, tenant_id, integration_id, bot_token, api_token, from_phone)
+                     VALUES ('credential-a', $1, 'twilio', 'account-a', 'token-a', '+15550002222')",
+                )
+                .bind(tenant)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            }
+            tx.commit().await.unwrap();
+        }
+
+        let db = crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        };
+        let visible = super::load_ui_omni_inbox_from_db(&db, "tenant-a", false)
+            .await
+            .unwrap();
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0]["id"], "message-a");
+        assert!(!visible[0].to_string().contains("private message"));
+
+        let foreign = super::OmniInboxActionPayload {
+            message_id: "message-b".to_string(),
+            approved: true,
+            edited_reply: Some("tamper".to_string()),
+        };
+        assert!(matches!(
+            super::apply_omni_inbox_action(&db, "tenant-a", &foreign).await,
+            Err(super::OmniInboxActionError::NotFound)
+        ));
+        let owned = super::OmniInboxActionPayload {
+            message_id: "message-a".to_string(),
+            approved: true,
+            edited_reply: Some("approved reply".to_string()),
+        };
+        let dispatch = super::apply_omni_inbox_action(&db, "tenant-a", &owned)
+            .await
+            .unwrap();
+        assert!(dispatch.is_some());
+
+        let mut tenant_a_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_a_tx, "tenant-a")
+            .await
+            .unwrap();
+        let status: String = sqlx::query_scalar(
+            "SELECT status FROM omni_inbox_messages WHERE id = 'message-a' AND tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
+        let reply: String = sqlx::query_scalar(
+            "SELECT content FROM inbox_messages WHERE tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
+        tenant_a_tx.commit().await.unwrap();
+        assert_eq!(status, "resolved");
+        assert_eq!(reply, "approved reply");
+
+        let mut tenant_b_tx = pool.begin().await.unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tenant_b_tx, "tenant-b")
+            .await
+            .unwrap();
+        let tenant_b_status: String = sqlx::query_scalar(
+            "SELECT status FROM omni_inbox_messages WHERE id = 'message-b' AND tenant_id = 'tenant-b'",
+        )
+        .fetch_one(&mut *tenant_b_tx)
+        .await
+        .unwrap();
+        let tenant_b_replies: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = 'tenant-b'")
+                .fetch_one(&mut *tenant_b_tx)
+                .await
+                .unwrap();
+        tenant_b_tx.commit().await.unwrap();
+        assert_eq!(tenant_b_status, "unread");
+        assert_eq!(tenant_b_replies, 0);
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query(&format!("DROP ROLE {role}"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        admin.close().await;
     }
 
     #[tokio::test]

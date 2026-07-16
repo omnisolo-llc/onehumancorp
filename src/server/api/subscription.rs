@@ -1,23 +1,23 @@
+use crate::hub::Hub;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::DepartmentEvent;
+use crate::services::subscription::service::SubscriptionService;
+use axum::http::StatusCode;
 use axum::{
+    Router,
     extract::{Extension, Json},
     response::IntoResponse,
     routing::{get, post},
-    Router,
 };
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::sync::Arc;
-use crate::hub::Hub;
-use axum::http::StatusCode;
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::DepartmentEvent;
-use crate::services::subscription::service::SubscriptionService;
 
 type HmacSha256 = Hmac<Sha256>;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct SubscriptionPlanResponse {
     pub id: String,
     pub name: String,
@@ -27,7 +27,7 @@ pub struct SubscriptionPlanResponse {
     pub active: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct SubscriberResponse {
     pub id: String,
     pub customer_id: String,
@@ -35,7 +35,7 @@ pub struct SubscriberResponse {
     pub health_score: Option<i32>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct FulfillmentBatchResponse {
     pub id: String,
     pub fulfillment_date: String,
@@ -49,41 +49,156 @@ pub struct CreateFulfillmentBatchRequest {
     pub fulfillment_date: String,
 }
 
-async fn get_plans(
-    Extension(hub): Extension<Arc<Hub>>,
+#[derive(Debug, Serialize)]
+pub struct SubscriptionOverviewResponse {
+    pub plans: Vec<SubscriptionPlanResponse>,
+    pub subscribers: Vec<SubscriberResponse>,
+    pub batches: Vec<FulfillmentBatchResponse>,
+}
 
-    Extension(claims): Extension<::server_common::Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
-    };
+#[derive(Clone, Debug)]
+struct SubscriptionTenantPolicy {
+    multitenant: bool,
+    configured_default: String,
+}
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
-    };
+fn resolve_subscription_tenant(
+    claims: &::server_common::Claims,
+    multitenant: bool,
+    configured_default: &str,
+) -> Result<String, StatusCode> {
+    let tenant = if multitenant {
+        claims.organization_id.as_deref().unwrap_or_default()
+    } else {
+        configured_default
+    }
+    .trim();
 
-    let result = sqlx::query(
-        "SELECT sp.id as id, COALESCE(p.title, sp.name) as name, COALESCE(p.description, sp.description) as description, COALESCE(p.price_cents, sp.price_cents) as amount, COALESCE(sp.interval, sp.frequency) as interval, sp.status = 'active' as active FROM subscription_plans sp LEFT JOIN products p ON sp.product_id = p.id WHERE sp.tenant_id = $1"
+    if tenant.is_empty() {
+        Err(StatusCode::UNAUTHORIZED)
+    } else {
+        Ok(tenant.to_string())
+    }
+}
+
+fn subscription_tenant(
+    claims: &::server_common::Claims,
+    policy: &SubscriptionTenantPolicy,
+) -> Result<String, StatusCode> {
+    resolve_subscription_tenant(claims, policy.multitenant, &policy.configured_default)
+}
+
+async fn fetch_subscription_plans(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<Vec<SubscriptionPlanResponse>, sqlx::Error> {
+    sqlx::query_as::<_, SubscriptionPlanResponse>(
+        "SELECT
+            sp.id,
+            COALESCE(p.title, sp.name) AS name,
+            COALESCE(p.description, sp.description, '') AS description,
+            COALESCE(p.price_cents, sp.price_cents)::BIGINT AS amount,
+            COALESCE(NULLIF(sp.interval, ''), sp.frequency) AS interval,
+            sp.status = 'active' AS active
+         FROM subscription_plans sp
+         LEFT JOIN products p
+           ON sp.product_id = p.id
+          AND p.tenant_id = sp.tenant_id
+         WHERE sp.tenant_id = $1
+         ORDER BY sp.created_at ASC, sp.id ASC",
     )
     .bind(tenant_id)
-    .fetch_all(&mut *conn)
-    .await;
+    .fetch_all(pool)
+    .await
+}
 
-    match result {
-        Ok(rows) => {
-            use sqlx::Row;
-            let plans: Vec<SubscriptionPlanResponse> = rows.into_iter().map(|r| SubscriptionPlanResponse {
-                id: r.try_get("id").unwrap_or_default(),
-                name: r.try_get("name").unwrap_or_default(),
-                description: r.try_get("description").unwrap_or_default(),
-                amount: r.try_get::<i64, _>("amount").unwrap_or(0),
-                interval: r.try_get("interval").unwrap_or_default(),
-                active: r.try_get("active").unwrap_or(true),
-            }).collect();
-            (StatusCode::OK, Json(plans)).into_response()
-        },
+async fn fetch_subscribers(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<Vec<SubscriberResponse>, sqlx::Error> {
+    sqlx::query_as::<_, SubscriberResponse>(
+        "SELECT
+            id,
+            customer_id,
+            status,
+            health_score::INTEGER AS health_score
+         FROM subscriptions
+         WHERE tenant_id = $1
+         ORDER BY created_at ASC, id ASC",
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await
+}
+
+async fn fetch_fulfillment_batches(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<Vec<FulfillmentBatchResponse>, sqlx::Error> {
+    sqlx::query_as::<_, FulfillmentBatchResponse>(
+        "SELECT
+            id,
+            fulfillment_date::TEXT AS fulfillment_date,
+            status,
+            subscriber_count::BIGINT AS subscriber_count
+         FROM fulfillment_batches
+         WHERE tenant_id = $1
+         ORDER BY fulfillment_date ASC, created_at ASC, id ASC",
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await
+}
+
+async fn fetch_subscription_overview(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<SubscriptionOverviewResponse, sqlx::Error> {
+    let (plans, subscribers, batches) = tokio::try_join!(
+        fetch_subscription_plans(pool, tenant_id),
+        fetch_subscribers(pool, tenant_id),
+        fetch_fulfillment_batches(pool, tenant_id),
+    )?;
+
+    Ok(SubscriptionOverviewResponse {
+        plans,
+        subscribers,
+        batches,
+    })
+}
+
+async fn get_subscription_overview(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
+    };
+
+    match fetch_subscription_overview(&hub.pool, &tenant_id).await {
+        Ok(overview) => (StatusCode::OK, Json(overview)).into_response(),
+        Err(error) => {
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch subscription overview");
+            tracing::error!(tenant_id, %error, "Failed to fetch subscription overview");
+            (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
+        }
+    }
+}
+
+async fn get_plans(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
+    };
+
+    match fetch_subscription_plans(&hub.pool, &tenant_id).await {
+        Ok(plans) => (StatusCode::OK, Json(plans)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscription plans");
             tracing::error!("Failed to fetch subscription plans: {}", e);
@@ -94,37 +209,16 @@ async fn get_plans(
 
 async fn get_subscribers(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
-    };
-
-    let result = sqlx::query(
-        "SELECT id, customer_id, status FROM subscriptions WHERE tenant_id = $1"
-    )
-    .bind(tenant_id)
-    .fetch_all(&mut *conn)
-    .await;
-
-    match result {
-        Ok(rows) => {
-            use sqlx::Row;
-            let subscribers: Vec<SubscriberResponse> = rows.into_iter().map(|r| SubscriberResponse {
-                id: r.try_get("id").unwrap_or_default(),
-                customer_id: r.try_get("customer_id").unwrap_or_default(),
-                status: r.try_get("status").unwrap_or_default(),
-                health_score: r.try_get("health_score").unwrap_or(None),
-            }).collect();
-            (StatusCode::OK, Json(subscribers)).into_response()
-        },
+    match fetch_subscribers(&hub.pool, &tenant_id).await {
+        Ok(subscribers) => (StatusCode::OK, Json(subscribers)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscribers");
             tracing::error!("Failed to fetch subscribers: {}", e);
@@ -135,40 +229,16 @@ async fn get_subscribers(
 
 async fn get_fulfillment_batches(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
-    };
-
-    let result = sqlx::query(
-        "SELECT id, fulfillment_date::text AS fulfillment_date, status, subscriber_count
-         FROM fulfillment_batches
-         WHERE tenant_id = $1
-         ORDER BY fulfillment_date ASC, created_at ASC"
-    )
-    .bind(tenant_id)
-    .fetch_all(&mut *conn)
-    .await;
-
-    match result {
-        Ok(rows) => {
-            use sqlx::Row;
-            let batches: Vec<FulfillmentBatchResponse> = rows.into_iter().map(|r| FulfillmentBatchResponse {
-                id: r.try_get("id").unwrap_or_default(),
-                fulfillment_date: r.try_get("fulfillment_date").unwrap_or_default(),
-                status: r.try_get("status").unwrap_or_default(),
-                subscriber_count: r.try_get("subscriber_count").unwrap_or(0),
-            }).collect();
-            (StatusCode::OK, Json(batches)).into_response()
-        },
+    match fetch_fulfillment_batches(&hub.pool, &tenant_id).await {
+        Ok(batches) => (StatusCode::OK, Json(batches)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch fulfillment batches");
             tracing::error!("Failed to fetch fulfillment batches: {}", e);
@@ -179,14 +249,14 @@ async fn get_fulfillment_batches(
 
 async fn create_fulfillment_batch(
     Extension(hub): Extension<Arc<Hub>>,
-
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
     Json(payload): Json<CreateFulfillmentBatchRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
     };
 
     let service = SubscriptionService::new(Arc::new(hub.pool.clone()));
@@ -215,9 +285,15 @@ async fn create_fulfillment_batch(
             payload: event_payload,
         };
         if let Err(e) = orchestrator.dispatch_event(event).await {
-            ::server_telemetry::record_error_signal("[bug] Failed to dispatch fulfillment batch event");
+            ::server_telemetry::record_error_signal(
+                "[bug] Failed to dispatch fulfillment batch event",
+            );
             tracing::error!("Failed to dispatch fulfillment batch event: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Operations dispatch failed").into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Operations dispatch failed",
+            )
+                .into_response();
         }
     }
 
@@ -251,10 +327,7 @@ pub struct MagicLinkClaims {
     pub exp_unix: i64,
 }
 
-pub fn sign_magic_link_token(
-    claims: &MagicLinkClaims,
-    secret: &[u8],
-) -> Result<String, String> {
+pub fn sign_magic_link_token(claims: &MagicLinkClaims, secret: &[u8]) -> Result<String, String> {
     if secret.is_empty() {
         return Err("magic link secret is required".to_string());
     }
@@ -265,7 +338,11 @@ pub fn sign_magic_link_token(
     mac.update(encoded_payload.as_bytes());
     let signature = mac.finalize().into_bytes();
 
-    Ok(format!("{}.{}", encoded_payload, URL_SAFE_NO_PAD.encode(signature)))
+    Ok(format!(
+        "{}.{}",
+        encoded_payload,
+        URL_SAFE_NO_PAD.encode(signature)
+    ))
 }
 
 pub fn verify_magic_link_token(
@@ -323,26 +400,36 @@ async fn handle_magic_link(
         .or_else(|_| std::env::var("MAGIC_LINK_SECRET"))
     {
         Ok(secret) if !secret.trim().is_empty() => secret,
-        _ => return (StatusCode::INTERNAL_SERVER_ERROR, "Magic link secret is not configured").into_response(),
+        _ => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Magic link secret is not configured",
+            )
+                .into_response();
+        }
     };
-    let claims = match verify_magic_link_token(&payload.token, secret.as_bytes(), chrono::Utc::now().timestamp()) {
+    let claims = match verify_magic_link_token(
+        &payload.token,
+        secret.as_bytes(),
+        chrono::Utc::now().timestamp(),
+    ) {
         Ok(claims) if claims.action == payload.action => claims,
         Ok(_) => return (StatusCode::BAD_REQUEST, "Token action mismatch").into_response(),
         Err(_) => return (StatusCode::BAD_REQUEST, "Invalid token").into_response(),
     };
 
-    let update = sqlx::query(
-        "UPDATE subscribers SET status = $1 WHERE id = $2"
-    )
-    .bind(status)
-    .bind(claims.subscriber_id)
-    .execute(&mut *conn)
-    .await;
+    let update = sqlx::query("UPDATE subscribers SET status = $1 WHERE id = $2")
+        .bind(status)
+        .bind(claims.subscriber_id)
+        .execute(&mut *conn)
+        .await;
 
     match update {
         Ok(_) => (StatusCode::OK, Json(MagicLinkResponse { success: true })).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("[bug] Failed to update subscription via magic link");
+            ::server_telemetry::record_error_signal(
+                "[bug] Failed to update subscription via magic link",
+            );
             tracing::error!("Failed to update subscription via magic link: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
@@ -355,12 +442,13 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 
 async fn get_subscription_by_id(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     axum::extract::Path(id): axum::extract::Path<String>,
-Extension(claims): Extension<::server_common::Claims>,
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
     };
 
     let mut conn = match hub.pool.acquire().await {
@@ -380,7 +468,7 @@ Extension(claims): Extension<::server_common::Claims>,
          FROM subscriptions s
          JOIN subscription_plans sp ON s.plan_id = sp.id
          JOIN products p ON sp.product_id = p.id
-         WHERE s.id = $1 AND s.tenant_id = $2"
+         WHERE s.id = $1 AND s.tenant_id = $2",
     )
     .bind(&id)
     .bind(tenant_id)
@@ -395,7 +483,9 @@ Extension(claims): Extension<::server_common::Claims>,
             let price_f64 = (price as f64) / 100.0;
             let discounted_price = price_f64 * (1.0 - (discount_percentage as f64 / 100.0));
 
-            let next_date: chrono::DateTime<chrono::Utc> = r.try_get("nextDeliveryDate").unwrap_or_else(|_| chrono::Utc::now());
+            let next_date: chrono::DateTime<chrono::Utc> = r
+                .try_get("nextDeliveryDate")
+                .unwrap_or_else(|_| chrono::Utc::now());
 
             let sub = serde_json::json!({
                 "id": r.try_get::<String, _>("id").unwrap_or_default(),
@@ -407,7 +497,7 @@ Extension(claims): Extension<::server_common::Claims>,
                 "discountedPrice": discounted_price,
             });
             (StatusCode::OK, Json(sub)).into_response()
-        },
+        }
         Ok(None) => (StatusCode::NOT_FOUND, "Subscription not found").into_response(),
         Err(e) => {
             tracing::error!("Failed to fetch subscription by id: {}", e);
@@ -424,12 +514,13 @@ pub struct SubscriptionActionRequest {
 async fn subscription_action(
     axum::extract::Path(id): axum::extract::Path<String>,
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<SubscriptionActionRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match ::server_config::get().multitenant {
-        true => claims.organization_id.clone().unwrap_or_else(|| "".to_string()),
-        false => ::server_common::auth_utils::get_default_tenant(),
+    let tenant_id = match subscription_tenant(&claims, &tenant_policy) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return (status, "Organization is required").into_response(),
     };
 
     let mut conn = match hub.pool.acquire().await {
@@ -460,13 +551,33 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
     hub: Arc<Hub>,
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
 ) -> Router<S> {
+    router_with_policy(
+        hub,
+        orchestrator,
+        SubscriptionTenantPolicy {
+            multitenant: ::server_config::get().multitenant,
+            configured_default: ::server_common::auth_utils::get_default_tenant(),
+        },
+    )
+}
+
+fn router_with_policy<S: Clone + Send + Sync + 'static>(
+    hub: Arc<Hub>,
+    orchestrator: Option<Arc<DepartmentOrchestrator>>,
+    tenant_policy: SubscriptionTenantPolicy,
+) -> Router<S> {
     Router::new()
+        .route("/", get(get_subscription_overview))
         .route("/plans", get(get_plans))
         .route("/subscribers", get(get_subscribers))
-        .route("/fulfillment-batches", get(get_fulfillment_batches).post(create_fulfillment_batch))
+        .route(
+            "/fulfillment-batches",
+            get(get_fulfillment_batches).post(create_fulfillment_batch),
+        )
         .route("/magic-link", post(handle_magic_link))
         .route("/{id}", get(get_subscription_by_id))
         .route("/{id}/action", post(subscription_action))
+        .layer(Extension(tenant_policy))
         .layer(Extension(orchestrator))
         .layer(Extension(hub))
 }
@@ -474,6 +585,159 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
+
+    fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "user-1".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: organization_id.map(str::to_string),
+            username: "subscriber".to_string(),
+            email: "subscriber@example.com".to_string(),
+            roles: vec![],
+            session_id: None,
+            jti: "subscription-test".to_string(),
+        }
+    }
+
+    #[test]
+    fn multitenant_subscription_requests_require_a_non_blank_organization() {
+        assert_eq!(
+            resolve_subscription_tenant(&claims(None), true, "system"),
+            Err(StatusCode::UNAUTHORIZED),
+        );
+        assert_eq!(
+            resolve_subscription_tenant(&claims(Some("  ")), true, "system"),
+            Err(StatusCode::UNAUTHORIZED),
+        );
+    }
+
+    #[test]
+    fn explicitly_single_tenant_requests_use_the_configured_default() {
+        assert_eq!(
+            resolve_subscription_tenant(&claims(None), false, "configured-tenant"),
+            Ok("configured-tenant".to_string()),
+        );
+    }
+
+    #[tokio::test]
+    async fn subscription_overview_queries_are_tenant_scoped_in_postgres() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://postgres:postgres@127.0.0.1:32768/ohc_test".to_string()
+        });
+        let admin = match sqlx::PgPool::connect(&database_url).await {
+            Ok(pool) => pool,
+            Err(error) => {
+                eprintln!("skipping subscription postgres test; database unavailable: {error}");
+                return;
+            }
+        };
+        let schema = format!("subscription_overview_{}", uuid::Uuid::new_v4().simple());
+        sqlx::query(&format!("CREATE SCHEMA {schema}"))
+            .execute(&admin)
+            .await
+            .expect("create isolated subscription schema");
+
+        let schema_for_connections = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .after_connect(move |connection, _metadata| {
+                let search_path = format!("SET search_path TO {schema_for_connections}");
+                Box::pin(async move {
+                    sqlx::query(&search_path).execute(connection).await?;
+                    Ok(())
+                })
+            })
+            .connect(&database_url)
+            .await
+            .expect("connect isolated subscription pool");
+
+        for statement in [
+            "CREATE TABLE products (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, title TEXT NOT NULL, description TEXT, price_cents BIGINT NOT NULL)",
+            "CREATE TABLE subscription_plans (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, product_id TEXT, name TEXT NOT NULL, description TEXT, price_cents BIGINT NOT NULL, frequency TEXT NOT NULL, interval TEXT, status TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE subscriptions (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, status TEXT NOT NULL, health_score INTEGER, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+            "CREATE TABLE fulfillment_batches (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, fulfillment_date DATE NOT NULL, status TEXT NOT NULL, subscriber_count INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+            "INSERT INTO subscription_plans (id, tenant_id, name, description, price_cents, frequency, interval, status) VALUES ('plan-a', 'tenant-a', 'A plan', 'Owned', 2500, 'month', 'month', 'active'), ('plan-b', 'tenant-b', 'B plan', 'Foreign', 9900, 'year', 'year', 'active')",
+            "INSERT INTO subscriptions (id, tenant_id, customer_id, status, health_score) VALUES ('subscriber-a', 'tenant-a', 'customer-a', 'ACTIVE', 90), ('subscriber-b', 'tenant-b', 'customer-b', 'ACTIVE', 10)",
+            "INSERT INTO fulfillment_batches (id, tenant_id, fulfillment_date, status, subscriber_count) VALUES ('batch-a', 'tenant-a', '2026-08-01', 'PENDING', 3), ('batch-b', 'tenant-b', '2026-09-01', 'PENDING', 99)",
+        ] {
+            sqlx::query(statement)
+                .execute(&pool)
+                .await
+                .expect("prepare subscription integration data");
+        }
+
+        let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(Hub::new(event_log_tx, pool.clone()));
+        let app = router_with_policy(
+            hub,
+            None,
+            SubscriptionTenantPolicy {
+                multitenant: true,
+                configured_default: "system".to_string(),
+            },
+        )
+        .layer(Extension(claims(Some("tenant-a"))));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+            .await
+            .unwrap();
+        let overview: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(overview["plans"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["plans"][0]["id"], "plan-a");
+        assert_eq!(overview["subscribers"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["subscribers"][0]["id"], "subscriber-a");
+        assert_eq!(overview["batches"].as_array().unwrap().len(), 1);
+        assert_eq!(overview["batches"][0]["id"], "batch-a");
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .expect("drop isolated subscription schema");
+    }
+
+    #[tokio::test]
+    async fn subscription_overview_route_rejects_missing_organization_in_multitenant_mode() {
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/unused").unwrap();
+        let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(Hub::new(event_log_tx, pool));
+        let app = router_with_policy(
+            hub,
+            None,
+            SubscriptionTenantPolicy {
+                multitenant: true,
+                configured_default: "system".to_string(),
+            },
+        )
+        .layer(Extension(claims(None)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
 
     #[test]
     fn signed_magic_link_token_round_trips_claims() {
@@ -499,9 +763,16 @@ mod tests {
         };
 
         let token = sign_magic_link_token(&claims, b"test-secret").expect("token should sign");
-        let (payload, signature) = token.split_once('.').expect("signed token should have two parts");
+        let (payload, signature) = token
+            .split_once('.')
+            .expect("signed token should have two parts");
         let replacement = if payload.ends_with('A') { "B" } else { "A" };
-        let tampered = format!("{}{}.{}", &payload[..payload.len() - 1], replacement, signature);
+        let tampered = format!(
+            "{}{}.{}",
+            &payload[..payload.len() - 1],
+            replacement,
+            signature
+        );
 
         assert!(verify_magic_link_token(&tampered, b"test-secret", 1_800_000_000).is_err());
     }

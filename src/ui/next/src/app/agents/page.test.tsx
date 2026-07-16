@@ -29,16 +29,16 @@ beforeEach(() => {
   global.fetch = mockFetch;
   (globalThis as any).WebSocket = MockWebSocket;
   mockFetch.mockImplementation((url: string) => {
-    if (url.includes('/api/agents/workflows')) {
+    if (url.includes('/api/v1/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });
     }
-    if (url.includes('/api/agents/approvals')) {
+    if (url.includes('/api/v1/agents/approvals')) {
       return Promise.resolve({ ok: true, json: async () => ({ pending_approvals: [], next_cursor: null }) });
     }
     if (url.includes('/api/v1/memory')) {
       return Promise.resolve({ ok: true, json: async () => ([]) });
     }
-    if (url.includes('/api/agents/hire')) {
+    if (url.includes('/api/v1/agents/hire')) {
       return Promise.resolve({
         ok: true,
         status: 201,
@@ -92,7 +92,7 @@ test('summons an expert into the task composer and starts a hire workflow', asyn
 
   await waitFor(() => {
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/agents/hire',
+      '/api/v1/agents/hire',
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('Growth Strategist'),
@@ -235,10 +235,10 @@ test('sends Workbuddy context, attachment, model, and output controls in the hir
   fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
 
   await waitFor(() => {
-    expect(mockFetch).toHaveBeenCalledWith('/api/agents/hire', expect.objectContaining({ method: 'POST' }));
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/hire', expect.objectContaining({ method: 'POST' }));
   });
 
-  const hireCall = mockFetch.mock.calls.find(([url]) => url === '/api/agents/hire');
+  const hireCall = mockFetch.mock.calls.find(([url]) => url === '/api/v1/agents/hire');
   expect(hireCall).toBeDefined();
   const payload = JSON.parse(hireCall![1].body);
   expect(payload).toMatchObject({
