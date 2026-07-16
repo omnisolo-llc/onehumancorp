@@ -22,6 +22,37 @@ impl CustomerSuccessAgent {
         self.hub = Some(hub);
         self
     }
+
+    async fn generate_llm_reason(&self, compressed_prompt: &str, fallback_response: &str) -> String {
+        match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            .as_deref()
+        {
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                crate::minimax::MinimaxClient::new(api_key).reason(compressed_prompt).await.unwrap_or_else(|_| fallback_response.to_string())
+            }
+            _ => {
+                crate::minimax::LocalLLMClient::new().reason(compressed_prompt).await.unwrap_or_else(|_| fallback_response.to_string())
+            }
+        }
+    }
+
+    async fn generate_llm_embedding(&self, text: &str) -> Vec<f32> {
+        match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            .as_deref()
+        {
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                crate::minimax::MinimaxClient::new(api_key).generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
+            }
+            _ => {
+                crate::minimax::LocalLLMClient::new().generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
+            }
+        }
+    }
+
 }
 
 #[async_trait::async_trait]
@@ -44,6 +75,7 @@ impl Department for CustomerSuccessAgent {
             "job_status_updates".to_string(),
         ]
     }
+
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let config = self.get_config(&event.tenant_id);
@@ -334,15 +366,7 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
-                }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
-                }
-            };
+            let generated_response = self.generate_llm_reason(&compressed_prompt, "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?").await;
 
             let action_payload = serde_json::json!({
                 "feature_type": "subscription_churn_risk",
@@ -375,15 +399,7 @@ impl Department for CustomerSuccessAgent {
                 );
                 let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-                let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
-                };
+                let generated_response = self.generate_llm_reason(&compressed_prompt, "Hi, looks like you might be running low! Reply Yes to restock.").await;
 
                 let action_payload = serde_json::json!({
                     "feature_type": "predictive_restock_draft",
@@ -436,10 +452,7 @@ impl Department for CustomerSuccessAgent {
             let prompt = format!("You are The Ambassador for tenant {}. A subscriber (Customer ID: {}) is at risk of churning due to a low health score of {}. Write a concise, personalized win-back message offering a free 15-minute consultation to get them back on track. Keep it warm and friendly.", event.tenant_id, customer_id, health_score);
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
-                Ok("minimax") => { let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string()); crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) },
-                _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) }
-            };
+            let generated_response = self.generate_llm_reason(&compressed_prompt, "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!").await;
 
             let description = format!("The Ambassador identified subscriber {} as at-risk and drafted a win-back offer.", subscriber_id);
             let action_payload = serde_json::json!({
@@ -544,18 +557,7 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
-            let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                .as_deref()
-            {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
-                }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
-                }
-            };
+            let query_embedding = self.generate_llm_embedding(message).await;
 
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
@@ -590,18 +592,7 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                .as_deref()
-            {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
-            };
+            let generated_response = self.generate_llm_reason(&compressed_prompt, "Thank you for your message. We will get back to you shortly.").await;
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
