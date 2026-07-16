@@ -1,4 +1,4 @@
-# Release Pipeline Hermeticity TODO_RESOLVED
+# Release Pipeline Hermeticity DONE
 
 Last updated: 2026-05-19
 
@@ -284,7 +284,7 @@ Acceptance checks:
 - Workflow skips gracefully or produces unsigned simulator/dev output when
   signing is unavailable.
 
-## CI Matrix TODO_RESOLVED
+## CI Matrix DONE
 
 Build verification jobs:
 
