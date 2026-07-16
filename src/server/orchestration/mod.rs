@@ -31,3 +31,4 @@ pub mod router;
 pub mod minimax_swarm;
 pub mod queue;
 pub mod identity_resolution;
+pub mod event_router;
