@@ -715,6 +715,7 @@ export default function OnboardingWizard() {
   };
 
   const getProgress = () => {
+    if (step < 1) return 0;
     // There are 5 steps, let's make it a more gradual fill
     if (step === 1) {
       if (chatStep === 1) return 25;
@@ -1083,7 +1084,12 @@ export default function OnboardingWizard() {
                     className="flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     <span className="flex items-center gap-2">
-                      <SetupIcon name="sparkles" /> Generate Storefront
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      ) : (
+                        <SetupIcon name="sparkles" />
+                      )}
+                      {isLoading ? "Generating..." : "Generate Storefront"}
                     </span>
                   </button>
                 </div>

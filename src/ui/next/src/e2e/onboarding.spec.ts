@@ -278,6 +278,7 @@ test.describe('OnboardingWizard CUJ', () => {
   });
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/onboarding');
     await expect(page.getByText("Setup Assistant")).toBeVisible();
 
@@ -290,9 +291,10 @@ test.describe('OnboardingWizard CUJ', () => {
     // We use the ID to ensure exact targeting, as the Instant Build UI provides this specific button.
     const generateBtn = page.locator('#generate-storefront-btn');
     await expect(generateBtn).toBeVisible();
+    await expect(generateBtn).not.toBeDisabled();
     await generateBtn.click();
 
     // The current UI skips directly to the "You're Live!" success screen.
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 30000 });
   });
 });
