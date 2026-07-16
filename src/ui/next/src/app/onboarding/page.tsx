@@ -1995,7 +1995,7 @@ export default function OnboardingWizard() {
           {step === 4 && (
             <div
               aria-live="polite"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glass-card  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -2126,7 +2126,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 glass-card  flex flex-col items-center mb-6">
+                <div className="p-3 glassmorphism  flex flex-col items-center mb-6">
                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
                     Your Shareable Link
                   </p>
