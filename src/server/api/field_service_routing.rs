@@ -140,112 +140,161 @@ async fn get_today_routes(
             routes_data.push((r_id, staff_id, route_date, status));
         }
 
-        let mut job_futures = Vec::new();
-        for (r_id, _, _, _) in &routes_data {
-            let t_id = tenant_id.clone();
-            let route_id = r_id.clone();
-            let pool = pool.clone();
-            let is_mobile = mobile_optimized;
-            let db_store = state.db.store.clone();
+        let route_ids: Vec<String> = routes_data.iter().map(|(id, _, _, _)| id.clone()).collect();
 
-            job_futures.push(tokio::spawn(async move {
-                let mut conn = pool.acquire().await.unwrap();
-                let query_str = if is_mobile {
-                    match db_store {
-                        crate::db::DbStore::Postgres => {
-                            r#"
-                            SELECT
-                                jl.id,
-                                NULL::varchar as customer_id,
-                                COALESCE(jt.name, 'Service Job') as job_title,
-                                '' as address,
-                                NULL::double precision as lat,
-                                NULL::double precision as lng,
-                                COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
-                                NULL::timestamp as scheduled_end,
-                                jl.status,
-                                jl.sequence_order as order_index
-                            FROM job_locations jl
-                            JOIN appointments a ON jl.appointment_id = a.id
-                            LEFT JOIN job_templates jt ON a.job_template_id = jt.id
-                            WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
-                            ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                            "#
-                        },
-                        crate::db::DbStore::Sqlite(_) => {
-                            r#"
-                            SELECT
-                                jl.id,
-                                CAST(NULL AS TEXT) as customer_id,
-                                COALESCE(jt.name, 'Service Job') as job_title,
-                                '' as address,
-                                CAST(NULL AS REAL) as lat,
-                                CAST(NULL AS REAL) as lng,
-                                COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
-                                CAST(NULL AS TEXT) as scheduled_end,
-                                jl.status,
-                                jl.sequence_order as order_index
-                            FROM job_locations jl
-                            JOIN appointments a ON jl.appointment_id = a.id
-                            LEFT JOIN job_templates jt ON a.job_template_id = jt.id
-                            WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
-                            ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                            "#
+        let mut jobs_by_route: std::collections::HashMap<String, Vec<JobLocation>> = std::collections::HashMap::new();
+
+        if !route_ids.is_empty() {
+            let is_mobile = mobile_optimized;
+            let mut conn = match pool.acquire().await {
+                Ok(conn) => conn,
+                Err(e) => {
+                    tracing::error!("Failed to acquire connection: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "internal error"}))).into_response();
+                }
+            };
+
+            match state.db.store {
+                crate::db::DbStore::Postgres => {
+                    let placeholders = route_ids.iter().enumerate().map(|(i, _)| format!("${}", i + 2)).collect::<Vec<_>>().join(",");
+                    let query_str = if is_mobile {
+                        format!(r#"
+                        SELECT
+                            jl.id,
+                            jl.service_route_id,
+                            NULL::varchar as customer_id,
+                            COALESCE(jt.name, 'Service Job') as job_title,
+                            '' as address,
+                            NULL::double precision as lat,
+                            NULL::double precision as lng,
+                            COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                            NULL::timestamp as scheduled_end,
+                            jl.status,
+                            jl.sequence_order as order_index
+                        FROM job_locations jl
+                        JOIN appointments a ON jl.appointment_id = a.id
+                        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                        WHERE jl.tenant_id = $1 AND jl.service_route_id IN ({})
+                        ORDER BY jl.service_route_id, jl.sequence_order ASC, a.scheduled_start_time ASC
+                        "#, placeholders)
+                    } else {
+                        format!(r#"
+                        SELECT
+                            jl.id,
+                            jl.service_route_id,
+                            a.customer_id,
+                            COALESCE(jt.name, 'Service Job') as job_title,
+                            COALESCE(a.location_address, 'No Address Provided') as address,
+                            a.location_lat as lat,
+                            a.location_lng as lng,
+                            COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                            a.scheduled_end_time as scheduled_end,
+                            jl.status,
+                            jl.sequence_order as order_index
+                        FROM job_locations jl
+                        JOIN appointments a ON jl.appointment_id = a.id
+                        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                        WHERE jl.tenant_id = $1 AND jl.service_route_id IN ({})
+                        ORDER BY jl.service_route_id, jl.sequence_order ASC, a.scheduled_start_time ASC
+                        "#, placeholders)
+                    };
+
+                    let mut q = sqlx::query(&query_str).bind(&tenant_id);
+                    for r_id in &route_ids {
+                        q = q.bind(r_id);
+                    }
+
+                    let jobs_result = q.fetch_all(&mut *conn).await;
+
+                    if let Ok(jobs_rows) = jobs_result {
+                        for j_row in jobs_rows {
+                            let s_id: String = j_row.get("service_route_id");
+                            let job = JobLocation {
+                                id: j_row.get("id"),
+                                customer_id: j_row.try_get("customer_id").unwrap_or(None),
+                                job_title: j_row.get("job_title"),
+                                address: j_row.get("address"),
+                                lat: j_row.try_get("lat").unwrap_or(None),
+                                lng: j_row.try_get("lng").unwrap_or(None),
+                                scheduled_start: j_row.get("scheduled_start"),
+                                scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
+                                status: j_row.get("status"),
+                                order_index: j_row.get("order_index"),
+                            };
+                            jobs_by_route.entry(s_id).or_default().push(job);
                         }
                     }
-                } else {
-                    r#"
-                    SELECT
-                        jl.id,
-                        a.customer_id,
-                        COALESCE(jt.name, 'Service Job') as job_title,
-                        COALESCE(a.location_address, 'No Address Provided') as address,
-                        a.location_lat as lat,
-                        a.location_lng as lng,
-                        COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
-                        a.scheduled_end_time as scheduled_end,
-                        jl.status,
-                        jl.sequence_order as order_index
-                    FROM job_locations jl
-                    JOIN appointments a ON jl.appointment_id = a.id
-                    LEFT JOIN job_templates jt ON a.job_template_id = jt.id
-                    WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
-                    ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                    "#
-                };
+                },
+                crate::db::DbStore::Sqlite(_) => {
+                    let placeholders = route_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                    let query_str = if is_mobile {
+                        format!(r#"
+                        SELECT
+                            jl.id,
+                            jl.service_route_id,
+                            CAST(NULL AS TEXT) as customer_id,
+                            COALESCE(jt.name, 'Service Job') as job_title,
+                            '' as address,
+                            CAST(NULL AS REAL) as lat,
+                            CAST(NULL AS REAL) as lng,
+                            COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                            CAST(NULL AS TEXT) as scheduled_end,
+                            jl.status,
+                            jl.sequence_order as order_index
+                        FROM job_locations jl
+                        JOIN appointments a ON jl.appointment_id = a.id
+                        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                        WHERE jl.tenant_id = ? AND jl.service_route_id IN ({})
+                        ORDER BY jl.service_route_id, jl.sequence_order ASC, a.scheduled_start_time ASC
+                        "#, placeholders)
+                    } else {
+                        format!(r#"
+                        SELECT
+                            jl.id,
+                            jl.service_route_id,
+                            a.customer_id,
+                            COALESCE(jt.name, 'Service Job') as job_title,
+                            COALESCE(a.location_address, 'No Address Provided') as address,
+                            a.location_lat as lat,
+                            a.location_lng as lng,
+                            COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
+                            a.scheduled_end_time as scheduled_end,
+                            jl.status,
+                            jl.sequence_order as order_index
+                        FROM job_locations jl
+                        JOIN appointments a ON jl.appointment_id = a.id
+                        LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                        WHERE jl.tenant_id = ? AND jl.service_route_id IN ({})
+                        ORDER BY jl.service_route_id, jl.sequence_order ASC, a.scheduled_start_time ASC
+                        "#, placeholders)
+                    };
 
-                let jobs_result = sqlx::query(query_str)
-                .bind(&t_id)
-                .bind(&route_id)
-                .fetch_all(&mut *conn)
-                .await;
+                    let mut q = sqlx::query(&query_str).bind(&tenant_id);
+                    for r_id in &route_ids {
+                        q = q.bind(r_id);
+                    }
 
-                let mut jobs = Vec::new();
-                if let Ok(jobs_rows) = jobs_result {
-                    for j_row in jobs_rows {
-                        jobs.push(JobLocation {
-                            id: j_row.get("id"),
-                            customer_id: j_row.try_get("customer_id").unwrap_or(None),
-                            job_title: j_row.get("job_title"),
-                            address: j_row.get("address"),
-                            lat: j_row.try_get("lat").unwrap_or(None),
-                            lng: j_row.try_get("lng").unwrap_or(None),
-                            scheduled_start: j_row.get("scheduled_start"),
-                            scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
-                            status: j_row.get("status"),
-                            order_index: j_row.get("order_index"),
-                        });
+                    let jobs_result = q.fetch_all(&mut *conn).await;
+
+                    if let Ok(jobs_rows) = jobs_result {
+                        for j_row in jobs_rows {
+                            let s_id: String = j_row.get("service_route_id");
+                            let job = JobLocation {
+                                id: j_row.get("id"),
+                                customer_id: j_row.try_get("customer_id").unwrap_or(None),
+                                job_title: j_row.get("job_title"),
+                                address: j_row.get("address"),
+                                lat: j_row.try_get("lat").unwrap_or(None),
+                                lng: j_row.try_get("lng").unwrap_or(None),
+                                scheduled_start: j_row.get("scheduled_start"),
+                                scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
+                                status: j_row.get("status"),
+                                order_index: j_row.get("order_index"),
+                            };
+                            jobs_by_route.entry(s_id).or_default().push(job);
+                        }
                     }
                 }
-                (route_id, jobs)
-            }));
-        }
-
-        let jobs_results = futures::future::join_all(job_futures).await;
-        let mut jobs_by_route: std::collections::HashMap<String, Vec<JobLocation>> = std::collections::HashMap::new();
-        for result in jobs_results {
-            if let Ok((r_id, jobs)) = result {
-                jobs_by_route.insert(r_id, jobs);
             }
         }
 
