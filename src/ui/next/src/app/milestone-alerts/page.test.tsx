@@ -118,4 +118,27 @@ describe('MilestoneAlertsPage', () => {
 
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
+
+  it('shows soft paywall when trying to remove branding without Pro', async () => {
+    await act(async () => {
+      render(<MilestoneAlertsPage />);
+    });
+
+    const milestoneTitle = screen.getByText('First Sale!');
+    const container = milestoneTitle.closest('div.glassmorphism');
+
+    await act(async () => {
+        fireEvent.click(container!);
+    });
+
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    expect(removeBrandingCheckbox).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(removeBrandingCheckbox);
+    });
+
+    expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
+  });
+
 });
