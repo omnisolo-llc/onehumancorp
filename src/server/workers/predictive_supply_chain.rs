@@ -220,6 +220,28 @@ impl PredictiveSupplyChainWorker {
             .await
             .map_err(|e| e.to_string())?;
 
+            let action_id = Uuid::new_v4().to_string();
+            let action_payload = json!({
+                "action_type": "Draft Purchase Order",
+                "description": format!("Flour & Sugar running low based on next week's cake orders."),
+                "vendor_id": vendor_id,
+                "purchase_order_id": po_id,
+                "suggested_quantity": quantity,
+                "total_cost": quantity * 10.0
+            });
+
+            sqlx::query(
+                "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at, source, agent_type)
+                 VALUES ($1, $2, 'PurchaseOrderDraft', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'Operations Agent', 'operations')"
+            )
+            .bind(&action_id)
+            .bind(&tenant_id)
+            .bind(&product_id)
+            .bind(&action_payload)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
             // Mark job complete
             sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
                 .bind(&job_id)

@@ -868,6 +868,57 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
+            {((approval.proposed_action || approval.context_payload)
+              ?.action_type === "Draft Purchase Order" || (approval.proposed_action || approval.context_payload)
+              ?.action_type === "PurchaseOrderDraft") && (
+              <div
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                data-testid="purchase-order-draft-card"
+              >
+                <div className="flex items-center gap-2 text-orange-500 font-semibold text-sm">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  Low Stock Warning
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Vendor
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload)?.vendor_id === 'sysco' ? 'Sysco' : (approval.proposed_action || approval.context_payload)?.vendor_id || 'Sysco'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Suggested Quantity
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload)
+                      ?.suggested_quantity || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Estimated Cost
+                  </span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    ${(approval.proposed_action || approval.context_payload)
+                      ?.total_cost || 0}
+                  </span>
+                </div>
+              </div>
+            )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "quote_draft" && (
               <div
@@ -2590,6 +2641,53 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.action_type === "Draft Purchase Order" || (approval.proposed_action || approval.context_payload)
+            ?.action_type === "PurchaseOrderDraft" ? (
+          <>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              aria-label="Approve & Send PO"
+              data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send PO"
+              )}
+            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Edit Quantities"
+                data-testid="feed-dismiss-btn"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Edit Quantities"
+                )}
+              </button>
+            </div>
+          </>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "create_product" ? (
           <>

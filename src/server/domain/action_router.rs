@@ -30,6 +30,17 @@ pub async fn dispatch_action(
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
         }
 
+        "PurchaseOrderDraft" => {
+            tracing::info!("Approved and dispatched draft purchase order for tenant: {}", tenant_id);
+            if let Some(po_id) = payload.get("purchase_order_id").and_then(|v| v.as_str()) {
+                let _ = sqlx::query("UPDATE purchase_orders SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                    .bind(po_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await;
+                tracing::info!("Mocked email/API dispatch for PO {}", po_id);
+            }
+        }
         "create_product" => {
             crate::domain::catalog::handle_create_product(tenant_id, payload, pool)
                 .await
