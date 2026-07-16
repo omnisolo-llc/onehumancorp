@@ -321,7 +321,7 @@ export default function CostDashboardPage() {
 
         {/* Budget Health Alert */}
         {data && (data.budget_health_alert || (data.department_tier_usage?.departments?.some((d: any) => d.soft_limit_reached))) && (
-            <div id="budget-health-alert" className="p-4 bg-amber-50/70 border border-amber-200 backdrop-blur-[30px] saturate-[210%] saturate-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-start gap-3">
+            <div id="budget-health-alert" className="p-4 bg-amber-50/70 border border-amber-200 backdrop-blur-[20px] saturate-[200%] rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-start gap-3">
                 <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -369,7 +369,7 @@ export default function CostDashboardPage() {
                         <span className="font-medium text-gray-900  flex items-center gap-2">
                             LLM Usage
                             {data?.department_tier_usage?.departments?.some(d => d.action_limit !== null && d.actions_used / d.action_limit >= 0.8) || data?.budget_health_alert ? (
-                                <span id="budget-alert-badge" className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50/70 backdrop-blur-[30px] saturate-[210%] border border-amber-200 text-amber-800">
+                                <span id="budget-alert-badge" className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50/70 backdrop-blur-[20px] saturate-[200%] border border-amber-200 text-amber-800">
                                     <svg className="mr-1 h-3 w-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                     </svg>
