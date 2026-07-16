@@ -553,6 +553,16 @@ impl InventoryService {
             .await
             .unwrap_or(None);
 
+        if update_result.is_none() {
+             update_result = sqlx::query_scalar("UPDATE inventory_levels SET available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1 RETURNING available_count")
+                 .bind(quantity)
+                 .bind(product_id)
+                 .bind(tenant_id)
+                 .fetch_optional(&mut *tx)
+                 .await
+                 .unwrap_or(None);
+        }
+
         if update_result.is_some() {
             let inventory_level_res = sqlx::query("SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
                 .bind(product_id)
@@ -801,6 +811,56 @@ mod tests {
             .unwrap();
 
         assert!(feed_count.0 > 0);
+    }
+
+    #[tokio::test]
+    async fn test_commit_inventory_fallback_offline_pos() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = crate::db::get_pool();
+        let _db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let tenant_id = "test_inventory_tenant_fallback";
+        let product_id = "test_product_fallback";
+
+        let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant Fallback') ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product Fallback', 10, 10) ON CONFLICT DO NOTHING")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count, committed_count) VALUES ($1, $2, $3, 'store', 10, 0) ON CONFLICT DO NOTHING")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(tenant_id)
+            .bind(product_id)
+            .execute(&pool)
+            .await;
+
+        let redis_client_opt = None;
+        let service = Arc::new(InventoryService::new(redis_client_opt));
+
+        // We commit without reserving first, simulating an offline sync where committed_count is 0 but we want to deduct 2
+        let res = service.commit_inventory(tenant_id, product_id, 2, "").await.unwrap();
+        assert!(res.success);
+
+        let stock: (i32,) = sqlx::query_as("SELECT available_count FROM inventory_levels WHERE tenant_id = $1 AND variant_id = $2")
+            .bind(tenant_id)
+            .bind(product_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(stock.0, 8); // Should have deducted from available directly
     }
 
     #[tokio::test]

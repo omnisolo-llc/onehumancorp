@@ -475,6 +475,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_reconcile_crdt_payloads_inventory_levels_fallback() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = crate::db::get_pool();
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let service = MyPosService::new(db.clone());
+        let tenant_id = "tenant-pos-fallback-test";
+        let item_id = "prod-fallback-test";
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Fallback Tenant') ON CONFLICT DO NOTHING")
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ($1, $2, 'Fallback Test Item', 10) ON CONFLICT DO NOTHING"
+        )
+        .bind(&item_id)
+        .bind(&tenant_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let payload = ::server_ohc::orchestration::PosCrdtPayload {
+            r#type: "inventory".to_string(),
+            item_id: item_id.to_string(),
+            quantity_delta: 3,
+            updated_at: 100,
+            transaction_id: "tx_1".to_string(),
+        };
+
+        let result = service.reconcile_crdt_payloads(vec![payload], &tenant_id).await;
+        assert!(result.is_ok());
+
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count.0, 13);
+    }
+
+    #[tokio::test]
     async fn test_reconcile_crdt_payloads() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
