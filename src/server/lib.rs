@@ -1612,6 +1612,7 @@ impl HubService for MyHubService {
         let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
         let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+        let _ = budget_manager.record_spend_cents((total_costs_f64 * 100.0).round() as i64);
         let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
         let response = ::server_ohc::orchestration::CostDashboardResponse {
