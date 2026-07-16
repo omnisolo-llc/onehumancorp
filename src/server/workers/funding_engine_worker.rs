@@ -82,7 +82,7 @@ impl FundingEngineWorker {
                         },
                         crate::db::DbStore::Sqlite(_) => {
                             sqlx::query_scalar("SELECT tier FROM tenants WHERE id = $1")
-                                .bind(&tenant_id_str)
+                                .bind(&tenant_id.to_string())
                                 .fetch_one(&db.pool)
                                 .await
                                 .unwrap_or_else(|_| "Unknown".to_string())
@@ -141,7 +141,7 @@ impl FundingEngineWorker {
                                             crate::db::DbStore::Sqlite(_) => {
                                                 if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                                     .bind(&notif_id.to_string())
-                                                    .bind(&tenant_id_str)
+                                                    .bind(&tenant_id.to_string())
                                                     .bind("Funding Engine Agent")
                                                     .bind(serde_json::json!({"description": "AI Agent Paused: The Funding Engine Agent"}).to_string())
                                                     .bind(serde_json::json!({"proposed_content": "System is paused. LLM API is unavailable."}).to_string())
@@ -186,7 +186,7 @@ impl FundingEngineWorker {
                                     crate::db::DbStore::Sqlite(_) => {
                                         let _ = sqlx::query("INSERT INTO funding_opportunities (id, tenant_id, grant_name, amount, draft_proposal_text, deadline) VALUES ($1, $2, $3, $4, $5, $6)")
                                             .bind(&opp_id.to_string())
-                                            .bind(&tenant_id_str)
+                                            .bind(&tenant_id.to_string())
                                             .bind(grant_name)
                                             .bind(amount)
                                             .bind(draft_proposal_text)
@@ -214,7 +214,7 @@ impl FundingEngineWorker {
                                      crate::db::DbStore::Sqlite(_) => {
                                          let _ = sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                             .bind(&notif_id.to_string())
-                                            .bind(&tenant_id_str)
+                                            .bind(&tenant_id.to_string())
                                             .bind("Finance Dept")
                                             .bind("High")
                                             .bind(format!("✨ Finance Dept: We found a ${} grant you qualify for. Proposal drafted.", amount))

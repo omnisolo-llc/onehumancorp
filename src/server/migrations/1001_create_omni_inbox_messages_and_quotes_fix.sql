@@ -61,16 +61,4 @@ ALTER TABLE quotes ADD COLUMN IF NOT EXISTS customer_id TEXT REFERENCES customer
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS last_follow_up_at TIMESTAMPTZ;
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS follow_up_count INTEGER DEFAULT 0;
 
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='total_amount') THEN
-        ALTER TABLE quotes RENAME COLUMN total_amount TO total_amount_cents;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='required_deposit') THEN
-        ALTER TABLE quotes RENAME COLUMN required_deposit TO required_deposit_cents;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quotes' AND column_name='checkout_url') THEN
-        ALTER TABLE quotes RENAME COLUMN checkout_url TO stripe_payment_link;
-    END IF;
-END
-$$;
+-- Postgres DO block removed for SQLite compatibility

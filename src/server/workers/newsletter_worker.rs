@@ -70,7 +70,7 @@ impl NewsletterWorker {
                             sqlx::query_scalar::<_, String>(
                                 "SELECT STRING_AGG(name, ', ') FROM catalog_items WHERE tenant_id = $1 AND created_at > NOW() - INTERVAL '7 days'"
                             )
-                            .bind(&tenant_id)
+                            .bind(&tenant_id.to_string())
                             .fetch_one(&db.pool)
                             .await
                             .unwrap_or_default()
@@ -79,7 +79,7 @@ impl NewsletterWorker {
                             sqlx::query_scalar::<_, String>(
                                 "SELECT GROUP_CONCAT(name, ', ') FROM catalog_items WHERE tenant_id = $1 AND created_at > datetime('now', '-7 days')"
                             )
-                            .bind(&tenant_id)
+                            .bind(&tenant_id.to_string())
                             .fetch_one(&db.pool)
                             .await
                             .unwrap_or_default()
@@ -140,7 +140,7 @@ impl NewsletterWorker {
                                             crate::db::DbStore::Sqlite(_) => {
                                                 if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                                     .bind(&notif_id.to_string())
-                                                    .bind(&tenant_id_str)
+                                                    .bind(&tenant_id.to_string())
                                                     .bind("Newsletter Agent")
                                                     .bind(serde_json::json!({"description": "AI Agent Paused: The Newsletter Agent"}).to_string())
                                                     .bind(serde_json::json!({"proposed_content": "System is paused. LLM API is unavailable."}).to_string())
@@ -171,7 +171,7 @@ impl NewsletterWorker {
                         crate::db::DbStore::Postgres => {
                              let _ = sqlx::query("INSERT INTO newsletter_drafts (id, tenant_id, subject, body_html, body_markdown, status) VALUES ($1, $2, $3, $4, $5, 'Draft')")
                                 .bind(&draft_id)
-                                .bind(&tenant_id)
+                                .bind(&tenant_id.to_string())
                                 .bind(&subject)
                                 .bind(&body_html)
                                 .bind(&body_markdown)
@@ -181,7 +181,7 @@ impl NewsletterWorker {
                         crate::db::DbStore::Sqlite(_) => {
                              let _ = sqlx::query("INSERT INTO newsletter_drafts (id, tenant_id, subject, body_html, body_markdown, status) VALUES ($1, $2, $3, $4, $5, 'Draft')")
                                 .bind(&draft_id)
-                                .bind(&tenant_id)
+                                .bind(&tenant_id.to_string())
                                 .bind(&subject)
                                 .bind(&body_html)
                                 .bind(&body_markdown)
@@ -196,7 +196,7 @@ impl NewsletterWorker {
                          crate::db::DbStore::Postgres => {
                              let _ = sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&notif_id)
-                                .bind(&tenant_id)
+                                .bind(&tenant_id.to_string())
                                 .bind("System")
                                 .bind("Normal")
                                 .bind("Weekly Newsletter Draft Ready! Review and send.")
@@ -208,7 +208,7 @@ impl NewsletterWorker {
                          crate::db::DbStore::Sqlite(_) => {
                              let _ = sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&notif_id)
-                                .bind(&tenant_id)
+                                .bind(&tenant_id.to_string())
                                 .bind("System")
                                 .bind("Normal")
                                 .bind("Weekly Newsletter Draft Ready! Review and send.")
