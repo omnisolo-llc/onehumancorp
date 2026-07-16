@@ -1833,6 +1833,52 @@ impl RedisMemoryStore {
     }
 }
 
+use ohc_builtin_agent_core::hnsw_memory::AgentDB;
+use tokio::sync::RwLock;
+
+/// A wrapper around `AgentDB` that implements `LongTermMemory` using an `LlmClient`
+/// to generate embeddings for semantic search.
+#[derive(Clone)]
+pub struct HnswMemoryStore {
+    db: std::sync::Arc<RwLock<AgentDB>>,
+    llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+}
+
+impl std::fmt::Debug for HnswMemoryStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HnswMemoryStore").finish()
+    }
+}
+
+impl HnswMemoryStore {
+    pub fn new(llm: std::sync::Arc<dyn crate::llm::LlmClient>) -> Self {
+        Self {
+            db: std::sync::Arc::new(RwLock::new(AgentDB::new())),
+            llm,
+        }
+    }
+}
+
+#[async_trait]
+impl LongTermMemory for HnswMemoryStore {
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
+        let db = self.db.read().await;
+        let results = db.search(&embedding, limit);
+        Ok(results.into_iter().map(|v| v.metadata).collect())
+    }
+
+    async fn store(&self, content: &str, _tags: Vec<String>) -> Result<(), String> {
+        let embedding = self.llm.generate_embedding(content).await.map_err(|e| e.to_string())?;
+        let id = uuid::Uuid::new_v4().to_string();
+
+        let mut db = self.db.write().await;
+        // We store the content directly in the metadata field
+        db.insert(id, embedding, content.to_string());
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
@@ -1873,6 +1919,44 @@ impl LongTermMemory for RedisMemoryStore {
             .map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod hnsw_tests {
+    #[tokio::test]
+    async fn test_hnsw_memory_store() {
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant("Summarized"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![1.0, 0.0, 0.0])
+            }
+        }
+
+        let llm = std::sync::Arc::new(MockLlm);
+        let store = super::HnswMemoryStore::new(llm);
+        crate::memory_store::LongTermMemory::store(&store, "HNSW Memory Store works", vec![]).await.unwrap();
+
+        let results = crate::memory_store::LongTermMemory::retrieve(&store, "works", 10).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0], "HNSW Memory Store works");
     }
 }
 
