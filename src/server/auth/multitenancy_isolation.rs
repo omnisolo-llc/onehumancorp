@@ -180,6 +180,14 @@ async fn test_pool_connection_tenant_leakage_prevention() {
         row2.0.is_none() || row2.0.as_deref() == Some(""),
         "CRITICAL VULNERABILITY: Tenant context leaked across transactions on the same pooled connection!"
     );
+
+    let mut tx3 = pool.begin().await.unwrap();
+    let row_role: (String,) = sqlx::query_as("SELECT current_user").fetch_one(&mut *tx3).await.unwrap();
+    tx3.commit().await.unwrap();
+    assert_ne!(
+        row_role.0, "ohc_bypassrls",
+        "CRITICAL VULNERABILITY: System role leaked across transactions on the same pooled connection!"
+    );
 }
 
 #[tokio::test]

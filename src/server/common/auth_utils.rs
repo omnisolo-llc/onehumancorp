@@ -4,7 +4,7 @@ pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
 {
-    query("SET ROLE ohc_bypassrls").execute(executor).await?;
+    query("SET LOCAL ROLE ohc_bypassrls").execute(executor).await?;
     Ok(())
 }
 
@@ -33,7 +33,7 @@ where
         // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
         // But DO blocks can't be used with extended query protocol either? Actually they can!
         // Another option: "SET ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
-        query("SET ROLE ohc_bypassrls").execute(executor).await?;
+        query("SET LOCAL ROLE ohc_bypassrls").execute(executor).await?;
     } else {
         // We MUST use transaction scope (true) to prevent tenant leakage across queries on the same connection.
         // Pool hooks handle global resets, but transaction-level scope ensures that if a transaction commits/rolls back,
