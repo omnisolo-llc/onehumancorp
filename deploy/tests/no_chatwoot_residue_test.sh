@@ -245,3 +245,13 @@ done
 
 # Workaround for GitHub Actions Node 24 compile cache bug where the runner leaves root-owned files
 sudo rm -rf /tmp/node-compile-cache || true
+
+# Workaround for GitHub Actions Node 24 compile cache bug where the runner leaves root-owned files
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "NODE_DISABLE_COMPILE_CACHE=1" >> "$GITHUB_ENV"
+  echo "ACTIONS_RUNNER_DISABLE_COMPILE_CACHE=1" >> "$GITHUB_ENV"
+fi
+sudo rm -rf /tmp/node-compile-cache || true
+
+# Use docker to clean up the node cache in case it is root-owned from a previous run
+docker run --rm -v /tmp:/mnt alpine rm -rf /mnt/node-compile-cache || true
