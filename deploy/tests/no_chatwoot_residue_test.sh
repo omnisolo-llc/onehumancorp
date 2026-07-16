@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "NODE_DISABLE_COMPILE_CACHE=1" >> "$GITHUB_ENV"
+fi
+
 scanner_error() {
   local reason="$1"
   shift
