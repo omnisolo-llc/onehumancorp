@@ -25,9 +25,9 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
     // Fill in last 7 days with zeros
     for i in 0..7 {
         if let Some(d) = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(i)) {
-            let d_str = d.format("%Y-%m-%d").to_string();
-            trends.insert(d_str.clone(), DailyCost {
-                date: d_str,
+            let date_val = d.date_naive();
+            trends.insert(date_val, DailyCost {
+                date: String::new(), // Will be populated at the end
                 total_cost: 0,
                 llm_cost: 0,
                 storage_cost: 0,
@@ -41,8 +41,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
 
     for row in rows {
         if let Some(date) = row.date {
-            let date_str = date.format("%Y-%m-%d").to_string();
-            if let Some(daily) = trends.get_mut(&date_str) {
+            if let Some(daily) = trends.get_mut(&date) {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
                     "ohc_llm_cost_total_cents" => daily.llm_cost += val,
@@ -62,9 +61,13 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
         }
     }
 
-    let mut sorted: Vec<DailyCost> = trends.into_values().collect();
-    sorted.sort_by(|a, b| a.date.cmp(&b.date));
-    sorted
+    let mut sorted: Vec<(chrono::NaiveDate, DailyCost)> = trends.into_iter().collect();
+    sorted.sort_by(|a, b| a.0.cmp(&b.0));
+
+    sorted.into_iter().map(|(date, mut cost)| {
+        cost.date = date.format("%Y-%m-%d").to_string();
+        cost
+    }).collect()
 }
 
 use std::sync::{Mutex, OnceLock};

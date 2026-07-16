@@ -177,25 +177,36 @@ impl PromptCache {
         let mut optimized_context = std::borrow::Cow::Borrowed(context);
         if context.contains("](") {
             let mut result = String::with_capacity(context.len());
-            let mut chars = context.char_indices().peekable();
-            let mut in_url = false;
+            let mut last_idx = 0;
 
-            while let Some((i, c)) = chars.next() {
-                if !in_url && c == ']' {
-                    result.push(c);
-                    if let Some(&(_, '(')) = chars.peek() {
-                        let rest = &context[i + 2..];
-                        if rest.starts_with("http://") || rest.starts_with("https://") {
-                            in_url = true;
-                            chars.next(); // Skip '('
-                        }
+            let mut idx = 0;
+            while let Some(pos) = context[idx..].find("](") {
+                let current_pos = idx + pos;
+                result.push_str(&context[last_idx..=current_pos]); // include ']'
+
+                let rest = &context[current_pos + 2..];
+                if rest.starts_with("http://") || rest.starts_with("https://") {
+                    if let Some(end_pos) = rest.find(')') {
+                        // Found a matching ')', skip the URL
+                        last_idx = current_pos + 2 + end_pos + 1;
+                        idx = last_idx;
+                    } else {
+                        // Incomplete URL, but let's just strip everything after it if we want to be safe,
+                        // or just skip stripping this one. We'll skip stripping if no ')'.
+                        idx = current_pos + 2;
+                        last_idx = idx;
+                        result.push('(');
                     }
-                } else if in_url && c == ')' {
-                    in_url = false;
-                } else if !in_url {
-                    result.push(c);
+                } else {
+                    idx = current_pos + 2;
+                    last_idx = idx;
+                    result.push('(');
                 }
             }
+            if last_idx < context.len() {
+                result.push_str(&context[last_idx..]);
+            }
+
             if result.len() != context.len() {
                 optimized_context = std::borrow::Cow::Owned(result);
             }
@@ -250,6 +261,7 @@ impl PromptCache {
 
         format!("{}...", slice)
     }
+
 }
 
 #[cfg(test)]
