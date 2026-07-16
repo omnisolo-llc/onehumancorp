@@ -2,7 +2,6 @@
 -- Migration 211: Add missing RLS to tables
 
 -- Enable RLS
-ALTER TABLE IF EXISTS agent_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_session_summaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS auto_reply_policies ENABLE ROW LEVEL SECURITY;
@@ -67,7 +66,6 @@ DECLARE
 BEGIN
     FOR t_name IN
         SELECT unnest(ARRAY[
-            'agent_jobs',
             'agent_session_summaries',
             'appointments',
             'auto_reply_policies',
@@ -172,7 +170,6 @@ DECLARE
 BEGIN
     FOR t_name IN
         SELECT unnest(ARRAY[
-            'agent_jobs',
             'agent_session_summaries',
             'appointments',
             'auto_reply_policies',

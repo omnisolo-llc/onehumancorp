@@ -138,15 +138,6 @@ ALTER TABLE IF EXISTS agent_inbox ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_agent_inbox ON agent_inbox;
 CREATE POLICY tenant_isolation_agent_inbox ON agent_inbox USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/migrations/138_agent_jobs.sql-    tenant_id VARCHAR NOT NULL,
-src/server/migrations/138_agent_jobs.sql-        USING (tenant_id = current_setting('app.current_tenant', true))
-src/server/migrations/138_agent_jobs.sql-        WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
--- Adding RLS for agent_jobs
-ALTER TABLE IF EXISTS agent_jobs ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
-ALTER TABLE IF EXISTS agent_jobs ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_agent_jobs ON agent_jobs;
-CREATE POLICY tenant_isolation_agent_jobs ON agent_jobs USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
-
 src/server/migrations/005_agent_kv_store.sql-    tenant_id VARCHAR(255) NOT NULL,
 src/server/migrations/005_agent_kv_store.sql-    PRIMARY KEY (tenant_id, kv_key)
 src/server/migrations/005_agent_kv_store.sql-CREATE POLICY tenant_isolation_agent_kv_store ON agent_kv_store USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
