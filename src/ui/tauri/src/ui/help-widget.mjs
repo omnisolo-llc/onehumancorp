@@ -71,16 +71,23 @@
                 }, 500); // 500ms long press
             }
         }
-    });
+    }, { passive: true });
 
     document.addEventListener('touchend', (e) => {
         clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
+    }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
         clearTimeout(window.touchTimer);
         hideTooltip();
+    }, { passive: true });
+
+    document.addEventListener('click', (e) => {
+        const isTooltipTrigger = e.target.closest('[data-tooltip], [data-tooltip-id]');
+        const isTooltipItself = e.target.closest('.ohc-tooltip');
+        if (!isTooltipTrigger && !isTooltipItself) {
+            hideTooltip();
+        }
     });
 
     document.addEventListener('touchcancel', (e) => {
@@ -103,7 +110,7 @@
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
+            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
             bubble.classList.add('glassmorphism');
             document.body.appendChild(bubble);
 
@@ -189,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 56px;
             height: 56px;
             border-radius: 28px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             color: #0f172a;
@@ -219,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             border-radius: 20px;
@@ -235,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.5);
@@ -346,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-bottom-right-radius: 4px;
         }
         .ohc-chat-msg.agent {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -374,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-radius: 20px;
             font-size: 14px;
             outline: none;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
         }
@@ -399,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-bottom: 12px;
             cursor: pointer;
             transition: background 0.2s;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -421,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -473,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
@@ -558,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
-                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
+                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
                             `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
                             `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
                             `</div>`;
@@ -581,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
+            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
