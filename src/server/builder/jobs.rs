@@ -123,7 +123,17 @@ async fn execute_publish_site_job(
     // Agentic SEO Pre-rendering: Proactively regenerate cache and push directly to edge
     let cache_key_full = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
     match crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, cache_key_full.clone(), cache.clone()).await {
-        Ok(_) => info!("Agentic SEO Pre-rendering: Successfully pre-rendered and pushed to edge cache: {}", cache_key_full),
+        Ok(_) => {
+            info!("Agentic SEO Pre-rendering: Successfully pre-rendered and pushed to edge cache: {}", cache_key_full);
+            let feed_msg = "Marketing Agent pre-rendered your new catalog for Google.";
+            let _ = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'Marketing', $3::jsonb, $4::jsonb, 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING")
+                .bind(Uuid::new_v4())
+                .bind(tenant_id)
+                .bind(serde_json::json!({ "description": feed_msg }))
+                .bind(serde_json::json!({ "action": "SEO_PreRender" }))
+                .execute(&mut *conn)
+                .await;
+        },
         Err(e) => tracing::error!("Agentic SEO Pre-rendering: Failed to pre-render edge cache for {}: {}", cache_key_full, e),
     }
 

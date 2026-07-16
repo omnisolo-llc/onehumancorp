@@ -103,7 +103,21 @@
             color: #666;
             font-weight: 600;
         }
-    </style>
+
+        /* Toggle Switch Styles */
+        input:checked + span {
+            background-color: #34C759 !important;
+        }
+        input:not(:checked) + span {
+            background-color: #ccc !important;
+        }
+        input:checked + span span {
+            transform: translateX(20px) !important;
+        }
+        input:not(:checked) + span span {
+            transform: translateX(0) !important;
+        }
+</style>
 </head>
 <body>
     <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
@@ -115,6 +129,26 @@
         <div class="iframe-wrapper" id="preview-wrapper">
             <div class="loading" id="loading-state">Loading your catalog...</div>
             <iframe id="storefront-iframe" style="display: none;" title="Live Storefront Preview"></iframe>
+        </div>
+
+        <div style="margin-top: 24px; background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px); border-radius: 12px; padding: 20px; border: 1px solid rgba(0,0,0,0.05); text-align: left;">
+            <h2 style="font-size: 18px; margin-top: 0; color: #1d1d1f; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                SEO & Discoverability
+                <label style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                    <input type="checkbox" id="seo-toggle" checked style="opacity: 0; width: 0; height: 0;">
+                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #34C759; transition: .4s; border-radius: 24px;">
+                        <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; transform: translateX(20px);"></span>
+                    </span>
+                </label>
+            </h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                 <span style="font-size: 14px; font-weight: 500; color: #1d1d1f;">Auto-optimize for Search Engines</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(52, 199, 89, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(52, 199, 89, 0.2);">
+                <div style="width: 8px; height: 8px; background-color: #34C759; border-radius: 50%;"></div>
+                <span id="seo-status" style="font-size: 13px; color: #1d1d1f; font-weight: 500;">Your storefront is globally distributed and lightning fast.</span>
+            </div>
         </div>
 
         <footer style="margin-top: 24px; text-align: center; padding: 16px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); border-radius: 12px; width: 100%; box-sizing: border-box;">
@@ -177,5 +211,29 @@
         });
     </script>
   <script src="help-widget.mjs" type="module"></script>
-  </body>
+
+<script id="seo-toggle-script">
+    document.addEventListener('DOMContentLoaded', () => {
+        const seoToggle = document.getElementById('seo-toggle');
+        const seoStatus = document.getElementById('seo-status');
+
+        if (seoToggle && seoStatus) {
+            const statusIndicator = seoStatus.previousElementSibling;
+            seoToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    seoStatus.innerText = 'Your storefront is globally distributed and lightning fast.';
+                    statusIndicator.style.backgroundColor = '#34C759';
+                    statusIndicator.parentElement.style.backgroundColor = 'rgba(52, 199, 89, 0.1)';
+                    statusIndicator.parentElement.style.borderColor = 'rgba(52, 199, 89, 0.2)';
+                } else {
+                    seoStatus.innerText = 'SEO optimization is currently disabled.';
+                    statusIndicator.style.backgroundColor = '#ccc';
+                    statusIndicator.parentElement.style.backgroundColor = 'rgba(200, 200, 200, 0.1)';
+                    statusIndicator.parentElement.style.borderColor = 'rgba(200, 200, 200, 0.2)';
+                }
+            });
+        }
+    });
+</script>
+</body>
 </html>
