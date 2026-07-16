@@ -2671,6 +2671,44 @@
             `;
           }
 
+          if (actionType === 'supply_order') {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  ${renderAgentBadge(item.source || item.event_source || "Unknown")}
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #FF9500; background: rgba(255, 149, 0, 0.1); padding: 4px 8px; border-radius: 8px;">Low Stock Warning</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 12px; color: #1D1D1F;">${description}</div>
+                <div style="background: rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">Current Stock:</span>
+                        <span data-testid="supply-order-stock" style="font-weight: 600; color: #1D1D1F;">${item.proposed_action?.remaining_stock || item.context_payload?.remaining_stock || 0} units</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">Est. Runout:</span>
+                        <span style="font-weight: 600; color: #1D1D1F;">${item.proposed_action?.est_runout_days || item.context_payload?.est_runout_days || 0} days</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px;">
+                        <span style="color: #6b7280;">Reorder Quantity:</span>
+                        <span data-testid="supply-order-quantity" style="font-weight: 700; color: #0066FF;">${item.proposed_action?.suggested_reorder_quantity || item.context_payload?.suggested_reorder_quantity || 0} Units</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                        <span style="color: #6b7280;">Vendor:</span>
+                        <span style="font-weight: 600; color: #1D1D1F;">${item.proposed_action?.vendor_name || item.context_payload?.vendor_name || "Unknown"} (${item.proposed_action?.vendor_contact || item.context_payload?.vendor_contact || "N/A"})</span>
+                    </div>
+                </div>
+                <div style="background: rgba(0, 0, 0, 0.02); padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05);">
+                  <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Drafted Message:</div>
+                  <div style="font-size: 14px; color: #1D1D1F; font-style: italic;">"${item.proposed_action?.draft_message || item.context_payload?.draft_message || ""}"</div>
+                </div>
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                  <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send PO</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Edit Quantities</button>
+                </div>
+              </div>
+            `;
+          }
+
           if (item.source === 'Proactive Context Agent') {
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden; box-sizing: border-box; width: 100%;">
