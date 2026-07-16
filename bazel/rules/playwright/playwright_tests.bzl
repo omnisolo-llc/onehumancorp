@@ -40,9 +40,6 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         tags.append("exclusive")
     env = {
         "BASE_URL": "http://localhost:18789",
-        "OHC_AGENT_TOKEN": "test_token",
-        "OHC_AGENT_AUTH_KEY": "test_key_must_be_32_bytes_long_here_it_is",
-        "OHC_AGENT_SPIFFE_ID": "spiffe://ohc/agent",
         "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
         "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
         "PLAYWRIGHT_RETRIES": "0",
