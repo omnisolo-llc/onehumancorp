@@ -446,6 +446,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
   MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE_MODE" \
+  OHC_AGENT_TOKEN="dummy_token_for_tests" \
+  OHC_AGENT_AUTH_KEY="dummy_auth_key_for_tests_that_is_long_enough_to_pass_validation_of_32_bytes_or_more" \
   OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
   OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
   OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
