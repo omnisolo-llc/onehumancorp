@@ -112,6 +112,64 @@ impl InventoryLocker for StandaloneInventoryLocker {
     }
 }
 
+
+pub struct PostgresInventoryLocker {
+    pool: sqlx::PgPool,
+}
+
+impl PostgresInventoryLocker {
+    pub fn new(pool: sqlx::PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait::async_trait]
+impl InventoryLocker for PostgresInventoryLocker {
+    async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
+        let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < NOW()")
+            .execute(&self.pool)
+            .await;
+
+        let result = sqlx::query("INSERT INTO distributed_locks (id, lock_val, expires_at) VALUES ($1, $2, NOW() + make_interval(secs => $3))")
+            .bind(lock_key)
+            .bind(lock_id)
+            .bind(ttl)
+            .execute(&self.pool)
+            .await;
+
+        result.is_ok()
+    }
+
+    async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
+        let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2")
+            .bind(lock_key)
+            .bind(expected_lock_id)
+            .execute(&self.pool)
+            .await;
+
+        result.map(|res| res.rows_affected() > 0).unwrap_or(false)
+    }
+
+    async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
+        let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < NOW()")
+            .execute(&self.pool)
+            .await;
+
+        sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= NOW()")
+            .bind(lock_key)
+            .fetch_optional(&self.pool)
+            .await
+            .unwrap_or(None)
+    }
+
+    async fn clear(&self, lock_key: &str) {
+        let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1")
+            .bind(lock_key)
+            .execute(&self.pool)
+            .await;
+    }
+}
+
 pub struct RedisLocker {
     client: redis::Client,
 }
@@ -203,11 +261,7 @@ impl InventoryService {
         let locker: Box<dyn InventoryLocker> = if let Some(ref client) = redis_client {
             Box::new(RedisLocker::new(client.clone()))
         } else {
-            if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
-                Box::new(StandaloneInventoryLocker::with_pool(pool))
-            } else {
-                Box::new(StandaloneInventoryLocker::new())
-            }
+            Box::new(PostgresInventoryLocker::new(crate::db::get_pool()))
         };
         Self { locker, redis_client }
     }
