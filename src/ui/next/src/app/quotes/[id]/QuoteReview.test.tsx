@@ -1,25 +1,34 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import QuoteReviewPage from './page';
-import { useParams, useRouter } from 'next/navigation';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { TooltipProvider } from '../../../components/TooltipRegistry';
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import QuoteReviewPage from "./page";
+import { useParams, useRouter } from "next/navigation";
+import { vi, describe, it, expect, beforeEach } from "vitest";
+import { TooltipProvider } from "../../../components/TooltipRegistry";
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useParams: vi.fn(),
   useRouter: vi.fn(),
-  usePathname: vi.fn(() => '/quotes/123'),
+  usePathname: vi.fn(() => "/quotes/123"),
 }));
 
-describe('QuoteReviewPage', () => {
-  const mockRouter = { back: vi.fn(), push: vi.fn() };
+vi.mock("../../pos/terminal/StripeTerminalClient", () => ({
+  default: ({ amount, onSuccess }: any) => (
+    <div data-testid="mock-terminal">
+      <span>Terminal Active: {amount}</span>
+      <button onClick={onSuccess}>Simulate Payment Success</button>
+    </div>
+  ),
+}));
+
+describe("QuoteReviewPage", () => {
+  const mockRouter = { back: vi.fn(), push: vi.fn(), refresh: vi.fn() };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useParams as any).mockReturnValue({ id: '123' });
+    (useParams as any).mockReturnValue({ id: "123" });
     (useRouter as any).mockReturnValue(mockRouter);
     global.fetch = vi.fn((url) => {
-      if (url === '/api/v1/tooltips') {
+      if (url === "/api/v1/tooltips") {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({}),
@@ -34,36 +43,102 @@ describe('QuoteReviewPage', () => {
     global.alert = vi.fn();
   });
 
-  it('renders quote details and allows approval', async () => {
+  it("renders quote details and allows approval", async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        id: '123',
-        status: 'DRAFT',
+        id: "123",
+        status: "DRAFT",
         total_amount_cents: 10000,
         required_deposit_cents: 3333,
-        line_items: [{ id: 'li1', description: 'Item 1', unit_price_cents: 10000, quantity: 1 }]
+        line_items: [
+          {
+            id: "li1",
+            description: "Item 1",
+            unit_price_cents: 10000,
+            quantity: 1,
+          },
+        ],
       }),
     });
 
     render(
       <TooltipProvider>
         <QuoteReviewPage />
-      </TooltipProvider>
+      </TooltipProvider>,
     );
 
-    await waitFor(() => expect(screen.getByText('Item 1 (x1)')).toBeInTheDocument());
-    expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getByText("Item 1 (x1)")).toBeInTheDocument(),
+    );
+    expect(screen.getAllByText("$100.00").length).toBeGreaterThan(0);
 
-    const approveBtn = screen.getByText('Approve & Send Quote');
+    const approveBtn = screen.getByText("Approve & Send Quote");
 
     (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ status: 'ACCEPTED', stripe_payment_link: 'http://stripe.com' })
+      ok: true,
+      json: async () => ({
+        status: "ACCEPTED",
+        stripe_payment_link: "http://stripe.com",
+      }),
     });
 
     fireEvent.click(approveBtn);
-    await waitFor(() => expect(screen.getByText('ACCEPTED')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("ACCEPTED")).toBeInTheDocument(),
+    );
     expect(global.alert).toHaveBeenCalled();
+  });
+
+  it("allows collecting in-person payment for sent quotes", async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: "123",
+        status: "SENT",
+        total_amount_cents: 10000,
+        required_deposit_cents: 3333,
+        line_items: [
+          {
+            id: "li1",
+            description: "Item 1",
+            unit_price_cents: 10000,
+            quantity: 1,
+          },
+        ],
+      }),
+    });
+
+    render(
+      <TooltipProvider>
+        <QuoteReviewPage />
+      </TooltipProvider>,
+    );
+
+    // Wait for load
+    await waitFor(() =>
+      expect(screen.getByText("Item 1 (x1)")).toBeInTheDocument(),
+    );
+
+    // Click collect in person
+    const collectBtn = screen.getByText("Collect in-person");
+    fireEvent.click(collectBtn);
+
+    // Verify terminal UI is shown
+    await waitFor(() =>
+      expect(screen.getByTestId("mock-terminal")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Terminal Active: 10000")).toBeInTheDocument();
+
+    // Simulate success
+    const successBtn = screen.getByText("Simulate Payment Success");
+    fireEvent.click(successBtn);
+
+    expect(global.alert).toHaveBeenCalledWith("Payment Successful!");
+
+    // Verify it returns to the normal view
+    await waitFor(() =>
+      expect(screen.queryByTestId("mock-terminal")).not.toBeInTheDocument(),
+    );
   });
 });

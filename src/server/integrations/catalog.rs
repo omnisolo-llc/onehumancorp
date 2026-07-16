@@ -1,4 +1,4 @@
-pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
+pub use server_integrations_core::{IntegrationProvider, ProviderMetadata};
 
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
@@ -151,6 +151,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "Restic Local Backup MCP",
             "backup",
             "local://restic".to_string(),
+        ),
+        metadata_provider(
+            "stripe_terminal",
+            "Stripe Terminal",
+            "payment",
+            "https://api.stripe.com/v1/terminal".to_string(),
         ),
     ]
 }
