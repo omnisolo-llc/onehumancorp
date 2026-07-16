@@ -1,0 +1,8 @@
+build --config=local
+test --config=local
+test --test_env=OHC_AGENT_TOKEN
+test --test_env=OHC_AGENT_SPIFFE_ID
+build --action_env=OHC_AGENT_TOKEN=dummy_token
+build --action_env=OHC_AGENT_SPIFFE_ID=spiffe://ohc/org/tenant-offline/agent/x
+build --action_env=OHC_AGENT_AUTH_KEY=0123456789abcdef0123456789abcdef
+test --test_env=OHC_AGENT_AUTH_KEY

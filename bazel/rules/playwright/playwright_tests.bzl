@@ -44,6 +44,9 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
         "PLAYWRIGHT_RETRIES": "0",
         "PLAYWRIGHT_TEST_TIMEOUT": "180000",
+        "OHC_AGENT_TOKEN": "dummy_token",
+        "OHC_AGENT_AUTH_KEY": "0123456789abcdef0123456789abcdef",
+        "OHC_AGENT_SPIFFE_ID": "spiffe://ohc/org/tenant-offline/agent/x",
         "PLAYWRIGHT_VIDEO": "off",
     }
     env.update(extra_env)
