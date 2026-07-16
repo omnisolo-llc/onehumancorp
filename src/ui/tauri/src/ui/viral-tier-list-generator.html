@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Tier List Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0066FF;
+      --border: rgba(0, 0, 0, 0.08);
+      --input-bg: #ffffff;
+
+      /* Tier Colors */
+      --tier-s-bg: #ff3b30;
+      --tier-a-bg: #ff9500;
+      --tier-b-bg: #ffcc00;
+      --tier-c-bg: #34c759;
+      --tier-d-bg: #32ade6;
+      --tier-text: #ffffff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Outfit", sans-serif;
+      margin-top: 0;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .header-nav {
+      margin-bottom: 24px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .split-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input[type="text"], .form-group textarea {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text-main);
+      font-size: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input[type="text"]:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 16px;
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .toggle-label {
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pro-badge {
+      background: #1d1d1f;
+      color: white;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 30px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d1d6;
+      transition: .3s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    input:checked + .slider {
+      background-color: #34c759;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: inherit;
+      margin-top: 24px;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:hover {
+      background-color: #005ce6;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: var(--text-main);
+      border: 1px solid #d1d1d6;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background-color: rgba(0,0,0,0.03);
+    }
+
+    /* Generated Link Area */
+    .result-area {
+      display: none;
+      margin-top: 24px;
+      padding: 16px;
+      background: rgba(0, 102, 255, 0.05);
+      border: 1px solid rgba(0, 102, 255, 0.1);
+      border-radius: 12px;
+    }
+
+    .result-area.active {
+      display: block;
+    }
+
+    .result-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .generated-input-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .generated-input-container input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .copy-btn {
+      width: auto;
+      margin: 0;
+      padding: 0 16px;
+      font-size: 14px;
+      border-radius: 8px;
+    }
+
+    /* Preview Panel */
+    .preview-header {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .preview-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .tier-list-preview {
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-content-area {
+      padding: 24px;
+    }
+
+    .preview-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .preview-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    .tiers-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tier-row {
+      display: flex;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.05);
+      background: #fafafa;
+    }
+
+    .tier-label {
+      width: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--tier-text);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .tier-label.s { background-color: var(--tier-s-bg); }
+    .tier-label.a { background-color: var(--tier-a-bg); }
+    .tier-label.b { background-color: var(--tier-b-bg); }
+    .tier-label.c { background-color: var(--tier-c-bg); }
+    .tier-label.d { background-color: var(--tier-d-bg); }
+
+    .tier-items {
+      flex: 1;
+      padding: 12px;
+      min-height: 48px;
+    }
+
+    .preview-branding {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-top: 1px solid rgba(0,0,0,0.05);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-decoration: none;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 40px;
+      border-radius: 24px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .modal-desc {
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --card-bg: rgba(30, 30, 30, 0.65);
+        --text-main: #f5f5f7;
+        --border: rgba(255, 255, 255, 0.1);
+        --input-bg: rgba(0, 0, 0, 0.5);
+      }
+      .tier-row { background: #1c1c1e; }
+      .modal-content { background: #1c1c1e; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-nav">
+      <a href="dashboard.html" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Dashboard
+      </a>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 40px;">
+      <h1 style="font-size: 36px; margin-bottom: 8px;">Viral Tier List Generator</h1>
+      <p style="color: var(--text-secondary); font-size: 16px;">Create an interactive tier list. When users rank items and share, you get leads.</p>
+    </div>
+
+    <div class="split-layout">
+      <!-- Config Panel -->
+      <div class="card">
+        <h2 style="font-size: 20px; margin-bottom: 24px;">Tier List Details</h2>
+
+        <div class="form-group">
+          <label for="title">List Title</label>
+          <input type="text" id="title" placeholder="e.g., Best Coffees of 2024" value="Best E2E Test Tools">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <input type="text" id="description" placeholder="e.g., A definitive ranking of my favorites." value="A definitive ranking of my favorites.">
+        </div>
+
+        <div class="toggle-container">
+          <div class="toggle-label">
+            Remove "Powered by OHC" Badge
+            <span class="pro-badge" id="pro-badge">PRO</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="branding-toggle" data-testid="branding-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <button id="generate-btn">Generate Share Link</button>
+
+        <div class="result-area" id="result-area">
+          <div class="result-label">Your Viral Link:</div>
+          <div class="generated-input-container">
+            <input type="text" id="generated-link" readonly data-testid="generated-link">
+            <button class="copy-btn" id="copy-link-btn">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Panel -->
+      <div class="card preview-container">
+        <div class="preview-header">Live Preview</div>
+
+        <div class="tier-list-preview">
+          <div class="preview-content-area">
+            <div class="preview-title" id="preview-title">Best E2E Test Tools</div>
+            <div class="preview-desc" id="preview-desc">A definitive ranking of my favorites.</div>
+
+            <div class="tiers-wrapper">
+              <div class="tier-row">
+                <div class="tier-label s">S</div>
+                <div class="tier-items"></div>
+              </div>
+              <div class="tier-row">
+                <div class="tier-label a">A</div>
+                <div class="tier-items"></div>
+              </div>
+              <div class="tier-row">
+                <div class="tier-label b">B</div>
+                <div class="tier-items"></div>
+              </div>
+            </div>
+          </div>
+
+          <a href="#" class="preview-branding" id="preview-branding">⚡ Powered by OHC</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Soft Paywall Modal -->
+  <div class="modal" id="paywall-modal">
+    <div class="modal-content">
+      <div class="modal-icon">✨</div>
+      <h2 class="modal-title">Upgrade to Pro</h2>
+      <p class="modal-desc">Make the Viral Tier List 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+
+      <button id="upgrade-btn">Upgrade to Pro ($79/mo)</button>
+      <button class="btn-secondary" id="keep-branding-btn">Keep Branding</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Elements
+      const titleInput = document.getElementById('title');
+      const descInput = document.getElementById('description');
+      const brandingToggle = document.getElementById('branding-toggle');
+      const proBadge = document.getElementById('pro-badge');
+
+      const previewTitle = document.getElementById('preview-title');
+      const previewDesc = document.getElementById('preview-desc');
+      const previewBranding = document.getElementById('preview-branding');
+
+      const generateBtn = document.getElementById('generate-btn');
+      const resultArea = document.getElementById('result-area');
+      const generatedLink = document.getElementById('generated-link');
+      const copyLinkBtn = document.getElementById('copy-link-btn');
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const keepBrandingBtn = document.getElementById('keep-branding-btn');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+
+      // State
+      let state = {
+        tenant: 'demo-store',
+        hasPro: false,
+        removeBranding: false
+      };
+
+      // Initialize
+      try {
+        state.tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        state.hasPro = localStorage.getItem('has_pro') === 'true';
+      } catch (e) {
+        console.warn('LocalStorage not available');
+      }
+
+      if (state.hasPro) {
+        proBadge.style.display = 'none';
+      }
+
+      // Handlers
+      const updatePreview = () => {
+        previewTitle.textContent = titleInput.value || 'List Title';
+        previewDesc.textContent = descInput.value || 'List Description';
+        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+      };
+
+      const handleBrandingToggle = (e) => {
+        if (!state.hasPro && e.target.checked) {
+          e.preventDefault();
+          e.target.checked = false;
+          paywallModal.classList.add('active');
+          return;
+        }
+        state.removeBranding = e.target.checked;
+        updatePreview();
+      };
+
+      const handleGenerateLink = () => {
+        const origin = window.location.origin.includes('localhost') ? 'https://ohc.app' : window.location.origin;
+        const title = encodeURIComponent(titleInput.value);
+        const desc = encodeURIComponent(descInput.value);
+        const branding = !state.removeBranding;
+
+        const url = `${origin}/tier-list?tenant=${state.tenant}&title=${title}&desc=${desc}&branding=${branding}`;
+        generatedLink.value = url;
+        resultArea.classList.add('active');
+      };
+
+      // Events
+      titleInput.addEventListener('input', updatePreview);
+      descInput.addEventListener('input', updatePreview);
+      brandingToggle.addEventListener('change', handleBrandingToggle);
+
+      generateBtn.addEventListener('click', handleGenerateLink);
+
+      copyLinkBtn.addEventListener('click', () => {
+        generatedLink.select();
+        navigator.clipboard.writeText(generatedLink.value);
+        copyLinkBtn.textContent = 'Copied!';
+        setTimeout(() => { copyLinkBtn.textContent = 'Copy'; }, 2000);
+      });
+
+      keepBrandingBtn.addEventListener('click', () => {
+        paywallModal.classList.remove('active');
+      });
+
+      upgradeBtn.addEventListener('click', () => {
+        window.location.href = '/pricing.html';
+      });
+
+      // Initial Update
+      updatePreview();
+    });
+  </script>
+</body>
+</html>

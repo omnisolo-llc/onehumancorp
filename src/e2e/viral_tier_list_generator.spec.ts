@@ -19,7 +19,7 @@ test.describe('Viral Tier List Generator Loop', () => {
     await tierListButton.click();
 
     // 1. Merchant navigates to tier list generator page
-    await page.waitForURL('**/viral-tier-list-generator');
+    await page.waitForURL('**/viral-tier-list-generator.html');
 
     // Check baseline: the page should be loaded
     const titleHeader = page.locator('h1', { hasText: 'Viral Tier List Generator' });
@@ -30,12 +30,13 @@ test.describe('Viral Tier List Generator Loop', () => {
     await page.fill('input#description', 'A definitive ranking of my favorites.');
 
     // Check preview updates
-    await expect(page.locator('h1', { hasText: 'Best E2E Test Tools' }).nth(1)).toBeVisible();
-    await expect(page.locator('p', { hasText: 'A definitive ranking of my favorites.' })).toBeVisible();
+    await expect(page.locator('#preview-title')).toHaveText('Best E2E Test Tools');
+    await expect(page.locator('#preview-desc')).toHaveText('A definitive ranking of my favorites.');
 
     // 2. Merchant tries to remove branding without Pro
-    const removeBrandingCheckbox = page.locator('data-testid=branding-toggle');
-    await removeBrandingCheckbox.click();
+    const removeBrandingCheckbox = page.locator('#branding-toggle');
+    // Using evaluate or label click since the checkbox is visually hidden
+    await page.locator('.toggle-switch').click();
 
     // 3. Soft paywall appears
     const upgradeHeader = page.locator('h2', { hasText: 'Upgrade to Pro' });
@@ -53,7 +54,7 @@ test.describe('Viral Tier List Generator Loop', () => {
     await generateBtn.click();
 
     // 7. Verify URL
-    const generatedLinkInput = page.locator('data-testid=generated-link');
+    const generatedLinkInput = page.locator('#generated-link');
     await expect(generatedLinkInput).toBeVisible();
 
     const url = await generatedLinkInput.inputValue();
