@@ -217,6 +217,10 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('never reports a rejected publication as live', async () => {
+    // Supress console.error in this specific test to avoid noise in the test logs
+    const originalConsoleError = console.error;
+    console.error = vi.fn();
+
     vi.useRealTimers();
     useWebsiteBuilderStore.setState({
       wizardStep: 9,
@@ -242,6 +246,8 @@ describe('WebsiteBuilderPage', () => {
       expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
       expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
     });
+
+    console.error = originalConsoleError;
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
