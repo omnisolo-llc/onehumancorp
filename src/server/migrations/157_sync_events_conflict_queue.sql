@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS sync_conflict_queue (
 
 ALTER TABLE sync_conflict_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_sync_conflict_queue ON sync_conflict_queue
-    USING (tenant_id = current_setting('app.current_tenant', TRUE));
+    USING (tenant_id = current_setting('app.current_tenant', TRUE))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS test_sync_entities (
     id TEXT PRIMARY KEY,
@@ -23,4 +24,5 @@ CREATE TABLE IF NOT EXISTS test_sync_entities (
 
 ALTER TABLE test_sync_entities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_test_sync_entities ON test_sync_entities
-    USING (tenant_id = current_setting('app.current_tenant', TRUE));
+    USING (tenant_id = current_setting('app.current_tenant', TRUE))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);

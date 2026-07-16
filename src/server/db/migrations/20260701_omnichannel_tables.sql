@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS customer_profile (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE customer_profile ENABLE ROW LEVEL SECURITY;
-CREATE POLICY customer_profile_tenant_isolation_policy ON customer_profile FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY customer_profile_tenant_isolation_policy ON customer_profile FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS work_item (
     id UUID PRIMARY KEY,
@@ -19,7 +20,8 @@ CREATE TABLE IF NOT EXISTS work_item (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE work_item ENABLE ROW LEVEL SECURITY;
-CREATE POLICY work_item_tenant_isolation_policy ON work_item FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY work_item_tenant_isolation_policy ON work_item FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS agent_draft (
     id UUID PRIMARY KEY,
@@ -34,4 +36,5 @@ CREATE POLICY agent_draft_tenant_isolation_policy ON agent_draft FOR ALL USING (
     EXISTS (
         SELECT 1 FROM work_item WHERE work_item.id = agent_draft.work_item_id AND work_item.tenant_id = current_setting('app.current_tenant_id', true)::uuid
     )
-);
+)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);

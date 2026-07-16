@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS proposed_bookings (
 
 ALTER TABLE proposed_bookings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY proposed_bookings_tenant_isolation ON proposed_bookings
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS work_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS work_tasks (
 
 ALTER TABLE work_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY work_tasks_tenant_isolation ON work_tasks
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 -- +goose Down
 DROP TABLE IF EXISTS work_tasks;

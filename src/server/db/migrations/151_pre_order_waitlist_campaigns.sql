@@ -27,7 +27,8 @@ CREATE POLICY "Tenant isolation for waitlist_campaigns insert"
 
 CREATE POLICY "Tenant isolation for waitlist_campaigns update"
     ON waitlist_campaigns FOR UPDATE
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE POLICY "Tenant isolation for waitlist_campaigns delete"
     ON waitlist_campaigns FOR DELETE
@@ -58,7 +59,8 @@ CREATE POLICY "Tenant isolation for pre_order_entries insert"
 
 CREATE POLICY "Tenant isolation for pre_order_entries update"
     ON pre_order_entries FOR UPDATE
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE POLICY "Tenant isolation for pre_order_entries delete"
     ON pre_order_entries FOR DELETE

@@ -12,4 +12,5 @@ CREATE TABLE IF NOT EXISTS agent_session_summaries (
 );
 
 ALTER TABLE agent_session_summaries ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_policy ON agent_session_summaries USING (tenant_id = current_setting('app.current_tenant'));
+CREATE POLICY tenant_isolation_policy ON agent_session_summaries USING (tenant_id = current_setting('app.current_tenant'))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);

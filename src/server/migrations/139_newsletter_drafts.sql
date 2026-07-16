@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS newsletter_drafts (
 ALTER TABLE newsletter_drafts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_policy ON newsletter_drafts
-    USING (tenant_id = current_setting('app.current_tenant')::UUID);
+    USING (tenant_id = current_setting('app.current_tenant')::UUID)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE INDEX IF NOT EXISTS idx_newsletter_drafts_tenant_id ON newsletter_drafts(tenant_id);

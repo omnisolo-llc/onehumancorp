@@ -9,4 +9,5 @@ CREATE TABLE IF NOT EXISTS operation_intents (
 );
 ALTER TABLE operation_intents ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_operation_intents ON operation_intents
-    USING (tenant_id = current_setting('app.current_tenant', true));
+    USING (tenant_id = current_setting('app.current_tenant', true))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);

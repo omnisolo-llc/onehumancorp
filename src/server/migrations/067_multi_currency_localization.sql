@@ -48,4 +48,5 @@ ALTER TABLE ohc_fx_rates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_ohc_fx_rates ON ohc_fx_rates;
 CREATE POLICY tenant_isolation_ohc_fx_rates
 ON ohc_fx_rates
-USING (true);
+USING (true)
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);

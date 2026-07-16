@@ -2,7 +2,8 @@
 -- Enable missing Row Level Security for tables
 -- Following the existing pattern: ALTER TABLE %I ENABLE ROW LEVEL SECURITY; and CREATE POLICY ...
 
-ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 ALTER TABLE IF EXISTS ai_memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bom_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer_timeline ENABLE ROW LEVEL SECURITY;

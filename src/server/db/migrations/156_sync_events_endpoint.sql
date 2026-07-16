@@ -38,10 +38,13 @@ ALTER TABLE sync_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conflict_queue ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_entity_versions ON entity_versions
-    USING (tenant_id = current_setting('app.current_tenant', TRUE));
+    USING (tenant_id = current_setting('app.current_tenant', TRUE))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE POLICY tenant_isolation_sync_events ON sync_events
-    USING (tenant_id = current_setting('app.current_tenant', TRUE));
+    USING (tenant_id = current_setting('app.current_tenant', TRUE))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE POLICY tenant_isolation_conflict_queue ON conflict_queue
-    USING (tenant_id = current_setting('app.current_tenant', TRUE));
+    USING (tenant_id = current_setting('app.current_tenant', TRUE))
+WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
