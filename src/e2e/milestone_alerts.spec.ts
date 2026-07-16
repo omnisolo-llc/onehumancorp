@@ -26,6 +26,7 @@ test.describe('Milestone Alerts', () => {
     });
 
     test('displays soft paywall when attempting to remove branding without pro', async ({ page, loginAs, adminUser }) => {
+        test.setTimeout(30000);
         // Authenticate using regular flow
         await loginAs(page, adminUser);
 
