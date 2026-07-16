@@ -1356,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;

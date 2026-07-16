@@ -911,7 +911,8 @@
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
         <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
         <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
-        <div style="margin-top: 15px;"><a href="/api/ui/changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
+        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
+        <div style="margin-top: 15px;"><a href="api-docs.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">API Documentation</a></div>
       </div>
 
 
@@ -3287,7 +3288,7 @@ function initWalkthrough() {
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
+            const step = steps[currentStep];
 
             // Clean up previous highlights
             document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
@@ -3635,7 +3636,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   </label>
                 </div>
                 <div id="advanced-help-links" style="display: none;">
-                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
+                    <a href="api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
                     <a href="aider.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">Aider RepoMap</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
@@ -3735,7 +3736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -3884,7 +3885,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(bubble);
 
             function renderStep() {
-                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
+                const step = steps[currentStep];
 
                 document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
                     el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
