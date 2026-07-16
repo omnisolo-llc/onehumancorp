@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viral Co-Marketing Generator | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #F5F5F7;
+      --panel-bg: rgba(255, 255, 255, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.4);
+      --text-main: #1D1D1F;
+      --text-muted: #86868b;
+      --accent: #0066FF;
+      --accent-hover: #0052cc;
+      --success: #34C759;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    /* Header */
+    header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-bottom: 1px solid var(--panel-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    header h1 { margin: 0; font-size: 24px; letter-spacing: -0.02em; }
+    .btn-secondary {
+      padding: 8px 16px;
+      background: #e5e5ea;
+      color: var(--text-main);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 24px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 0.9);
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--text-main);
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    #output-section { display: none; }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+    }
+
+    .copy-btn {
+      width: 100%;
+      padding: 10px;
+      background: #e5e5ea;
+      color: var(--text-main);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 24px;
+    }
+
+    #preview-container {
+      margin-top: 16px;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      background: white;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="font-outfit">OHC Growth</h1>
+    <a href="dashboard.html" class="btn-secondary" id="back-btn">Dashboard</a>
+  </header>
+
+  <main>
+    <div class="glass-panel">
+      <h2>Co-Marketing Offer Generator</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">
+        Partner with another local business to share customers. Generate a high-converting landing page and promotional email to send to their list.
+      </p>
+
+      <form id="generator-form">
+        <div class="form-group">
+          <label for="partner-name">Partner Business Name</label>
+          <input type="text" id="partner-name" placeholder="e.g. Joe's Coffee Shop" required>
+        </div>
+        <div class="form-group">
+          <label for="joint-offer">The Joint Offer</label>
+          <textarea id="joint-offer" placeholder="e.g. Get a free coffee at Joe's when you buy a custom cake from us." required></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" id="generate-btn">Generate Co-Marketing Assets</button>
+      </form>
+    </div>
+
+    <div class="glass-panel" id="output-section">
+      <h2 style="color: var(--success);">Assets Generated! 🎉</h2>
+
+      <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px;">Partner Email Copy</label>
+      <div class="code-block" id="email-output"></div>
+      <button class="copy-btn" id="copy-email-btn">Copy Email</button>
+
+      <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px;">Landing Page Snippet (HTML)</label>
+      <div class="code-block" id="html-output"></div>
+      <button class="copy-btn" id="copy-html-btn">Copy HTML</button>
+
+      <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px;">Landing Page Preview</label>
+      <div id="preview-container"></div>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('generator-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('generate-btn');
+      const partnerName = document.getElementById('partner-name').value;
+      const jointOffer = document.getElementById('joint-offer').value;
+
+      btn.textContent = 'Generating...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/v1/growth/co-marketing/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            partner_name: partnerName,
+            joint_offer: jointOffer
+          })
+        });
+
+        if (!res.ok) throw new Error('Generation failed');
+        const data = await res.json();
+
+        document.getElementById('email-output').textContent = data.email_copy;
+        document.getElementById('html-output').textContent = data.landing_page_html;
+
+        // Show preview securely
+        const previewContainer = document.getElementById('preview-container');
+        previewContainer.innerHTML = '';
+
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.border = 'none';
+        iframe.style.minHeight = '300px';
+        previewContainer.appendChild(iframe);
+
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>body { font-family: sans-serif; margin: 0; }</style>
+          </head>
+          <body>
+            ${data.landing_page_html}
+          </body>
+          </html>
+        `);
+        doc.close();
+
+        document.getElementById('output-section').style.display = 'block';
+        document.getElementById('output-section').scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
+        console.error(err);
+        alert('Failed to generate assets. Please try again.');
+      } finally {
+        btn.textContent = 'Generate Co-Marketing Assets';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-email-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(document.getElementById('email-output').textContent);
+      const btn = document.getElementById('copy-email-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Email', 2000);
+    });
+
+    document.getElementById('copy-html-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(document.getElementById('html-output').textContent);
+      const btn = document.getElementById('copy-html-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy HTML', 2000);
+    });
+  </script>
+</body>
+</html>
