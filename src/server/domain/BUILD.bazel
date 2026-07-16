@@ -31,6 +31,11 @@ rust_library(
     name = "server_domain",
     srcs = [
         "bazel_lib.rs",
+        "//src/server/domain/eventbridge:mod.rs",
+        "//src/server/domain/eventbridge:schema.rs",
+        "//src/server/domain/eventbridge:queue.rs",
+        "//src/server/domain/eventbridge:ingress.rs",
+        "//src/server/domain/eventbridge:dispatcher.rs",
         "action_router.rs",
         "catalog.rs",
         "agent_approvals.rs",

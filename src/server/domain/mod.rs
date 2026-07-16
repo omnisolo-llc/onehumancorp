@@ -23,3 +23,4 @@ pub mod money;
 pub use money::Money;
 
 pub mod catalog;
+pub mod eventbridge;
