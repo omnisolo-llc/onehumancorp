@@ -16,6 +16,7 @@ export default defineConfig({
       '**/.next/**',
       '**/coverage/**',
       '**/bazel-*/**',
+      '**/scripts/api-route-imports.test.mjs',
       // '**/api/**',
     ],
     coverage: {

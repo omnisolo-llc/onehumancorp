@@ -10,6 +10,10 @@ import {
 
 let liveDependencies: Promise<MiddlewareDependencies> | undefined;
 
+export function _resetLiveDependencies(): void {
+  liveDependencies = undefined;
+}
+
 async function dependenciesFromEnvironment(): Promise<MiddlewareDependencies> {
   const config = parseAuthRuntimeConfig(process.env);
   const ring = await parseSessionKeyRing(process.env);

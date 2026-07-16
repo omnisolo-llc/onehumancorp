@@ -16,9 +16,11 @@ function request(path: string, cookie?: string): NextRequest {
 }
 
 describe("Next authentication middleware adapter", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetModules();
     for (const name of AUTH_ENVIRONMENT) vi.stubEnv(name, undefined);
+    const { _resetLiveDependencies } = await import("./middleware");
+    _resetLiveDependencies();
   });
 
   afterEach(() => {
