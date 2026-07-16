@@ -2843,10 +2843,10 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 let pool2 = sqlite_pool.clone();
                 let (shared_res, swarm_res) = tokio::join!(
                     tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool1).await
+                        sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND (auto_dreamed = 0 OR auto_dreamed = FALSE) LIMIT 25").fetch_all(&pool1).await
                     }),
                     tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool2).await
+                        sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND (auto_dreamed = 0 OR auto_dreamed = FALSE) LIMIT 25").fetch_all(&pool2).await
                     })
                 );
 

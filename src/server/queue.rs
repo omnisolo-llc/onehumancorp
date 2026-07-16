@@ -1011,13 +1011,17 @@ impl SqliteTaskQueue {
 
     pub async fn init(&self) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS local_queue_jobs (
+            "CREATE TABLE IF NOT EXISTS sub_agent_queue (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
-                task_id TEXT NOT NULL,
-                role TEXT NOT NULL,
-                payload BLOB,
-                status TEXT DEFAULT 'QUEUED'
+                parent_task_id TEXT,
+                payload TEXT,
+                status TEXT,
+                worker_id TEXT,
+                scheduled_at DATETIME,
+                completed_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );"
         ).execute(&self.pool).await?;
         Ok(())
@@ -1028,27 +1032,55 @@ impl SqliteTaskQueue {
 impl TaskQueue for SqliteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        let mut builder = sqlx::QueryBuilder::new("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) ");
-        builder.push_values(jobs.into_iter(), |mut b, job| {
-            b.push_bind(job.id)
-             .push_bind(job.tenant_id)
-             .push_bind(job.parent_task_id)
-             .push_bind(job.job_type)
-             .push_bind(job.payload.into_bytes());
+        let mut prepared_jobs = Vec::new();
+        for job in jobs {
+            let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+            payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
+            payload_map["attempts"] = serde_json::json!(job.retry_count);
+            payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+
+            let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+            let org_id = if job.tenant_id.is_empty() {
+                payload_map["tenant_id"].as_str().unwrap_or("").to_string()
+            } else {
+                job.tenant_id.clone()
+            };
+            prepared_jobs.push((job.id, org_id, job.parent_task_id, new_payload, job.next_retry_at));
+        }
+
+        let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) ");
+        builder.push_values(prepared_jobs.into_iter(), |mut b, (id, tenant_id, parent_task_id, payload, scheduled_at)| {
+            b.push_bind(id)
+             .push_bind(tenant_id)
+             .push_bind(parent_task_id)
+             .push_bind(payload)
+             .push_bind("QUEUED")
+             .push_bind(scheduled_at);
         });
         builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        // Here job.payload is a String but in the SQLite table it's BLOB, 
-        // we can store it as text since SQLite handles it loosely or cast it.
-        sqlx::query("INSERT INTO local_queue_jobs (id, tenant_id, task_id, role, payload) VALUES (?, ?, ?, ?, ?)")
+        let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+        payload_map["agent_role"] = serde_json::Value::String(job.job_type.clone());
+        payload_map["attempts"] = serde_json::json!(job.retry_count);
+        payload_map["max_attempts"] = serde_json::json!(job.max_retries);
+
+        let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
+        let org_id = if job.tenant_id.is_empty() {
+            payload_map["tenant_id"].as_str().unwrap_or("").to_string()
+        } else {
+            job.tenant_id.clone()
+        };
+
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES (?, ?, ?, ?, ?, ?)")
             .bind(job.id)
-            .bind(job.tenant_id)
+            .bind(org_id)
             .bind(job.parent_task_id)
-            .bind(job.job_type)
-            .bind(job.payload.as_bytes())
+            .bind(new_payload)
+            .bind("QUEUED")
+            .bind(job.next_retry_at)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -1062,7 +1094,7 @@ impl TaskQueue for SqliteTaskQueue {
         // To avoid SQLITE_BUSY lock-upgrade errors when claiming tasks in SQLite, execute an atomic UPDATE ... RETURNING query
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query_str = format!(
-            "UPDATE local_queue_jobs SET status = 'RUNNING' WHERE id = (SELECT id FROM local_queue_jobs WHERE status = 'QUEUED' AND role IN ({}) LIMIT 1) RETURNING id, tenant_id, task_id, role, payload, status",
+            "UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) AND json_extract(payload, '$.agent_role') IN ({}) ORDER BY scheduled_at ASC LIMIT 1) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at",
             role_placeholders
         );
 
@@ -1077,19 +1109,24 @@ impl TaskQueue for SqliteTaskQueue {
             use sqlx::Row;
             let id: String = row.get("id");
             let tenant_id: String = row.get("tenant_id");
-            let task_id: String = row.get("task_id");
-            let role: String = row.get("role");
-            let payload: Vec<u8> = row.get("payload");
-            
+            let parent_task_id: String = row.try_get("parent_task_id").unwrap_or_default();
+            let payload: String = row.get("payload");
+            let status: String = row.get("status");
+
+            let payload_map: serde_json::Value = serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+            let role = payload_map["agent_role"].as_str().unwrap_or("").to_string();
+            let retry_count = payload_map["attempts"].as_i64().unwrap_or(0) as i32;
+            let max_retries = payload_map["max_attempts"].as_i64().unwrap_or(3) as i32;
+
             Ok(Some(Job {
                 id,
                 tenant_id,
-                parent_task_id: task_id,
+                parent_task_id,
                 job_type: role,
-                payload: String::from_utf8(payload).unwrap_or_default(),
-                status: "RUNNING".to_string(),
-                retry_count: 1,
-                max_retries: 3,
+                payload,
+                status,
+                retry_count,
+                max_retries,
                 next_retry_at: Utc::now(),
                 locked_until: None,
                 created_at: Utc::now(),
@@ -1101,7 +1138,7 @@ impl TaskQueue for SqliteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str, tenant_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'COMPLETED' WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
             .bind(job_id)
             .bind(tenant_id)
             .execute(&self.pool)
@@ -1110,8 +1147,10 @@ impl TaskQueue for SqliteTaskQueue {
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, tenant_id: &str, _reason: &str) -> Result<(), String> {
-        sqlx::query("UPDATE local_queue_jobs SET status = 'FAILED' WHERE id = ? AND tenant_id = ?")
+    async fn fail(&self, job_id: &str, tenant_id: &str, reason: &str) -> Result<(), String> {
+        let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
+        sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', payload = json_patch(COALESCE(payload, '{}'), ?) WHERE id = ? AND tenant_id = ?")
+            .bind(payload_update)
             .bind(job_id)
             .bind(tenant_id)
             .execute(&self.pool)
@@ -1126,8 +1165,9 @@ impl TaskQueue for SqliteTaskQueue {
         payload_map["max_attempts"] = serde_json::json!(job.max_retries);
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
 
-        sqlx::query("UPDATE local_queue_jobs SET status = 'QUEUED', payload = ? WHERE id = ? AND tenant_id = ?")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = ?, scheduled_at = ? WHERE id = ? AND tenant_id = ?")
             .bind(new_payload)
+            .bind(job.next_retry_at)
             .bind(&job.id)
             .bind(&job.tenant_id)
             .execute(&self.pool)
