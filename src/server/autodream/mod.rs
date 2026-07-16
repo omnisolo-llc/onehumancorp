@@ -193,9 +193,30 @@ impl AutoDreamWorker {
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let tracer = global::tracer("ohc.autodream");
-        let _span = tracer.start("autodream_consolidate_epoch");
-        debug!("AutoDream: consolidating epoch...");
+        let start = std::time::Instant::now();
+        let mut error_count = 0;
+
+        if let Err(e) = Self::process_fs_memories(&self.db, &self.embedded_counter, &self.cache).await {
+            error_count += 1;
+            tracing::error!("process_fs_memories error: {}", e);
+        }
+        if let Err(e) = Self::process_db_memories(&self.db, &self.embedded_counter, &self.cache).await {
+            error_count += 1;
+            tracing::error!("process_db_memories error: {}", e);
+        }
+        if let Err(e) = Self::consolidate_agent_task_memories(&self.db, &self.embedded_counter, &self.cache).await {
+            error_count += 1;
+            tracing::error!("consolidate_agent_task_memories error: {}", e);
+        }
+
+        let mode = if crate::is_standalone_runtime() { "standalone" } else { "cloud" };
+        if error_count > 0 {
+            for _ in 0..error_count {
+                ::server_telemetry::record_autodream_consolidation_error(mode);
+            }
+        }
+        ::server_telemetry::record_autodream_batch_processing_duration(start.elapsed().as_secs_f64(), mode);
+
         Ok(())
     }
 

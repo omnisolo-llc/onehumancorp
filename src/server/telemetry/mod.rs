@@ -2005,3 +2005,149 @@ mod pii_pattern_tests {
         assert!(!is_pii_value_pattern("1234"));
     }
 }
+
+static AUTODREAM_CONSOLIDATION_ERRORS_TOTAL: std::sync::OnceLock<opentelemetry::metrics::Counter<u64>> = std::sync::OnceLock::new();
+static AUTODREAM_BATCH_PROCESSING_DURATION: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+
+pub fn get_autodream_consolidation_errors_total() -> &'static opentelemetry::metrics::Counter<u64> {
+    AUTODREAM_CONSOLIDATION_ERRORS_TOTAL.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.autodream");
+        meter
+            .u64_counter("ohc_autodream_consolidation_errors_total")
+            .with_description("Total number of consolidation errors in AutoDream")
+            .build()
+    })
+}
+
+pub fn get_autodream_batch_processing_duration() -> &'static opentelemetry::metrics::Histogram<f64> {
+    AUTODREAM_BATCH_PROCESSING_DURATION.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.autodream");
+        meter
+            .f64_histogram("ohc_autodream_batch_processing_duration_bucket")
+            .with_description("Batch processing duration for AutoDream")
+            .build()
+    })
+}
+
+pub fn record_autodream_consolidation_error(mode: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+    let counter = get_autodream_consolidation_errors_total();
+    counter.add(
+        1,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
+}
+
+pub fn record_autodream_batch_processing_duration(duration_sec: f64, mode: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+    let histogram = get_autodream_batch_processing_duration();
+    histogram.record(
+        duration_sec,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
+}
+
+pub fn get_deployment_mode() -> &'static str {
+    if crate::is_standalone_runtime() {
+        "standalone"
+    } else {
+        "cloud"
+    }
+}
+
+static SYNC_DAEMON_ERROR_TOTAL: std::sync::OnceLock<opentelemetry::metrics::Counter<u64>> = std::sync::OnceLock::new();
+
+pub fn get_sync_daemon_error_total() -> &'static opentelemetry::metrics::Counter<u64> {
+    SYNC_DAEMON_ERROR_TOTAL.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.hybrid_sync");
+        meter
+            .u64_counter("sync_daemon_error_total")
+            .with_description("Total number of sync daemon errors")
+            .build()
+    })
+}
+
+pub async fn record_sync_daemon_error_total(pool: &sqlx::PgPool, count: f64, deployment_mode: &str, reason: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+
+    let counter = get_sync_daemon_error_total();
+    counter.add(
+        count as u64,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+            opentelemetry::KeyValue::new("reason", reason.to_string()),
+        ],
+    );
+}
+
+static SYNC_LATENCY: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+
+pub fn get_sync_latency() -> &'static opentelemetry::metrics::Histogram<f64> {
+    SYNC_LATENCY.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.hybrid_sync");
+        meter
+            .f64_histogram("sync_latency_bucket")
+            .with_description("Sync latency bucket")
+            .build()
+    })
+}
+
+pub async fn record_sync_latency(pool: &sqlx::PgPool, count: f32, deployment_mode: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+
+    let histogram = get_sync_latency();
+    histogram.record(
+        count as f64,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
+}
+
+static SYNC_DAEMON_BATCH_SIZE: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+
+pub fn get_sync_daemon_batch_size() -> &'static opentelemetry::metrics::Histogram<f64> {
+    SYNC_DAEMON_BATCH_SIZE.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.hybrid_sync");
+        meter
+            .f64_histogram("sync_daemon_batch_size_bucket")
+            .with_description("Sync daemon batch size bucket")
+            .build()
+    })
+}
+
+pub async fn record_sync_daemon_batch_size(pool: &sqlx::PgPool, count: f32, deployment_mode: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+
+    let histogram = get_sync_daemon_batch_size();
+    histogram.record(
+        count as f64,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
+}
+
+static SYNC_PAYLOAD_SIZE: std::sync::OnceLock<opentelemetry::metrics::Histogram<f64>> = std::sync::OnceLock::new();
+
+pub fn get_sync_payload_size() -> &'static opentelemetry::metrics::Histogram<f64> {
+    SYNC_PAYLOAD_SIZE.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.hybrid_sync");
+        meter
+            .f64_histogram("sync_payload_size_bucket")
+            .with_description("Sync payload size bucket")
+            .build()
+    })
+}
+
+pub async fn record_sync_payload_size(pool: &sqlx::PgPool, count: f32, deployment_mode: &str) {
+    if !::server_config::is_telemetry_enabled() { return; }
+
+    let histogram = get_sync_payload_size();
+    histogram.record(
+        count as f64,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
+}
