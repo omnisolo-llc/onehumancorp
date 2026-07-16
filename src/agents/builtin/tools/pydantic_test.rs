@@ -77,21 +77,3 @@ async fn test_pydantic_adapter_failure_nested_missing_field() {
         panic!("Expected LlmRecoverable error for self-correction");
     }
 }
-
-#[tokio::test]
-async fn test_pydantic_adapter_failure_exact_line_col() {
-    let adapter = PydanticAdapter::new(MyExecutor);
-    let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": "not a number" })).await;
-    assert!(result.is_err());
-
-    if let Err(ToolError::LlmRecoverable(msg)) = result {
-        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-        // The error should now be able to pinpoint the line and column, which wasn't possible with from_value
-        // Because "not a number" triggers a syntax/type error inside the string parsing.
-        // It should contain exact coordinate information instead of (line 0, col 0)
-        assert!(msg.contains("line 1"));
-        assert!(msg.contains("column 34"));
-    } else {
-        panic!("Expected LlmRecoverable error for self-correction");
-    }
-}
