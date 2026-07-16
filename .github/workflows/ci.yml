@@ -26,7 +26,7 @@ defaults:
 jobs:
   check-changes:
     name: Check what files changed
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
@@ -779,7 +779,7 @@ jobs:
       - docker-e2e
       - postgres-security
     if: ${{ always() }}
-    runs-on: oci-runner
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check required CI results
