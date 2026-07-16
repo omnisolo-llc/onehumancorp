@@ -3,6 +3,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
+    "//src/e2e:async_queue.spec.ts",
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
     "//src/ui/next:src/e2e/code-native.spec.ts",
 
