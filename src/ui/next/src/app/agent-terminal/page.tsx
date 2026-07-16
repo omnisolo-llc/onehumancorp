@@ -65,14 +65,14 @@ export default function AgentTerminalPage() {
         </p>
       </div>
 
-      <div className="backdrop-blur-xl bg-white/40 dark:bg-black/40 border border-white/20 dark:border-white/10 rounded-2xl p-6 shadow-2xl mb-6">
+      <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-6 shadow-2xl mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <label className="font-semibold text-gray-700 dark:text-gray-200">
             Terminal Backend:
             <select
               value={backend}
               onChange={handleBackendChange}
-              className="ml-3 p-2 border rounded-md bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-[#0066FF] focus:border-[#0066FF]"
+              className="ml-3 p-2 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-gray-800 dark:text-gray-100 focus:ring-[#0066FF] focus:border-[#0066FF]"
             >
               <option value="local">Local</option>
               <option value="docker">Docker</option>
@@ -80,7 +80,7 @@ export default function AgentTerminalPage() {
           </label>
         </div>
 
-        <div className="bg-black/90 text-green-400 font-mono text-sm p-4 rounded-xl h-96 overflow-y-auto shadow-inner mb-4 flex flex-col backdrop-blur-md border border-white/10">
+        <div className="bg-black/90 text-green-400 font-mono text-sm p-4 rounded-xl h-96 overflow-y-auto shadow-inner mb-4 flex flex-col  border border-white/10">
           {output.length === 0 ? (
             <div className="text-gray-500 italic">Welcome to the Multi-Backend Agent Terminal.</div>
           ) : (
@@ -98,12 +98,12 @@ export default function AgentTerminalPage() {
             onChange={(e) => setCommand(e.target.value)}
             disabled={loading}
             placeholder="Enter command (e.g. echo hello)..."
-            className="flex-1 p-3 border border-white/20 dark:border-white/10 rounded-lg bg-white/50 dark:bg-black/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-md transition-all"
+            className="flex-1 p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#0066FF]  transition-all"
           />
           <button
             type="submit"
             disabled={loading || !command.trim()}
-            className="px-6 py-3 bg-[#0071E3] text-white font-semibold rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors shadow-sm"
+            className="px-6 py-3 bg-[#0071E3] text-white font-semibold rounded-[8px] hover:bg-blue-600 disabled:opacity-50 transition-colors shadow-sm"
           >
             Submit
           </button>
