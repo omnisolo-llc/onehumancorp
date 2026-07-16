@@ -279,8 +279,8 @@ function InboxWorkspace({
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
-        <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
+        <div className="flex flex-col md:flex-row gap-4">
+          <section className="app-panel w-full md:w-1/3 glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div>
                 <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
@@ -428,8 +428,9 @@ function InboxWorkspace({
                       }
                       return (
                         <button
-                          className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-white/10"
+                          className="app-btn-primary w-full min-h-[44px] min-w-[44px] rounded-[8px]"
                           onClick={() => handleApproveAndSend(selected.id)}
+                          data-testid="feed-approve-btn"
                         >
                           {buttonText}
                         </button>
@@ -441,7 +442,7 @@ function InboxWorkspace({
                   <div className="mt-4 flex flex-col gap-4">
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                      className="app-btn-primary w-full min-h-[44px] min-w-[44px] rounded-[8px] flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
                   </div>
                 )}

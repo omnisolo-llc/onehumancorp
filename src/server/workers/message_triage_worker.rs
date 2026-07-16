@@ -157,7 +157,7 @@ Output JSON format:
                 "feature_type": "general",
                 "context_summary": "Customer inquiry",
                 "action_type": "Draft Reply",
-                "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
+                "action_payload": _omni_result.final_draft
             });
 
             let max_retries = 3;

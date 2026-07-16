@@ -46,6 +46,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/whatsapp-link-generator.spec.ts",
     "//src/ui/next:src/e2e/omni_inbox.spec.ts",
     "//src/ui/next:src/e2e/qr-code-generator.spec.ts",
+    "//src/e2e:playwright/ambassador_inbox.spec.ts",
     "//src/ui/next:src/e2e/interactive-quote.spec.ts",
     "//src/ui/next:src/e2e/loyalty-program.spec.ts",
     "//src/ui/next:src/e2e/assistant.spec.ts",
