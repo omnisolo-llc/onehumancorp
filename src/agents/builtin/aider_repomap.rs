@@ -55,11 +55,13 @@ impl RepoMap {
                         || trimmed.starts_with("enum ")
                         || trimmed.starts_with("pub enum ")
                     {
+                        signatures.push(trimmed.to_string());
                         matched = true;
                     }
                 }
                 "go" => {
                     if trimmed.starts_with("func ") || trimmed.starts_with("type ") {
+                        signatures.push(trimmed.to_string());
                         matched = true;
                     }
                 }
@@ -73,6 +75,7 @@ impl RepoMap {
                         || trimmed.starts_with("type ")
                         || trimmed.starts_with("export type ")
                     {
+                        signatures.push(trimmed.to_string());
                         matched = true;
                     }
                 }
@@ -101,7 +104,9 @@ impl RepoMap {
                     signatures.push("...".to_string());
                     break;
                 }
-                signatures.push(trimmed.to_string());
+                if ext == "py" || ext == "c" || ext == "cpp" || ext == "h" || ext == "hpp" {
+                    signatures.push(trimmed.to_string());
+                }
             }
         }
 
