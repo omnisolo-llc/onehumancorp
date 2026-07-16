@@ -13,6 +13,8 @@ exports_files(
         "worker_pool.rs",
         "redis_lock.rs",
         "ohc_job_queue_test.rs",
+        "ohc_async_jobs_queue.rs",
+        "event_router.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -32,6 +34,8 @@ rust_library(
         "worker_pool.rs",
         "redis_lock.rs",
         "ohc_job_queue_test.rs",
+        "ohc_async_jobs_queue.rs",
+        "event_router.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
