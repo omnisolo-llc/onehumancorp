@@ -176,3 +176,5 @@ build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
 GOTOOLCHAIN=local
+test --test_env=OHC_AGENT_AUTH_KEY=test-token-that-is-at-least-thirty-two-bytes-long-12345
+test --test_env=OHC_AGENT_TOKEN=test-token
