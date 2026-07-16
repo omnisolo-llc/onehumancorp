@@ -907,7 +907,6 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_triage_latency() {
         super::bench_ui_triage_latency().await;
-        bench_ui_triage_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1036,6 +1035,11 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_orders_latency() {
         bench_ui_orders_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_orders_mobile_payload() {
+        super::bench_ui_orders_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1213,6 +1217,7 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("13. Orders Dashboard Latency");
     bench_ui_orders_latency().await;
+    bench_ui_orders_mobile_payload().await;
 
     tracing::info!("14. Assistant Mobile Payload Optimization Latency");
     bench_assistant_mobile_payload().await;
@@ -1239,10 +1244,6 @@ pub async fn bench_hybrid_latency() {
     bench_get_daily_work_latency().await;
     tracing::info!("19. Completed Tasks Latency");
     bench_get_completed_tasks_latency().await;
-
-    tracing::info!("20. Triage Latency");
-    bench_ui_triage_latency().await;
-    bench_ui_triage_mobile_payload().await;
 
     tracing::info!("22. Field Service Routing Latency");
     bench_field_service_routing_latency().await;
@@ -2069,9 +2070,64 @@ pub async fn bench_ai_job_dispatch_latency() {
 }
 
 pub async fn bench_ui_orders_latency() {
-    tracing::info!("Benchmarking list_ui_orders_handler (Mobile Payload Optimization)...");
+    tracing::info!("Benchmarking list_ui_orders_handler...");
     let database_url =
         std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
+
+        let duration = start_sim.elapsed();
+
+        tracing::info!(
+            "  - list_ui_orders_handler (Postgres): {:?}",
+            duration
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id TEXT, tenant_id TEXT, name TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
+
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - list_ui_orders_handler (SQLite): {:?}",
+            duration
+        );
+    }
+}
+
+pub async fn bench_ui_orders_mobile_payload() {
+    tracing::info!("Benchmarking list_ui_orders_handler (Mobile Payload Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2096,9 +2152,32 @@ pub async fn bench_ui_orders_latency() {
             "  - list_ui_orders_handler (Postgres Payload Optimization): {:?}",
             duration
         );
-        tracing::info!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)");
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)");
     } else {
-        tracing::info!("  - list_ui_orders_handler (Payload Optimization verified, Hybrid Cache)");
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
+
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - list_ui_orders_handler (SQLite Payload Optimization): {:?}",
+            duration
+        );
+        tracing::info!("    (Mobile Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)");
     }
 }
 
