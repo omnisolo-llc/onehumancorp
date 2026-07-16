@@ -35,8 +35,13 @@ impl RepoMap {
 
         let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
 
+        let mut total_chars = 0;
+        let char_limit = 3000;
+
         for line in content.lines() {
             let trimmed = line.trim();
+            let mut matched = false;
+
             match ext {
                 "rs" => {
                     if trimmed.starts_with("fn ")
@@ -50,12 +55,12 @@ impl RepoMap {
                         || trimmed.starts_with("enum ")
                         || trimmed.starts_with("pub enum ")
                     {
-                        signatures.push(trimmed.to_string());
+                        matched = true;
                     }
                 }
                 "go" => {
                     if trimmed.starts_with("func ") || trimmed.starts_with("type ") {
-                        signatures.push(trimmed.to_string());
+                        matched = true;
                     }
                 }
                 "ts" | "js" => {
@@ -68,17 +73,36 @@ impl RepoMap {
                         || trimmed.starts_with("type ")
                         || trimmed.starts_with("export type ")
                     {
-                        signatures.push(trimmed.to_string());
+                        matched = true;
+                    }
+                }
+                "py" => {
+                    if trimmed.starts_with("def ") || trimmed.starts_with("class ") {
+                        matched = true;
+                    }
+                }
+                "c" | "cpp" | "h" | "hpp" => {
+                    if trimmed.starts_with("class ")
+                        || trimmed.starts_with("struct ")
+                        || trimmed.starts_with("enum ")
+                        || trimmed.starts_with("namespace ")
+                        // Simplified check for C/C++ function definitions (e.g. `int main()`, `void foo(int a)`)
+                        || (trimmed.contains('(') && trimmed.contains(')') && !trimmed.starts_with("//") && !trimmed.starts_with("/*") && !trimmed.starts_with('#') && trimmed.ends_with('{'))
+                    {
+                        matched = true;
                     }
                 }
                 _ => {}
             }
-        }
 
-        // Limit the number of signatures to avoid blowing up the map
-        if signatures.len() > 50 {
-            signatures.truncate(50);
-            signatures.push("...".to_string());
+            if matched {
+                total_chars += trimmed.len();
+                if total_chars > char_limit || signatures.len() >= 50 {
+                    signatures.push("...".to_string());
+                    break;
+                }
+                signatures.push(trimmed.to_string());
+            }
         }
 
         signatures
@@ -253,5 +277,76 @@ mod tests {
 
         let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
         assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_extract_signatures_py() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_py = File::create(root.join("main.py")).unwrap();
+        main_py
+            .write_all(b"class MyClass:\n    pass\n\ndef my_func():\n    pass\n")
+            .unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        let expected_lines: Vec<&str> = vec![
+            "└── main.py",
+            "    ├── class MyClass:",
+            "    └── def my_func():",
+        ];
+
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
+        assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_extract_signatures_c_cpp() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_cpp = File::create(root.join("main.cpp")).unwrap();
+        main_cpp
+            .write_all(b"#include <iostream>\n\nclass MyCppClass {\n};\n\nint main() {\n    return 0;\n}\n")
+            .unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        let expected_lines: Vec<&str> = vec![
+            "└── main.cpp",
+            "    ├── class MyCppClass {",
+            "    └── int main() {",
+        ];
+
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
+        assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_truncation_limit() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_rs = File::create(root.join("main.rs")).unwrap();
+
+        // Generate a file with many functions to trigger the char limit (3000 chars)
+        let mut content = String::new();
+        for i in 0..150 {
+            content.push_str(&format!("fn long_function_name_{}() {{}}\n", i));
+        }
+        main_rs.write_all(content.as_bytes()).unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        // Should end with "..." due to truncation
+        assert!(output.trim_end().ends_with("└── ..."));
+
+        // Ensure not all 150 functions were extracted
+        let lines: Vec<&str> = output.lines().collect();
+        assert!(lines.len() < 152); // Header + <150 functions + 1 "..."
     }
 }
