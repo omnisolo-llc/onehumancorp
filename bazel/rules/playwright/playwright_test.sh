@@ -442,6 +442,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
+  OHC_AGENT_TOKEN="dummy_token_for_e2e" \
+  OHC_AGENT_AUTH_KEY="dummy_key_for_e2e_must_be_at_least_32_bytes_long" \
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
   MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
