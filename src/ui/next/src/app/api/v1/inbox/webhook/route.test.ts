@@ -37,7 +37,7 @@ describe("POST /api/v1/inbox/webhook", () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/ai/draft-reply", {
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/inbox/webhook", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,20 +1,14 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Ambassador Auto-Responder CUJ', () => {
-  test('Owner sees AI Handled auto-replied message in inbox', async ({ page, request }) => {
-    // 1. Connect Instagram via Integrations
-    // Start from login to satisfy the rules
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
+  test('Owner sees drafted message in inbox and approves it', async ({ page, request, loginAs, adminUser }) => {
+    // 1. Log in
+    await loginAs(page, adminUser);
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
-    // Set configuration for auto-reply in backend if possible, or trigger auto-reply
-    const tenantId = 'test-tenant';
+    const tenantId = 'e2e-tenant';
 
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
-    // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
     const webhookPayload = {
       tenant_id: tenantId,
       sender_id: 'testuser',
@@ -30,21 +24,27 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     expect(response.ok()).toBeTruthy();
 
     // 3. Wait for background task to execute
-    // In our test environment, we wait for a moment so the worker pool handles it
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // 4. Check Inbox Page
     await page.goto('/inbox');
-    await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unified Inbox' })).toBeVisible({ timeout: 15000 });
 
-    // Verify "AI Handled" badge shows up
+    // Find the message in the queue
     const messageLocator = page.locator('.app-list-item', { hasText: 'I would like to place an order.' }).first();
-    await expect(messageLocator).toBeVisible({ timeout: 5000 });
+    await expect(messageLocator).toBeVisible({ timeout: 10000 });
 
-    // Click it
+    // Click it to view details
     await messageLocator.click();
 
-    // Verify detail shows AI Handled
-    await expect(page.locator('.app-panel-body .app-badge', { hasText: 'AI Handled' })).toBeVisible();
+    // Verify detail shows Draft Ready or a Send button
+    const approveBtn = page.getByRole('button', { name: /.*Approve.*Send.*Draft.*/ });
+    await expect(approveBtn).toBeVisible({ timeout: 10000 });
+
+    // Approve the draft
+    await approveBtn.click();
+
+    // Verify success message
+    await expect(page.getByText('Draft approved and sent.')).toBeVisible({ timeout: 5000 });
   });
 });
