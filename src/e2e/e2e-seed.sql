@@ -830,3 +830,22 @@ INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, tex
 ('e2e-tenant', 'dashboard', 1, 'dashboard-title', 'Welcome', 'Welcome to your dashboard! This is your control center.'),
 ('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
 ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ohc_async_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id VARCHAR NOT NULL,
+    job_type VARCHAR NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR NOT NULL DEFAULT 'PENDING',
+    retry_count INT NOT NULL DEFAULT 0,
+    max_retries INT NOT NULL DEFAULT 3,
+    next_retry_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ohc_async_jobs_polling_next_retry ON ohc_async_jobs(next_retry_at) WHERE status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_ohc_async_jobs_polling_type ON ohc_async_jobs(job_type) WHERE status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_ohc_async_jobs_tenant_status ON ohc_async_jobs(tenant_id, status);
+
+ALTER TABLE IF EXISTS ohc_async_jobs ENABLE ROW LEVEL SECURITY;

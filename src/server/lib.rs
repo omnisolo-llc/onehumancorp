@@ -2738,6 +2738,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     booking_reengagement_job.start();
 
     // Start Message Triage Worker
+    // Start Universal Event Router
+    let async_queue = Arc::new(crate::orchestration::queue::ohc_async_jobs_queue::OHCAsyncJobsQueue::new(db.pool.clone()));
+    let event_router_worker = Arc::new(crate::orchestration::queue::event_router::EventRouterWorker::new(db.clone(), async_queue));
+    event_router_worker.start();
+
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
 

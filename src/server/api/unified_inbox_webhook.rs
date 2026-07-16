@@ -221,181 +221,21 @@ pub async fn handle_unified_webhook(
 ) -> impl IntoResponse {
     let tenant_id = &payload.tenant_id;
 
-    if let Some(redis_client) = crate::get_redis_client() {
-        if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-            let lock_key = format!(
-                "ohc:lock:unified_inbox:{}:{}",
-                tenant_id, payload.identifier
-            );
-            let locked: redis::RedisResult<Option<String>> = redis::cmd("SET")
-                .arg(&lock_key)
-                .arg("1")
-                .arg("NX")
-                .arg("EX")
-                .arg(30)
-                .query_async(&mut conn)
-                .await;
+    let payload_val = serde_json::json!({
+        "source": payload.source,
+        "identifier": payload.identifier,
+        "message": payload.message,
+    });
 
-            if locked.is_err() || locked.unwrap().is_none() {
-                tracing::warn!(
-                    "Failed to acquire lock for tenant {} identifier {}",
-                    tenant_id,
-                    payload.identifier
-                );
-            }
-        }
-    }
-
-    let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
-    let customer_id = resolved_customer.unwrap_or_else(|| format!("cust-{}", Uuid::new_v4()));
-
-    let intent_id = Uuid::new_v4().to_string();
-    let _ = match &state.db.store {
-        crate::db::DbStore::Postgres => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
-            .bind(&intent_id)
-            .bind(tenant_id)
-            .bind(&payload.source)
-            .bind("customer_inquiry")
-            .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}))
-            .bind("PENDING")
-            .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
-        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-            .bind(&intent_id)
-            .bind(tenant_id)
-            .bind(&payload.source)
-            .bind("customer_inquiry")
-            .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}).to_string())
-            .bind("PENDING")
-            .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
-    };
-    let thread_id = format!("thread-{}", Uuid::new_v4());
-    let message_id = format!("msg-{}", Uuid::new_v4());
-    let action_id = format!("action-{}", Uuid::new_v4());
-
-    let mut context_summary = "New customer inquiry received.".to_string();
-
-    match &state.db.store {
-        crate::db::DbStore::Postgres => {
-            // Build Context Memory Graph Summary
-            let recent_history = sqlx::query(
-                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 2"
-            )
-            .bind(tenant_id)
-            .bind(&customer_id)
-            .fetch_all(&state.db.pool).await;
-
-            if let Ok(rows) = recent_history {
-                if !rows.is_empty() {
-                    let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows.into_iter().map(|row| {
-                        let channel: String = row.get("channel");
-                        let created_at: String = row.try_get("created_at").unwrap_or_default();
-                        format!("Sent {} ({})", channel, created_at)
-                    }).collect();
-                    history_str.push_str(&history_items.join(", "));
-                    context_summary = history_str;
-                }
-            }
-
-            let _ = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
-                .bind(&thread_id)
-                .bind(tenant_id)
-                .bind(&customer_id)
-                .bind(&payload.source)
-                .execute(&state.db.pool).await;
-
-            let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'customer', $4)")
-                .bind(&message_id)
-                .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&payload.message)
-                .execute(&state.db.pool).await;
-
-            let draft_reply = generate_draft_reply(
-                tenant_id,
-                &customer_id,
-                &payload.message,
-                &context_summary,
-                &state.db,
-            ).await;
-            let action_payload = serde_json::to_string(&DraftedResponse {
-                customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
-            })
-            .unwrap();
-
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DRAFT_REPLY', $4, 'pending')")
-                .bind(&action_id)
-                .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&action_payload)
-                .execute(&state.db.pool).await;
-        }
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            // Build Context Memory Graph Summary
-            let recent_history = sqlx::query(
-                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 2"
-            )
-            .bind(tenant_id)
-            .bind(&customer_id)
-            .fetch_all(sqlite_pool).await;
-
-            if let Ok(rows) = recent_history {
-                if !rows.is_empty() {
-                    let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows.into_iter().map(|row| {
-                        let channel: String = row.get("channel");
-                        let created_at: String = row.try_get("created_at").unwrap_or_default();
-                        format!("Sent {} ({})", channel, created_at)
-                    }).collect();
-                    history_str.push_str(&history_items.join(", "));
-                    context_summary = history_str;
-                }
-            }
-
-            let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
-                .bind(&thread_id)
-                .bind(tenant_id)
-                .bind(&customer_id)
-                .bind(&payload.source)
-                .execute(sqlite_pool).await;
-
-            let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES (?, ?, ?, 'customer', ?)")
-                .bind(&message_id)
-                .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&payload.message)
-                .execute(sqlite_pool).await;
-
-            let draft_reply = generate_draft_reply(
-                tenant_id,
-                &customer_id,
-                &payload.message,
-                &context_summary,
-                &state.db,
-            ).await;
-            let action_payload = serde_json::to_string(&DraftedResponse {
-                customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
-            })
-            .unwrap();
-
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
-                .bind(&action_id)
-                .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&action_payload)
-                .execute(sqlite_pool).await;
-        }
-    }
+    let queue = crate::orchestration::queue::ohc_async_jobs_queue::OHCAsyncJobsQueue::new(state.db.pool.clone());
+    let _ = queue.enqueue(tenant_id, "customer_support", &payload_val).await;
 
     (
         StatusCode::OK,
-        axum::Json(serde_json::json!({"success": true, "thread_id": thread_id})),
+        axum::Json(serde_json::json!({"success": true, "thread_id": "async-queued"})),
     )
         .into_response()
+}
 }
 
 static UI_WEBHOOK_FEED_CACHE: std::sync::OnceLock<
