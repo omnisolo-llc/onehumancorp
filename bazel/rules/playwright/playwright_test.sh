@@ -428,6 +428,15 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     RD_URL="redis://127.0.0.1:$VK_PORT"
     OHC_STANDALONE="false"
     export REDIS_URL="$RD_URL"
+
+    echo "[playwright] Generating self-signed TLS certificates for cloud mode..."
+    openssl req -x509 -new -nodes -keyout "$TEST_TMPDIR/ca.key" -sha256 -days 365 -out "$TEST_TMPDIR/ca.crt" -subj "/CN=Test CA" >/dev/null 2>&1
+    openssl genrsa -out "$TEST_TMPDIR/server.key" 2048 >/dev/null 2>&1
+    openssl req -new -key "$TEST_TMPDIR/server.key" -out "$TEST_TMPDIR/server.csr" -subj "/CN=localhost" >/dev/null 2>&1
+    openssl x509 -req -in "$TEST_TMPDIR/server.csr" -CA "$TEST_TMPDIR/ca.crt" -CAkey "$TEST_TMPDIR/ca.key" -CAcreateserial -out "$TEST_TMPDIR/server.crt" -days 365 -sha256 >/dev/null 2>&1
+    export OHC_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
+    export OHC_GRPC_TLS_KEY_PATH="$TEST_TMPDIR/server.key"
+    export OHC_GRPC_CLIENT_CA_PATH="$TEST_TMPDIR/ca.crt"
   fi
   export DATABASE_URL="$DB_URL"
 
