@@ -959,7 +959,11 @@ let db_for_products = self.db.clone();
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let org_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let org_id = payload_json.get("tenant_id")
+                                .or_else(|| payload_json.get("organization_id"))
+                                .and_then(|o| o.as_str())
+                                .unwrap_or("system")
+                                .to_string();
                             let mut product_id = String::new();
                             let mut product_name = String::new();
                             if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()) {
