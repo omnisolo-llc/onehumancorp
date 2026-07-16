@@ -69,12 +69,46 @@ impl Department for FinanceAgent {
             let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
             let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
             let description = format!("{} - {}", project_name, milestone_name);
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            let mut transaction_currency = "USD".to_string();
+            let mut exchange_rate = 1.0;
+
+            if let Ok(Some(customer)) = self.orchestrator.get_customer360(&event.tenant_id, customer_id).await {
+                if let Some(prefs) = customer.preferences {
+                    if let Some(locale) = prefs.get("locale").and_then(|v| v.as_str()) {
+                        if locale.starts_with("fr-") || locale.starts_with("de-") || locale.starts_with("it-") || locale.starts_with("es-") || locale == "EUR" {
+                            transaction_currency = "EUR".to_string();
+                        } else if locale.starts_with("en-GB") || locale == "GBP" {
+                            transaction_currency = "GBP".to_string();
+                        }
+                    }
+                }
+            }
+
+            if transaction_currency != "USD" {
+                if let Ok(Some(row)) = sqlx::query("SELECT rate FROM ohc_fx_rates WHERE from_currency = 'USD' AND to_currency = $1")
+                    .bind(&transaction_currency)
+                    .fetch_optional(&self.orchestrator.db().pool).await {
+                    use sqlx::Row;
+                    exchange_rate = row.get("rate");
+                } else {
+                    exchange_rate = if transaction_currency == "EUR" { 0.93 } else if transaction_currency == "GBP" { 0.79 } else { 1.0 };
+                }
+            }
+
+            let transaction_amount_cents = (amount_cents as f64 * exchange_rate) as i64;
+
             payload = serde_json::json!({
                 "feature_type": "invoice_draft",
                 "project_name": project_name,
                 "milestone_name": milestone_name,
                 "amount_cents": amount_cents,
-                "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "transaction_amount_cents": transaction_amount_cents,
+                "base_currency": "USD",
+                "transaction_currency": transaction_currency,
+                "exchange_rate": exchange_rate,
+                "customer_id": customer_id,
                 "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                 "line_items": [
                     {

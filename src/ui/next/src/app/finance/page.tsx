@@ -171,7 +171,18 @@ export default function FinancePage() {
 
                             <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-6">
                                 <span className="text-gray-500 font-medium">Total</span>
-                                <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">${draftInvoice.total_amount?.toFixed(2)}</span>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">
+                                        {draftInvoice.base_currency === draftInvoice.transaction_currency
+                                            ? `$${draftInvoice.total_amount?.toFixed(2)}`
+                                            : `$${draftInvoice.total_amount?.toFixed(2)} (${draftInvoice.transaction_currency})`}
+                                    </span>
+                                    {draftInvoice.base_currency && draftInvoice.transaction_currency && draftInvoice.base_currency !== draftInvoice.transaction_currency && draftInvoice.exchange_rate && (
+                                        <span className="text-sm text-gray-500 font-medium mt-1">
+                                            Est. ${((draftInvoice.total_amount || 0) / draftInvoice.exchange_rate).toFixed(2)} {draftInvoice.base_currency}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

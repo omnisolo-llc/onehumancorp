@@ -1069,6 +1069,10 @@ pub async fn execute_action(
 
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_draft") {
                         let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let transaction_amount_cents = payload.get("transaction_amount_cents").and_then(|v| v.as_i64()).unwrap_or(amount_cents);
+                        let base_currency = payload.get("base_currency").and_then(|v| v.as_str()).unwrap_or("USD");
+                        let transaction_currency = payload.get("transaction_currency").and_then(|v| v.as_str()).unwrap_or("USD");
+                        let exchange_rate = payload.get("exchange_rate").and_then(|v| v.as_f64()).unwrap_or(1.0);
                         let now = Utc::now();
 
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -1093,12 +1097,17 @@ pub async fn execute_action(
                                         // Record the sent invoice in the database
                                         match &self.db.store {
                                             DbStore::Postgres => {
-                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount) VALUES ($1, $2, $3, 'sent', $4, 'USD', $5)")
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount, base_currency, transaction_currency, exchange_rate, total_amount_cents) VALUES ($1, $2, $3, 'sent', $4, $5, $6, $7, $8, $9, $10)")
                                                     .bind(&sent_invoice.id)
                                                     .bind(tenant_id)
                                                     .bind(&customer_id_to_use)
                                                     .bind(now + chrono::Duration::days(30))
-                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(&transaction_currency)
+                                                    .bind(transaction_amount_cents as f64 / 100.0)
+                                                    .bind(&base_currency)
+                                                    .bind(&transaction_currency)
+                                                    .bind(exchange_rate)
+                                                    .bind(transaction_amount_cents as i32)
                                                     .execute(&self.db.pool)
                                                     .await
                                                 {
@@ -1106,12 +1115,17 @@ pub async fn execute_action(
                                                 }
                                             }
                                             DbStore::Sqlite(_) => {
-                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount) VALUES (?, ?, ?, 'sent', ?, 'USD', ?)")
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, status, due_date, currency, total_amount, base_currency, transaction_currency, exchange_rate, total_amount_cents) VALUES (?, ?, ?, 'sent', ?, ?, ?, ?, ?, ?, ?)")
                                                     .bind(&sent_invoice.id)
                                                     .bind(tenant_id)
                                                     .bind(&customer_id_to_use)
                                                     .bind(now + chrono::Duration::days(30))
-                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(&transaction_currency)
+                                                    .bind(transaction_amount_cents as f64 / 100.0)
+                                                    .bind(&base_currency)
+                                                    .bind(&transaction_currency)
+                                                    .bind(exchange_rate)
+                                                    .bind(transaction_amount_cents as i32)
                                                     .execute(&self.db.pool)
                                                     .await
                                                 {
