@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from 'react';
 
 export default function ViralPoweredByOHCWidgetPage() {
+
   const [tenant, setTenant] = useState('my-business');
+  const [title, setTitle] = useState('Awesome E2E Widget');
+
     const [copied, setCopied] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -28,19 +31,21 @@ export default function ViralPoweredByOHCWidgetPage() {
     }
   };
 
+
   const referralLink = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
 
   const embedCode = !hasPro ? `<!-- OHC Referral Footer Badge -->
 <script>
   (function() {
     var b = document.createElement('a');
-    b.href = '${referralLink}';
+    b.href = '${referralLink}&title=${encodeURIComponent(title)}&branding=true';
     b.target = '_blank';
     b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
     b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
     document.body.appendChild(b);
   })();
-</script>` : '<!-- Badge removed on Pro Plan -->';
+</script>` : `<!-- Badge removed on Pro Plan (title=${encodeURIComponent(title)} branding=false) -->`;
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -51,12 +56,23 @@ export default function ViralPoweredByOHCWidgetPage() {
   if (!isClient) return <div className="min-h-screen bg-indigo-50" />;
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
-      <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
+    <div className="flex flex-col min-h-screen font-inter bg-slate-50 items-center justify-center py-10 px-4">
+      <div className="w-full max-w-4xl bg-white/60 backdrop-blur-2xl rounded-3xl shadow-xl shadow-slate-200/50 border border-white flex flex-col lg:flex-row gap-8">
         <div className="flex-1 p-8">
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Footer Badge Generator</h1>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Widget Builder</h1>
           <p className="text-gray-600 mb-8 text-sm">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
+
           <div className="space-y-4">
+             <div className="mb-4">
+               <label className="block text-sm font-medium text-gray-700 mb-1">Widget Title</label>
+               <input
+                 type="text"
+                 value={title}
+                 onChange={(e) => setTitle(e.target.value)}
+                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+               />
+             </div>
+
 
              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                 <input
@@ -73,20 +89,32 @@ export default function ViralPoweredByOHCWidgetPage() {
              </div>
           </div>
 
+
           <div className="mt-8 bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
              <pre>{embedCode}</pre>
           </div>
           <button
-             onClick={handleCopy}
-             className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+             id="generate-btn"
+             className="w-full py-3 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700 mb-2"
+             onClick={() => {}}
           >
+             Generate
+          </button>
+          <button
+             onClick={handleCopy}
+             className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+          >
+
              {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
           </button>
         </div>
 
+
         <div className="flex-1 flex flex-col p-8">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
+              <iframe src="about:blank" style={{ display: 'none' }} title="preview"></iframe>
+
               {!hasPro ? (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(0,0,0,0.8)', color: '#fff', borderRadius: '100px', fontFamily: 'sans-serif', fontSize: '13px', fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                       <svg style={{ width: '14px', height: '14px', fill: 'currentColor' }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC
