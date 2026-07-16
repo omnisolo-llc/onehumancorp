@@ -486,7 +486,11 @@ pub async fn sync_offline_transactions_handler(
                                             .bind(product_id)
                                             .bind(&tenant_id)
                                             .execute(&mut *db_tx)
-                                            .await;
+                                            .await
+                                            .map_err(|e| {
+                                                tracing::error!("Failed to update products: {}", e);
+                                                e
+                                            });
 
                                         if update_res.is_ok() {
                                             let payload_str = serde_json::json!({
@@ -501,7 +505,11 @@ pub async fn sync_offline_transactions_handler(
                                                 .bind(&tenant_id)
                                                 .bind(&payload_str)
                                                 .execute(&mut *db_tx)
-                                                .await;
+                                                .await
+                                                .map_err(|e| {
+                                                    tracing::error!("Failed to insert into ledger: {}", e);
+                                                    e
+                                                });
                                         }
 
                                         if let Some(client) = crate::get_redis_client() {
