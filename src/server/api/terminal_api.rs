@@ -481,12 +481,28 @@ pub async fn sync_offline_transactions_handler(
                                             }));
                                         }
 
-                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                        let update_res = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                                             .bind(qty_i32)
                                             .bind(product_id)
                                             .bind(&tenant_id)
                                             .execute(&mut *db_tx)
                                             .await;
+
+                                        if update_res.is_ok() {
+                                            let payload_str = serde_json::json!({
+                                                "product_id": product_id,
+                                                "quantity_deducted": qty_i32,
+                                                "remaining_stock": std::cmp::max(0, stock - qty_i32),
+                                                "lock_id": "offline_sync"
+                                            }).to_string();
+
+                                            let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+                                                .bind(uuid::Uuid::new_v4().to_string())
+                                                .bind(&tenant_id)
+                                                .bind(&payload_str)
+                                                .execute(&mut *db_tx)
+                                                .await;
+                                        }
 
                                         if let Some(client) = crate::get_redis_client() {
                                             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {

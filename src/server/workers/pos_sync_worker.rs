@@ -242,7 +242,23 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         .bind(product_id)
                         .bind(&job.tenant_id)
                         .execute(&mut *tx)
-                        .await;
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    let payload_str = serde_json::json!({
+                        "product_id": product_id,
+                        "quantity_deducted": quantity_deducted,
+                        "remaining_stock": std::cmp::max(0, stock - quantity_deducted as i32),
+                        "lock_id": "offline_sync"
+                    }).to_string();
+
+                    let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&job.tenant_id)
+                        .bind(&payload_str)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
                 }
 
                 let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
@@ -499,7 +515,23 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     .bind(product_id)
                                     .bind(&job.tenant_id)
                                     .execute(&mut *tx)
-                                    .await;
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                let payload_str = serde_json::json!({
+                                    "product_id": product_id,
+                                    "quantity_deducted": qty,
+                                    "remaining_stock": std::cmp::max(0, stock - qty as i32),
+                                    "lock_id": "offline_sync"
+                                }).to_string();
+
+                                let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&job.tenant_id)
+                                    .bind(&payload_str)
+                                    .execute(&mut *tx)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
                             }
 
                             let inventory_level_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
