@@ -818,21 +818,28 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status: Option<String> = sqlx::query_scalar(
-                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
+                let old_status_row = sqlx::query(
+                    "SELECT status, organization_id, tokens_consumed, agent_role, model FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
                 )
                 .bind(id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status = match old_status {
+                let old_status_row = match old_status_row {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
+
+                use sqlx::Row;
+                let old_status: String = old_status_row.try_get("status").unwrap_or("PENDING".to_string());
+                let tokens_consumed: i32 = old_status_row.try_get("tokens_consumed").unwrap_or(0);
+                let agent_role: Option<String> = old_status_row.try_get("agent_role").unwrap_or(None);
+                let model: Option<String> = old_status_row.try_get("model").unwrap_or(None);
+                let org_id: String = old_status_row.try_get("organization_id").unwrap_or_default();
 
                 sqlx::query(
                     "UPDATE shared_tasks_decomposition SET status = $1, updated_at = $2 WHERE id = $3"
@@ -864,6 +871,18 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
 
                 if new_status == "COMPLETED" {
+                    if let (Some(role), Some(modl)) = (agent_role, model) {
+                        let _ = ::server_telemetry::record_task_resolution_efficiency(
+                            &self.db.pool,
+                            "SUCCESS",
+                            &role,
+                            &modl,
+                            tokens_consumed as i64,
+                            &org_id,
+                        )
+                        .await;
+                    }
+
                     let autodream = crate::autodream::AutoDreamWorker::new(self.db.clone());
                     let _ = autodream.consolidate_epoch().await;
                 }
