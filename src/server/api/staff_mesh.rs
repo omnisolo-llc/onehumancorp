@@ -294,6 +294,12 @@ pub async fn set_staff_pin_handler(
         .into_response()
 }
 
+
+#[derive(serde::Deserialize)]
+pub struct StaffQuery {
+    pub mobile_optimized: Option<bool>,
+}
+
 pub async fn get_staff_handler(
     claims: Option<Extension<::server_common::Claims>>,
     State(db): State<Arc<DB>>,
@@ -655,6 +661,7 @@ pub async fn create_task_handler(
 pub async fn get_tasks_handler(
     claims: Option<Extension<::server_common::Claims>>,
     State(db): State<Arc<DB>>,
+    axum::extract::Query(query): axum::extract::Query<StaffQuery>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(claims.as_ref()) {
         Some(id) => id,
@@ -669,7 +676,13 @@ pub async fn get_tasks_handler(
 
     let tasks = match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
-            let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC")
+            let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+            let query_str = if mobile_optimized {
+                "SELECT id, staff_id, title, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC"
+            } else {
+                "SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = ? ORDER BY created_at DESC"
+            };
+            let rows = sqlx::query(query_str)
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await;
@@ -677,14 +690,24 @@ pub async fn get_tasks_handler(
                 rows.into_iter()
                     .map(|row| {
                         use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "staff_id": row.get::<String, _>("staff_id"),
-                            "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
-                            "status": row.get::<String, _>("status"),
-                            "priority": row.get::<String, _>("priority"),
-                        })
+                        if mobile_optimized {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "staff_id": row.get::<String, _>("staff_id"),
+                                "title": row.get::<String, _>("title"),
+                                "status": row.get::<String, _>("status"),
+                                "priority": row.get::<String, _>("priority"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "staff_id": row.get::<String, _>("staff_id"),
+                                "title": row.get::<String, _>("title"),
+                                "description": row.try_get::<String, _>("description").unwrap_or_default(),
+                                "status": row.get::<String, _>("status"),
+                                "priority": row.get::<String, _>("priority"),
+                            })
+                        }
                     })
                     .collect::<Vec<_>>()
             })
@@ -709,7 +732,13 @@ pub async fn get_tasks_handler(
                 )
                     .into_response();
             }
-            let rows = sqlx::query("SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC")
+            let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+            let query_str = if mobile_optimized {
+                "SELECT id, staff_id, title, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC"
+            } else {
+                "SELECT id, staff_id, title, description, status, priority FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC"
+            };
+            let rows = sqlx::query(query_str)
                 .bind(&tenant_id)
                 .fetch_all(&mut *tx)
                 .await;
@@ -724,14 +753,24 @@ pub async fn get_tasks_handler(
                 rows.into_iter()
                     .map(|row| {
                         use sqlx::Row;
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "staff_id": row.get::<String, _>("staff_id"),
-                            "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
-                            "status": row.get::<String, _>("status"),
-                            "priority": row.get::<String, _>("priority"),
-                        })
+                        if mobile_optimized {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "staff_id": row.get::<String, _>("staff_id"),
+                                "title": row.get::<String, _>("title"),
+                                "status": row.get::<String, _>("status"),
+                                "priority": row.get::<String, _>("priority"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "staff_id": row.get::<String, _>("staff_id"),
+                                "title": row.get::<String, _>("title"),
+                                "description": row.try_get::<String, _>("description").unwrap_or_default(),
+                                "status": row.get::<String, _>("status"),
+                                "priority": row.get::<String, _>("priority"),
+                            })
+                        }
                     })
                     .collect::<Vec<_>>()
             })
