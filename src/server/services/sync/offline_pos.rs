@@ -12,6 +12,7 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub terminal_id: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
 }
