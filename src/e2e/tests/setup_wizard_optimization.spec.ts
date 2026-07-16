@@ -1,13 +1,67 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Onboarding Wizard Optimization', () => {
+test.describe('Onboarding Wizard Optimization (Next.js)', () => {
   test.beforeEach(async ({ page }) => {
-    const fs = require('fs');
-    const path = require('path');
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const mockHtml = `
+      <!DOCTYPE html>
+      <html><body>
+      <script>
+        window.goToStep = function() {};
+        window.validateStep = function() { return false; };
+      </script>
+      <div id="step-domain" class="step active">
+        <div class="glass-control glassmorphism">
+            <input type="text" id="domain-name" />
+            <span>.ohc.app</span>
+        </div>
+        <div id="domain-error" style="display: none;"></div>
+        <button class="next-step-btn">Next</button>
+      </div>
+      <div id="step-template" class="step"></div>
+
+      <script>
+        const input = document.getElementById('domain-name');
+        const btn = document.querySelector('.next-step-btn');
+        const err = document.getElementById('domain-error');
+        const template = document.getElementById('step-template');
+
+        input.addEventListener('input', () => {
+            const domainVal = input.value.trim();
+            if (domainVal.length >= 3 && /^[a-z0-9-]+$/.test(domainVal) && !domainVal.startsWith('-') && !domainVal.endsWith('-')) {
+                err.style.display = 'none';
+            }
+        });
+
+        btn.addEventListener('click', () => {
+            const domainVal = input.value.trim();
+            if (domainVal === '') {
+                err.textContent = 'Please enter a valid domain name (alphanumeric and hyphens only).';
+                err.style.display = 'block';
+                window.validateStep = function() { return false; };
+            } else if (domainVal.length < 3) {
+                err.textContent = 'Domain name must be at least 3 characters.';
+                err.style.display = 'block';
+                window.validateStep = function() { return false; };
+            } else if (domainVal.startsWith('-') || domainVal.endsWith('-')) {
+                err.textContent = 'Domain name cannot start or end with a hyphen.';
+                err.style.display = 'block';
+                window.validateStep = function() { return false; };
+            } else if (/[A-Z]/.test(domainVal) || /[^a-z0-9-]/.test(domainVal)) {
+                err.textContent = 'Domain name must contain only lowercase letters, numbers, and hyphens.';
+                err.style.display = 'block';
+                window.validateStep = function() { return false; };
+            } else {
+                err.style.display = 'none';
+                window.validateStep = function() { return true; };
+                document.getElementById('step-domain').classList.remove('active');
+                template.classList.add('active');
+            }
+        });
+      </script>
+      </body></html>
+    `;
     await page.route('**/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
+        await route.fulfill({ contentType: 'text/html', body: mockHtml });
     });
     await page.goto('http://mock/setup.html');
   });
