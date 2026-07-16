@@ -47,9 +47,9 @@ pub struct AddCartItemRequest {
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/", axum::routing::post(create_cart_handler))
-        .route("/{cart_id}", axum::routing::get(get_cart_handler))
-        .route("/{cart_id}/items", axum::routing::post(add_cart_item_handler))
-        .route("/{cart_id}/status", axum::routing::post(update_cart_status_handler))
+        .route("/:cart_id", axum::routing::get(get_cart_handler))
+        .route("/:cart_id/items", axum::routing::post(add_cart_item_handler))
+        .route("/:cart_id/status", axum::routing::post(update_cart_status_handler))
         .with_state(hub)
 }
 
