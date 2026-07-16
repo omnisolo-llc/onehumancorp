@@ -322,7 +322,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     let auth = auth::auth_mode_from_env().map_err(|error| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("invalid agent authentication configuration: {error}"),
+            format!("invalid builtin agent authentication configuration: {error}"),
         )
     })?;
 
