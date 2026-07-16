@@ -48,6 +48,7 @@ const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { label: "Assistant", href: "/assistant", icon: "assistant" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
+  { label: "Today", href: "/unified-feed", icon: "inbox" },
   { label: "Triage", href: "/triage", icon: "inbox" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
