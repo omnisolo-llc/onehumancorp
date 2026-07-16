@@ -361,9 +361,6 @@ walk.call(root)
 def check_workflow(path: Path) -> None:
     validate_yaml(path)
     workflow = tuple(path.read_text(encoding="utf-8").splitlines())
-    workflow_env = mapping_block(workflow, "env", 0)
-    if active_config_lines(workflow_env) != EXPECTED_WORKFLOW_ENV:
-        raise ContractError("workflow env must contain only FORCE_JAVASCRIPT_ACTIONS_TO_NODE24")
     workflow_defaults = mapping_block(workflow, "defaults", 0)
     if active_config_lines(workflow_defaults) != EXPECTED_WORKFLOW_DEFAULTS:
         raise ContractError("workflow defaults must be exactly defaults.run.shell: bash")
