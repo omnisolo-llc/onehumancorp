@@ -93,6 +93,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "https://api.razorpay.com/v1".to_string(),
         ),
         metadata_provider(
+            "stripe_terminal",
+            "Stripe Terminal (Tap to Pay)",
+            "payment",
+            "https://api.stripe.com/v1/terminal".to_string(),
+        ),
+        metadata_provider(
             "calendly",
             "Calendly",
             "calendar",

@@ -39,9 +39,16 @@ export const ReviewDraftQuoteCard: React.FC<ReviewDraftQuoteCardProps> = ({
       <div className="flex space-x-3">
         <button
           onClick={onApprove} data-testid="feed-approve-btn"
-                    className="flex-1 bg-[#0066FF] text-white min-h-[44px] px-4 rounded-[8px] text-sm font-medium hover:bg-blue-600 transition-colors"
+                    className="flex-1 bg-white/50 dark:bg-gray-800/50 text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] px-4 rounded-[8px] text-sm font-medium border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] hover:bg-white/80 dark:hover:bg-gray-700/50 transition-colors"
                 >
-          Approve & Send
+          Send link
+        </button>
+        <button
+          onClick={onApprove} data-testid="feed-collect-btn"
+                    className="flex-1 bg-[#34C759] text-white min-h-[44px] px-4 rounded-[8px] text-sm font-medium hover:bg-green-600 transition-colors"
+                    title="Collect payment now with a card reader or tap to pay"
+                >
+          Collect in-person
         </button>
         <button
           onClick={onEdit} data-testid="feed-dismiss-btn"
