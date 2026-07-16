@@ -53,7 +53,7 @@ async fn test_recency_aware_masking() {
                 message: Message {
                     role: Role::Assistant,
                     content: "Calling tool".to_string(),
-                    tool_calls: vec![ToolCall { id: "call_1".to_string(), name: "long_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_calls: vec![ToolCall { id: "call_1".to_string(), name: "long_tool".to_string(), arguments: serde_json::json!({}) }],
                     tool_results: vec![],
                     response_id: None,
                     previous_response_id: None,
@@ -90,6 +90,8 @@ async fn test_recency_aware_masking() {
     let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
     assert!(res.is_ok());
 
+    // Wait for async task to write to store
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     assert!(observation_store.contains_key("call_1"));
     let full_content = observation_store.get("call_1").unwrap().clone();
     assert!(full_content.contains("very long observation"));
@@ -144,7 +146,7 @@ async fn test_masking_logic_depth() {
                 message: Message {
                     role: Role::Assistant,
                     content: "Call 1".to_string(),
-                    tool_calls: vec![ToolCall { id: "c1".to_string(), name: "t".to_string(), arguments: serde_json::Value::Null }],
+                    tool_calls: vec![ToolCall { id: "c1".to_string(), name: "t".to_string(), arguments: serde_json::json!({}) }],
                     tool_results: vec![],
                     response_id: None,
                     previous_response_id: None,
@@ -157,7 +159,7 @@ async fn test_masking_logic_depth() {
                 message: Message {
                     role: Role::Assistant,
                     content: "Call 2".to_string(),
-                    tool_calls: vec![ToolCall { id: "c2".to_string(), name: "t".to_string(), arguments: serde_json::Value::Null }],
+                    tool_calls: vec![ToolCall { id: "c2".to_string(), name: "t".to_string(), arguments: serde_json::json!({}) }],
                     tool_results: vec![],
                     response_id: None,
                     previous_response_id: None,
