@@ -29,3 +29,5 @@ pub mod agent_memory;
 pub mod agent_feed;
 pub mod customer_memory_graph;
 pub mod omnichannel_service;
+
+pub mod seo_pre_render;

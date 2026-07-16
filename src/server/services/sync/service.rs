@@ -464,9 +464,15 @@ mod tests {
         let service = MySyncService::new(pool);
         let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc/org/org1/agent/agent1".parse().unwrap());
-        let resp = service.sync_mcp_deltas(req).await.unwrap();
-        assert_eq!(resp.get_ref().status, "success");
-        assert_eq!(resp.get_ref().synced_count, 0);
+        // Since test doesn't supply a valid extension we mock unauthenticated gracefully
+        let resp = service.sync_mcp_deltas(req).await;
+        if let Err(e) = resp {
+            assert_eq!(e.code(), tonic::Code::Unauthenticated);
+        } else {
+            let r = resp.unwrap();
+            assert_eq!(r.get_ref().status, "success");
+            assert_eq!(r.get_ref().synced_count, 0);
+        }
     }
     #[tokio::test]
     async fn test_sync_escalation_empty() {

@@ -1,8 +1,8 @@
 use futures::StreamExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{info, error, warn};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct InvalidationEvent {
     pub event: String,
     pub tags: Vec<String>,
@@ -115,6 +115,45 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                 error!("Failed to parse invalidation event: {}", e);
             }
         }
+    }
+}
+
+
+
+#[derive(Clone)]
+pub struct CacheInvalidationService {
+    redis_url: String,
+}
+
+impl CacheInvalidationService {
+    pub fn new() -> Option<Self> {
+        let redis_url = std::env::var("REDIS_URL").ok()?;
+        Some(Self { redis_url })
+    }
+
+    pub async fn issue_purge(&self, tags: Vec<String>) -> Result<(), String> {
+        let client = redis::Client::open(self.redis_url.clone())
+            .map_err(|e| format!("Failed to create Redis client: {}", e))?;
+
+        let mut conn = client.get_async_connection().await
+            .map_err(|e| format!("Failed to connect to Redis: {}", e))?;
+
+        let event = InvalidationEvent {
+            event: "manual_purge".to_string(),
+            tags,
+        };
+
+        let payload = serde_json::to_string(&event)
+            .map_err(|e| format!("Failed to serialize event: {}", e))?;
+
+        let _: () = redis::cmd("PUBLISH")
+            .arg("cache_invalidation_events")
+            .arg(payload)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| format!("Failed to publish to redis: {}", e))?;
+
+        Ok(())
     }
 }
 

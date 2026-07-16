@@ -53,7 +53,7 @@ members = [ "src/server/integrations/twilio", "src/server/integrations/mcp_confi
 temp-env = "0.3.6"
 futures-util = "0.3.32"
 tauri-cli = "2"
-tower = "0.4"
+tower = { version = "0.5", features = ["util"] }
 
 [dependencies.tokio]
 workspace = true
