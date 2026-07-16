@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 
 const appRoot = path.resolve(import.meta.dirname, "../src/app");
 const apiV1Root = path.join(appRoot, "api/v1");
