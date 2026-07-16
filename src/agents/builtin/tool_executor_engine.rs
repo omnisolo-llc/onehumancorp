@@ -19,6 +19,12 @@ impl ToolExecutionEngine {
     ) -> Result<String, ToolError> {
         // Enforce Anthropic 3-stage tool gating before execution
         ToolGater::check_gating(tc, tool.is_read_only, cfg)?;
+
+        // Pydantic-first schema validation
+        if let Err(e) = crate::output_parser::PydanticToolSchemaValidator::validate_arguments(&tool.parameters, &tc.arguments) {
+            return Err(ToolError::LlmRecoverable(format!("Validation Error (Pydantic-first tool schema): {}", e)));
+        }
+
         // SOTA Harness Patterns (2025-2026): Error Handling
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;

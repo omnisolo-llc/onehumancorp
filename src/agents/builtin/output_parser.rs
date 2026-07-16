@@ -29,6 +29,74 @@ pub trait PydanticSchemaValidator<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
 }
 
+pub struct PydanticToolSchemaValidator;
+
+impl PydanticToolSchemaValidator {
+    pub fn validate_arguments(schema: &serde_json::Value, args: &serde_json::Value) -> Result<(), String> {
+        if schema.is_object() {
+            let props = schema.get("properties");
+            let required = schema.get("required").and_then(|r| r.as_array());
+
+            if !args.is_object() {
+                return Err("Arguments must be a JSON object".to_string());
+            }
+
+            let args_obj = args.as_object().unwrap();
+
+            if let Some(req_list) = required {
+                for req in req_list {
+                    if let Some(req_str) = req.as_str() {
+                        if !args_obj.contains_key(req_str) {
+                            return Err(format!("Missing required argument: '{}'", req_str));
+                        }
+                    }
+                }
+            }
+
+            if let Some(p) = props.and_then(|p| p.as_object()) {
+                for (key, val) in args_obj {
+                    if !p.contains_key(key) {
+                        return Err(format!("Unexpected argument passed: '{}'", key));
+                    }
+                    if let Some(prop_schema) = p.get(key) {
+                        if let Some(prop_type) = prop_schema.get("type").and_then(|t| t.as_str()) {
+                            match prop_type {
+                                "string" => {
+                                    if !val.is_string() {
+                                        return Err(format!("Argument '{}' must be a string", key));
+                                    }
+                                }
+                                "number" | "integer" => {
+                                    if !val.is_number() {
+                                        return Err(format!("Argument '{}' must be a number", key));
+                                    }
+                                }
+                                "boolean" => {
+                                    if !val.is_boolean() {
+                                        return Err(format!("Argument '{}' must be a boolean", key));
+                                    }
+                                }
+                                "array" => {
+                                    if !val.is_array() {
+                                        return Err(format!("Argument '{}' must be an array", key));
+                                    }
+                                }
+                                "object" => {
+                                    if !val.is_object() {
+                                        return Err(format!("Argument '{}' must be an object", key));
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 pub struct AdvancedPydanticOutputParser<T> {
     _marker: std::marker::PhantomData<T>,
 }

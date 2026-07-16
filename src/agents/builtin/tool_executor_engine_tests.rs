@@ -279,6 +279,56 @@ use ohc_builtin_agent::agent::AgentRunConfig;
     }
 
     #[tokio::test]
+    async fn test_pydantic_first_schema_validation_failure() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "age": { "type": "number" }
+            },
+            "required": ["name"]
+        });
+
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: schema,
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Ok("success".to_string()),
+            }),
+        };
+
+        // Missing required argument
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({ "age": 30 }),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        assert!(res.is_err());
+        match res.expect_err("Expected error in test") {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Missing required argument: 'name'")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+
+        // Invalid type argument
+        let tc2 = ToolCall {
+            id: "2".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({ "name": 30 }),
+        };
+
+        let res2 = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc2, 2, &AgentRunConfig::default()).await;
+        assert!(res2.is_err());
+        match res2.expect_err("Expected error in test") {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Argument 'name' must be a string")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
     async fn test_llm_recoverable() {
         let tool = Tool {
             name: "dummy".to_string(),
