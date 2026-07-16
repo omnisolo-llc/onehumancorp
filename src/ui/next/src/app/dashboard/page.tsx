@@ -376,7 +376,6 @@ export default function Dashboard() {
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
 
-
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
       <AIFeaturePaywallWidget />

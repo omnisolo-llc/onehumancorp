@@ -55,7 +55,7 @@ function renderMessageContent(content: string) {
   });
 
   // Format basic line breaks
-  safeContent = safeContent.replace(/\n/g, '<br />');
+  safeContent = safeContent.replace(/\\n|\n/g, '<br />');
 
   // Sanitize the final HTML using DOMPurify
   return DOMPurify.sanitize(safeContent);
