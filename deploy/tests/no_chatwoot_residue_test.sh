@@ -242,3 +242,6 @@ for path in "${historical[@]}"; do
     exit 1
   fi
 done
+
+# Workaround for GitHub Actions Node 24 compile cache bug where the runner leaves root-owned files
+sudo rm -rf /tmp/node-compile-cache || true
