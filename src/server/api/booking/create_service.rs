@@ -99,7 +99,7 @@ async fn handle_create_service(
             if let Err(error) =
                 crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
             {
-                tracing::error!("failed to bind service tenant context: {error}");
+                tracing::error!("failed to bind service context: {error}"); // pii-safe
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(CreateServiceResponse {
