@@ -73,7 +73,7 @@ EXPECTED_HYGIENE_LINES = (
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
-EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"')
+EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"', '  NODE_DISABLE_COMPILE_CACHE: "1"')
 EXPECTED_POSTGRES_JOB_KEYS = (
     "name",
     "needs",
@@ -363,7 +363,7 @@ def check_workflow(path: Path) -> None:
     workflow = tuple(path.read_text(encoding="utf-8").splitlines())
     workflow_env = mapping_block(workflow, "env", 0)
     if active_config_lines(workflow_env) != EXPECTED_WORKFLOW_ENV:
-        raise ContractError("workflow env must contain only FORCE_JAVASCRIPT_ACTIONS_TO_NODE24")
+        raise ContractError("workflow env must contain only FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 and NODE_DISABLE_COMPILE_CACHE")
     workflow_defaults = mapping_block(workflow, "defaults", 0)
     if active_config_lines(workflow_defaults) != EXPECTED_WORKFLOW_DEFAULTS:
         raise ContractError("workflow defaults must be exactly defaults.run.shell: bash")
