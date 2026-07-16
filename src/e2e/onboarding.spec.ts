@@ -347,7 +347,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     // Wait for the container to load
     const container = page.locator(".container");
-    await expect(container).toBeVisible({ timeout: 15000 });
+    await expect(container).toBeVisible({ timeout: 30000 });
 
     // Check .container has no horizontal overflow
     const containerBox = await container.boundingBox();

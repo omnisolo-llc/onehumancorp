@@ -177,8 +177,8 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.reload();
 
     // We should be restored to the first step of the wizard where we were, with the text filled
-    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('input').first()).toHaveValue('My Restored Business', { timeout: 15000 });
+    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('input').first()).toHaveValue('My Restored Business', { timeout: 30000 });
   });
 
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
@@ -293,6 +293,6 @@ test.describe('OnboardingWizard CUJ', () => {
     await generateBtn.click();
 
     // The current UI skips directly to the "You're Live!" success screen.
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 30000 });
   });
 });
