@@ -21,6 +21,7 @@ struct CacheValue<T> {
     val: T,
     expiry: std::time::Instant,
     access_count: std::sync::atomic::AtomicU64,
+    tags: Vec<String>,
 }
 
 pub struct HybridCacheInner<T> {
@@ -286,56 +287,59 @@ where
         let now = std::time::Instant::now();
 
         if local.len() >= self.inner.max_local_capacity && !local.contains_key(key) {
-            let mut removed_keys = Vec::new();
-            let mut has_expired = false;
+            let mut removed_items = Vec::new();
 
-            let mut least_accessed_key = None;
-            let mut lowest_access_count = u64::MAX;
+            // Random sampling for O(1) eviction
+            static CURSOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+            let len = local.len();
+            if len > 0 {
+                let skip_count = CURSOR.fetch_add(13, Ordering::Relaxed) % len;
 
-            for item in local.iter() {
-                if item.expiry <= now {
-                    removed_keys.push(item.key().clone());
-                    has_expired = true;
-                } else {
-                    let count = item.access_count.load(Ordering::Relaxed);
-                    if count < lowest_access_count {
-                        lowest_access_count = count;
-                        least_accessed_key = Some(item.key().clone());
+                let mut least_accessed_key = None;
+                let mut lowest_access_count = u64::MAX;
+
+                for item in local.iter().skip(skip_count).take(10).chain(local.iter().take(10)) {
+                    if item.expiry <= now {
+                        removed_items.push((item.key().clone(), item.tags.clone()));
+                        // We found an expired item, we can stop sampling and just evict it
+                        least_accessed_key = None;
+                        break;
+                    } else {
+                        let count = item.access_count.load(Ordering::Relaxed);
+                        if count < lowest_access_count {
+                            lowest_access_count = count;
+                            least_accessed_key = Some(item.key().clone());
+                        }
                     }
                 }
-            }
 
-
-            if has_expired {
-                for k in &removed_keys {
-                    local.remove(k);
-                }
-            } else {
-                if local.len() >= self.inner.max_local_capacity {
+                if removed_items.is_empty() {
                     if let Some(key_to_remove) = least_accessed_key {
-                        local.remove(&key_to_remove);
-                        removed_keys.push(key_to_remove);
+                        if let Some((_, evicted_val)) = local.remove(&key_to_remove) {
+                            removed_items.push((key_to_remove, evicted_val.tags));
+                        }
                     }
-
-                    // LFU decay: halve all access counts
-                    for item in local.iter() {
-                        let current = item.access_count.load(Ordering::Relaxed);
-                        item.access_count.store(current / 2, Ordering::Relaxed);
+                } else {
+                    for (k, _) in &removed_items {
+                        local.remove(k);
                     }
                 }
             }
 
-
-            // Clean up tags
-            if !removed_keys.is_empty() {
+            // O(1) Tag Cleanup using the tags stored in CacheValue
+            if !removed_items.is_empty() {
                 let tags_map = self.get_local_tags();
-                for mut entry in tags_map.iter_mut() {
-                    let keys: &mut dashmap::DashSet<String> = entry.value_mut();
-                    for k in &removed_keys {
-                        keys.remove(k);
+                for (k, item_tags) in removed_items {
+                    for tag in item_tags {
+                        if let Some(mut tag_keys) = tags_map.get_mut(&tag) {
+                            tag_keys.remove(&k);
+                            if tag_keys.is_empty() {
+                                drop(tag_keys);
+                                tags_map.remove(&tag);
+                            }
+                        }
                     }
                 }
-                tags_map.retain(|_, keys| !keys.is_empty());
             }
         }
 
@@ -345,6 +349,7 @@ where
                 val: value,
                 expiry: std::time::Instant::now() + ttl,
                 access_count: std::sync::atomic::AtomicU64::new(0),
+                tags: tags.to_vec(),
             },
         );
 

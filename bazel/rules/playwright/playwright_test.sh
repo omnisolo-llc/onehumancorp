@@ -423,6 +423,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     RD_URL="redis://127.0.0.1:12345"
     OHC_STANDALONE="true"
     export REDIS_URL="redis://127.0.0.1:12345"
+    export OHC_ENV="test"
+    export OHC_AGENT_AUTH_DISABLED="true"
   else
     DB_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
     RD_URL="redis://127.0.0.1:$VK_PORT"
