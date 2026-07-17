@@ -14,3 +14,15 @@ impl Money {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_money_new() {
+        let money = Money::new(1000, "USD");
+        assert_eq!(money.amount, 1000);
+        assert_eq!(money.currency_code, "USD");
+    }
+}
