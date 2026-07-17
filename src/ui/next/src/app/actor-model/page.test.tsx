@@ -8,7 +8,7 @@ global.fetch = vi.fn();
 describe("ActorModelPage", () => {
   it("renders the page correctly", () => {
     render(<ActorModelPage />);
-    expect(screen.getByText("Actor-Model Message Passing")).toBeTruthy();
+    expect(screen.getByText("Actor-Model Message Passing")).toBeInTheDocument();
   });
 
   it("handles successful execution", async () => {

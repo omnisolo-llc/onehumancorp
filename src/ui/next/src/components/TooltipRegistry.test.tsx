@@ -60,14 +60,14 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 20));
     });
 
-    expect(screen.getByText('Fetched tooltip text')).toBeTruthy();
+    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
     await act(async () => {
         fireEvent.mouseLeave(button.parentElement!);
         await new Promise(r => setTimeout(r, 20));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
   });
 
   it('handles touch events (long press) for mobile', async () => {
@@ -95,14 +95,14 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 550));
     });
 
-    expect(screen.getByText('Fetched tooltip text')).toBeTruthy();
+    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
     await act(async () => {
         fireEvent.touchEnd(button.parentElement!);
         await new Promise(r => setTimeout(r, 2050));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
 
     await act(async () => {
         fireEvent.touchStart(button.parentElement!);
@@ -111,20 +111,20 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 350));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
 
     // Test handleTouchMove clears tooltip
     await act(async () => {
         fireEvent.touchStart(button.parentElement!);
         await new Promise(r => setTimeout(r, 600)); // Show it
     });
-    expect(screen.getByText('Fetched tooltip text')).toBeTruthy();
+    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
     await act(async () => {
         fireEvent.touchMove(button.parentElement!); // Move clears it
         await new Promise(r => setTimeout(r, 20));
     });
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
   });
 
   it('handles fetch errors gracefully', async () => {
@@ -225,14 +225,14 @@ describe('TooltipRegistry scroll and contextmenu', () => {
         vi.advanceTimersByTime(200);
     });
 
-    expect(screen.getByText('Fetched tooltip text')).toBeTruthy();
+    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
     await act(async () => {
         fireEvent.scroll(window);
         vi.advanceTimersByTime(200);
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeTruthy();
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
   });
 
   it('prevents default on context menu', async () => {

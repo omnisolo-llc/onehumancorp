@@ -45,7 +45,7 @@ describe('NetworkStatusIndicator', () => {
     });
 
     // Check if the offline text is present
-    expect(screen.getByText('Offline - Changes saved locally')).toBeTruthy();
+    expect(screen.getByText('Offline - Changes saved locally')).toBeInTheDocument();
   });
 
   it('applies the new Translucent Glass CSS classes', async () => {

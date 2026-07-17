@@ -24,15 +24,15 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
     });
 
-    expect(screen.getByText('Release Notes & Changelog')).toBeTruthy();
+    expect(screen.getByText('Release Notes & Changelog')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Version 1.0 (Latest)')).toBeTruthy();
+      expect(screen.getByText('Version 1.0 (Latest)')).toBeInTheDocument();
     });
 
     // Check for some content points
-    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeTruthy();
-    expect(screen.getByText(/Smart Tooltips:/)).toBeTruthy();
+    expect(screen.getByText(/Interactive AI Store Builder:/)).toBeInTheDocument();
+    expect(screen.getByText(/Smart Tooltips:/)).toBeInTheDocument();
   });
 
   it('renders paragraph strings', async () => {
@@ -48,7 +48,7 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
     });
     await waitFor(() => {
-      expect(screen.getByText(/Faster loading times for product images/)).toBeTruthy();
+      expect(screen.getByText(/Faster loading times for product images/)).toBeInTheDocument();
     });
   });
 

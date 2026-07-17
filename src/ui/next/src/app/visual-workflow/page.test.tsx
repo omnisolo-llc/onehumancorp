@@ -15,12 +15,12 @@ global.fetch = vi.fn();
 describe("VisualWorkflowPage", () => {
   it("renders the page and allows adding an LLM node", () => {
     render(<VisualWorkflowPage />);
-    expect(screen.getByText("Visual Workflow Orchestrator")).toBeTruthy();
+    expect(screen.getByText("Visual Workflow Orchestrator")).toBeInTheDocument();
 
     const addButton = screen.getByText("+ Add LLM Node");
     fireEvent.click(addButton);
 
-    expect(screen.getByText(/node-1/)).toBeTruthy();
+    expect(screen.getByText(/node-1/)).toBeInTheDocument();
   });
 
   it("allows adding an Input node", () => {
@@ -28,7 +28,7 @@ describe("VisualWorkflowPage", () => {
     const addButton = screen.getByText("+ Add Input Node");
     fireEvent.click(addButton);
 
-    expect(screen.getByText(/node-1/)).toBeTruthy();
+    expect(screen.getByText(/node-1/)).toBeInTheDocument();
   });
 
   it("allows adding an Output node", () => {
@@ -36,7 +36,7 @@ describe("VisualWorkflowPage", () => {
     const addButton = screen.getByText("+ Add Output Node");
     fireEvent.click(addButton);
 
-    expect(screen.getByText(/node-1/)).toBeTruthy();
+    expect(screen.getByText(/node-1/)).toBeInTheDocument();
   });
 
   it("allows adding an edge between nodes", () => {
@@ -44,13 +44,13 @@ describe("VisualWorkflowPage", () => {
     fireEvent.click(screen.getByText("+ Add Input Node"));
     fireEvent.click(screen.getByText("+ Add LLM Node"));
 
-    expect(screen.getByText(/node-1/)).toBeTruthy();
-    expect(screen.getByText(/node-2/)).toBeTruthy();
+    expect(screen.getByText(/node-1/)).toBeInTheDocument();
+    expect(screen.getByText(/node-2/)).toBeInTheDocument();
 
     const connectButton = screen.getByText("Connect from previous");
     fireEvent.click(connectButton);
 
-    expect(screen.getByText("node-1 → node-2")).toBeTruthy();
+    expect(screen.getByText("node-1 → node-2")).toBeInTheDocument();
   });
 
   it("calls fetch when running the workflow", async () => {
@@ -63,7 +63,7 @@ describe("VisualWorkflowPage", () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/v1/workflow/run", expect.any(Object));
-      expect(screen.getByText(/mocked result/)).toBeTruthy();
+      expect(screen.getByText(/mocked result/)).toBeInTheDocument();
     });
   });
 
@@ -74,7 +74,7 @@ describe("VisualWorkflowPage", () => {
     fireEvent.click(screen.getByText("Run Workflow"));
 
     await waitFor(() => {
-      expect(screen.getByText(/Error: Network Error/)).toBeTruthy();
+      expect(screen.getByText(/Error: Network Error/)).toBeInTheDocument();
     });
   });
 

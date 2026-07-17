@@ -23,11 +23,11 @@ describe('SeasonalPromoPage', () => {
 
   it('renders the page correctly', () => {
     render(<SeasonalPromoPage />);
-    expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeTruthy();
+    expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
   });
 
   it('renders the PoweredByOHC component', () => {
     render(<SeasonalPromoPage />);
-    expect(screen.getByTestId('powered-by-ohc')).toBeTruthy();
+    expect(screen.getByTestId('powered-by-ohc')).toBeInTheDocument();
   });
 });

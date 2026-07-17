@@ -7,7 +7,7 @@ global.fetch = vi.fn();
 describe("AnthropicGuardrailsPage", () => {
   it("renders correctly", () => {
     render(<AnthropicGuardrailsPage />);
-    expect(screen.getByText("Anthropic 3-Stage Tool Gating")).toBeTruthy();
+    expect(screen.getByText("Anthropic 3-Stage Tool Gating")).toBeInTheDocument();
   });
 
   it("handles valid execution", async () => {
@@ -32,7 +32,7 @@ describe("AnthropicGuardrailsPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Guardrails Passed/i)).toBeTruthy();
+      expect(screen.getByText(/Guardrails Passed/i)).toBeInTheDocument();
     });
   });
 
@@ -59,8 +59,8 @@ describe("AnthropicGuardrailsPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Guardrail Tripped/i)).toBeTruthy();
-      expect(screen.getByText(/Permission check failed/i)).toBeTruthy();
+      expect(screen.getByText(/Guardrail Tripped/i)).toBeInTheDocument();
+      expect(screen.getByText(/Permission check failed/i)).toBeInTheDocument();
     });
   });
 });

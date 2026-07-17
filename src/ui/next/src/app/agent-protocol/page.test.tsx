@@ -17,8 +17,8 @@ describe('Agent Protocol UI', () => {
 
   it('renders the agent protocol page', async () => {
     render(<AgentProtocolPage />);
-    expect(screen.getByText('Agent Protocol UI')).toBeTruthy();
-    expect(screen.getByText('Tasks')).toBeTruthy();
+    expect(screen.getByText('Agent Protocol UI')).toBeInTheDocument();
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/protocol?method=ap_list_tasks');
@@ -50,7 +50,7 @@ describe('Agent Protocol UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Write a poem')).toBeTruthy();
+      expect(screen.getByText('Write a poem')).toBeInTheDocument();
     });
   });
 
@@ -63,7 +63,7 @@ describe('Agent Protocol UI', () => {
     render(<AgentProtocolPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Write a poem')).toBeTruthy();
+      expect(screen.getByText('Write a poem')).toBeInTheDocument();
     });
 
     // Select the task
@@ -75,7 +75,7 @@ describe('Agent Protocol UI', () => {
     fireEvent.click(screen.getByText('Write a poem'));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Execute Step' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Execute Step' })).toBeInTheDocument();
     });
 
     const stepInput = screen.getByPlaceholderText('Optional Step Input...');
@@ -94,7 +94,7 @@ describe('Agent Protocol UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute Step' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Roses are red')).toBeTruthy();
+      expect(screen.getByText('Roses are red')).toBeInTheDocument();
     });
   });
 });

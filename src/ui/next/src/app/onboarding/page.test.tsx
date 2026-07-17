@@ -869,9 +869,9 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    expect(screen.queryByLabelText("Admin Name")).not.toBeTruthy();
-    expect(screen.queryByLabelText("Admin Email")).not.toBeTruthy();
-    expect(screen.queryByLabelText("Admin Password")).not.toBeTruthy();
+    expect(screen.queryByLabelText("Admin Name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Admin Email")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Admin Password")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Approve & Publish/i }),
     ).toBeEnabled();
@@ -1008,7 +1008,7 @@ describe("OnboardingWizard", () => {
     await user.click(generateBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/You're Live!/i)).toBeTruthy();
+      expect(screen.queryByText(/You're Live!/i)).toBeInTheDocument();
     }, { timeout: 4000 });
 
     const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/v1/onboarding/start_zero_click'));
@@ -1054,7 +1054,7 @@ describe("OnboardingWizard", () => {
     await user.click(generateBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Failed to generate your business/i)).toBeTruthy();
+      expect(screen.queryByText(/Failed to generate your business/i)).toBeInTheDocument();
     });
 
     console.error = originalConsoleError;
@@ -1252,7 +1252,7 @@ describe("OnboardingWizard", () => {
     await user.click(continueButton);
 
     await waitFor(() => {
-      expect(screen.queryByText("Please tell us what you sell.")).toBeTruthy();
+      expect(screen.queryByText("Please tell us what you sell.")).toBeInTheDocument();
     });
   });
 

@@ -16,7 +16,7 @@ vi.mock('@/app/components/PoweredByOHC', () => ({
 describe('CustomerMemoryGraph Component', () => {
   it('renders loading state initially', () => {
     render(<CustomerMemoryGraph />);
-    expect(screen.getByText('Loading customer history...')).toBeTruthy();
+    expect(screen.getByText('Loading customer history...')).toBeInTheDocument();
   });
 
   it('renders error state on fetch failure', async () => {
@@ -27,7 +27,7 @@ describe('CustomerMemoryGraph Component', () => {
     render(<CustomerMemoryGraph />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to fetch customer history.')).toBeTruthy();
+      expect(screen.getByText('Failed to fetch customer history.')).toBeInTheDocument();
     });
   });
 
@@ -60,25 +60,25 @@ describe('CustomerMemoryGraph Component', () => {
 
     await waitFor(() => {
       // Check for main headers
-      expect(screen.getByText('Customer Context')).toBeTruthy();
-      expect(screen.getByText('Timeline')).toBeTruthy();
+      expect(screen.getByText('Customer Context')).toBeInTheDocument();
+      expect(screen.getByText('Timeline')).toBeInTheDocument();
 
       // Check for AI insights segments
-      expect(screen.getByText('VIP')).toBeTruthy();
-      expect(screen.getByText('Frequent Buyer')).toBeTruthy();
-      expect(screen.getByText('2 total interactions recorded.')).toBeTruthy();
+      expect(screen.getByText('VIP')).toBeInTheDocument();
+      expect(screen.getByText('Frequent Buyer')).toBeInTheDocument();
+      expect(screen.getByText('2 total interactions recorded.')).toBeInTheDocument();
 
       // Check for specific events
-      expect(screen.getByText('Bought in store: Summer Dress')).toBeTruthy();
-      expect(screen.getByText('Sent DM: Do you have vegan cakes?')).toBeTruthy();
+      expect(screen.getByText('Bought in store: Summer Dress')).toBeInTheDocument();
+      expect(screen.getByText('Sent DM: Do you have vegan cakes?')).toBeInTheDocument();
 
       // Check for channels
-      expect(screen.getByText('pos')).toBeTruthy();
-      expect(screen.getByText('instagram')).toBeTruthy();
+      expect(screen.getByText('pos')).toBeInTheDocument();
+      expect(screen.getByText('instagram')).toBeInTheDocument();
 
       // Check for action buttons
-      expect(screen.getByText('Draft Reply')).toBeTruthy();
-      expect(screen.getByText('Issue Refund')).toBeTruthy();
+      expect(screen.getByText('Draft Reply')).toBeInTheDocument();
+      expect(screen.getByText('Issue Refund')).toBeInTheDocument();
     });
   });
 
@@ -97,7 +97,7 @@ describe('CustomerMemoryGraph Component', () => {
     render(<CustomerMemoryGraph />);
 
     await waitFor(() => {
-      expect(screen.getByText('No interaction history found.')).toBeTruthy();
+      expect(screen.getByText('No interaction history found.')).toBeInTheDocument();
     });
   });
 });

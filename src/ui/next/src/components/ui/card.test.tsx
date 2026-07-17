@@ -16,19 +16,19 @@ describe('Card Component', () => {
     );
 
     const titleElement = getByText('Title');
-    expect(titleElement).toBeTruthy();
+    expect(titleElement).toBeInTheDocument();
     expect(titleElement).toHaveClass('custom-title-class');
 
     const descElement = getByText('Description');
-    expect(descElement).toBeTruthy();
+    expect(descElement).toBeInTheDocument();
     expect(descElement).toHaveClass('custom-desc-class');
 
     const contentElement = getByText('Content');
-    expect(contentElement).toBeTruthy();
+    expect(contentElement).toBeInTheDocument();
     expect(contentElement).toHaveClass('custom-content-class');
 
     const footerElement = getByText('Footer');
-    expect(footerElement).toBeTruthy();
+    expect(footerElement).toBeInTheDocument();
     expect(footerElement).toHaveClass('custom-footer-class');
   });
 });

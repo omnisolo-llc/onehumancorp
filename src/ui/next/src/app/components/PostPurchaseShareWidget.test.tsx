@@ -21,8 +21,8 @@ describe('PostPurchaseShareWidget', () => {
 
   it('renders correctly with default props', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
-    expect(screen.getByText('Unlock VIP Concierge')).toBeTruthy();
-    expect(screen.getByText('Pro Feature')).toBeTruthy();
+    expect(screen.getByText('Unlock VIP Concierge')).toBeInTheDocument();
+    expect(screen.getByText('Pro Feature')).toBeInTheDocument();
   });
 
   it('generates the correct referral link', () => {
@@ -39,7 +39,7 @@ describe('PostPurchaseShareWidget', () => {
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/shop/test-tenant?ref=post_purchase_default');
     // UI immediately updates to unlocked state now, so we verify that instead
-    expect(screen.getByText('VIP Concierge Unlocked!')).toBeTruthy();
+    expect(screen.getByText('VIP Concierge Unlocked!')).toBeInTheDocument();
   });
 
   it('shares to WhatsApp', () => {

@@ -82,7 +82,7 @@ describe("CampaignOrchestrationPage", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/ui/dashboard/unified-feed?tenant_id=tenant-123");
-    // expect(screen.getByText("42")).toBeTruthy();
+    // expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open review workflow/i }).getAttribute("href")).toBe("/review-campaigns");
     expect(screen.getByRole("link", { name: /Open receipt workflow/i }).getAttribute("href")).toMatch(/\/orders(\/order-1001)?/);
 

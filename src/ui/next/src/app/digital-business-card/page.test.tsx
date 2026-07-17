@@ -40,13 +40,13 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     render(<DigitalBusinessCardGeneratorPage />);
 
     // Check main title
-    expect(screen.getByText('Digital Business Card Generator')).toBeTruthy();
+    expect(screen.getByText('Digital Business Card Generator')).toBeInTheDocument();
 
     // Check live preview default name
-    expect(screen.getByText('Jane Doe')).toBeTruthy();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
 
     // Check branding checkbox exists
-    expect(screen.getByText(/Remove "Powered by OHC" branding/)).toBeTruthy();
+    expect(screen.getByText(/Remove "Powered by OHC" branding/)).toBeInTheDocument();
   });
 
   it('updates live preview when form is filled', () => {
@@ -55,7 +55,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     const nameInput = screen.getByPlaceholderText('e.g. Jane Doe');
     fireEvent.change(nameInput, { target: { value: 'John Smith' } });
 
-    expect(screen.getByText('John Smith')).toBeTruthy();
+    expect(screen.getByText('John Smith')).toBeInTheDocument();
   });
 
   it('shows paywall when non-pro user tries to remove branding', () => {
@@ -64,7 +64,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     const brandingCheckbox = screen.getByRole('checkbox');
     fireEvent.click(brandingCheckbox);
 
-    expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeTruthy();
-    expect(screen.getByText('Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock full customization.')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeInTheDocument();
+    expect(screen.getByText('Make the Digital Business Card 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock full customization.')).toBeInTheDocument();
   });
 });

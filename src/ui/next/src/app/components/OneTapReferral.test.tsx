@@ -14,10 +14,10 @@ test('renders OneTapReferral and handles copy', async () => {
     render(<OneTapReferral tenantId="test-tenant" source="dashboard" />);
 
     // Check if component renders text correctly
-    expect(screen.getByText('Refer & Earn $50')).toBeTruthy();
+    expect(screen.getByText('Refer & Earn $50')).toBeInTheDocument();
 
     const copyButton = screen.getByRole('button', { name: /copy link/i });
-    expect(copyButton).toBeTruthy();
+    expect(copyButton).toBeInTheDocument();
 
     // Click the copy button
     fireEvent.click(copyButton);
@@ -26,5 +26,5 @@ test('renders OneTapReferral and handles copy', async () => {
     expect(mockWriteText).toHaveBeenCalledWith('/onboarding?ref=test-tenant&source=dashboard');
 
     // Check if button text changes to Copied!
-    expect(await screen.findByText('Copied!')).toBeTruthy();
+    expect(await screen.findByText('Copied!')).toBeInTheDocument();
 });

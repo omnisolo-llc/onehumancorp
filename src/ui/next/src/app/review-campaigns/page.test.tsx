@@ -11,6 +11,6 @@ vi.mock('next/navigation', () => {
 describe('ReviewCampaignsPage', () => {
   it('renders the page correctly', () => {
     render(<ReviewCampaignsPage />);
-    expect(screen.getByText('Automated Review Campaigns ⭐️')).toBeTruthy();
+    expect(screen.getByText('Automated Review Campaigns ⭐️')).toBeInTheDocument();
   });
 });

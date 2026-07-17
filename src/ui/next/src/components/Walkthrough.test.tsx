@@ -82,9 +82,9 @@ describe('Walkthrough Component', () => {
 
     // Initial step wait
     await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeTruthy();
-      expect(screen.getByText('content 1')).toBeTruthy();
-      expect(screen.getByText('Step 1 of 2')).toBeTruthy();
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
+      expect(screen.getByText('content 1')).toBeInTheDocument();
+      expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
     });
 
     const nextBtn = screen.getByText('Next');
@@ -94,9 +94,9 @@ describe('Walkthrough Component', () => {
 
     // Second step
     await waitFor(() => {
-      expect(screen.getByText('Step 2')).toBeTruthy();
-      expect(screen.getByText('content 2')).toBeTruthy();
-      expect(screen.getByText('Step 2 of 2')).toBeTruthy();
+      expect(screen.getByText('Step 2')).toBeInTheDocument();
+      expect(screen.getByText('content 2')).toBeInTheDocument();
+      expect(screen.getByText('Step 2 of 2')).toBeInTheDocument();
     });
 
     const finishBtn = screen.getByText('Finish');
@@ -122,7 +122,7 @@ describe('Walkthrough Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeTruthy();
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
     const buttons = screen.getAllByRole('button');
@@ -196,7 +196,7 @@ describe('Walkthrough Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeTruthy();
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
 
     act(() => {
@@ -204,7 +204,7 @@ describe('Walkthrough Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Step 1')).toBeTruthy();
+      expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
   });
 
@@ -222,7 +222,7 @@ describe('Walkthrough Component', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByText('Top Step')).toBeTruthy();
+      expect(screen.getByText('Top Step')).toBeInTheDocument();
     });
     let bubble = screen.getByRole('dialog');
 
@@ -237,7 +237,7 @@ describe('Walkthrough Component', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByText('Left Step')).toBeTruthy();
+      expect(screen.getByText('Left Step')).toBeInTheDocument();
     });
     bubble = screen.getByRole('dialog');
 
@@ -252,7 +252,7 @@ describe('Walkthrough Component', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByText('Right Step')).toBeTruthy();
+      expect(screen.getByText('Right Step')).toBeInTheDocument();
     });
     bubble = screen.getByRole('dialog');
   });
@@ -309,7 +309,7 @@ describe('Walkthrough Component', () => {
       <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
     );
 
-    expect(screen.getByText('Target')).toBeTruthy();
+    expect(screen.getByText('Target')).toBeInTheDocument();
 
     process.env.NEXT_PUBLIC_E2E = originalEnv;
     window.history.replaceState({}, '', originalUrl);

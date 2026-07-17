@@ -39,11 +39,11 @@ describe('MorningBriefingCard', () => {
 
     const { container } = render(<MorningBriefingCard tenant="test-tenant" />);
 
-    expect(screen.getByText('Morning Briefing')).toBeTruthy();
+    expect(screen.getByText('Morning Briefing')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Test briefing')).toBeTruthy();
-      expect(screen.getByText('Test triage item')).toBeTruthy();
+      expect(screen.getByText('Test briefing')).toBeInTheDocument();
+      expect(screen.getByText('Test triage item')).toBeInTheDocument();
     });
 
     // Visual styles check
@@ -67,7 +67,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Unable to load Morning Briefing.')).toBeTruthy();
+      expect(screen.getByText('Unable to load Morning Briefing.')).toBeInTheDocument();
     });
   });
 
@@ -85,7 +85,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Good morning. No new insights at this time.')).toBeTruthy();
+      expect(screen.getByText('Good morning. No new insights at this time.')).toBeInTheDocument();
     });
   });
 
@@ -103,7 +103,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Unable to load Morning Briefing.')).toBeTruthy();
+      expect(screen.getByText('Unable to load Morning Briefing.')).toBeInTheDocument();
     });
   });
 
@@ -129,8 +129,8 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Approve Item')).toBeTruthy();
-      expect(screen.getByText('Dismiss Item')).toBeTruthy();
+      expect(screen.getByText('Approve Item')).toBeInTheDocument();
+      expect(screen.getByText('Dismiss Item')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -145,7 +145,7 @@ describe('MorningBriefingCard', () => {
           body: JSON.stringify({ triage_item_id: '1', approved: true })
         })
       );
-      expect(screen.queryByText('Approve Item')).not.toBeTruthy();
+      expect(screen.queryByText('Approve Item')).not.toBeInTheDocument();
     });
 
     const dismissBtn = screen.getByTestId('action-card-dismiss-2');
@@ -159,7 +159,7 @@ describe('MorningBriefingCard', () => {
           body: JSON.stringify({ triage_item_id: '2', approved: false })
         })
       );
-      expect(screen.queryByText('Dismiss Item')).not.toBeTruthy();
+      expect(screen.queryByText('Dismiss Item')).not.toBeInTheDocument();
     });
   });
 
@@ -186,7 +186,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Approve Item')).toBeTruthy();
+      expect(screen.getByText('Approve Item')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -196,7 +196,7 @@ describe('MorningBriefingCard', () => {
     await waitFor(() => {
       expect(consoleErrorMock).toHaveBeenCalled();
       // Item shouldn't be removed
-      expect(screen.getByText('Approve Item')).toBeTruthy();
+      expect(screen.getByText('Approve Item')).toBeInTheDocument();
     });
 
     consoleErrorMock.mockRestore();
@@ -219,7 +219,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -232,8 +232,8 @@ describe('MorningBriefingCard', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Hello agent')).toBeTruthy();
-      expect(screen.getByText('Test chat reply')).toBeTruthy();
+      expect(screen.getByText('Hello agent')).toBeInTheDocument();
+      expect(screen.getByText('Test chat reply')).toBeInTheDocument();
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/ui/dashboard/analytics/chat'),
         expect.objectContaining({
@@ -261,7 +261,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -272,8 +272,8 @@ describe('MorningBriefingCard', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Hello agent error')).toBeTruthy();
-      expect(screen.getByText('I encountered an error retrieving that information.')).toBeTruthy();
+      expect(screen.getByText('Hello agent error')).toBeInTheDocument();
+      expect(screen.getByText('I encountered an error retrieving that information.')).toBeInTheDocument();
     });
   });
 
@@ -294,7 +294,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -305,8 +305,8 @@ describe('MorningBriefingCard', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Hello agent exception')).toBeTruthy();
-      expect(screen.getByText('I encountered an error retrieving that information.')).toBeTruthy();
+      expect(screen.getByText('Hello agent exception')).toBeInTheDocument();
+      expect(screen.getByText('I encountered an error retrieving that information.')).toBeInTheDocument();
     });
   });
 
@@ -324,7 +324,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const submitBtn = screen.getByTestId('insight-chat-submit');
@@ -358,7 +358,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test Action')).toBeTruthy();
+      expect(screen.getByText('Test Action')).toBeInTheDocument();
     });
   });
 
@@ -376,7 +376,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Execute Action')).toBeTruthy();
+      expect(screen.getByText('Execute Action')).toBeInTheDocument();
     });
   });
 
@@ -397,7 +397,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
@@ -408,7 +408,7 @@ describe('MorningBriefingCard', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('I encountered an error retrieving that information.')).toBeTruthy();
+      expect(screen.getByText('I encountered an error retrieving that information.')).toBeInTheDocument();
     });
   });
 
@@ -431,7 +431,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
 
     const submitBtn = screen.getByTestId('insight-chat-submit');
@@ -448,14 +448,14 @@ describe('MorningBriefingCard', () => {
     user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Thinking...")).toBeTruthy();
+      expect(screen.getByText("Thinking...")).toBeInTheDocument();
     });
 
     // Resolve the hanging promise to finish test
     resolveChatPromise({ ok: true, json: () => Promise.resolve({ reply: 'Test chat reply' }) });
 
     await waitFor(() => {
-      expect(screen.queryByText("Thinking...")).not.toBeTruthy();
+      expect(screen.queryByText("Thinking...")).not.toBeInTheDocument();
     });
   });
 
@@ -473,7 +473,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
   });
 
@@ -491,7 +491,7 @@ describe('MorningBriefingCard', () => {
     render(<MorningBriefingCard tenant="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Briefing')).toBeTruthy();
+      expect(screen.getByText('Briefing')).toBeInTheDocument();
     });
   });
 });

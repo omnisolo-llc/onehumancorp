@@ -32,7 +32,7 @@ afterEach(() => {
 
 test('renders Business Analytics heading', () => {
   render(<BusinessAnalytics />);
-  expect(screen.getByRole('heading', { name: /Business Analytics/i })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: /Business Analytics/i })).toBeInTheDocument();
 });
 
 test('navigates back to dashboard', () => {
@@ -43,23 +43,23 @@ test('navigates back to dashboard', () => {
 
 test('shows locked predictive AI insights when not pro', () => {
   render(<BusinessAnalytics />);
-  expect(screen.getByText('See The Future')).toBeTruthy();
-  expect(screen.getByText('Unlock Predictions')).toBeTruthy();
+  expect(screen.getByText('See The Future')).toBeInTheDocument();
+  expect(screen.getByText('Unlock Predictions')).toBeInTheDocument();
 });
 
 test('shows predictive AI insights when pro is active', () => {
   localStorage.setItem('pro_plan', 'true');
   render(<BusinessAnalytics />);
-  expect(screen.queryByText('See The Future')).not.toBeTruthy();
-  expect(screen.getByText('Predictive Revenue Forecast')).toBeTruthy();
-  expect(screen.getByText('Cohort Retention Analysis')).toBeTruthy();
+  expect(screen.queryByText('See The Future')).not.toBeInTheDocument();
+  expect(screen.getByText('Predictive Revenue Forecast')).toBeInTheDocument();
+  expect(screen.getByText('Cohort Retention Analysis')).toBeInTheDocument();
 });
 
 test('opens soft paywall modal when clicking Unlock Predictions', () => {
   render(<BusinessAnalytics />);
   const unlockButton = screen.getByText('Unlock Predictions');
   fireEvent.click(unlockButton);
-  expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeInTheDocument();
 });
 
 test('closes soft paywall modal', () => {
@@ -68,7 +68,7 @@ test('closes soft paywall modal', () => {
   fireEvent.click(unlockButton);
   const closeButton = screen.getByText('×');
   fireEvent.click(closeButton);
-  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
 });
 
 test('upgrades to pro via pricing page', () => {
@@ -90,11 +90,11 @@ test('claims trial extension via social share', () => {
   expect(global.window.open).toHaveBeenCalled();
   expect(localStorage.getItem('trial_active')).toBe('true');
   expect(screen.getByRole('status')).toHaveTextContent('7-day Pro Trial activated');
-  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).not.toBeInTheDocument();
 });
 
 test('shows pro view when trial is active', () => {
   localStorage.setItem('trial_active', 'true');
   render(<BusinessAnalytics />);
-  expect(screen.queryByText('See The Future')).not.toBeTruthy();
+  expect(screen.queryByText('See The Future')).not.toBeInTheDocument();
 });

@@ -5,7 +5,7 @@ import { Button } from './button';
 describe('Button Component', () => {
   it('renders default correctly', () => {
     const { getByText } = render(<Button>Click me</Button>);
-    expect(getByText('Click me')).toBeTruthy();
+    expect(getByText('Click me')).toBeInTheDocument();
   });
 
   it('renders different variants correctly', () => {

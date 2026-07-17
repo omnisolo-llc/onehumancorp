@@ -7,15 +7,15 @@ import '@testing-library/jest-dom';
 describe('PageHeader', () => {
   it('renders correctly with title and description', () => {
     render(<PageHeader title="My Page" description="Page description here" />);
-    expect(screen.getByText('My Page')).toBeTruthy();
-    expect(screen.getByText('Page description here')).toBeTruthy();
+    expect(screen.getByText('My Page')).toBeInTheDocument();
+    expect(screen.getByText('Page description here')).toBeInTheDocument();
   });
 
   it('renders correctly with title only', () => {
     render(<PageHeader title="Title Only" />);
-    expect(screen.getByText('Title Only')).toBeTruthy();
+    expect(screen.getByText('Title Only')).toBeInTheDocument();
     // Verify no paragraph element is rendered for description
-    expect(screen.queryByText(/Page description/)).not.toBeTruthy();
+    expect(screen.queryByText(/Page description/)).not.toBeInTheDocument();
   });
 
   it('contains proper translucent classes', () => {

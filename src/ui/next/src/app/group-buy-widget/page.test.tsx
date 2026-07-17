@@ -25,12 +25,12 @@ describe('Group Buy Widget Page', () => {
 
     // Wait for client-side render
     await waitFor(() => {
-      expect(screen.getByText('Group Buy Widget Builder')).toBeTruthy();
+      expect(screen.getByText('Group Buy Widget Builder')).toBeInTheDocument();
     });
 
-    expect(screen.getByDisplayValue('Premium Coffee Subscription')).toBeTruthy();
-    expect(screen.getByDisplayValue('24.99')).toBeTruthy();
-    expect(screen.getByDisplayValue('15.00')).toBeTruthy();
+    expect(screen.getByDisplayValue('Premium Coffee Subscription')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('24.99')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('15.00')).toBeInTheDocument();
   });
 
   it('shows paywall when removing branding without pro', async () => {
@@ -38,15 +38,15 @@ describe('Group Buy Widget Page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Remove OHC Branding')).toBeTruthy();
+      expect(screen.getByText('Remove OHC Branding')).toBeInTheDocument();
     });
 
     // Find the hidden checkbox associated with the label
     const brandingToggle = screen.getByRole('checkbox', { hidden: true });
     fireEvent.click(brandingToggle);
 
-    expect(screen.getAllByText('Upgrade to Pro')[0]).toBeTruthy();
-    expect(screen.getByText(/Removing OHC branding/)).toBeTruthy();
+    expect(screen.getAllByText('Upgrade to Pro')[0]).toBeInTheDocument();
+    expect(screen.getByText(/Removing OHC branding/)).toBeInTheDocument();
   });
 
   it('allows removing branding with pro', async () => {
@@ -54,13 +54,13 @@ describe('Group Buy Widget Page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('Remove OHC Branding')).toBeTruthy();
+      expect(screen.getByText('Remove OHC Branding')).toBeInTheDocument();
     });
 
     const brandingToggle = screen.getByRole('checkbox', { hidden: true });
     fireEvent.click(brandingToggle);
 
-    expect(screen.queryByText('Upgrade to Pro')).not.toBeTruthy();
+    expect(screen.queryByText('Upgrade to Pro')).not.toBeInTheDocument();
     expect(brandingToggle).toBeChecked();
   });
 
@@ -68,7 +68,7 @@ describe('Group Buy Widget Page', () => {
     render(<Page />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Premium Coffee Subscription')).toBeTruthy();
+      expect(screen.getByDisplayValue('Premium Coffee Subscription')).toBeInTheDocument();
     });
 
     const nameInput = screen.getByDisplayValue('Premium Coffee Subscription');

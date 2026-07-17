@@ -67,17 +67,17 @@ describe('FieldOpsJobsPage', () => {
   it('renders the daily roster after loading', async () => {
     render(<FieldOpsJobsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Today's Route")).toBeTruthy();
+      expect(screen.getByText("Today's Route")).toBeInTheDocument();
     });
-    expect(screen.getByText('Alice Smith')).toBeTruthy();
-    expect(screen.getByText('Bob Jones')).toBeTruthy();
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    expect(screen.getByText('Bob Jones')).toBeInTheDocument();
   });
 
   it('shows offline indicator when offline', async () => {
     Object.defineProperty(navigator, 'onLine', { value: false });
     render(<FieldOpsJobsPage />);
     await waitFor(() => {
-      expect(screen.getByText(/Offline Mode/)).toBeTruthy();
+      expect(screen.getByText(/Offline Mode/)).toBeInTheDocument();
     });
   });
 
@@ -85,7 +85,7 @@ describe('FieldOpsJobsPage', () => {
     render(<FieldOpsJobsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alice Smith')).toBeTruthy();
+      expect(screen.getByText('Alice Smith')).toBeInTheDocument();
     });
 
     const textareas = screen.getAllByPlaceholderText(/E.g., Needs a replacement quote./);
@@ -100,7 +100,7 @@ describe('FieldOpsJobsPage', () => {
     const completeButton = await screen.findByText('Job Done');
     fireEvent.click(completeButton);
 
-    expect(await screen.findByText('Saved Notes:')).toBeTruthy();
-    expect(screen.getByText(/"Needs new piping"/)).toBeTruthy();
+    expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();
+    expect(screen.getByText(/"Needs new piping"/)).toBeInTheDocument();
   });
 });

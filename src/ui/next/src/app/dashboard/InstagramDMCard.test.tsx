@@ -15,9 +15,9 @@ describe('InstagramDMCard', () => {
 
     const { container } = render(<InstagramDMCard approval={approval} />);
 
-    expect(screen.getByText('Instagram DM')).toBeTruthy();
-    expect(screen.getByText('Test Customer Message')).toBeTruthy();
-    expect(screen.getByText('Test Draft Reply')).toBeTruthy();
+    expect(screen.getByText('Instagram DM')).toBeInTheDocument();
+    expect(screen.getByText('Test Customer Message')).toBeInTheDocument();
+    expect(screen.getByText('Test Draft Reply')).toBeInTheDocument();
 
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('backdrop-blur-[30px]');
@@ -35,8 +35,8 @@ describe('InstagramDMCard', () => {
 
     render(<InstagramDMCard approval={approval} />);
 
-    expect(screen.getByText('Test Original Message')).toBeTruthy();
-    expect(screen.getByText('Test Generated Response')).toBeTruthy();
+    expect(screen.getByText('Test Original Message')).toBeInTheDocument();
+    expect(screen.getByText('Test Generated Response')).toBeInTheDocument();
   });
 
   it('renders correctly with context_payload.description', () => {
@@ -49,7 +49,7 @@ describe('InstagramDMCard', () => {
 
     render(<InstagramDMCard approval={approval} />);
 
-    expect(screen.getByText('Test Description Message')).toBeTruthy();
+    expect(screen.getByText('Test Description Message')).toBeInTheDocument();
   });
 
   it('handles approve action', () => {

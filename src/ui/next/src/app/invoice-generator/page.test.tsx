@@ -36,11 +36,11 @@ describe('InvoiceGeneratorPage', () => {
 
     it('renders the Invoice Generator form correctly', () => {
         render(<InvoiceGeneratorPage />);
-        expect(screen.getByText('Create Professional Invoice')).toBeTruthy();
-        expect(screen.getByLabelText(/Client Name/i)).toBeTruthy();
-        expect(screen.getByLabelText(/Project Details/i)).toBeTruthy();
-        expect(screen.getByLabelText(/Amount \(\$\)/i)).toBeTruthy();
-        expect(screen.getByRole('button', { name: /Generate Shareable Invoice/i })).toBeTruthy();
+        expect(screen.getByText('Create Professional Invoice')).toBeInTheDocument();
+        expect(screen.getByLabelText(/Client Name/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Project Details/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Amount \(\$\)/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Generate Shareable Invoice/i })).toBeInTheDocument();
     });
 
     it('validates form inputs before generating link', () => {

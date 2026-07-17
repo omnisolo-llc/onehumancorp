@@ -25,12 +25,12 @@ describe('Publish Agent Page', () => {
   it('renders the publish agent form', async () => {
     render(<PublishAgentPage />);
 
-    expect(screen.getByText('Publish New Agent')).toBeTruthy();
-    expect(screen.getByLabelText('Agent Name')).toBeTruthy();
-    expect(screen.getByLabelText('Description')).toBeTruthy();
-    expect(screen.getByLabelText('Role')).toBeTruthy();
-    expect(screen.getByLabelText('System Prompt')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Publish to Marketplace' })).toBeTruthy();
+    expect(screen.getByText('Publish New Agent')).toBeInTheDocument();
+    expect(screen.getByLabelText('Agent Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
+    expect(screen.getByLabelText('Role')).toBeInTheDocument();
+    expect(screen.getByLabelText('System Prompt')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publish to Marketplace' })).toBeInTheDocument();
   });
 
   it('handles successful submission', async () => {
@@ -78,7 +78,7 @@ describe('Publish Agent Page', () => {
     const form = screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form');
     fireEvent.submit(form!);
 
-    expect(await screen.findByText(/Failed to publish agent/i)).toBeTruthy();
+    expect(await screen.findByText(/Failed to publish agent/i)).toBeInTheDocument();
   });
 
   it('displays error when data contains error', async () => {
@@ -97,6 +97,6 @@ describe('Publish Agent Page', () => {
     const form = screen.getByRole('button', { name: 'Publish to Marketplace' }).closest('form');
     fireEvent.submit(form!);
 
-    expect(await screen.findByText('Invalid agent data from backend')).toBeTruthy();
+    expect(await screen.findByText('Invalid agent data from backend')).toBeInTheDocument();
   });
 });

@@ -74,7 +74,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('renders initial setup screen', async () => {
     await act(async () => { render(<WebsiteBuilderPage />); });
-    expect(screen.getByText('Your business, live in minutes.')).toBeTruthy();
+    expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/state');
@@ -128,7 +128,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Online'));
 
     // Step 6
-    expect(screen.queryByPlaceholderText('Password')).not.toBeTruthy();
+    expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Next'));
 
     // Step 7
@@ -147,11 +147,11 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Publish my business'));
 
     // Verify generating screen
-    expect(screen.getByText('Agents are building your store...')).toBeTruthy();
+    expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
 
     await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.any(Object));
-        expect(screen.getByText('Success! Your business is live!')).toBeTruthy();
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     });
 
     const startCall = (global.fetch as any).mock.calls.find(
@@ -208,11 +208,11 @@ describe('WebsiteBuilderPage', () => {
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeTruthy();
+      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
     });
 
     await waitFor(() => {
-        expect(screen.getByText('Success! Your business is live!')).toBeTruthy();
+        expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
     }, { timeout: 3500 });
   });
 
@@ -239,8 +239,8 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(await screen.findByText('Publish my business'));
 
     await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeTruthy();
-      expect(screen.queryByText('Success! Your business is live!')).not.toBeTruthy();
+      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
+      expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
     });
   });
 
@@ -258,7 +258,7 @@ describe('WebsiteBuilderPage', () => {
       // 3 + 1 PoweredBy (the powered by component isn't wrapped in draggable-block anymore based on actual implementation)
       // Wait for it to not be empty
       expect(screen.getAllByTestId('draggable-block').length).toBe(3);
-      expect(screen.getByText('⚡ Powered by OHC')).toBeTruthy();
+      expect(screen.getByText('⚡ Powered by OHC')).toBeInTheDocument();
     });
 
     const blocks = screen.getAllByTestId('draggable-block');
@@ -301,14 +301,14 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeTruthy();
+      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText('1-Tap Launch'));
 
     await waitFor(() => {
-      expect(screen.getByText('Success! Your business is live!')).toBeTruthy();
-      expect(screen.getByText('/bio/testdomain')).toBeTruthy();
+      expect(screen.getByText('Success! Your business is live!')).toBeInTheDocument();
+      expect(screen.getByText('/bio/testdomain')).toBeInTheDocument();
     });
   });
 
@@ -349,7 +349,7 @@ describe('WebsiteBuilderPage', () => {
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
-      expect(screen.getByText('Agents are building your store...')).toBeTruthy();
+      expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
     });
 
     act(() => {

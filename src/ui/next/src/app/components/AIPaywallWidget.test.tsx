@@ -16,7 +16,7 @@ describe('AIPaywallWidget', () => {
 
   it('renders a warning button if remaining actions <= 10', () => {
     render(<AIPaywallWidget remainingActions={5} />);
-    expect(screen.getByText('⚠️ 5 AI Actions Left')).toBeTruthy();
+    expect(screen.getByText('⚠️ 5 AI Actions Left')).toBeInTheDocument();
   });
 
   it('opens the modal when the warning button is clicked', () => {
@@ -24,8 +24,8 @@ describe('AIPaywallWidget', () => {
     const btn = screen.getByText('⚠️ 5 AI Actions Left');
     fireEvent.click(btn);
 
-    expect(screen.getByText("You're running low on AI power!")).toBeTruthy();
-    expect(screen.getByText('Upgrade to Pro')).toBeTruthy();
+    expect(screen.getByText("You're running low on AI power!")).toBeInTheDocument();
+    expect(screen.getByText('Upgrade to Pro')).toBeInTheDocument();
   });
 
   it('navigates to pricing when upgrade is clicked', () => {

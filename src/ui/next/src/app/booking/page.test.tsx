@@ -27,7 +27,7 @@ describe('BookingPage', () => {
 
   it('renders the booking form', () => {
     render(<BookingPage />);
-    expect(screen.getByText('Book an Appointment')).toBeTruthy();
+    expect(screen.getByText('Book an Appointment')).toBeInTheDocument();
   });
 
   it('submits the form and shows the success screen with OneTapReferral', async () => {
@@ -68,7 +68,7 @@ describe('BookingPage', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Request Sent!')).toBeTruthy();
+      expect(screen.getByText('Request Sent!')).toBeInTheDocument();
     });
   });
 });

@@ -30,9 +30,9 @@ describe('ChaosReportPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('System Reliability Report')).toBeTruthy();
-      expect(screen.getByText('Latency Distribution')).toBeTruthy();
-      expect(screen.getByText('Error Rate Over Time')).toBeTruthy();
+      expect(screen.getByText('System Reliability Report')).toBeInTheDocument();
+      expect(screen.getByText('Latency Distribution')).toBeInTheDocument();
+      expect(screen.getByText('Error Rate Over Time')).toBeInTheDocument();
     });
   });
 });

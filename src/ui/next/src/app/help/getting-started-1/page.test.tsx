@@ -14,8 +14,8 @@ vi.mock('next/navigation', () => ({
 describe('GettingStartedArticle', () => {
   it('renders the article with the correct title and text', () => {
     render(<GettingStartedArticle />);
-    expect(screen.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeTruthy();
-    expect(screen.getByText(/Welcome to OneHumanCorp!/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to OneHumanCorp!/)).toBeInTheDocument();
   });
 
   it('navigates back to the help center when the back button is clicked', () => {

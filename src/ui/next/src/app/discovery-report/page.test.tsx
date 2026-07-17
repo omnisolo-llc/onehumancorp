@@ -13,7 +13,7 @@ describe('DiscoveryReportPage', () => {
   it('renders loading state initially', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}));
     render(<DiscoveryReportPage />);
-    expect(screen.getByText('Loading your report...')).toBeTruthy();
+    expect(screen.getByText('Loading your report...')).toBeInTheDocument();
   });
 
   it('renders empty state when no reports exist', async () => {
@@ -25,9 +25,9 @@ describe('DiscoveryReportPage', () => {
     render(<DiscoveryReportPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No Reports Yet')).toBeTruthy();
+      expect(screen.getByText('No Reports Yet')).toBeInTheDocument();
     });
-    expect(screen.getByText(/Your first AI Discovery Report will be generated soon/i)).toBeTruthy();
+    expect(screen.getByText(/Your first AI Discovery Report will be generated soon/i)).toBeInTheDocument();
   });
 
   it('renders reports correctly', async () => {
@@ -46,11 +46,11 @@ describe('DiscoveryReportPage', () => {
     render(<DiscoveryReportPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('June 2026')).toBeTruthy();
+      expect(screen.getByText('June 2026')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('ChatGPT recommended your handyman services 15 times this week to locals in your area.')).toBeTruthy();
-    expect(screen.getByText('chatgpt recommendations')).toBeTruthy();
-    expect(screen.getByText('15')).toBeTruthy();
+    expect(screen.getByText('ChatGPT recommended your handyman services 15 times this week to locals in your area.')).toBeInTheDocument();
+    expect(screen.getByText('chatgpt recommendations')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
   });
 });

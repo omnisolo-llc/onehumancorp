@@ -23,7 +23,7 @@ describe("NewProposalPage", () => {
 
     expect(
       await screen.findByText("Bakery website proposal"),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
   });
 
   test("shows an accessible stable error for a failed draft", async () => {
@@ -40,6 +40,6 @@ describe("NewProposalPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Failed to draft proposal",
     );
-    expect(screen.queryByText("undefined")).not.toBeTruthy();
+    expect(screen.queryByText("undefined")).not.toBeInTheDocument();
   });
 });

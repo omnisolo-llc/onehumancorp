@@ -7,14 +7,14 @@ import '@testing-library/jest-dom';
 describe('ErrorState', () => {
   it('renders correctly with title and message', () => {
     render(<ErrorState title="Error Title" message="Something went wrong." />);
-    expect(screen.getByText('Error Title')).toBeTruthy();
-    expect(screen.getByText('Something went wrong.')).toBeTruthy();
+    expect(screen.getByText('Error Title')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
   });
 
   it('renders correctly with message only', () => {
     render(<ErrorState message="Only a message." />);
-    expect(screen.queryByRole('heading')).not.toBeTruthy();
-    expect(screen.getByText('Only a message.')).toBeTruthy();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByText('Only a message.')).toBeInTheDocument();
   });
 
   it('contains proper translucent classes', () => {
