@@ -26,19 +26,20 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
-
-
   useEffect(() => {
-    const handleReconciliation = (e: any) => {
-      if (e.detail && e.detail.pending_reconciliation) {
-        setPendingReconciliation(e.detail.pending_reconciliation);
+    const handleReconciliation = (event: any) => {
+      if (event.detail && event.detail.pending_reconciliation) {
+        setPendingReconciliation(event.detail.pending_reconciliation);
       }
     };
-    window.addEventListener('ohc_sync_reconciliation', handleReconciliation);
-    return () => {
-      window.removeEventListener('ohc_sync_reconciliation', handleReconciliation);
-    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ohc_sync_reconciliation', handleReconciliation);
+      return () => {
+        window.removeEventListener('ohc_sync_reconciliation', handleReconciliation);
+      };
+    }
   }, []);
+
 
   useEffect(() => {
     async function initTerminal() {

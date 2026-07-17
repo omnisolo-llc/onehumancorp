@@ -475,14 +475,28 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             }
                         };
 
-                        let current_stock_res = sqlx::query("SELECT available_quantity, inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                        let current_stock_res = sqlx::query("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
                             .bind(&job.tenant_id)
                             .fetch_optional(&mut *tx)
                             .await;
 
+                        let mut stock: i32 = -1;
+
                         if let Ok(Some(row)) = current_stock_res {
-                            let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
+                            stock = sqlx::Row::get(&row, "available_count");
+                        } else {
+                            let fallback_res = sqlx::query("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await;
+                            if let Ok(Some(row)) = fallback_res {
+                                stock = sqlx::Row::get(&row, "available_quantity");
+                            }
+                        }
+
+                        if stock >= 0 {
 
                             let inventory_already_deducted = payload.get("inventory_already_deducted").and_then(|v| v.as_bool()).unwrap_or(false);
 
