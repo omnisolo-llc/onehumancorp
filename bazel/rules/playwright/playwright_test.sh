@@ -311,7 +311,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull pgvector/pgvector:pg15 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -321,7 +321,7 @@ done
 if [ "$PULL_PG_SUCCESS" = true ]; then
   PULL_VK_SUCCESS=false
   for i in {1..3}; do
-  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1; then
+  if docker pull valkey/valkey:8-alpine >/dev/null 2>&1; then
       PULL_VK_SUCCESS=true
       break
     fi
@@ -329,8 +329,8 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
-      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg15; then
+      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
@@ -450,6 +450,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
+  OHC_AGENT_TOKEN="test_agent_token" \
+  OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \

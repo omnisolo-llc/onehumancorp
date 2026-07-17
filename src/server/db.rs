@@ -496,7 +496,7 @@ impl DB {
             conn_opts = conn_opts.pragma("cipher_compatibility", "4");
 
             let sqlite_pool = SqlitePoolOptions::new()
-                .max_connections(50)
+                .max_connections(200)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
