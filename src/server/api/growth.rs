@@ -2071,6 +2071,7 @@ pub struct WrappedResponse {
 }
 
 async fn handle_wrapped(
+
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
     Extension(state): Extension<GrowthState>,
 ) -> impl IntoResponse {
@@ -2119,11 +2120,13 @@ async fn handle_wrapped(
 
     let total_sales = format!("${:.2}", (total_cents as f64) / 100.0);
 
+
     Json(WrappedResponse {
         year: chrono::Utc::now().naive_utc().format("%Y").to_string().parse().unwrap_or(2026),
         title: "Your Year in Review 🎉".to_string(),
         subtitle: "See how your AI agents and viral loops grew your business.".to_string(),
         stats: WrappedStats {
+
             total_sales: total_sales.clone(),
             total_orders: total_orders as i64,
             new_customers: new_customers as i64,
@@ -2131,6 +2134,7 @@ async fn handle_wrapped(
             ai_hours_saved: ai_hours_saved as i64,
         },
         share_text: format!("My AI agents saved me {} hours this year and drove {} in sales! Check out my OHC Year in Review:", ai_hours_saved, total_sales),
+
     })
 }
 
