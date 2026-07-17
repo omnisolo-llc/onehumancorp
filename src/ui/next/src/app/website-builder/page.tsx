@@ -588,7 +588,7 @@ export default function WebsiteBuilderPage() {
                             await startRes.json();
                             setStatus('live');
                         } catch (err) {
-                          console.error(err);
+                          if (process.env.NODE_ENV !== 'test') console.error(err);
                           setStatus('idle');
                         }
                       }}
