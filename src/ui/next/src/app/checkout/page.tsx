@@ -166,9 +166,14 @@ function CheckoutContent() {
         setIsProcessing(false);
         return;
       }
+      if (data.error_message && data.error_message.includes("checked out by another customer")) {
+        setCheckoutStatus("This item is currently being purchased by another customer. Please try again in a few minutes.");
+        setIsProcessing(false);
+        return;
+      }
       if (!response.ok || !data.checkout_url) {
         throw new Error(
-          data.message || data.error || "Failed to create checkout session",
+          data.message || data.error || data.error_message || "Failed to create checkout session",
         );
       }
 
@@ -493,7 +498,7 @@ function CheckoutContent() {
                 </button>
               </WithTooltip>
 
-              {checkoutStatus && checkoutStatus !== "Oops! Item just sold out." && (
+              {checkoutStatus && checkoutStatus !== "Oops! Item just sold out." && checkoutStatus !== "This item is currently being purchased by another customer. Please try again in a few minutes." && (
                 <p
                   className="text-sm font-medium text-indigo-700"
                   role="status"
@@ -527,6 +532,36 @@ function CheckoutContent() {
                         Someone at our physical store is buying the last one
                         right now. Check back in 15 minutes or browse similar
                         items.
+                      </p>
+                      <button
+                        onClick={() => setCheckoutStatus("")}
+                        className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {checkoutStatus === "This item is currently being purchased by another customer. Please try again in a few minutes." && (
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] z-[100] shadow-2xl rounded-t-[24px]">
+                  <div className="flex items-start gap-4 max-w-lg mx-auto">
+                    <div className="w-12 h-12 bg-amber-100 rounded-full flex-shrink-0 flex items-center justify-center text-xl text-amber-600">
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 font-outfit">
+                        Item Currently Locked
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                        This item is currently being purchased by another customer. Please try again in a few minutes.
                       </p>
                       <button
                         onClick={() => setCheckoutStatus("")}

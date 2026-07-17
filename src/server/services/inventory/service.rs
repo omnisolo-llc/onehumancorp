@@ -126,15 +126,29 @@ impl RedisLocker {
 impl InventoryLocker for RedisLocker {
     async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            redis::cmd("SET")
-                .arg(lock_key)
-                .arg(lock_id)
-                .arg("EX")
-                .arg(ttl)
-                .arg("NX")
-                .query_async(&mut conn)
-                .await
-                .unwrap_or(false)
+            let max_retries = 3;
+            for i in 0..max_retries {
+                let acquired: bool = redis::cmd("SET")
+                    .arg(lock_key)
+                    .arg(lock_id)
+                    .arg("EX")
+                    .arg(ttl)
+                    .arg("NX")
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(false);
+
+                if acquired {
+                    return true;
+                }
+
+                if i < max_retries - 1 {
+                    // Random backoff between 50ms and 200ms
+                    let jitter: u64 = rand::random::<u64>() % 150;
+                    tokio::time::sleep(std::time::Duration::from_millis(50 + jitter)).await;
+                }
+            }
+            false
         } else {
             false
         }
