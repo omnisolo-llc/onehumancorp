@@ -1395,7 +1395,7 @@ pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
 
@@ -1421,7 +1421,7 @@ pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
         tracing::info!(
@@ -2611,7 +2611,7 @@ pub async fn bench_ui_triage_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id WHERE a.tenant_id = $1 AND a.status != 'resolved' AND a.status != 'dismissed') sub ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
 
@@ -2669,7 +2669,7 @@ pub async fn bench_ui_ledger_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
 
@@ -2694,7 +2694,7 @@ pub async fn bench_ui_ledger_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
         tracing::info!(
@@ -2727,7 +2727,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
 
@@ -2752,7 +2752,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
         tracing::info!(
@@ -2785,7 +2785,7 @@ pub async fn bench_ui_inbox_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
 
@@ -2810,7 +2810,7 @@ pub async fn bench_ui_inbox_mobile_payload() {
 
         let _ = tokio::spawn(async move {
             let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
         tracing::info!(
