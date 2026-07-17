@@ -193,8 +193,8 @@ export default function CostDashboardPage() {
       actions={[{ label: "Back to My Plan", href: "/plan" }]}
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
-        <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40">
+        <section className="app-panel glass-panel backdrop-blur-3xl bg-white/50 border border-white/50 shadow-2xl rounded-3xl hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] transition-all duration-300 overflow-hidden">
+            <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/30 px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Advisory Summary</h2>
             </div>
             <div className="app-panel-body p-6">
@@ -205,8 +205,8 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg">
-          <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40 flex justify-between items-center">
+        <section id="my-plan-section" className="app-panel glass-panel backdrop-blur-3xl bg-white/50 border border-white/50 shadow-2xl rounded-3xl overflow-hidden transition-all duration-300">
+          <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/30 px-6 py-4 border-b border-white/40 flex justify-between items-center">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
@@ -460,7 +460,7 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
-        <section className="app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:shadow-2xl transition-shadow duration-300 p-6 md:p-8">
+        <section className="app-card ohc-growth-card glass-panel backdrop-blur-3xl bg-white/50 border border-white/50 shadow-2xl rounded-3xl hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] transition-all duration-300 p-6 md:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900 ">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">

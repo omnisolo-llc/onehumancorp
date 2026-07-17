@@ -177,25 +177,36 @@ impl PromptCache {
         let mut optimized_context = std::borrow::Cow::Borrowed(context);
         if context.contains("](") {
             let mut result = String::with_capacity(context.len());
-            let mut chars = context.char_indices().peekable();
-            let mut in_url = false;
+            let mut search_start = 0;
 
-            while let Some((i, c)) = chars.next() {
-                if !in_url && c == ']' {
-                    result.push(c);
-                    if let Some(&(_, '(')) = chars.peek() {
-                        let rest = &context[i + 2..];
-                        if rest.starts_with("http://") || rest.starts_with("https://") {
-                            in_url = true;
-                            chars.next(); // Skip '('
-                        }
+            while let Some(bracket_idx) = context[search_start..].find("](") {
+                let absolute_bracket_idx = search_start + bracket_idx;
+
+                // Push everything up to the `]`
+                result.push_str(&context[search_start..=absolute_bracket_idx]);
+
+                let paren_content_start = absolute_bracket_idx + 2;
+                let rest = &context[paren_content_start..];
+
+                if rest.starts_with("http://") || rest.starts_with("https://") {
+                    if let Some(close_paren_idx) = rest.find(')') {
+                        // Skip the URL entirely
+                        search_start = paren_content_start + close_paren_idx + 1;
+                    } else {
+                        // Unmatched '(', just process the rest normally
+                        search_start = paren_content_start;
                     }
-                } else if in_url && c == ')' {
-                    in_url = false;
-                } else if !in_url {
-                    result.push(c);
+                } else {
+                    // Not an http/https URL, so we keep the `(` and continue
+                    result.push('(');
+                    search_start = paren_content_start;
                 }
             }
+            // Push the remainder
+            if search_start < context.len() {
+                result.push_str(&context[search_start..]);
+            }
+
             if result.len() != context.len() {
                 optimized_context = std::borrow::Cow::Owned(result);
             }

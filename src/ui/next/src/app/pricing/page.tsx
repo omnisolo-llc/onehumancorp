@@ -120,7 +120,7 @@ export default function PricingPage() {
         </div>
 
         {/* My Plan Section */}
-        <div className="mb-8 p-6 app-card ohc-growth-card glass-card shadow-xl rounded-2xl w-full">
+        <div className="mb-8 p-6 app-card ohc-growth-card glass-panel backdrop-blur-3xl bg-white/50 border border-white/50 shadow-2xl rounded-3xl w-full transition-all duration-300">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
@@ -132,14 +132,14 @@ export default function PricingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/60 rounded-2xl border border-white/50 shadow-sm">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI Actions Used</p>
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.ai_actions_used || 0}
                         <span className="text-sm font-normal text-gray-500 ml-1">/ {planDetails?.ai_actions_limit || '∞'}</span>
                     </p>
                 </div>
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/60 rounded-2xl border border-white/50 shadow-sm">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
@@ -148,7 +148,7 @@ export default function PricingPage() {
                         </span>
                     </p>
                 </div>
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/60 rounded-2xl border border-white/50 shadow-sm">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Estimated Next Bill</p>
                     <p className="text-xl font-bold text-gray-900">
                         ${((planDetails?.next_bill_estimated || 0) / 100).toFixed(2)}
@@ -208,7 +208,7 @@ export default function PricingPage() {
             <p className="text-xs md:text-sm text-gray-500 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
         </div>
 
-        <div className="p-6 app-card ohc-growth-card glass-panel w-full mt-2">
+        <div className="p-6 app-card ohc-growth-card glass-panel backdrop-blur-3xl bg-white/50 border border-white/50 shadow-2xl rounded-3xl w-full mt-2 transition-all duration-300">
             <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <div>
