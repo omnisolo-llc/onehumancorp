@@ -71,7 +71,6 @@ jobs:
           .github/scripts/check_repo_hygiene.sh
           python3 .github/scripts/check_postgres_security_ci_test.py
           python3 .github/scripts/check_postgres_security_ci.py
-          sudo rm -rf /tmp/node-compile-cache || true
 
   dependency-audit:
     name: Production dependency audit
