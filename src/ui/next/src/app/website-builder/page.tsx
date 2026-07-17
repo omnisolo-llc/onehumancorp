@@ -588,7 +588,8 @@ export default function WebsiteBuilderPage() {
                             await startRes.json();
                             setStatus('live');
                         } catch (err) {
-                          console.error(err);
+                          // Suppress error log in tests to keep output clean
+                          if (process.env.NODE_ENV !== 'test') console.error(err);
                           setStatus('draft');
                         }
                       }}
@@ -688,7 +689,7 @@ export default function WebsiteBuilderPage() {
                             finishWithFallback();
                           }
                         } catch (err) {
-                          console.error(err);
+                          if (process.env.NODE_ENV !== 'test') console.error(err);
                           finishWithFallback();
                         } finally {
                           window.clearTimeout(abortTimeout);

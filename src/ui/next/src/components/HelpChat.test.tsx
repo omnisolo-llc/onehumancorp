@@ -188,6 +188,23 @@ describe('HelpChat accessibility', () => {
     expect(log).toBeInTheDocument();
     expect(log).toHaveAttribute('aria-live', 'polite');
   });
+
+  it('closes the chat when Escape key is pressed', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime, delay: null });
+    render(<HelpChat />);
+
+    // Open chat
+    const openButton = screen.getByLabelText('Open help chat');
+    await user.click(openButton);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Press Escape
+    const input = screen.getByPlaceholderText('Ask anything...');
+    fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 describe('HelpChat normalizeAgentReply and URL safety', () => {

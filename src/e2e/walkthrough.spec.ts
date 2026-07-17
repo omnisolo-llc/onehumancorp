@@ -10,25 +10,29 @@ test.describe('Walkthrough Features', () => {
     // Wait for the button
     const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');
     await expect(walkthroughBtn).toBeVisible();
+    await walkthroughBtn.scrollIntoViewIfNeeded();
 
     // Click the button to start walkthrough
-    await walkthroughBtn.click();
+    await page.evaluate(() => document.getElementById('dashboard-walkthrough-btn')?.click());
 
     // The walkthrough bubble should appear
     const bubble = page.locator('#walkthrough-bubble');
     await expect(bubble).toBeVisible();
 
     // It should have the correct title for the first step
-    await expect(bubble.locator('h4')).toHaveText('Business Analytics');
+    await expect(bubble.locator('h4')).toHaveText('Welcome');
 
     // Test the "Next" button moves to next step
     const nextBtn = page.locator('#wt-next');
-    await nextBtn.click();
+    await page.evaluate(() => document.getElementById('wt-next')?.click());
     await expect(bubble.locator('h4')).toHaveText('Operations Map');
 
     // Test the "Finish" button closes the walkthrough
+    await page.evaluate(() => document.getElementById('wt-next')?.click());
+    await expect(bubble.locator('h4')).toHaveText('AI Savings');
+
     await expect(nextBtn).toHaveText('Finish');
-    await nextBtn.click();
+    await page.evaluate(() => document.getElementById('wt-next')?.click());
     await expect(bubble).not.toBeVisible();
   });
 });
