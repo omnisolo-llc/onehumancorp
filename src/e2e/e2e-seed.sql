@@ -777,7 +777,7 @@ INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
 ('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help/ai-support'),
 ('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help/marketing-tools'),
 ('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help/billing-settings'),
-('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs')
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs.html')
 ON CONFLICT DO NOTHING;
 
 -- Seed video_tutorials
@@ -808,7 +808,7 @@ INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
 ('e2e-tenant', 'AI Agents', 'Activate AI Support', 'Let our AI handle customer inquiries and triage your inbox.', '/help/ai-support'),
 ('e2e-tenant', 'Marketing', 'Grow Your Audience', 'Use our built-in tools to run promotions and track performance.', '/help/marketing-tools'),
 ('e2e-tenant', 'Account & Billing', 'Manage Billing', 'Update your subscription and payment methods.', '/help/billing-settings'),
-('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs')
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services to your workspace.', '/api-docs.html')
 ON CONFLICT DO NOTHING;
 
 -- Seed video_tutorials

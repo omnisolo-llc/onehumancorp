@@ -39,7 +39,7 @@ test.describe('Help Center & Documentation Features', () => {
 
     // 3. Navigate to API Docs
     await apiLink.evaluate((b) => (b as HTMLElement).click());
-    await expect(page).toHaveURL(/\/api-docs\.html/);
+    await expect(page).toHaveURL(/\/api-docs.html/);
 
     // 4. Hover to see tooltip
     const tooltipTarget = page.locator('#api-docs-tooltip');

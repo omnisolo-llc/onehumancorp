@@ -109,7 +109,7 @@ test.describe("Documentation Features Flow", () => {
   });
 
   test("Advanced User can access API Documentation", async ({ page }) => {
-    await page.goto("/api-docs");
+    await page.goto("/api-docs.html");
     await page.waitForLoadState("networkidle");
 
     // Verify the advanced disclaimer

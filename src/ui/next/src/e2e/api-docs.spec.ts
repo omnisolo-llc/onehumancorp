@@ -3,7 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('API Documentation', () => {
   test('should load the Swagger UI on the api-docs page', async ({ page }) => {
     // Navigate to the API Docs page using next.js app routing
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
 
     // Wait for the specific data test id to be attached to the dom
     await page.waitForSelector('[data-testid="api-docs-title"]', { state: 'attached' });

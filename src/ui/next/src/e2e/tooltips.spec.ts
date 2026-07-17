@@ -4,7 +4,7 @@ test.describe("Tooltips", () => {
 
   test("renders tooltip on hover", async ({ page }) => {
     // Navigate to a page that contains a tooltip
-    await page.goto("/api-docs");
+    await page.goto("/api-docs.html");
 
     // Wait for the page to load
     await page.waitForLoadState("domcontentloaded");
@@ -86,7 +86,7 @@ test.describe("Tooltips", () => {
   test("handles mobile long-press and cancels on touchmove", async ({
     page,
   }) => {
-    await page.goto("/api-docs");
+    await page.goto("/api-docs.html");
 
     // Wait for the page to load
     await page.waitForLoadState("domcontentloaded");

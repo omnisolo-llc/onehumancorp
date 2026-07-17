@@ -36,7 +36,7 @@ test.describe('Extended Documentation & Help Features', () => {
   });
 
   test('Advanced Persona: Can load Swagger UI in API Documentation page', async ({ page }) => {
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api-docs.html');
     await page.waitForLoadState('networkidle');
 
     // Check for advanced badge

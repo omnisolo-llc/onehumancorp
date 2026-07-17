@@ -37,7 +37,7 @@ test.describe('Documentation full suite', () => {
   test('API Docs loads Swagger UI', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     // Visit api docs page
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
 
     // Check for Swagger UI wrapper
     const swaggerUI = page.locator('.swagger-ui');

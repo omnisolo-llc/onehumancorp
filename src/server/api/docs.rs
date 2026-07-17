@@ -333,7 +333,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
         HelpArticle { category: "Marketing".to_string(), title: "Grow Your Audience".to_string(), desc: "Use our built-in tools to run promotions and track performance.".to_string(), link: "/help/marketing-tools".to_string() },
         HelpArticle { category: "Account & Billing".to_string(), title: "Manage Billing".to_string(), desc: "Update your subscription and payment methods.".to_string(), link: "/help/billing-settings".to_string() },
-        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs.html".to_string() },
     ]
 }
 

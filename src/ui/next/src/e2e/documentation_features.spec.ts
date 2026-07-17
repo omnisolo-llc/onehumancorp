@@ -9,7 +9,7 @@ test.describe('Documentation Features', () => {
   });
 
   test('API Docs page loads correctly', async ({ page }) => {
-    await page.goto('/api-docs');
+    await page.goto('/api-docs.html');
     await expect(page.getByTestId('api-docs-title')).toBeVisible();
     await expect(page.getByText('Advanced:')).toBeVisible();
   });
