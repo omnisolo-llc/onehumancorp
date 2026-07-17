@@ -495,6 +495,26 @@
     </style>
   </head>
   <body>
+
+<div id="p2p-mesh-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" style="display: none;">
+    <div class="glassmorphism p-6 max-w-sm w-full relative flex flex-col items-center text-center">
+        <button onclick="document.getElementById('p2p-mesh-modal').style.display='none'" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-blue-600">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm5 4h-2v-2h2v2zm0-4h-2V7h2v5z"></path></svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Nearby Register Found</h2>
+        <p class="text-sm text-gray-600 mb-6">Connect to the primary register to sync inventory and sales while offline.</p>
+        <button id="join-mesh-btn" class="w-full bg-[#0066FF] hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors">Join Local Register Network</button>
+    </div>
+</div>
+
+<div id="teammate-mesh-indicator" class="hidden fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-green-100/90 backdrop-blur-md border border-green-200 rounded-full shadow-sm" style="display: none;">
+    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+    <span class="text-xs font-bold text-green-800">Mesh Synced</span>
+</div>
+
     <div class="container glassmorphism" id="main-container">
 
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
@@ -2228,7 +2248,130 @@ initWalkthrough();
     updateOfflineStatus();
 </script>
   <script src="help-widget.mjs" type="module"></script>
-  </body>
+
+<script>
+    // --- P2P Mesh Logic Simulation ---
+    const P2P_MESH_CHANNEL = 'ohc_p2p_mesh';
+    let meshChannel = null;
+    let isMeshJoined = false;
+    let localDeviceId = localStorage.getItem('ohc_pos_device_id') || ('device_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()));
+    localStorage.setItem('ohc_pos_device_id', localDeviceId);
+
+    function initP2PMesh() {
+        if (!meshChannel) {
+            meshChannel = new BroadcastChannel(P2P_MESH_CHANNEL);
+            meshChannel.onmessage = async (event) => {
+                const data = event.data;
+                if (!isMeshJoined && data.type === 'mesh_discovery' && !navigator.onLine) {
+                    // Show discovery prompt if offline
+                    const modal = document.getElementById('p2p-mesh-modal');
+                    if(modal) modal.style.display = 'flex';
+                }
+
+                if (isMeshJoined && data.type === 'mesh_mutation' && data.senderId !== localDeviceId) {
+                    // Received a mutation from the mesh, apply it
+                    const mutation = data.mutation;
+                    console.log('Received P2P mutation:', mutation);
+
+                    // Check if already in queue to prevent loops
+                    const queue = await getQueue();
+                    if (!queue.some(m => m.id === mutation.id)) {
+                        // Apply optimistic UI
+                        if (mutation.type === 'inventory_toggle') {
+                            const cacheKey = 'ohc_catalog_' + (localStorage.getItem('tenant_id') || 'default');
+                            try {
+                                const cached = localStorage.getItem(cacheKey);
+                                if (cached) {
+                                    const catalog = JSON.parse(cached);
+                                    const updated = catalog.map(p => {
+                                        if (p.id === mutation.payload.item_id || 'e2e-product-' + p.id === mutation.id) {
+                                            return { ...p, inventory_count: mutation.payload.is_sold_out ? 0 : Math.max(1, p.inventory_count || 1) };
+                                        }
+                                        return p;
+                                    });
+                                    localStorage.setItem(cacheKey, JSON.stringify(updated));
+                                    if (window.renderCatalog) window.renderCatalog(updated);
+                                }
+                            } catch (e) {}
+                        } else if (mutation.type === 'tap_to_pay' || mutation.type === 'cash_sale') {
+                            // Update inventory count down
+                            const cacheKey = 'ohc_catalog_' + (localStorage.getItem('tenant_id') || 'default');
+                            try {
+                                const cached = localStorage.getItem(cacheKey);
+                                if (cached) {
+                                    const catalog = JSON.parse(cached);
+                                    const updated = catalog.map(p => {
+                                        if (p.id === mutation.product_id) {
+                                            return { ...p, inventory_count: Math.max(0, (p.inventory_count || 0) - mutation.quantity) };
+                                        }
+                                        return p;
+                                    });
+                                    localStorage.setItem(cacheKey, JSON.stringify(updated));
+                                    if (window.renderCatalog) window.renderCatalog(updated);
+                                }
+                            } catch (e) {}
+                        }
+
+                        // Add to our own queue so it eventually syncs when WE go online
+                        mutation._from_mesh = true;
+                        if(window.enqueueOfflineMutation) {
+                            await window.enqueueOfflineMutation(mutation);
+                        }
+                    }
+                }
+            };
+        }
+
+        // Announce presence
+        if (!navigator.onLine && meshChannel) {
+            meshChannel.postMessage({ type: 'mesh_discovery', senderId: localDeviceId });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initP2PMesh();
+
+        const joinBtn = document.getElementById('join-mesh-btn');
+        if (joinBtn) {
+            joinBtn.addEventListener('click', () => {
+                isMeshJoined = true;
+                document.getElementById('p2p-mesh-modal').style.display = 'none';
+                document.getElementById('teammate-mesh-indicator').style.display = 'flex';
+                // Announce we joined
+                if (meshChannel) {
+                    meshChannel.postMessage({ type: 'mesh_joined', senderId: localDeviceId });
+                }
+            });
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        if (meshChannel) {
+            meshChannel.postMessage({ type: 'mesh_discovery', senderId: localDeviceId });
+        }
+    });
+
+    // Hook into enqueueOfflineMutation
+    setTimeout(() => {
+        if(window.enqueueOfflineMutation) {
+            const originalEnqueue = window.enqueueOfflineMutation;
+            window.enqueueOfflineMutation = async function(mutation) {
+                await originalEnqueue(mutation);
+                if (!navigator.onLine && isMeshJoined && !mutation._from_mesh && meshChannel) {
+                    console.log('Broadcasting P2P mutation:', mutation);
+                    meshChannel.postMessage({
+                        type: 'mesh_mutation',
+                        senderId: localDeviceId,
+                        mutation: mutation
+                    });
+                }
+            };
+        }
+    }, 500);
+
+</script>
+
+</body>
 </html>
 
 <!-- Authorized deletion line 0 -->
