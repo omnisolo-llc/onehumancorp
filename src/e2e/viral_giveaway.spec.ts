@@ -94,8 +94,44 @@ test.describe('Viral Giveaway Loop', () => {
 
     await page.locator('.toggle-switch').click({ force: true });
     // Soft paywall should appear
-    await expect(page.locator('text=Pro Feature')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Upgrade to Pro' }).first()).toBeVisible();
+    await expect(page.getByText('Upgrade to Pro').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View Plans' }).first()).toBeVisible();
+  });
+
+  test('should unlock pro features when sharing on X', async ({ page }) => {
+    await page.goto('/giveaway');
+    await page.evaluate(() => {
+        localStorage.setItem('tenant', 'e2e-test-store');
+        localStorage.setItem('has_pro', 'false');
+    });
+    await page.reload();
+
+    await page.locator('.toggle-switch').click({ force: true });
+
+    const shareBtn = page.locator('#share-to-unlock-btn');
+    await expect(shareBtn).toBeVisible();
+
+    // Mock window.open so the test doesn't actually open a new tab
+    await page.evaluate(() => {
+        window.open = function() { return null; };
+    });
+
+    await page.route('/api/v1/growth/trial-extension/claim', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, message: "Trial extended" })
+        });
+    });
+
+    await shareBtn.click();
+
+    const statusMsg = page.locator('#soft-paywall-status');
+    await expect(statusMsg).toBeVisible();
+    await expect(statusMsg).toHaveText('Unlocked!');
+
+    // Modal should close
+    await expect(page.locator('#paywall-modal')).not.toBeVisible();
   });
 
   test('should hide branding when pro is enabled and toggle is clicked', async ({ page, context }) => {
