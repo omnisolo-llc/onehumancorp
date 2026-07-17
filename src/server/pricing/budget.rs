@@ -111,6 +111,12 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
+        if time_elapsed.as_secs() == 0 {
+            return false;
+        }
+        if time_elapsed > total_duration {
+            return false; // elapsed time greater than total duration makes the rate calculation invalid
+        }
         let current = self.current.load(Ordering::SeqCst);
         let expected_spend = (self.total_limit_cents as f64) * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
@@ -303,5 +309,14 @@ mod tests {
 
         let manager = BudgetManager::new(100.0);
         assert!(!manager.is_spend_rate_too_high(one_day, std::time::Duration::from_secs(0)));
+
+        // zero time elapsed
+        assert!(!manager.is_spend_rate_too_high(std::time::Duration::from_secs(0), one_day));
+
+        // time elapsed greater than total duration
+        assert!(!manager.is_spend_rate_too_high(std::time::Duration::from_secs(86400 * 2), one_day));
+
+        // current = 0
+        assert!(!manager.is_spend_rate_too_high(one_day, std::time::Duration::from_secs(86400 * 30)));
     }
 }
