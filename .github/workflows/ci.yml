@@ -75,7 +75,6 @@ jobs:
       - name: Cleanup node-compile-cache
         if: always()
         run: sudo rm -rf /tmp/node-compile-cache || true
-
   dependency-audit:
     name: Production dependency audit
     needs:
@@ -342,7 +341,6 @@ jobs:
       - name: Cleanup node-compile-cache
         if: always()
         run: sudo rm -rf /tmp/node-compile-cache || true
-
   bazel-test-e2e:
     name: Bazel UI E2E (${{ matrix.name }})
     needs:
@@ -429,7 +427,6 @@ jobs:
       - name: Cleanup node-compile-cache
         if: always()
         run: sudo rm -rf /tmp/node-compile-cache || true
-
       - name: Collect Playwright UI E2E report
         if: always()
         env:
@@ -606,7 +603,6 @@ jobs:
       - name: Cleanup node-compile-cache
         if: always()
         run: sudo rm -rf /tmp/node-compile-cache || true
-
   docker-e2e:
     name: Docker E2E
     needs:
@@ -694,7 +690,6 @@ jobs:
       - name: Cleanup node-compile-cache
         if: always()
         run: sudo rm -rf /tmp/node-compile-cache || true
-
   postgres-security:
     name: PostgreSQL tenant isolation
     needs:
@@ -823,7 +818,8 @@ jobs:
           echo "kind-e2e: ${KIND_E2E_RESULT}"
           echo "docker-e2e: ${DOCKER_E2E_RESULT}"
           echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"
-
+          sudo rm -rf /tmp/node-compile-cache || true
+          sudo rm -rf /tmp/node-compile-cache || true
           sudo rm -rf /tmp/node-compile-cache || true
 
           require_success() {
