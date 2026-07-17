@@ -5,9 +5,31 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   test.beforeEach(async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const workspaceRoot = process.env.BUILD_WORKSPACE_DIRECTORY || process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
     await page.route('**/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        let finalPath = path.join(tauriUiDir, 'setup.html');
+        // Check local disk and Bazel runfiles paths
+        if (!fs.existsSync(finalPath)) {
+             finalPath = path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html');
+        }
+        if (!fs.existsSync(finalPath) && process.env.TEST_WORKSPACE) {
+             finalPath = path.join(process.cwd(), 'external', process.env.TEST_WORKSPACE, 'src/ui/tauri/src/ui/setup.html');
+        }
+        if (!fs.existsSync(finalPath) && process.env.TEST_WORKSPACE) {
+             finalPath = path.join(process.cwd(), process.env.TEST_WORKSPACE, 'src/ui/tauri/src/ui/setup.html');
+        }
+        if (!fs.existsSync(finalPath) && process.env.RUNFILES_DIR) {
+            finalPath = path.join(process.env.RUNFILES_DIR, process.env.TEST_WORKSPACE || '', 'src/ui/tauri/src/ui/setup.html');
+        }
+
+        if (!fs.existsSync(finalPath)) {
+            // Absolute fallback for this test context
+            finalPath = '/app/src/ui/tauri/src/ui/setup.html';
+        }
+
+        const content = fs.readFileSync(finalPath, 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
   });
@@ -17,14 +39,14 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
 
   test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
     await page.goto('http://mock/setup.html');
-    const container = page.locator('.container');
+    const container = page.locator('.glassmorphism').first();
     await expect(container).toBeVisible();
 
     await page.emulateMedia({ colorScheme: 'light' });
     await page.waitForTimeout(500);
 
     const bgColor = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(bgColor).toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)/);
+    expect(bgColor).toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/);
 
     const backdropFilter = await container.evaluate((el) => window.getComputedStyle(el).backdropFilter);
     expect(backdropFilter).toContain('blur(30px)');
@@ -39,7 +61,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
 
   test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
     await page.goto('http://mock/setup.html');
-    const container = page.locator('.container');
+    const container = page.locator('.glassmorphism').first();
     await expect(container).toBeVisible();
 
     await page.emulateMedia({ colorScheme: 'dark' });

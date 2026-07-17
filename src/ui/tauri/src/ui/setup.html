@@ -2,35 +2,255 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Open secure onboarding</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+    <title>OHC Onboarding</title>
     <style>
       body {
         align-items: center;
-        background: #f5f5f7;
+        /* Using a subtle built-in gradient instead of an external image to ensure reliability and performance */
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         color: #1d1d1f;
         display: flex;
-        font-family: system-ui, sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         justify-content: center;
         min-height: 100vh;
         margin: 0;
+        padding: 16px;
       }
-      main { max-width: 32rem; padding: 2rem; text-align: center; }
-      a { color: #06f; font-weight: 700; }
+      @media (prefers-color-scheme: dark) {
+        body {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d3436 100%);
+            color: #f5f5f7;
+        }
+      }
+
+      .glassmorphism {
+        background: rgba(252, 252, 252, 0.65);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        padding: 32px;
+        box-sizing: border-box;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+        }
+      }
+
+      h1 { font-size: 24px; margin-top: 0; margin-bottom: 8px; text-align: center; }
+      p { font-size: 15px; margin-bottom: 24px; text-align: center; color: #555; line-height: 1.4; }
+
+      @media (prefers-color-scheme: dark) {
+        p { color: #aaa; }
+      }
+
+      .choice-card {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
+        text-align: left;
+      }
+      .choice-card:hover { background: rgba(255, 255, 255, 0.8); transform: translateY(-2px); }
+      .choice-card h3 { margin: 0 0 4px 0; font-size: 16px; }
+      .choice-card p { margin: 0; font-size: 14px; text-align: left; }
+
+      @media (prefers-color-scheme: dark) {
+        .choice-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .choice-card:hover { background: rgba(255, 255, 255, 0.1); }
+      }
+
+      .container { display: flex; flex-direction: column; }
+
+      input, select, textarea {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 16px;
+        box-sizing: border-box;
+        margin-bottom: 16px;
+      }
+      @media (prefers-color-scheme: dark) {
+        input, select, textarea {
+          background: rgba(0, 0, 0, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: white;
+        }
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        border: none;
+        background: #0066cc;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        min-height: 44px; /* Touch target size */
+      }
+      button:hover { background: #005bb5; }
+      button:disabled { background: #aaa; cursor: not-allowed; }
+
+      .setup-nav-button {
+          width: auto;
+          min-width: 44px;
+          min-height: 44px;
+          border-radius: 999px; /* intentional diff for testing */
+      }
+
+      .hidden { display: none !important; }
+      .error-message { color: #d32f2f; font-size: 14px; margin-bottom: 16px; text-align: center; display: none; }
+      @media (prefers-color-scheme: dark) { .error-message { color: #f44336; } }
+
     </style>
   </head>
   <body>
-    <main>
-      <h1>Continue in secure onboarding</h1>
-      <p>Account credentials are managed by the signed-in web session.</p>
-      <p><a id="continue" href="http://127.0.0.1:3000/onboarding">Open onboarding</a></p>
-    </main>
+    <div class="glassmorphism container" id="app-root">
+
+      <!-- Screen 1: Welcome / Start -->
+      <div id="screen-start">
+        <h1>Welcome to OHC</h1>
+        <p>Set up your assistant to manage your day.</p>
+
+        <div class="error-message" id="error-start"></div>
+
+        <div class="choice-card" id="btn-quick-start">
+          <h3>Quick Start</h3>
+          <p>Let OHC configure the best setup based on your profile.</p>
+        </div>
+
+        <div class="choice-card" id="btn-step-by-step">
+          <h3 style="margin-bottom: 4px;">Step-by-Step Setup</h3>
+          <p>Manually configure your assistant and features.</p>
+        </div>
+      </div>
+
+      <!-- Screen 2: Step-by-step inputs -->
+      <div id="screen-details" class="hidden">
+        <h1>Business Details</h1>
+        <p>Tell us a bit about your work.</p>
+
+        <div class="error-message" id="error-details"></div>
+
+        <label for="biz-name" style="display:block; margin-bottom:4px; font-size:14px; font-weight:600;">Business Name</label>
+        <input type="text" id="biz-name" placeholder="e.g. Maya's Cakes" />
+
+        <label for="biz-type" style="display:block; margin-bottom:4px; font-size:14px; font-weight:600;">Industry</label>
+        <select id="biz-type">
+          <option value="food">Food & Beverage</option>
+          <option value="service">Field Service</option>
+          <option value="retail">Retail / Boutique</option>
+          <option value="creator">Creator / Tutor</option>
+          <option value="agency">Agency / Studio</option>
+          <option value="other">Other</option>
+        </select>
+
+        <button id="btn-submit-details">Continue</button>
+      </div>
+
+      <!-- Screen 3: Loading / Zero-click start -->
+      <div id="screen-loading" class="hidden">
+        <h1>Setting things up...</h1>
+        <p>Configuring your workspace, agent instructions, and tools.</p>
+        <div style="text-align:center; margin-top:20px;">
+          <!-- spinner placeholder -->
+          <svg width="40" height="40" viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="20" fill="none" stroke="#0066cc" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="0">
+              <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
+            </circle>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Screen 4: Success -->
+      <div id="screen-success" class="hidden">
+        <h1>You're all set!</h1>
+        <p>Your work assistant is ready.</p>
+        <button id="btn-go-to-dashboard">Go to Dashboard</button>
+      </div>
+
+    </div>
+
     <script>
-      const link = document.getElementById("continue");
-      const webOrigin = window.location.protocol.startsWith("http")
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : "http://127.0.0.1:3000";
-      link.href = `${webOrigin}/onboarding${window.location.search}${window.location.hash}`;
+      const screenStart = document.getElementById('screen-start');
+      const screenDetails = document.getElementById('screen-details');
+      const screenLoading = document.getElementById('screen-loading');
+      const screenSuccess = document.getElementById('screen-success');
+
+      const btnQuickStart = document.getElementById('btn-quick-start');
+      const btnStepByStep = document.getElementById('btn-step-by-step');
+      const btnSubmitDetails = document.getElementById('btn-submit-details');
+      const btnGoToDashboard = document.getElementById('btn-go-to-dashboard');
+      const errorDetails = document.getElementById('error-details');
+      const errorStart = document.getElementById('error-start');
+
+      function showScreen(screen) {
+        [screenStart, screenDetails, screenLoading, screenSuccess].forEach(s => s.classList.add('hidden'));
+        screen.classList.remove('hidden');
+      }
+
+      btnStepByStep.addEventListener('click', () => {
+        showScreen(screenDetails);
+      });
+
+      btnQuickStart.addEventListener('click', async () => {
+        errorStart.style.display = 'none';
+        showScreen(screenLoading);
+        try {
+          const res = await fetch('/api/v1/onboarding/start_zero_click', { method: 'POST' });
+          if (!res.ok) throw new Error('Zero-click onboarding failed to connect.');
+          showScreen(screenSuccess);
+        } catch (e) {
+          showScreen(screenStart);
+          errorStart.innerText = 'Unable to complete quick start right now. Please try again or use Step-by-Step setup.';
+          errorStart.style.display = 'block';
+        }
+      });
+
+      btnSubmitDetails.addEventListener('click', async () => {
+        const bizName = document.getElementById('biz-name').value;
+        const bizType = document.getElementById('biz-type').value;
+        if (!bizName) {
+            errorDetails.innerText = 'Please enter a business name.';
+            errorDetails.style.display = 'block';
+            return;
+        }
+        errorDetails.style.display = 'none';
+        showScreen(screenLoading);
+        try {
+          const res = await fetch('/api/v1/onboarding/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ businessName: bizName, businessType: bizType })
+          });
+          if (!res.ok) throw new Error('Setup failed');
+          showScreen(screenSuccess);
+        } catch (e) {
+          showScreen(screenDetails);
+          errorDetails.innerText = 'An error occurred while saving your details. Please check your network and try again.';
+          errorDetails.style.display = 'block';
+        }
+      });
+
+      btnGoToDashboard.addEventListener('click', () => {
+        window.location.href = '/dashboard';
+      });
     </script>
   </body>
 </html>
