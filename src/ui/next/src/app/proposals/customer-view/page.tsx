@@ -14,6 +14,7 @@ function CustomerProposalViewContent() {
         if (!proposalId) return;
         async function fetchQuote() {
             try {
+                // Quotes logic remains because the URL param is still the quote_id
                 const res = await fetch(`/api/v1/quotes/${proposalId}`);
                 if (!res.ok) throw new Error('Failed to fetch proposal');
                 const data = await res.json();
@@ -34,6 +35,8 @@ function CustomerProposalViewContent() {
             const data = await res.json();
             if (data.stripe_payment_link) {
                 window.location.href = data.stripe_payment_link;
+            } else if (quote.quote.checkout_url) {
+                 window.location.href = quote.quote.checkout_url;
             } else {
                 alert('Proposal Accepted!');
                 window.location.reload();
@@ -50,8 +53,8 @@ function CustomerProposalViewContent() {
 
     return (
         <div style={{ maxWidth: '375px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Your Quote</h1>
-            <p style={{ color: '#666' }}>Proposal ID: {proposalId}</p>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Your Proposal & Quote</h1>
+            <p style={{ color: '#666', fontSize: '14px' }}>Proposal ID: {proposalId}</p>
 
             <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
                 {quote.line_items?.map((item: any) => (
@@ -84,7 +87,7 @@ function CustomerProposalViewContent() {
                         cursor: 'pointer'
                     }}
                 >
-                    {isLoading ? 'Processing...' : 'Approve & Pay Invoice'}
+                    {isLoading ? 'Processing...' : 'Accept Proposal & Pay Deposit'}
                 </button>
             ) : (
                 <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#e6f4ea', color: '#137333', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold' }}>

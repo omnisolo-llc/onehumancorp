@@ -2326,6 +2326,18 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS project_intakes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        proposal_id TEXT,
+                        source TEXT NOT NULL,
+                        inquiry_text TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'proposal_drafted', 'proposal_sent', 'accepted', 'rejected')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS projects (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

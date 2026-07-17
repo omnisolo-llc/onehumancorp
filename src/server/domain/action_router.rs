@@ -8,6 +8,11 @@ pub async fn dispatch_action(
     pool: &PgPool,
 ) -> Result<(), String> {
     match feature_type {
+        "project_proposal_draft" => {
+            crate::domain::quotes::handle_project_proposal_action(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         "quote_draft" => {
             crate::domain::quotes::handle_quote_action(tenant_id, payload, pool)
                 .await

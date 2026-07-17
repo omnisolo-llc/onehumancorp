@@ -135,6 +135,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.remaining_stock !== undefined ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "create_product" ||
           (approval.proposed_action || approval.context_payload)
@@ -656,7 +657,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
-              ?.feature_type === "autonomous_booking_quote" && (
+              ?.feature_type === "autonomous_booking_quote" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ) && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="autonomous-booking-quote-card"
@@ -869,7 +871,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
-              ?.feature_type === "quote_draft" && (
+              ?.feature_type === "quote_draft" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ) && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="quote-draft-card"
@@ -1325,7 +1328,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
-                ?.feature_type === "quote_draft" ? (
+                ?.feature_type === "quote_draft" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-500 dark:text-gray-400">
@@ -1547,6 +1551,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_reengagement" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -1659,6 +1674,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -2209,6 +2235,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "invoice" ? null : (
             approval.proposed_action || approval.context_payload
           )?.feature_type === "ambassador_reply" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -2301,7 +2338,19 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           )
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "quote_draft" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <div className="flex flex-col gap-1">
@@ -2637,7 +2686,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           </>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "quote_draft" ||
+            (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ? (
           <>
             <button
               onClick={() =>

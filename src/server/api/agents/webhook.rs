@@ -114,7 +114,7 @@ async fn handle_webhook(
     }
 
     // Client intake flow via email or form webhook
-    if payload.source == "intake_form" || payload.source == "email_inquiry" || payload.source == "work_intake" {
+    if payload.source == "intake_form" || payload.source == "email_inquiry" || payload.source == "work_intake" || payload.source == "project_intake" {
         let tenant_id = payload.tenant_id.clone();
         let inquiry = payload.message.clone();
         let pool = crate::db::get_pool();
@@ -132,7 +132,87 @@ async fn handle_webhook(
             .await;
         }
 
-        let service_lead_id = uuid::Uuid::new_v4().to_string();
+
+        if payload.source == "project_intake" {
+            let project_intake_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO project_intakes (id, tenant_id, customer_id, source, inquiry_text, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'pending', NOW(), NOW())")
+                .bind(&project_intake_id)
+                .bind(&tenant_id)
+                .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default().to_string())
+                .bind(&payload.source)
+                .bind(&inquiry)
+                .execute(&pool)
+                .await;
+
+            let (suggested_price, service_name, scope) = match analyze_intake_inquiry(&inquiry).await {
+                Ok(res) => res,
+                Err(_) => (2500.00, "Custom Project".to_string(), "Custom project requirements based on inquiry.".to_string()),
+            };
+
+            let drafted_message = format!(
+                "Hi there! Based on your project request for '{}', I've put together a drafted proposal. The estimated scope will cost around ${:.2}.",
+                inquiry, suggested_price
+            );
+
+            let quote_id = uuid::Uuid::new_v4().to_string();
+            let quote_line_item_id = uuid::Uuid::new_v4().to_string();
+            let price_cents = (suggested_price * 100.0) as i64;
+
+            let _ = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', NOW(), NOW())")
+                .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+                .bind(&tenant_id)
+                .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
+                .execute(&pool)
+                .await;
+
+            let _ = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW(), $5)")
+                .bind(uuid::Uuid::parse_str(&quote_line_item_id).unwrap_or_default())
+                .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+                .bind(&scope)
+                .bind(price_cents)
+                .bind(tenant_id.clone())
+                .execute(&pool)
+                .await;
+
+            let _ = sqlx::query("UPDATE project_intakes SET proposal_id = $1, status = 'proposal_drafted', updated_at = NOW() WHERE id = $2")
+                .bind(&quote_id)
+                .bind(&project_intake_id)
+                .execute(&pool)
+                .await;
+
+            let mut preliminary_tasks = vec![];
+            preliminary_tasks.push(serde_json::json!({"title": format!("Initial Consultation for {}", service_name), "status": "Pending"}));
+            preliminary_tasks.push(serde_json::json!({"title": format!("Draft {} Strategy", service_name), "status": "Pending"}));
+            preliminary_tasks.push(serde_json::json!({"title": "Final Review & Delivery", "status": "Pending"}));
+
+            let action_payload = serde_json::json!({
+                "feature_type": "project_proposal_draft",
+                "project_intake_id": project_intake_id,
+                "customer_inquiry": inquiry,
+                "suggested_price": suggested_price,
+                "scope": scope,
+                "generated_response": drafted_message,
+                "service": service_name,
+                "quote_id": quote_id,
+                "preliminary_tasks": preliminary_tasks,
+                "customer_name": payload.customer_name.unwrap_or_else(|| "Unknown".to_string()),
+            });
+
+            match orchestrator.execute_action(
+                DepartmentType::Sales,
+                format!("Action Required: Approve Project Proposal for {}", service_name),
+                tenant_id,
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await {
+                Ok(_) => tracing::info!("Enqueued project_proposal_draft approval action"),
+                Err(e) => tracing::error!("Failed to enqueue project_proposal_draft approval action: {}", e),
+            }
+
+            return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
+        }
+
+let service_lead_id = uuid::Uuid::new_v4().to_string();
         let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
             .bind(&service_lead_id)
             .bind(&tenant_id)

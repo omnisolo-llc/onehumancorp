@@ -140,7 +140,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         // Also update the quote with the stripe link
         if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
             let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
-            sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 AND tenant_id = $3")
+            sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 ")
                 .bind(&stripe_payment_link)
                 .bind(quote_uuid)
                 .bind(tenant_id)
@@ -149,6 +149,141 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         }
 
         tracing::info!("Dispatched SMS/WhatsApp with quote and payment link {} to customer {}", stripe_payment_link, client_id);
+    }
+
+    Ok(())
+}
+
+
+pub async fn handle_project_proposal_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+    let mut db_price = 0.0;
+    let mut db_client_id = String::new();
+    let mut db_scope = String::new();
+
+    let quote_id = payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or("");
+
+    let mut action_customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    if !quote_id.is_empty() {
+        tracing::info!("Approved project proposal draft: {}", quote_id);
+        let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
+        sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+            .bind(quote_uuid)
+            .bind(tenant_id)
+            .execute(pool)
+            .await?;
+
+        let row = sqlx::query("SELECT customer_id, total_amount_cents FROM quotes WHERE id = $1 AND tenant_id = $2")
+            .bind(quote_uuid)
+            .bind(tenant_id)
+            .fetch_optional(pool)
+            .await?;
+
+        if let Some(r) = row {
+            use sqlx::Row;
+            let total_cents: i64 = r.try_get("total_amount_cents").unwrap_or(0);
+            db_price = (total_cents as f64) / 100.0;
+            let cust_uuid: uuid::Uuid = r.try_get("customer_id").unwrap_or_default();
+            db_client_id = cust_uuid.to_string();
+
+            if action_customer_id.is_empty() {
+                action_customer_id = db_client_id.clone();
+            }
+        }
+
+        let lines = sqlx::query("SELECT description FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2")
+            .bind(quote_uuid)
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await?;
+
+        for row in lines {
+            use sqlx::Row;
+            let desc: String = row.try_get("description").unwrap_or_default();
+            if !db_scope.is_empty() {
+                db_scope.push_str(", ");
+            }
+            db_scope.push_str(&desc);
+        }
+    }
+
+    let mut client_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+    if !db_client_id.is_empty() {
+        client_id = &db_client_id;
+    }
+    if client_id == "unknown" && !action_customer_id.is_empty() {
+        client_id = &action_customer_id;
+    }
+
+    let mut price = payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    if db_price > 0.0 {
+        price = db_price;
+    }
+
+    let mut scope = payload.get("scope").and_then(|v| v.as_str()).unwrap_or("Project Service");
+    if !db_scope.is_empty() {
+        scope = &db_scope;
+    }
+
+    let project_id = uuid::Uuid::new_v4().to_string();
+    let service_name = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Project");
+
+    let _ = sqlx::query("INSERT INTO projects (id, tenant_id, quote_id, customer_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'Active', NOW(), NOW())")
+        .bind(&project_id)
+        .bind(tenant_id)
+        .bind(uuid::Uuid::parse_str(quote_id).ok())
+        .bind(uuid::Uuid::parse_str(client_id).unwrap_or_default().to_string())
+        .bind(service_name)
+        .execute(pool)
+        .await;
+
+    if let Some(tasks) = payload.get("preliminary_tasks").and_then(|v| v.as_array()) {
+        for task in tasks {
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let title = task.get("title").and_then(|v| v.as_str()).unwrap_or("Task");
+            let _ = sqlx::query("INSERT INTO project_tasks (id, tenant_id, project_id, title, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'Pending', NOW(), NOW())")
+                .bind(&task_id)
+                .bind(tenant_id)
+                .bind(&project_id)
+                .bind(title)
+                .execute(pool)
+                .await;
+        }
+    }
+
+    if price > 0.0 {
+        let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+        let stripe_client = StripeClient::new(api_key);
+
+        let mut stripe_payment_link = payload.get("stripe_payment_link")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")));
+
+        if payload.get("stripe_payment_link").is_none() {
+            match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
+                Ok(url) => {
+                    stripe_payment_link = url;
+                }
+                Err(e) => tracing::error!("Stripe integration failed: {}", e),
+            }
+        }
+
+        let project_intake_id = payload.get("project_intake_id").and_then(|v| v.as_str()).unwrap_or("");
+        if !project_intake_id.is_empty() {
+             let _ = sqlx::query("UPDATE project_intakes SET status = 'proposal_sent', updated_at = NOW() WHERE id = $1")
+                .bind(project_intake_id)
+                .execute(pool)
+                .await;
+        }
+
+        let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
+        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 ")
+            .bind(&stripe_payment_link)
+            .bind(quote_uuid)
+            .bind(tenant_id)
+            .execute(pool)
+            .await;
     }
 
     Ok(())
