@@ -108,8 +108,13 @@ for arg in "$@"; do
       fi
       ;;
     *)
-      echo "Playwright Bazel coverage check failed: unexpected argument '$arg'."
-      exit 1
+      if [[ "$arg" == -* ]]; then
+        # Ignore arguments that start with a dash, they are for playwright_test.sh
+        continue
+      else
+        echo "Playwright Bazel coverage check failed: unexpected argument '$arg'."
+        exit 1
+      fi
       ;;
   esac
 done
