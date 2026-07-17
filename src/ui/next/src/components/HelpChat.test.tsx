@@ -379,3 +379,15 @@ describe('HelpChat remaining branches', () => {
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
   });
 });
+
+describe('HelpChat translucent glass styling', () => {
+  it('tests that the help chat has translucent glass styling', () => {
+    render(<HelpChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    // Check for the modal container styling
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('backdrop-blur-xl');
+    expect(dialog).toHaveClass('bg-white/50');
+  });
+});
