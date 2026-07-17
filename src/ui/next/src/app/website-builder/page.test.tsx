@@ -239,7 +239,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(await screen.findByText('Publish my business'));
 
     await waitFor(() => {
-      expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
+      expect(screen.getByText('Publish my business')).toBeInTheDocument();
       expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
     });
   });
@@ -286,7 +286,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles launch from draft mode', async () => {
-    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }] });
+    useWebsiteBuilderStore.setState({ status: 'draft', blocks: [{ type: 'Hero', props: {} }], wizardStep: 'review' });
 
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes('publish_draft')) {

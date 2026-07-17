@@ -589,7 +589,7 @@ export default function WebsiteBuilderPage() {
                             setStatus('live');
                         } catch (err) {
                           console.error(err);
-                          setStatus('draft');
+                          setStatus('idle');
                         }
                       }}
                     >
@@ -626,7 +626,7 @@ export default function WebsiteBuilderPage() {
                           setProductName('First Product');
                           setProductPrice('10.00');
 
-                          setStatus('draft');
+                          setStatus('idle');
                         };
                         const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
                         const controller = new AbortController();
