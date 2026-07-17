@@ -6,20 +6,5 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: [
-      'src/ui/next/src/**/*.test.{ts,tsx}',
-      'src/ui/tauri/src/**/*.test.{ts,tsx}',
-    ],
-    exclude: [
-      '**/node_modules/**',
-      '**/bazel-out/**',
-      '**/bazel-bin/**',
-      '**/bazel-mono/**',
-      '**/bazel-testlogs/**',
-      '**/bazel-workspace/**',
-      '**/target/**',
-      '**/.git/**',
-      '**/.cache/**',
-    ],
   },
 })

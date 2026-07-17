@@ -1137,6 +1137,9 @@ pub async fn capture_payment_intent_handler(
                         match service.commit_inventory(&tenant_id, product_id, quantity, &lock_id).await {
                             Ok(res) if !res.success => {
                                 tracing::error!("Failed to commit inventory after successful capture: {}", res.error_message);
+                            Err(e) => {
+                                tracing::error!("Error committing inventory: {}", e);
+                            },
                             },
                             Ok(_) => {
                                 // Inventory commit successful, log an order if possible

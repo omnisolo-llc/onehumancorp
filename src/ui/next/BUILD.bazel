@@ -60,7 +60,7 @@ sh_test(
         "src/**/*.snap",
         "src/**/*.ts",
         "src/**/*.tsx",
-    ], allow_empty = True) + [
+    ]) + [
         "next-env.d.ts",
         "next.config.mjs",
         "package.json",

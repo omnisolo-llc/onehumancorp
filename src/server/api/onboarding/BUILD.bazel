@@ -97,7 +97,6 @@ rust_library(
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
-        "@crates//:tower-0.5.3",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",

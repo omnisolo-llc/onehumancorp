@@ -416,6 +416,76 @@ impl InventoryService {
         })
     }
 
+    pub async fn commit_inventory(
+        &self,
+        tenant_id: &str,
+        product_id: &str,
+        quantity: i32,
+        lock_id: &str,
+    ) -> Result<CommitResult, String> {
+        let lock_key = Self::get_lock_key(tenant_id, product_id);
+
+        // Try to release the lock immediately, proving we own it
+        let released = self.locker.release(&lock_key, lock_id).await;
+
+        let pool = crate::db::get_pool();
+
+        if !released {
+            // We don't own the lock (it expired or was owned by someone else).
+            // We should rollback the transaction.
+            tracing::error!("Failed to commit inventory: lock expired or invalid for product_id: {}, lock_id: {}", product_id, lock_id);
+            return Ok(CommitResult {
+                success: false,
+                error_message: "Failed to release lock, it may have expired".to_string(),
+            });
+        }
+
+        if let Ok(mut tx) = pool.begin().await {
+            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
+                let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND committed_count >= $1")
+                    .bind(quantity)
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                if let Ok(res) = update_res {
+                    if res.rows_affected() > 0 {
+                        let _ = tx.commit().await;
+                        return Ok(CommitResult {
+                            success: true,
+                            error_message: "".to_string(),
+                        });
+                    }
+                }
+            }
+
+            // Fallback for legacy
+            let update_res = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND locked_quantity >= $1")
+                .bind(quantity)
+                .bind(product_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            if let Ok(res) = update_res {
+                if res.rows_affected() > 0 {
+                    let _ = tx.commit().await;
+                    return Ok(CommitResult {
+                        success: true,
+                        error_message: "".to_string(),
+                    });
+                }
+            }
+            let _ = tx.rollback().await;
+        }
+
+        Ok(CommitResult {
+            success: false,
+            error_message: "Database error committing inventory".to_string(),
+        })
+    }
+
     pub async fn release_inventory(
         &self,
         tenant_id: &str,

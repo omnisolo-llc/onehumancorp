@@ -3479,7 +3479,7 @@ pub async fn update_ui_omni_inbox_action_handler(
             return axum::http::StatusCode::NOT_FOUND.into_response();
         }
         Err(OmniInboxActionError::Database(error)) => {
-            tracing::error!("Failed to apply tenant-scoped omni-inbox action: {error:?}"); // pii-safe
+            tracing::error!("Failed to apply tenant-scoped omni-inbox action: {error:?}");
             return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };

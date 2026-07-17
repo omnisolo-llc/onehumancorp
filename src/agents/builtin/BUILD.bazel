@@ -175,7 +175,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tonic",
-        "@crates//:tower-0.4.13",
+        "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-opentelemetry",
         "@crates//:tracing-subscriber",

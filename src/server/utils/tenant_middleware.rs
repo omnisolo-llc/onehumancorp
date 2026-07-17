@@ -26,7 +26,6 @@ pub fn is_auth_bypass_path(path: &str) -> bool {
 
     let fixed_prefix = [
         "/api/public",
-        "/api/v1/public",
         "/api/webhook",
         "/api/v1/auth",
         "/api/onboarding",

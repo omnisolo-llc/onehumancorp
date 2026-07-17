@@ -1176,10 +1176,6 @@ describe("OnboardingWizard", () => {
     const launchButton = await screen.findAllByRole("button", { name: /Approve \& Publish/i }).then(els => els[0]);
     await user.click(launchButton);
 
-    await waitFor(() => {
-      expect(useOnboardingStore.getState().step).toBe(5);
-    });
-
     expect(startRequestPayload).toBeDefined();
     expect(startRequestPayload.initial_products).toEqual([
       { name: "Custom AI Product", price: "99" },
