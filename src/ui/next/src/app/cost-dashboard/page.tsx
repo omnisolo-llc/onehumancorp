@@ -62,12 +62,10 @@ export default function CostDashboardPage() {
   const handleCancelSubscription = async () => {
     if (confirm('Are you sure you want to cancel your subscription?')) {
       try {
-        const token = localStorage.getItem('token');
         const response = await fetch('/api/v1/billing/cancel-subscription', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            'Content-Type': 'application/json'
           },
         });
         if (response.ok) {
@@ -83,12 +81,10 @@ export default function CostDashboardPage() {
 
   const handleDownloadInvoice = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/billing/download-invoice', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Content-Type': 'application/json'
         },
       });
       if (response.ok) {
@@ -107,12 +103,10 @@ export default function CostDashboardPage() {
 
   const handleManageBilling = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Content-Type': 'application/json'
         },
       });
 
@@ -133,29 +127,23 @@ export default function CostDashboardPage() {
   useEffect(() => {
     async function fetchCostData() {
       try {
-        const token = localStorage.getItem('token');
-        const headers = { 'Authorization': `Bearer ${token}` };
-
         const [costRes, planRes] = await Promise.all([
-          fetch('/api/v1/billing/cost-dashboard', { headers }),
-          fetch('/api/v1/billing/my-plan', { headers })
+          fetch('/api/v1/billing/cost-dashboard'),
+          fetch('/api/v1/billing/my-plan')
         ]);
 
         if (costRes.ok) {
             const result = await costRes.json();
             setData(result);
-        } else {
-            console.error("Failed to fetch cost data:", costRes.status);
         }
 
         if (planRes.ok) {
             const planResult = await planRes.json();
             setMyPlanData(planResult);
-        } else {
-            console.error("Failed to fetch plan data:", planRes.status);
         }
-      } catch (err) {
-        console.error("Error fetching cost data", err);
+      } catch {
+        setData(null);
+        setMyPlanData(null);
       } finally {
         setLoading(false);
       }

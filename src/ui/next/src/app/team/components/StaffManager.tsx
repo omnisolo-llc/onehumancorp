@@ -27,7 +27,7 @@ export default function StaffManager() {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('/api/staff');
+      const response = await fetch('/api/v1/staff');
       if (response.ok) {
         const data = await response.json();
         setStaff(data.staff || []);
@@ -45,7 +45,7 @@ export default function StaffManager() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/staff', {
+      const response = await fetch('/api/v1/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone_number: phone, role })

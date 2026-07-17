@@ -14,7 +14,7 @@ export default function RalphLoopPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/ralph-loop', {
+      const response = await fetch('/api/v1/ralph-loop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task, progress_file: progressFile }),

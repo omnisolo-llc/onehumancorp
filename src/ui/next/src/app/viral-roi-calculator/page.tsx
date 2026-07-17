@@ -18,7 +18,7 @@ export default function ViralROICalculatorPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+      const storedTenant = localStorage.getItem('business_display_name') || 'My Business';
       setTenantId(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }

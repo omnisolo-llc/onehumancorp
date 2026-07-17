@@ -16,7 +16,7 @@ sequenceDiagram
     participant Memory as AutoDream (Vector DB)
     participant Agent as Swarm Agent
 
-    CE->>Hub: 1. Hire Agent (POST /api/agents/hire)
+    CE->>Hub: 1. Hire Agent (POST /api/v1/agents/hire)
     Hub->>Agent: 2. Initialize (Inject SPIFFE Identity)
     Agent->>Memory: 3. Context Sync (Pull historical RAG)
     Memory-->>Agent: Returns OHC-SIP embeddings
