@@ -12,7 +12,7 @@ describe("POST /api/v1/booking/request", () => {
     vi.restoreAllMocks();
   });
 
-  it("forwards booking proposal requests to the Rust backend instead of returning a mock request id", async () => {
+  it("forwards booking quote requests to the Rust backend instead of returning a mock request id", async () => {
     const backendResponse = {
       success: true,
       request_id: "req_real_123",
@@ -24,7 +24,7 @@ describe("POST /api/v1/booking/request", () => {
     });
 
     const body = {
-      description: "Need a cake delivery proposal",
+      description: "Need a cake delivery quote",
       fileName: "cake.jpg",
       timestamp: "2026-06-06T12:00:00Z",
     };

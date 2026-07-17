@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function InteractiveProposalGeneratorPage() {
+export default function InteractiveQuoteGeneratorPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('my-store');
   const [serviceName, setServiceName] = useState('Custom Cake Design');
@@ -20,7 +20,7 @@ export default function InteractiveProposalGeneratorPage() {
     }
   }, []);
 
-  const generatedLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/proposal-calculator?tenant=${tenant}&service=${encodeURIComponent(serviceName)}&basePrice=${encodeURIComponent(basePrice.toString())}&unitName=${encodeURIComponent(unitName)}&pricePerUnit=${encodeURIComponent(pricePerUnit.toString())}&theme=${theme}`;
+  const generatedLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/quote-calculator?tenant=${tenant}&service=${encodeURIComponent(serviceName)}&basePrice=${encodeURIComponent(basePrice.toString())}&unitName=${encodeURIComponent(unitName)}&pricePerUnit=${encodeURIComponent(pricePerUnit.toString())}&theme=${theme}`;
   const iframeCode = `<iframe src="${generatedLink}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
 <div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color:#6b7280;text-decoration:none;font-weight:600;font-family:sans-serif;">⚡ Powered by OHC</a></div>`;
 
@@ -44,7 +44,7 @@ export default function InteractiveProposalGeneratorPage() {
           <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-700">
             ← Back
           </button>
-          <h1 className="text-2xl font-bold font-outfit text-gray-900">Interactive Proposal Generator 🧮</h1>
+          <h1 className="text-2xl font-bold font-outfit text-gray-900">Interactive Quote Generator 🧮</h1>
         </div>
       </header>
 
@@ -149,7 +149,7 @@ export default function InteractiveProposalGeneratorPage() {
                         style={getThemeStyles()}
                     >
                         <div className="p-6">
-                            <h3 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Proposal</h3>
+                            <h3 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Quote</h3>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center opacity-80">
                                     <span>Base Price</span>
@@ -183,7 +183,7 @@ export default function InteractiveProposalGeneratorPage() {
                                     className="w-full mt-6 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
                                     disabled
                                 >
-                                    Request Proposal
+                                    Request Quote
                                 </button>
                             </div>
                         </div>

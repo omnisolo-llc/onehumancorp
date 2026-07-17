@@ -2347,6 +2347,27 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS project_intakes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        inquiry TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'processed')),
+                        source TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS project_tasks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        proposal_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS proposals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

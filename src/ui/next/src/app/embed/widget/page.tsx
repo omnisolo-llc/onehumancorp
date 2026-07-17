@@ -81,12 +81,12 @@ function WidgetContent() {
                 <h2 className={`text-2xl font-bold mb-1 ${t.text}`}>
                     {type === 'intake' && 'Get Started'}
                     {type === 'booking' && 'Book an Appointment'}
-                    {type === 'proposal' && 'Request a Proposal'}
+                    {type === 'quote' && 'Request a Quote'}
                 </h2>
                 <p className={`text-sm ${t.textMuted}`}>
                     {type === 'intake' && 'Tell us what you need and we will help you out.'}
                     {type === 'booking' && 'Select a time that works best for you.'}
-                    {type === 'proposal' && 'Provide details for an accurate estimate.'}
+                    {type === 'quote' && 'Provide details for an accurate estimate.'}
                 </p>
             </div>
 
@@ -129,13 +129,13 @@ function WidgetContent() {
                     <label className={`block text-xs font-semibold mb-1 ${t.text}`}>
                         {type === 'intake' && 'How can we help?'}
                         {type === 'booking' && 'Additional Notes'}
-                        {type === 'proposal' && 'Project Details'}
+                        {type === 'quote' && 'Project Details'}
                     </label>
                     <textarea
                         required
                         name="details"
                         rows={type === 'booking' ? 2 : 4}
-                        placeholder={type === 'proposal' ? 'Describe your project...' : 'Provide more details...'}
+                        placeholder={type === 'quote' ? 'Describe your project...' : 'Provide more details...'}
                         className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
                     />
                 </div>
@@ -146,7 +146,7 @@ function WidgetContent() {
                 >
                     {type === 'intake' && 'Submit Request'}
                     {type === 'booking' && 'Confirm Booking'}
-                    {type === 'proposal' && 'Get My Proposal'}
+                    {type === 'quote' && 'Get My Quote'}
                 </button>
             </form>
         </div>

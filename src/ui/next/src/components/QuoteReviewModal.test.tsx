@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ProposalReviewModal } from './ProposalReviewModal';
+import { QuoteReviewModal } from './QuoteReviewModal';
 import React from 'react';
 
-describe('ProposalReviewModal', () => {
+describe('QuoteReviewModal', () => {
   const mockPayload = {
-    feature_type: 'proposal_draft',
+    feature_type: 'quote_draft',
     service: 'Test Service',
     price: 100.0,
     customer_inquiry: 'I need a test service'
@@ -13,21 +13,21 @@ describe('ProposalReviewModal', () => {
 
   it('renders correctly when open', () => {
     render(
-      <ProposalReviewModal
+      <QuoteReviewModal
         isOpen={true}
         onClose={vi.fn()}
         onApprove={vi.fn()}
         initialPayload={mockPayload}
       />
     );
-    expect(screen.getByText('Review Proposal')).toBeDefined();
+    expect(screen.getByText('Review Quote')).toBeDefined();
     expect(screen.getByDisplayValue('Test Service')).toBeDefined();
-    expect(screen.getByTestId('modal-proposal-total')).toHaveTextContent('$100.00');
+    expect(screen.getByTestId('modal-quote-total')).toHaveTextContent('$100.00');
   });
 
   it('updates total when price changes', () => {
     render(
-      <ProposalReviewModal
+      <QuoteReviewModal
         isOpen={true}
         onClose={vi.fn()}
         onApprove={vi.fn()}
@@ -36,13 +36,13 @@ describe('ProposalReviewModal', () => {
     );
     const priceInput = screen.getByDisplayValue('100.00');
     fireEvent.change(priceInput, { target: { value: '150.00' } });
-    expect(screen.getByTestId('modal-proposal-total')).toHaveTextContent('$150.00');
+    expect(screen.getByTestId('modal-quote-total')).toHaveTextContent('$150.00');
   });
 
   it('calls onApprove with updated payload', () => {
     const onApprove = vi.fn();
     render(
-      <ProposalReviewModal
+      <QuoteReviewModal
         isOpen={true}
         onClose={vi.fn()}
         onApprove={onApprove}

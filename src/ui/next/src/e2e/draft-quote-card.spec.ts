@@ -1,12 +1,12 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
-test.describe('Draft Proposal Action Card CUJ', () => {
+test.describe('Draft Quote Action Card CUJ', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
-  test('Owner sees draft proposal suggestion and approves it on 375px mobile viewport', async ({ page, loginAs, adminUser }) => {
+  test('Owner sees draft quote suggestion and approves it on 375px mobile viewport', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    // 1. Simulate the SalesAgent drafting a proposal
-    await page.request.post('/api/v1/agents/approvals/simulate-proposal-draft', {
+    // 1. Simulate the SalesAgent drafting a quote
+    await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
       headers: {
         'x-tenant-id': 'tenant-1',
         'x-user-id': 'default'
@@ -22,8 +22,8 @@ test.describe('Draft Proposal Action Card CUJ', () => {
     // Switch to Sales department
     await page.getByText('The Salesperson').click();
 
-    // 3. Verify the Draft Proposal Suggestion card is visible
-    await expect(page.getByTestId('proposal-draft-card').first()).toBeVisible();
+    // 3. Verify the Draft Quote Suggestion card is visible
+    await expect(page.getByTestId('quote-draft-card').first()).toBeVisible();
 
     // 4. Verify card contents
     await expect(page.getByText('Action Required: Approve Estimate for 2-Bedroom Apartment Painting')).toBeVisible();
@@ -35,12 +35,12 @@ test.describe('Draft Proposal Action Card CUJ', () => {
     await editBtn.click();
 
     // 6. Edit the price
-    const priceInput = page.getByTestId('edit-proposal-price');
+    const priceInput = page.getByTestId('edit-quote-price');
     await expect(priceInput).toBeVisible();
     await priceInput.fill('350');
 
     // 7. Edit the scope
-    const scopeInput = page.getByTestId('edit-proposal-scope');
+    const scopeInput = page.getByTestId('edit-quote-scope');
     await expect(scopeInput).toBeVisible();
     await scopeInput.fill('Updated 2-Bedroom Apartment Painting including labor and standard materials plus extra parts.');
 
@@ -50,23 +50,23 @@ test.describe('Draft Proposal Action Card CUJ', () => {
     await approveBtn.click();
 
     // 9. Optimistic UI update should remove the card from the feed
-    await expect(page.getByTestId('proposal-draft-card')).toHaveCount(0);
+    await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
   });
 });
 
-test.describe('Draft Proposal Action Card Edge Cases', () => {
+test.describe('Draft Quote Action Card Edge Cases', () => {
     test.use({ viewport: { width: 375, height: 812 } });
 
     test('Mobile view layout constraints are respected', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/v1/agents/approvals/simulate-proposal-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
         await page.goto('/team');
         await page.getByText('The Salesperson').click();
 
-        const card = page.getByTestId('proposal-draft-card').first();
+        const card = page.getByTestId('quote-draft-card').first();
         await expect(card).toBeVisible();
         const box = await card.boundingBox();
         expect(box!.width).toBeLessThanOrEqual(375);
@@ -74,7 +74,7 @@ test.describe('Draft Proposal Action Card Edge Cases', () => {
 
     test('Edit modal closes correctly on reject', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/v1/agents/approvals/simulate-proposal-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -84,12 +84,12 @@ test.describe('Draft Proposal Action Card Edge Cases', () => {
         await page.getByRole('button', { name: 'Edit' }).first().click();
         await page.getByRole('button', { name: 'Cancel' }).click();
 
-        await expect(page.getByTestId('edit-proposal-price')).not.toBeVisible();
+        await expect(page.getByTestId('edit-quote-price')).not.toBeVisible();
     });
 
     test('Price formatting validates input correctly', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/v1/agents/approvals/simulate-proposal-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -98,14 +98,14 @@ test.describe('Draft Proposal Action Card Edge Cases', () => {
 
         await page.getByRole('button', { name: 'Edit' }).first().click();
 
-        const priceInput = page.getByTestId('edit-proposal-price');
+        const priceInput = page.getByTestId('edit-quote-price');
         await priceInput.fill('abc');
         await expect(priceInput).toHaveValue(''); // Assuming type="number" strips non-numeric characters
     });
 
     test('Approving without editing maintains suggested values', async ({ page, loginAs, adminUser }) => {
         await loginAs(page, adminUser);
-        await page.request.post('/api/v1/agents/approvals/simulate-proposal-draft', {
+        await page.request.post('/api/v1/agents/approvals/simulate-quote-draft', {
             headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default' },
             data: { inbox_message_id: 'msg-1' }
         });
@@ -113,6 +113,6 @@ test.describe('Draft Proposal Action Card Edge Cases', () => {
         await page.getByText('The Salesperson').click();
 
         await page.getByRole('button', { name: 'Approve & Send' }).first().click();
-        await expect(page.getByTestId('proposal-draft-card')).toHaveCount(0);
+        await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
     });
 });

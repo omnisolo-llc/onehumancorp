@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import InteractiveProposalGeneratorPage from './page';
+import InteractiveQuoteGeneratorPage from './page';
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -9,26 +9,26 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-describe('InteractiveProposalGeneratorPage', () => {
+describe('InteractiveQuoteGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders correctly', () => {
-    render(<InteractiveProposalGeneratorPage />);
-    expect(screen.getByText('Interactive Proposal Generator 🧮')).toBeDefined();
+    render(<InteractiveQuoteGeneratorPage />);
+    expect(screen.getByText('Interactive Quote Generator 🧮')).toBeDefined();
     expect(screen.getByText('Widget Settings')).toBeDefined();
     expect(screen.getByText('Live Preview')).toBeDefined();
   });
 
   it('updates preview when inputs change', () => {
-    render(<InteractiveProposalGeneratorPage />);
+    render(<InteractiveQuoteGeneratorPage />);
 
     const titleInput = screen.getByPlaceholderText('e.g. Custom Cake Design');
     fireEvent.change(titleInput, { target: { value: 'Landscaping Service' } });
 
     // Check if the preview updates
-    const textElements = screen.getAllByText('Landscaping Service Proposal');
+    const textElements = screen.getAllByText('Landscaping Service Quote');
     expect(textElements.length).toBeGreaterThan(0);
   });
 });

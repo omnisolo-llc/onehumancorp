@@ -1,6 +1,6 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
-test.describe('Interactive Proposal Widget Growth Loop', () => {
+test.describe('Interactive Quote Widget Growth Loop', () => {
     test('generator page renders correctly, preview updates, and public widget functions properly with viral loop link', async ({ page }) => {
         // 1. Set some initial local storage state to act as a logged-in user
         await page.goto('/dashboard');
@@ -8,11 +8,11 @@ test.describe('Interactive Proposal Widget Growth Loop', () => {
             localStorage.setItem('tenant', 'e2e-service');
         });
 
-        // 2. Go to the Interactive Proposal Generator page
-        await page.goto('/interactive-proposal-generator');
+        // 2. Go to the Interactive Quote Generator page
+        await page.goto('/interactive-quote-generator');
 
         // Check the page header
-        await expect(page.locator('h1', { hasText: 'Interactive Proposal Generator 🧮' })).toBeVisible();
+        await expect(page.locator('h1', { hasText: 'Interactive Quote Generator 🧮' })).toBeVisible();
 
         // 3. Configure the page
         const serviceNameInput = page.getByPlaceholder('e.g. Custom Cake Design');
@@ -32,10 +32,10 @@ test.describe('Interactive Proposal Widget Growth Loop', () => {
 
         // 5. Navigate to the generated public widget page (simulated embed page)
         // Since the generator page dynamically builds the link, we can just navigate directly
-        await page.goto('/proposal-calculator?tenant=e2e-service&service=Professional%20Landscaping&basePrice=200&unitName=Hours&pricePerUnit=50&theme=light');
+        await page.goto('/quote-calculator?tenant=e2e-service&service=Professional%20Landscaping&basePrice=200&unitName=Hours&pricePerUnit=50&theme=light');
 
         // Verify the public page loaded the passed data
-        await expect(page.locator('h3', { hasText: 'Professional Landscaping Proposal' })).toBeVisible();
+        await expect(page.locator('h3', { hasText: 'Professional Landscaping Quote' })).toBeVisible();
         await expect(page.locator('span', { hasText: '$200.00' }).first()).toBeVisible();
         await expect(page.locator('label', { hasText: 'Number of Hours' })).toBeVisible();
 
@@ -57,7 +57,7 @@ test.describe('Interactive Proposal Widget Growth Loop', () => {
 
         // 8. Go back to generator page and verify the embed code contains the viral link
         // We wait for the generator page to be ready and local storage tenant to be loaded
-        await page.goto('/interactive-proposal-generator');
+        await page.goto('/interactive-quote-generator');
         // Give time for useEffect to pick up localStorage and update state to e2e-service
         await page.waitForFunction(() => {
             const el = document.querySelector('textarea[readonly]');
@@ -73,12 +73,12 @@ test.describe('Interactive Proposal Widget Growth Loop', () => {
         expect(embedCodeValue).toContain('⚡ Powered by OHC');
     });
 
-    test('Dashboard contains link to Interactive Proposal Generator', async ({ page }) => {
+    test('Dashboard contains link to Interactive Quote Generator', async ({ page }) => {
         await page.goto('/dashboard');
 
-        // Find the link to create an interactive proposal widget
-        const proposalWidgetLink = page.locator('a[href="/interactive-proposal-generator"]');
-        await expect(proposalWidgetLink).toBeVisible();
-        await expect(proposalWidgetLink).toContainText('Interactive Proposal Widget');
+        // Find the link to create an interactive quote widget
+        const quoteWidgetLink = page.locator('a[href="/interactive-quote-generator"]');
+        await expect(quoteWidgetLink).toBeVisible();
+        await expect(quoteWidgetLink).toContainText('Interactive Quote Widget');
     });
 });

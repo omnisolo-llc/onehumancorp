@@ -173,8 +173,8 @@ export default function FeedPage() {
   const handleAction = async (id: string, state: string, updatedProposed?: any, updatedContext?: any) => {
     const item = items.find(i => i.id === id);
     if (state === 'APPROVED') {
-      if (item?.proposed_action?.action_type === 'Draft Proposal') {
-        router.push(`/proposals/${item.proposed_action.proposal_id}`);
+      if (item?.proposed_action?.action_type === 'Draft Quote') {
+        router.push(`/quotes/${item.proposed_action.quote_id}`);
         return;
       }
       if (item?.proposed_action?.action_type === 'Draft Booking') {
@@ -356,7 +356,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution || isInvoiceFollowup ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
                     <span className={`w-2 h-2 rounded-full ${isDisputeResolution || isInvoiceFollowup ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceFollowup ? 'ACTION REQUIRED' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Proposal' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceFollowup ? 'ACTION REQUIRED' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -374,7 +374,7 @@ export default function FeedPage() {
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
                     : isPromoter
                     ? `New Product: ${promoterPayload?.product_name || 'Marketing Draft'}`
-                    : item.proposed_action?.action_type === 'Draft Proposal'
+                    : item.proposed_action?.action_type === 'Draft Quote'
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Follow-up'
                     ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
@@ -522,7 +522,7 @@ export default function FeedPage() {
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                           data-testid="feed-approve-btn"
                         >
-                          {isProcessing ? 'Processing...' : (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Proposal' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
+                          {isProcessing ? 'Processing...' : (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
                         </button>
                         <button
                           onClick={() => startEditing(item)}

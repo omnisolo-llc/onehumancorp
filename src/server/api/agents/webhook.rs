@@ -133,7 +133,7 @@ async fn handle_webhook(
         }
 
         let service_lead_id = uuid::Uuid::new_v4().to_string();
-        let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
+        let _ = sqlx::query("INSERT INTO project_intakes (id, tenant_id, customer_id, inquiry, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
             .bind(&service_lead_id)
             .bind(&tenant_id)
             .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
@@ -173,25 +173,25 @@ async fn handle_webhook(
 
         // Customer record created above
 
-        let quote_id = uuid::Uuid::new_v4().to_string();
-        let quote_line_item_id = uuid::Uuid::new_v4().to_string();
+        let proposal_id = uuid::Uuid::new_v4().to_string();
+        let proposal_line_item_id = uuid::Uuid::new_v4().to_string();
 
         let price_cents = (suggested_price * 100.0) as i64;
 
         let _ = sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', NOW(), NOW())"
+            "INSERT INTO proposals (id, tenant_id, customer_id, status, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', NOW(), NOW())"
         )
-        .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(&proposal_id).unwrap_or_default())
         .bind(&tenant_id)
         .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
         .execute(&pool)
         .await;
 
         let _ = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW(), $5)"
+            "INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW(), $5)"
         )
-        .bind(uuid::Uuid::parse_str(&quote_line_item_id).unwrap_or_default())
-        .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(&proposal_line_item_id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(&proposal_id).unwrap_or_default())
         .bind(&scope)
         .bind(price_cents)
         .bind(tenant_id.clone())
@@ -209,7 +209,7 @@ async fn handle_webhook(
             "service": service_name,
             "price": suggested_price,
             "context": context,
-            "quote_id": quote_id,
+            "proposal_id": proposal_id,
             "customer_name": payload.customer_name.unwrap_or_else(|| "Unknown".to_string()),
         });
 

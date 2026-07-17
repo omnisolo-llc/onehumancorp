@@ -167,7 +167,7 @@ export default function ShareCardsPage() {
                         Share to WhatsApp
                     </a>
                     <a
-                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&proposal=${encodeURIComponent(shareText)}`}
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&quote=${encodeURIComponent(shareText)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-[#166fe5] transition-all"

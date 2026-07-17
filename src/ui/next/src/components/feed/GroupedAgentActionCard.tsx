@@ -8,12 +8,12 @@ export const GroupedAgentActionCard = ({
   queuedActionIds,
   editingId,
   editContent,
-  editProposalPrice,
-  editProposalScope,
+  editQuotePrice,
+  editQuoteScope,
   setEditingId,
   setEditContent,
-  setEditProposalPrice,
-  setEditProposalScope,
+  setEditQuotePrice,
+  setEditQuoteScope,
   handleDecision,
 }: any) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -76,12 +76,12 @@ export const GroupedAgentActionCard = ({
               queuedActionIds={queuedActionIds}
               editingId={editingId}
               editContent={editContent}
-              editProposalPrice={editProposalPrice}
-              editProposalScope={editProposalScope}
+              editQuotePrice={editQuotePrice}
+              editQuoteScope={editQuoteScope}
               setEditingId={setEditingId}
               setEditContent={setEditContent}
-              setEditProposalPrice={setEditProposalPrice}
-              setEditProposalScope={setEditProposalScope}
+              setEditQuotePrice={setEditQuotePrice}
+              setEditQuoteScope={setEditQuoteScope}
               handleDecision={handleDecision}
             />
           ))}

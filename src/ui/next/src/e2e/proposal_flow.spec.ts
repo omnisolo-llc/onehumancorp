@@ -18,23 +18,23 @@ test.describe('Autonomous Proposal Flow', () => {
     expect(submitResponse.ok()).toBeTruthy();
 
     await page.goto('/dashboard');
-    const proposalCard = page.getByTestId('proposal-draft-card').first();
-    await expect(proposalCard).toBeVisible({ timeout: 15000 });
+    const quoteCard = page.getByTestId('quote-draft-card').first();
+    await expect(quoteCard).toBeVisible({ timeout: 15000 });
 
     // 2. Opening the review modal
-    const reviewBtn = page.getByTestId('review-proposal-draft').first();
+    const reviewBtn = page.getByTestId('review-quote-draft').first();
     await reviewBtn.click();
 
     const modal = page.locator('role=dialog');
     await expect(modal).toBeVisible();
-    await expect(modal.getByText('Review Proposal')).toBeVisible();
+    await expect(modal.getByText('Review Quote')).toBeVisible();
 
     // 3. Editing a line item price
     const priceInput = modal.locator('input[type="number"]').nth(1); // Second number input (Price $)
     await priceInput.fill('550.00');
 
     // Verify total updates
-    await expect(modal.getByTestId('modal-proposal-total')).toHaveText('$550.00');
+    await expect(modal.getByTestId('modal-quote-total')).toHaveText('$550.00');
 
     // 4. Toggling the deposit requirement
     const depositSwitch = modal.locator('role=switch');
@@ -48,7 +48,7 @@ test.describe('Autonomous Proposal Flow', () => {
 
     // 6. Verifying the proposal moves to the Activity Feed
     await expect(modal).not.toBeVisible();
-    await expect(proposalCard).not.toBeVisible();
+    await expect(quoteCard).not.toBeVisible();
 
     const activityTab = page.locator('button', { hasText: /Activity Feed/ });
     await activityTab.click();

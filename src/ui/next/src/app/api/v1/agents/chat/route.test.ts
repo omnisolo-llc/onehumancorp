@@ -3,10 +3,10 @@ import { routeIntent } from './utils';
 
 describe('routeIntent', () => {
   it('should route sales messages to sales department', () => {
-    const result = routeIntent('Can you generate a proposal for John Doe?');
+    const result = routeIntent('Can you generate a quote for John Doe?');
     expect(result.department_assigned).toBe('sales');
     expect(result.agent).toBe('The Salesperson');
-    expect(result.description).toContain('proposal');
+    expect(result.description).toContain('quote');
   });
 
   it('should route lead messages to sales department', () => {

@@ -51,7 +51,7 @@ const departments = [
   { id: 'operations', name: 'The Manager', role: 'Operations', description: 'Inventory, orders, fulfillment, and handoffs.', status: 'Active' },
   { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', description: 'Customer replies, loyalty, review recovery, and escalations.', status: 'Active' },
   { id: 'marketing', name: 'The Promoter', role: 'Marketing', description: 'Posts, promos, campaigns, and brand voice.', status: 'Active' },
-  { id: 'sales', name: 'The Closer', role: 'Sales', description: 'Proposals, follow-ups, pipeline cleanup, and win-back actions.', status: 'Active' },
+  { id: 'sales', name: 'The Closer', role: 'Sales', description: 'Quotes, follow-ups, pipeline cleanup, and win-back actions.', status: 'Active' },
   { id: 'finance', name: 'The Accountant', role: 'Finance', description: 'Invoices, margins, budgets, and cash-flow checks.', status: 'Guarded' },
   { id: 'legal', name: 'The Counsel', role: 'Legal', description: 'Contracts, compliance, and approval-only risk review.', status: 'Approval only' },
 ];

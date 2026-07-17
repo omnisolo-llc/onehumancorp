@@ -27,7 +27,7 @@ pub struct ClientIntakeRequest {
 pub struct ClientIntakeResponse {
     pub success: bool,
     pub proposal_drafted: bool,
-    pub quote_id: Option<String>,
+    pub proposal_id: Option<String>,
 }
 
 #[derive(Clone)]
@@ -138,15 +138,15 @@ async fn handle_client_intake(
 
     let customer_id = uuid::Uuid::new_v4();
     let quote_request_id = uuid::Uuid::new_v4();
-    let quote_id = uuid::Uuid::new_v4();
-    let quote_line_item_id = uuid::Uuid::new_v4();
+    let proposal_id = uuid::Uuid::new_v4();
+    let proposal_line_item_id = uuid::Uuid::new_v4();
 
     // Begin saving to DB
     let mut tx = match state.orchestrator.db().pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to begin transaction: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response()
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response()
         },
     };
 
@@ -174,14 +174,14 @@ async fn handle_client_intake(
         .await {
             tracing::error!("Failed to insert quote_request: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response();
     }
 
     let total_amount_cents = (suggested_price * 100.0) as i64;
     let deposit_cents = total_amount_cents / 3;
 
-    if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
-        .bind(quote_id)
+    if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
+        .bind(proposal_id)
         .bind(&tenant_id)
         .bind(customer_id)
         .bind(total_amount_cents)
@@ -190,24 +190,24 @@ async fn handle_client_intake(
         .await {
             tracing::error!("Failed to insert quote: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response();
     }
 
-    if let Err(e) = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
-        .bind(quote_line_item_id)
-        .bind(quote_id)
+    if let Err(e) = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
+        .bind(proposal_line_item_id)
+        .bind(proposal_id)
         .bind(&service_name)
         .bind(total_amount_cents)
         .execute(&mut *tx)
         .await {
             tracing::error!("Failed to insert quote line item: {}", e);
             let _ = tx.rollback().await;
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response();
     }
 
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response();
     }
 
     let action_payload = serde_json::json!({
@@ -221,7 +221,7 @@ async fn handle_client_intake(
         "generated_response": drafted_message,
         "service": service_name,
         "price": suggested_price,
-        "quote_id": quote_id.to_string(),
+        "proposal_id": proposal_id.to_string(),
     });
 
     match state.orchestrator.execute_action(
@@ -231,8 +231,8 @@ async fn handle_client_intake(
         ActionRisk::DraftForReview,
         action_payload,
     ).await {
-        Ok(_) => (StatusCode::OK, Json(ClientIntakeResponse { success: true, proposal_drafted: true, quote_id: Some(quote_id.to_string()) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response(),
+        Ok(_) => (StatusCode::OK, Json(ClientIntakeResponse { success: true, proposal_drafted: true, proposal_id: Some(proposal_id.to_string()) })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, proposal_id: None })).into_response(),
     }
 }
 
@@ -245,7 +245,7 @@ mod tests {
         let resp = ClientIntakeResponse {
             success: true,
             proposal_drafted: true,
-            quote_id: Some("1234-5678".to_string()),
+            proposal_id: Some("1234-5678".to_string()),
         };
         let serialized = serde_json::to_string(&resp).unwrap();
         assert!(serialized.contains("1234-5678"));

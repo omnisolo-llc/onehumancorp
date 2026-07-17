@@ -7,29 +7,29 @@ function CustomerProposalViewContent() {
     const searchParams = useSearchParams();
     const proposalId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState(false);
-    const [proposal, setProposal] = useState<any>(null);
+    const [quote, setQuote] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!proposalId) return;
-        async function fetchProposal() {
+        async function fetchQuote() {
             try {
-                const res = await fetch(`/api/v1/proposals/${proposalId}`);
+                const res = await fetch(`/api/v1/quotes/${proposalId}`);
                 if (!res.ok) throw new Error('Failed to fetch proposal');
                 const data = await res.json();
-                setProposal(data);
+                setQuote(data);
             } catch (err: any) {
                 setError(err.message);
             }
         }
-        fetchProposal();
+        fetchQuote();
     }, [proposalId]);
 
     const handleAccept = async () => {
         if (!proposalId) return;
         setIsLoading(true);
         try {
-            const res = await fetch(`/api/v1/proposals/${proposalId}/accept`, { method: 'POST' });
+            const res = await fetch(`/api/v1/quotes/${proposalId}/accept`, { method: 'POST' });
             if (!res.ok) throw new Error('Failed to accept proposal');
             const data = await res.json();
             if (data.stripe_payment_link) {
@@ -46,15 +46,15 @@ function CustomerProposalViewContent() {
     };
 
     if (error) return <div className="p-4 text-center text-[#FF3B30]">{error}</div>;
-    if (!proposal) return <div className="p-4 text-center">Loading...</div>;
+    if (!quote) return <div className="p-4 text-center">Loading...</div>;
 
     return (
         <div style={{ maxWidth: '375px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Your Proposal</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Your Quote</h1>
             <p style={{ color: '#666' }}>Proposal ID: {proposalId}</p>
 
             <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                {proposal.line_items?.map((item: any) => (
+                {quote.line_items?.map((item: any) => (
                     <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <span>{item.description} (x{item.quantity})</span>
                         <span>${(item.unit_price_cents * item.quantity / 100).toFixed(2)}</span>
@@ -63,11 +63,11 @@ function CustomerProposalViewContent() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px' }}>
                     <span>Total</span>
-                    <span>${(proposal.proposal.total_amount_cents / 100).toFixed(2)}</span>
+                    <span>${(quote.quote.total_amount_cents / 100).toFixed(2)}</span>
                 </div>
             </div>
 
-            {proposal.proposal.status !== 'ACCEPTED' ? (
+            {quote.quote.status !== 'ACCEPTED' ? (
                 <button
                     onClick={handleAccept}
                     disabled={isLoading}

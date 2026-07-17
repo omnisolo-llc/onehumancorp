@@ -162,7 +162,7 @@ beforeEach(() => {
     });
   });
 
-  it('handles delivery proposal flow correctly', async () => {
+  it('handles delivery quote flow correctly', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -173,14 +173,14 @@ beforeEach(() => {
 
     await act(async () => { render(<CheckoutPage />); });
 
-    const addressInput = screen.getByPlaceholderText('Enter address for delivery proposal');
+    const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
     fireEvent.change(addressInput, { target: { value: '123 Main St' } });
 
     const checkButton = screen.getByText('Check');
     fireEvent.click(checkButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/checkout/delivery-proposal', expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/checkout/delivery-quote', expect.objectContaining({
         method: 'POST'
       }));
       expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();

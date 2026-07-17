@@ -31,7 +31,7 @@ test('shows a latency state while an AI action is being drafted', async () => {
   render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
 
   fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Proposal the sink repair' },
+    target: { value: 'Quote the sink repair' },
   });
   fireEvent.click(screen.getByTestId('team-chat-send'));
 
@@ -42,7 +42,7 @@ test('shows a latency state while an AI action is being drafted', async () => {
     new Response(
       JSON.stringify({
         agent: 'The Salesperson',
-        description: 'Draft proposal for Plumbing Fix',
+        description: 'Draft quote for Plumbing Fix',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     ),
@@ -51,7 +51,7 @@ test('shows a latency state while an AI action is being drafted', async () => {
   await waitFor(() => {
     expect(screen.queryByText('Working on your request...')).not.toBeInTheDocument();
   });
-  expect(screen.getByText('Draft proposal for Plumbing Fix')).toBeInTheDocument();
+  expect(screen.getByText('Draft quote for Plumbing Fix')).toBeInTheDocument();
 });
 
 test('renders an actionable error card when AI action execution fails', async () => {

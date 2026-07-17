@@ -15,7 +15,7 @@ import { approvalBackendPath } from "./approvalBackend";
 import { GET as list } from "./route";
 import { POST as simulateBooking } from "./simulate-booking-draft/route";
 import { POST as simulateLeadRecovery } from "./simulate-lead-recovery/route";
-import { POST as simulateProposal } from "./simulate-proposal-draft/route";
+import { POST as simulateQuote } from "./simulate-quote-draft/route";
 import { POST as simulateStockout } from "./simulate-stockout-reorder/route";
 
 const context = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -36,16 +36,16 @@ describe("authenticated approval routes", () => {
     await decide(request("/api/v1/agents/approvals/approval-7", "POST"), context("approval-7"));
     await simulateBooking(request("/api/v1/agents/approvals/simulate-booking-draft", "POST"));
     await simulateLeadRecovery(request("/api/v1/agents/approvals/simulate-lead-recovery", "POST"));
-    await simulateProposal(request("/api/v1/agents/approvals/simulate-proposal-draft", "POST"));
+    await simulateQuote(request("/api/v1/agents/approvals/simulate-quote-draft", "POST"));
     await simulateStockout(request("/api/v1/agents/approvals/simulate-stockout-reorder", "POST"));
 
     expect(proxyBackendRequest.mock.calls.map(([, path]) => path)).toEqual([
       "/api/v1/agents/approvals",
       "/api/v1/agents/approvals/activity",
       "/api/v1/agents/approvals/approval-7",
-      "/api/v1/agents/approvals/simulate-autonomous-booking-proposal",
+      "/api/v1/agents/approvals/simulate-autonomous-booking-quote",
       "/api/v1/agents/approvals/simulate-lead-recovery",
-      "/api/v1/agents/approvals/simulate-proposal-draft",
+      "/api/v1/agents/approvals/simulate-quote-draft",
       "/api/v1/agents/approvals/simulate-stockout-reorder",
     ]);
   });

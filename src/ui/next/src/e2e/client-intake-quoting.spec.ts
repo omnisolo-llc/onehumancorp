@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
-  test('creates proposal from intake and allows approval', async ({ request, page }) => {
+  test('creates quote from intake and allows approval', async ({ request, page }) => {
     // We send a client intake request
     const formData = new URLSearchParams();
     formData.append('name', 'Carlos Handyman Test');
@@ -19,12 +19,12 @@ test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
     const result = await res.json();
     expect(result.success).toBe(true);
     expect(result.proposal_drafted).toBe(true);
-    expect(result.proposal_id).toBeDefined();
+    expect(result.quote_id).toBeDefined();
 
-    const proposalId = result.proposal_id;
+    const quoteId = result.quote_id;
 
     // Now Carlos navigates to the Quoting page
-    await page.goto(`/proposals/${proposalId}`);
+    await page.goto(`/quotes/${quoteId}`);
 
     // Expect the line item description for the service
     await expect(page.locator('text=x1')).toBeVisible({ timeout: 15000 });
@@ -32,12 +32,12 @@ test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
     // Expect the price to be visible
     await expect(page.locator('text=$')).first().toBeVisible();
 
-    // Find and click the Approve & Send Proposal button
-    const approveBtn = page.getByRole('button', { name: 'Approve & Send Proposal' });
+    // Find and click the Approve & Send Quote button
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send Quote' });
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
-    // The proposal should transition to SENT, wait for success (e.g. proposal status to update or alert)
+    // The quote should transition to SENT, wait for success (e.g. quote status to update or alert)
     // Actually the page doesn't show "SENT" natively if there is a stripe link but it might alert
     // wait for network or status update
     page.on('dialog', dialog => dialog.accept());

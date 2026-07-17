@@ -18,7 +18,7 @@ describe('AgentActionCard', () => {
   };
 
   it('renders standard layout without error', () => {
-    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editProposalPrice="" editProposalScope="" setEditProposalPrice={vi.fn()} setEditProposalScope={vi.fn()} />);
+    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
     expect(screen.getAllByText('Test event')[0]).toBeInTheDocument();
     expect(screen.getByTestId('feed-approve-btn')).toBeInTheDocument();
     expect(screen.getByTestId('feed-dismiss-btn')).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe('AgentActionCard', () => {
 
   it('handles approve click', () => {
     const handleDecision = vi.fn();
-    render(<AgentActionCard approval={defaultApproval} handleDecision={handleDecision} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editProposalPrice="" editProposalScope="" setEditProposalPrice={vi.fn()} setEditProposalScope={vi.fn()} />);
+    render(<AgentActionCard approval={defaultApproval} handleDecision={handleDecision} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId('feed-approve-btn'));
     expect(handleDecision).toHaveBeenCalledWith('msg_1', true, undefined, 'Test event');
@@ -34,7 +34,7 @@ describe('AgentActionCard', () => {
 
   it('handles dismiss click', () => {
     const handleDecision = vi.fn();
-    render(<AgentActionCard approval={defaultApproval} handleDecision={handleDecision} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editProposalPrice="" editProposalScope="" setEditProposalPrice={vi.fn()} setEditProposalScope={vi.fn()} />);
+    render(<AgentActionCard approval={defaultApproval} handleDecision={handleDecision} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId('feed-dismiss-btn'));
     expect(handleDecision).toHaveBeenCalledWith('msg_1', false, undefined, 'Test event');
@@ -42,14 +42,14 @@ describe('AgentActionCard', () => {
 
   it('triggers edit flow', () => {
     const setEditingId = vi.fn();
-    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={setEditingId} editingId={null} setEditContent={vi.fn()} editContent="" editProposalPrice="" editProposalScope="" setEditProposalPrice={vi.fn()} setEditProposalScope={vi.fn()} />);
+    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={setEditingId} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId('edit-proposal'));
     expect(setEditingId).toHaveBeenCalledWith('msg_1');
   });
 
   it('renders editing state', () => {
-    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId="msg_1" setEditContent={vi.fn()} editContent="Edit text" editProposalPrice="" editProposalScope="" setEditProposalPrice={vi.fn()} setEditProposalScope={vi.fn()} />);
+    render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId="msg_1" setEditContent={vi.fn()} editContent="Edit text" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
 
     expect(screen.getByTestId('edit-proposal-textarea')).toBeInTheDocument();
     expect(screen.getByTestId('save-proposal')).toBeInTheDocument();

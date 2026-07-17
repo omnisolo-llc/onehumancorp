@@ -370,9 +370,9 @@ impl Department for SalesAgent {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
                                 // Update proposals table to persist Stripe URL
-                                if let Some(eid) = payload.get("estimate_id").and_then(|v| v.as_str()) {
+                                if let Some(eid) = payload.get("proposal_id").and_then(|v| v.as_str()) {
                                     let db = crate::db::get_pool();
-                                    let _ = sqlx::query("UPDATE estimates SET status = 'sent', updated_at = NOW() WHERE id = $1")
+                                    let _ = sqlx::query("UPDATE proposals SET status = 'SENT', updated_at = NOW() WHERE id = $1")
                                         .bind(eid)
                                         .execute(&db)
                                         .await;
@@ -385,8 +385,19 @@ impl Department for SalesAgent {
 
                         if let Some(lid) = payload.get("service_lead_id").and_then(|v| v.as_str()) {
                             let db = crate::db::get_pool();
-                            let _ = sqlx::query("UPDATE service_leads SET status = 'estimated', updated_at = NOW() WHERE id = $1")
+                            let _ = sqlx::query("UPDATE project_intakes SET status = 'processed', updated_at = NOW() WHERE id = $1")
                                 .bind(lid)
+                                .execute(&db)
+                                .await;
+                        }
+
+                        if let Some(proposal_id) = payload.get("proposal_id").and_then(|v| v.as_str()) {
+                            let db = crate::db::get_pool();
+                            let _ = sqlx::query("INSERT INTO project_tasks (id, tenant_id, proposal_id, description, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())")
+                                .bind(uuid::Uuid::new_v4().to_string())
+                                .bind(&event.tenant_id)
+                                .bind(proposal_id)
+                                .bind("Execute project fulfillment")
                                 .execute(&db)
                                 .await;
                         }

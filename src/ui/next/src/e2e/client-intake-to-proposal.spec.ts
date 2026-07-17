@@ -19,11 +19,11 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
 
     expect(submitResponse.ok()).toBeTruthy();
 
-    // The backend now parses "Plumbing Fix" via LLM and generates the 'proposal_draft' intent
-    // which gets broadcasted and SalesAgent creates a 'proposal_draft' Approval in the DB.
+    // The backend now parses "Plumbing Fix" via LLM and generates the 'quote_draft' intent
+    // which gets broadcasted and SalesAgent creates a 'quote_draft' Approval in the DB.
 
     // To prevent flakiness and due to async nature of the system, we manually trigger
-    // the simulation endpoint used by 'draft-proposal-card.spec.ts' if needed, but the e2e test
+    // the simulation endpoint used by 'draft-quote-card.spec.ts' if needed, but the e2e test
     // should ideally rely on the event queue if everything is wired.
 
 
@@ -34,9 +34,9 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     const proposalsTab = page.locator('button', { hasText: /Proposals/ }).first();
     await expect(proposalsTab).toBeVisible({ timeout: 15000 });
 
-    // Verify the "Draft Proposal" card is visible
-    const proposalCard = page.getByTestId('proposal-draft-card').first();
-    await expect(proposalCard).toBeVisible();
+    // Verify the "Draft Quote" card is visible
+    const quoteCard = page.getByTestId('quote-draft-card').first();
+    await expect(quoteCard).toBeVisible();
 
     // Verify card content correctly scoped the request
     await expect(page.getByText('Action Required: Approve Estimate for Plumbing Fix')).toBeVisible();
@@ -45,11 +45,11 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     await expect(page.getByText('Suggested Time:')).toBeVisible();
 
     // Step 3: Owner taps "Approve & Send"
-    const approveBtn = page.getByTestId('approve-proposal-draft').first();
+    const approveBtn = page.getByTestId('approve-quote-draft').first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
 
     // Step 4: The card is removed from the feed (optimistic UI update)
-    await expect(proposalCard).toHaveCount(0);
+    await expect(quoteCard).toHaveCount(0);
   });
 });

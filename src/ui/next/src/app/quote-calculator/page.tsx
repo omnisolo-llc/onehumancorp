@@ -3,11 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-function ProposalCalculatorContent() {
+function QuoteCalculatorContent() {
     const searchParams = useSearchParams();
 
     const [tenant, setTenant] = useState('demo');
-    const [serviceName, setServiceName] = useState('Custom Proposal');
+    const [serviceName, setServiceName] = useState('Custom Quote');
     const [basePrice, setBasePrice] = useState(0);
     const [unitName, setUnitName] = useState('Units');
     const [pricePerUnit, setPricePerUnit] = useState(0);
@@ -17,7 +17,7 @@ function ProposalCalculatorContent() {
     useEffect(() => {
         const t = searchParams.get('tenant') || 'demo';
         setTenant(t);
-        setServiceName(searchParams.get('service') || 'Custom Proposal');
+        setServiceName(searchParams.get('service') || 'Custom Quote');
         setBasePrice(Number(searchParams.get('basePrice')) || 0);
         setUnitName(searchParams.get('unitName') || 'Units');
         setPricePerUnit(Number(searchParams.get('pricePerUnit')) || 0);
@@ -31,7 +31,7 @@ function ProposalCalculatorContent() {
     const handleRequestClick = () => {
         // Send a message to the parent frame
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'ohc-proposal-request', tenant }, '*');
+            window.parent.postMessage({ type: 'ohc-quote-request', tenant }, '*');
         } else {
             // Open the work intake or contact page as fallback
             window.open(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`, '_blank');
@@ -50,7 +50,7 @@ function ProposalCalculatorContent() {
         <div className="min-h-screen flex items-center justify-center font-inter w-full" style={getThemeStyles()}>
             <div className="w-full h-full flex flex-col justify-between">
                 <div className="p-6 flex-1">
-                    <h3 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Proposal</h3>
+                    <h3 className="text-xl font-bold mb-4 font-outfit text-center">{serviceName} Quote</h3>
 
                     <div className="space-y-4">
                         {basePrice > 0 && (
@@ -90,7 +90,7 @@ function ProposalCalculatorContent() {
                             onClick={handleRequestClick}
                             className="w-full mt-6 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md"
                         >
-                            Request Proposal
+                            Request Quote
                         </button>
                     </div>
                 </div>
@@ -114,10 +114,10 @@ function ProposalCalculatorContent() {
     );
 }
 
-export default function ProposalCalculatorPage() {
+export default function QuoteCalculatorPage() {
     return (
         <Suspense fallback={<div className="p-8 text-center text-gray-500 font-inter">Loading calculator...</div>}>
-            <ProposalCalculatorContent />
+            <QuoteCalculatorContent />
         </Suspense>
     );
 }

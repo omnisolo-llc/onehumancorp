@@ -102,17 +102,17 @@ export class SyncManager {
           payment_intent_id: null,
           currency: null
        };
-    } else if (m.type === 'draft_proposal') {
+    } else if (m.type === 'draft_quote') {
       return {
          timestamp: new Date(m.timestamp || Date.now()).toISOString(),
          transaction_id: m.id,
-         product_id: 'draft_proposal',
+         product_id: 'draft_quote',
          quantity_deducted: 0,
          amount: null,
          payment_method: null,
          payment_intent_id: null,
          currency: 'usd',
-         mutation_type: 'draft_proposal',
+         mutation_type: 'draft_quote',
          payload: m.notes
       };
     } else if (m.type === 'agent_intent') {
@@ -128,7 +128,7 @@ export class SyncManager {
          mutation_type: 'agent_intent',
          payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
       };
-    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_proposal' || m.type === 'approve_proposal' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'fulfillment_action' || m.type === 'generate_invoice' || m.type === 'sync_event') {
+    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'fulfillment_action' || m.type === 'generate_invoice' || m.type === 'sync_event') {
         return m; // keep them for specific APIs
     }
     return m;
@@ -250,40 +250,40 @@ export class SyncManager {
         }
       }
 
-      // Sync Proposal Actions
-      const proposalUpdates = generalMutations.filter(m => m.type === 'update_proposal');
-      for (const update of proposalUpdates) {
+      // Sync Quote Actions
+      const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
+      for (const update of quoteUpdates) {
         try {
-          const res = await fetch(`/api/v1/proposals?id=${update.proposalId}`, {
+          const res = await fetch(`/api/v1/quotes?id=${update.quoteId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
             body: JSON.stringify(update.payload)
           });
           this.checkRateLimit(res);
           if (!res.ok) {
-            console.error(`Proposal Update Sync failed with status ${res.status}`);
+            console.error(`Quote Update Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
-          console.error("Proposal Update Sync error:", err);
+          console.error("Quote Update Sync error:", err);
           allOkFinal = false;
         }
       }
 
-      const proposalApprovals = generalMutations.filter(m => m.type === 'approve_proposal');
-      for (const approval of proposalApprovals) {
+      const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
+      for (const approval of quoteApprovals) {
         try {
-          const res = await fetch(`/api/v1/proposals/${approval.proposalId}/approve`, {
+          const res = await fetch(`/api/v1/quotes/${approval.quoteId}/approve`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
           });
           this.checkRateLimit(res);
           if (!res.ok) {
-            console.error(`Proposal Approval Sync failed with status ${res.status}`);
+            console.error(`Quote Approval Sync failed with status ${res.status}`);
             if (res.status >= 500) allOkFinal = false;
           }
         } catch (err) {
-          console.error("Proposal Approval Sync error:", err);
+          console.error("Quote Approval Sync error:", err);
           allOkFinal = false;
         }
       }
@@ -326,7 +326,7 @@ export class SyncManager {
       }
 
       // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_proposal' && m.type !== 'approve_proposal' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
 
       if (operationIntents.length > 0) {
         const mappedIntents = operationIntents.map(m => ({
@@ -382,7 +382,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_proposal' && m.type !== 'approve_proposal' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
       if (generalGenMutations.length > 0) {
         try {
           const resGen = await fetch('/api/v1/sync/offline', {

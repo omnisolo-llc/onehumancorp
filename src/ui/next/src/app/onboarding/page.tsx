@@ -678,7 +678,7 @@ export default function OnboardingWizard() {
     {
       id: "Sales",
       name: "Sales Assistant",
-      desc: "Drafts proposals & handles payments",
+      desc: "Drafts quotes & handles payments",
       icon: "🛍️",
     },
     {

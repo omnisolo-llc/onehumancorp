@@ -29,7 +29,7 @@ export default function EmbedBuilderPage() {
             embedUrl += `&hideBranding=true`;
         }
 
-        const iframeCode = `<iframe src="${embedUrl}" width="100%" height="500" frameborder="0" style="border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); background: transparent;" title="OHC ${widgetType === 'intake' ? 'Intake' : widgetType === 'booking' ? 'Booking' : 'Proposal'} Widget"></iframe>`;
+        const iframeCode = `<iframe src="${embedUrl}" width="100%" height="500" frameborder="0" style="border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); background: transparent;" title="OHC ${widgetType === 'intake' ? 'Intake' : widgetType === 'booking' ? 'Booking' : 'Quote'} Widget"></iframe>`;
 
         let fullCode = iframeCode;
 
@@ -76,7 +76,7 @@ export default function EmbedBuilderPage() {
                         <span>🚀 Growth Loop</span>
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 drop-shadow-sm">Interactive Embed Builder</h1>
-                    <p className="text-gray-600 text-base md:text-lg">Generate a custom widget to embed on your external website. Capture leads, bookings, or proposals directly into OHC.</p>
+                    <p className="text-gray-600 text-base md:text-lg">Generate a custom widget to embed on your external website. Capture leads, bookings, or quotes directly into OHC.</p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -100,7 +100,7 @@ export default function EmbedBuilderPage() {
                             <div className="mb-6">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Widget Type</label>
                                 <div className="flex bg-gray-100 p-1 rounded-xl">
-                                    {['intake', 'booking', 'proposal'].map((type) => (
+                                    {['intake', 'booking', 'quote'].map((type) => (
                                         <button
                                             key={type}
                                             onClick={() => setWidgetType(type)}
