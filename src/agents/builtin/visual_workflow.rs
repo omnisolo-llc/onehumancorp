@@ -67,6 +67,16 @@ pub struct WorkflowGraph {
     pub edges: Vec<Edge>,
 }
 
+impl WorkflowGraph {
+    pub fn export_to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
+
+    pub fn import_from_json(json_str: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json_str)
+    }
+}
+
 pub struct WorkflowExecutor {
     pub graph: WorkflowGraph,
     pub agent: Arc<Agent>,
@@ -1608,5 +1618,50 @@ mod additional_tests {
         assert!(res1.is_err());
         let res2 = graph.validate_connection(&in_node, &out_node);
         assert!(res2.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_json_export {
+    use super::*;
+
+    #[test]
+    fn test_export_import_json() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "node1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "test".to_string(),
+                    },
+                },
+                Node {
+                    id: "node2".to_string(),
+                    node_type: NodeType::ParallelFork {
+                        targets: vec!["target1".to_string(), "target2".to_string()],
+                    },
+                },
+            ],
+            edges: vec![Edge {
+                source: "node1".to_string(),
+                target: "node2".to_string(),
+            }],
+        };
+
+        let json_str = graph.export_to_json().expect("Failed to export to json");
+        assert!(json_str.contains("node1"));
+        assert!(json_str.contains("ParallelFork"));
+
+        let imported_graph = WorkflowGraph::import_from_json(&json_str).expect("Failed to import from json");
+        assert_eq!(imported_graph.nodes.len(), 2);
+        assert_eq!(imported_graph.edges.len(), 1);
+
+        match &imported_graph.nodes[1].node_type {
+            NodeType::ParallelFork { targets } => {
+                assert_eq!(targets.len(), 2);
+                assert_eq!(targets[0], "target1");
+            },
+            _ => panic!("Expected ParallelFork node"),
+        }
     }
 }

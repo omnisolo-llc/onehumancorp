@@ -108,7 +108,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
 }
 
 pub struct RetryWithErrorOutputParser<'a, T> {
-    pub max_retries: usize,
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
     llm: Arc<dyn LlmClientForParser>,
 }
@@ -118,7 +117,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
         llm: Arc<dyn LlmClientForParser>,
     ) -> Self {
-        Self { parser, llm, max_retries: 2 }
+        Self { parser, llm }
     }
 
     pub async fn parse_with_prompt(
