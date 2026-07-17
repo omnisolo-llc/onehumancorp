@@ -850,3 +850,13 @@ INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, tex
 ('e2e-tenant', 'dashboard', 1, 'dashboard-title', 'Welcome', 'Welcome to your dashboard! This is your control center.'),
 ('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
 ON CONFLICT DO NOTHING;
+
+INSERT INTO vendors (id, tenant_id, name, contact_info)
+VALUES
+  ('vendor-1', 'e2e-tenant', 'Default Supplier', 'vendor@example.com')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost)
+VALUES
+  ('po-123', 'e2e-tenant', 'vendor-1', 'DRAFT', 400.0)
+ON CONFLICT DO NOTHING;
