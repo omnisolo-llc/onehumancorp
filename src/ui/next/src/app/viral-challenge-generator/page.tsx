@@ -88,11 +88,11 @@ export default function ViralChallengeGeneratorPage() {
           </div>
 
           <div className="mt-8 bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
-             <pre id="result-area"><input type="hidden" id="generated-url" value={embedUrl} />{embedCode}</pre>
+             <pre id="result-area"><span id="generated-url">{embedUrl}</span>{embedCode}</pre>
           </div>
           <button
              onClick={handleCopy}
-             id="copy-btn"
+             id="generate-btn"
              className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
              {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}

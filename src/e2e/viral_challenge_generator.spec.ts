@@ -9,7 +9,7 @@ test('viral_challenge_generator_smoke', async ({ page, request, loginAs, adminUs
 test.describe('Viral Challenge Generator', () => {
   test('should navigate to the challenge generator from dashboard and create a challenge', async ({ page, context }) => {
     // Navigate to dashboard
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Click the challenge generator link
     const challengeLink = page.locator('#challenge-link');

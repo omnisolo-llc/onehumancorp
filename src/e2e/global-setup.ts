@@ -2,6 +2,10 @@ import { chromium, type FullConfig } from '@playwright/test';
 
 
 export default async function globalSetup(config: FullConfig) {
+  process.env.OHC_AGENT_TOKEN = process.env.OHC_AGENT_TOKEN || 'test-agent-token';
+  process.env.OHC_AGENT_SPIFFE_ID = process.env.OHC_AGENT_SPIFFE_ID || 'spiffe://example.org/agent';
+  process.env.OHC_AGENT_AUTH_KEY = process.env.OHC_AGENT_AUTH_KEY || 'testtesttesttesttesttesttesttesttesttesttest';
+
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
   if (!baseURL) {
     console.log('Playwright baseURL is required for e2e global setup.');
