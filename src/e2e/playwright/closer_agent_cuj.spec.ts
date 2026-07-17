@@ -64,7 +64,7 @@ test.describe('Closer Agent CUJ (End-to-End)', () => {
     // It should have a Review Estimate or similar button depending on feed item.
     // If unified-feed doesn't have custom button for Draft Quote, we can click the action card to see details or manually navigate if we know how the app works.
     // For now, let's navigate directly to the quote UI to review and approve, simulating tapping the card.
-    await page.goto(`/api/ui/quote.html?tenant=${adminUser.tenantId}&id=${quoteId}`);
+    await page.goto(`/api/v1/ui/quote.html?tenant=${adminUser.tenantId}&id=${quoteId}`);
 
     // Wait for the quote to load and check real values
     await expect(page.locator('text=DRAFT').or(page.locator('text=Draft Quote')).or(page.locator('text=Draft'))).toBeVisible({ timeout: 15000 });

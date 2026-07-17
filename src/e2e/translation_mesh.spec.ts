@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 test.describe('Hybrid AI Translation Mesh', () => {
   test('Inbox translation toggle displays correctly', async ({ page }) => {
     // 1. Send webhook to simulate incoming Spanish message
-    await page.request.post('/api/agents/webhook', {
+    await page.request.post('/api/v1/agents/webhook', {
       data: {
         tenant_id: 'default',
         message: 'Hola, ¿tienen opciones veganas para el pastel?',

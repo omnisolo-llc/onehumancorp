@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Agent Profile Cloud Bridge Share', () => {
   test('User can generate and copy a cloud bridge invite link from the agent profile', async ({ page }) => {
     // Navigate to the agent profile page
-    await page.goto('/api/ui/agent-profile.html');
+    await page.goto('/api/v1/ui/agent-profile.html');
 
     // Ensure the page has loaded by checking for the branding link or standard text
     await expect(page.locator('text=Powered by OHC').first()).toBeVisible();

@@ -16,7 +16,7 @@ export default function WorkIntakeWidgetPage() {
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant') || 'my-business';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
     document.title = "Embed Work Intake | OHC";

@@ -25,7 +25,7 @@ const specialistLabels = [
 
 async function readWorkflow(request: APIRequestContext, workflowId: string): Promise<WorkflowRecord | undefined> {
   const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-  const response = await request.get(`${apiBase}/api/agents/workflows`);
+  const response = await request.get(`${apiBase}/api/v1/agents/workflows`);
   expect(response.ok()).toBeTruthy();
   const body = await response.json();
   return (body.workflows as WorkflowRecord[]).find((workflow) => workflow.id === workflowId);
@@ -61,7 +61,7 @@ test.describe('real MiniMax hire-agent flow', () => {
 
     const agentName = `M3 E2E Business Operator ${Date.now()}`;
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const hireResponse = await request.post(`${apiBase}/api/agents/hire`, {
+    const hireResponse = await request.post(`${apiBase}/api/v1/agents/hire`, {
       data: {
         name: agentName,
         role: 'Business growth operator',
@@ -76,7 +76,7 @@ test.describe('real MiniMax hire-agent flow', () => {
     expect(hired.agent_id).toMatch(/^agent-/);
     expect(hired.workflow_id).toMatch(/^[0-9a-f-]{36}$/);
 
-    const agentsResponse = await request.get(`${apiBase}/api/agents`);
+    const agentsResponse = await request.get(`${apiBase}/api/v1/agents`);
     expect(agentsResponse.ok()).toBeTruthy();
     const agents = await agentsResponse.json();
     const hiredAgent = agents.find((agent: any) => agent.id === hired.agent_id);

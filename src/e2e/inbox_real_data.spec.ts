@@ -5,15 +5,15 @@ test.describe('Inbox real-data behavior', () => {
     test.setTimeout(60000);
 
     const inboxResponse = page.waitForResponse((response) =>
-      response.url().includes('/api/ui/inbox/messages') && response.request().method() === 'GET',
+      response.url().includes('/api/v1/ui/inbox/messages') && response.request().method() === 'GET',
     );
 
     await page.goto('/inbox');
     const response = await inboxResponse;
 
-    expect(response.status(), '/api/ui/inbox/messages must be reachable').toBeLessThan(500);
+    expect(response.status(), '/api/v1/ui/inbox/messages must be reachable').toBeLessThan(500);
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
-    await expect(page.getByText('Loaded from `/api/ui/inbox/messages`.')).toBeVisible();
+    await expect(page.getByText('Loaded from `/api/v1/ui/inbox/messages`.')).toBeVisible();
   });
 
   test('does not expose simulated inbox controls or silent send-message no-ops', async ({ page }) => {

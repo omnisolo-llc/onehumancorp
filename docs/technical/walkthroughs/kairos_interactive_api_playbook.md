@@ -40,21 +40,21 @@ See also:
 ## Interactive Endpoints
 
 ### 1. Create Orchestration Task
-**POST** `/api/orchestration/tasks`
+**POST** `/api/v1/orchestration/tasks`
 - **Payload**: `{"mission_id": "M-123", "title": "Audit Security", "description": "Verify tenant isolation in K8s", "priority": "P1"}`
 - **Response**: `201 Created` with the full `SharedTask` object.
 
 ### 2. Broadcast Mesh Event (v2)
-**POST** `/api/mesh/v2/broadcast`
+**POST** `/api/v1/mesh/v2/broadcast`
 - **Payload**: `{"channel": "swarm-events", "data": {"event": "status_update", "status": "IN_PROGRESS", "agent_id": "agent_swe_001"}}`
 - **Security**: Requires mTLS SPIFFE Identity.
 
 ### 3. Hybrid Health Probe
-**GET** `/api/health/hybrid`
+**GET** `/api/v1/health/hybrid`
 - **Response**: `{"mode": "cloud", "status": "healthy", "details": {"mesh_active": true, "sync_queue": 0, "stuck_missions": 0}}`
 
 ### 4. Poll and Claim Tasks
-**GET** `/api/orchestration/tasks?agent_id={agent_id}`
+**GET** `/api/v1/orchestration/tasks?agent_id={agent_id}`
 - **Description**: Agents poll this endpoint to claim pending tasks. Uses `FOR UPDATE SKIP LOCKED` (Postgres) or application-level mutexes (SQLite) to ensure atomic claiming.
 
 ```mermaid
@@ -63,7 +63,7 @@ sequenceDiagram
     participant Hub as Orchestration Hub
     participant DB as Shared Task DB
 
-    Agent->>Hub: GET /api/orchestration/tasks?agent_id=...
+    Agent->>Hub: GET /api/v1/orchestration/tasks?agent_id=...
     Hub->>DB: SELECT FOR UPDATE SKIP LOCKED (Pending)
     DB-->>Hub: Return Task & Lock Row
     Hub->>DB: UPDATE status='IN_PROGRESS'
@@ -71,7 +71,7 @@ sequenceDiagram
 ```
 
 ### 5. Update Task Status
-**PUT** `/api/orchestration/tasks/{task_id}/status`
+**PUT** `/api/v1/orchestration/tasks/{task_id}/status`
 - **Payload**: `{"status": "COMPLETED", "agent_id": "agent_swe_001", "result": "Security audit finished. No leaks detected."}`
 
 ### 6. Trigger AutoDream Sync
@@ -100,7 +100,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A[Client Request] -->|GET /api/health/hybrid| B(Orchestrator Hub)
+    A[Client Request] -->|GET /api/v1/health/hybrid| B(Orchestrator Hub)
     B -.->|Ping| C[(Shared Task DB)]
     B -.->|Check Backlog| C
     B -.->|Publish mesh:health| D((Teammate Mesh))

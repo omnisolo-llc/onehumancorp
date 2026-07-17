@@ -20,7 +20,7 @@ export default function PreOrderWidgetPage() {
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
-      setTenant(localStorage.getItem('tenant_id') || 'demo');
+      setTenant(localStorage.getItem('business_display_name') || 'demo');
     }
   }, []);
 

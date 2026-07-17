@@ -15,7 +15,7 @@ export default function GatherActVerifyPage() {
     setResponse(null);
 
     try {
-      const res = await fetch("/api/gather_act_verify", {
+      const res = await fetch("/api/v1/gather_act_verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

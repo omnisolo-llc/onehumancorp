@@ -29,7 +29,7 @@ export function WrappedWidget() {
   useEffect(() => {
     let currentTenant = "my-store";
     if (typeof localStorage !== "undefined") {
-      currentTenant = localStorage.getItem("tenant") || localStorage.getItem("tenant_id") || "my-store";
+      currentTenant = localStorage.getItem("business_display_name") || "my-store";
       setTenantId(currentTenant);
     }
 

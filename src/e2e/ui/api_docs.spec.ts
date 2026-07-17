@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 test.describe('API Documentation', () => {
   test('should render Swagger UI', async ({ page }) => {
     // Navigate to the API Docs page
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api/v1/ui/api-docs.html');
     await page.waitForLoadState('networkidle');
 
     // Swagger UI typically renders a div with class "swagger-ui", but we are loading from unpkg,

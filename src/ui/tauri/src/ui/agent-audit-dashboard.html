@@ -296,7 +296,7 @@
 
             // Fetch Activities
             try {
-                const res = await fetch(`/api/agents/approvals/ledger?tenant_id=${tenantId}`, {
+                const res = await fetch(`/api/v1/agents/approvals/ledger?tenant_id=${tenantId}`, {
                     headers: {
                         'x-tenant-id': tenantId,
                         'x-user-id': 'default'
