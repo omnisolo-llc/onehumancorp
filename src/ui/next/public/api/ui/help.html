@@ -345,6 +345,54 @@
       </div>
     </div>
 
+  <!-- Help Widget -->
+  <button class="help-widget-btn" aria-label="Help" id="ohc-help-btn" onclick="toggleHelpWidget()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  </button>
+
+  <div class="help-widget-panel" id="help-widget-panel">
+    <div class="help-widget-header">
+      <h3>How can we help?</h3>
+      <button class="close-widget" onclick="toggleHelpWidget()">&times;</button>
+    </div>
+    <div class="help-widget-tabs">
+      <button class="tab-btn active" onclick="switchWidgetTab(event, 'learn')">Learn</button>
+      <button class="tab-btn" onclick="switchWidgetTab(event, 'ask-ai')">Ask AI</button>
+      <button class="tab-btn" onclick="switchWidgetTab(event, 'whats-new')">New</button>
+    </div>
+    <div class="help-widget-content">
+      <!-- Learn Tab -->
+      <div id="tab-learn" class="tab-pane active">
+        <h4>Interactive Tours</h4>
+        <button class="tour-btn" onclick="startStoreTour()">Tour: Set up your store</button>
+        <button class="tour-btn" onclick="startPaymentTour()">Tour: Accept your first payment</button>
+        <button class="tour-btn" onclick="startAgentTour()">Tour: Activate your AI Support Agent</button>
+      </div>
+      <!-- Ask AI Tab -->
+      <div id="tab-ask-ai" class="tab-pane" style="display: none;">
+        <div class="chat-messages" id="help-chat-messages">
+          <div class="message ai">Hi! I'm your Help Agent. Ask me anything about using OHC.</div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="help-chat-input" placeholder="Ask anything..." onkeypress="handleChatEnter(event)">
+        </div>
+      </div>
+      <!-- What's New Tab -->
+      <div id="tab-whats-new" class="tab-pane" style="display: none;">
+        <h4>Recent Updates</h4>
+        <div class="update-item">
+          <strong>v1.2: AI Scheduling</strong>
+          <p>Your agent can now book appointments directly from Instagram DMs.</p>
+        </div>
+        <a href="changelog.html" class="full-notes-link">Read full release notes</a>
+      </div>
+    </div>
+  </div>
+
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
@@ -394,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
+                "api-docs-tooltip": "Direct API access is only for custom integrations.",
             };
         });
     }
@@ -823,6 +872,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Advanced
+        if (q === '' || 'advanced api documentation'.includes(q.toLowerCase())) {
+            html += `<div class="section-title">Advanced</div><div class="grid">`;
+            html += `
+              <a href="api-docs.html" class="card" id="api-docs-tooltip">
+                <h3>API Documentation</h3>
+                <p>For custom integrations and developers.</p>
+              </a>
+            `;
+            html += `</div>`;
+        }
+
         // Videos
         if (filteredVideos.length > 0) {
             html += `<div class="section-title">Video Tutorials</div><div class="videos-grid">`;
@@ -868,6 +929,69 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 
 <style>
+/* Help Widget Styles */
+.help-widget-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: #000;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.help-widget-panel {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 320px;
+  height: 480px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  display: none;
+  flex-direction: column;
+  z-index: 10000;
+  overflow: hidden;
+}
+.help-widget-header { padding: 16px; background: #f9f9f9; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.help-widget-header h3 { margin: 0; font-size: 16px; }
+.close-widget { background: none; border: none; font-size: 20px; cursor: pointer; }
+.help-widget-tabs { display: flex; border-bottom: 1px solid #eee; }
+.tab-btn { flex: 1; padding: 12px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; }
+.tab-btn.active { border-bottom-color: #000; font-weight: 500; }
+.help-widget-content { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; }
+.tour-btn { width: 100%; padding: 12px; text-align: left; background: #f5f5f5; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+.chat-messages { flex: 1; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+.message { padding: 8px 12px; border-radius: 8px; max-width: 85%; font-size: 14px; }
+.message.ai { background: #f0f0f0; align-self: flex-start; }
+.message.user { background: #000; color: #fff; align-self: flex-end; }
+.chat-input-area input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+.update-item { padding: 12px; background: #f9f9f9; border-radius: 8px; margin-bottom: 12px; }
+.update-item p { margin: 4px 0 0; font-size: 14px; color: #666; }
+.full-notes-link { display: block; text-align: center; color: #0066cc; text-decoration: none; padding: 12px; }
+</style>
+<script>
+function toggleHelpWidget() {
+  const panel = document.getElementById('help-widget-panel');
+  panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+}
+function switchWidgetTab(event, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
+  event.target.classList.add('active');
+  document.getElementById('tab-' + tabId).style.display = 'block';
+}
+</script>
+
+<style>
 .ohc-tooltip {
     position: fixed;
     background: #333;
@@ -899,6 +1023,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
+                "api-docs-tooltip": "Direct API access is only for custom integrations.",
+                "api-docs-tooltip": "Direct API access is only for custom integrations.",
             };
         });
     }
@@ -1050,5 +1176,47 @@ function initWalkthrough() {
 initWalkthrough();
 </script>
 
+
+<script>
+function startStoreTour() {
+    startWalkthrough([
+        { targetId: 'body', title: 'Step 1: Dashboard', content: 'This is where you start.' },
+        { targetId: 'body', title: 'Step 2: Add Products', content: 'Add your first product here.' },
+        { targetId: 'body', title: 'Step 3: Launch', content: 'You are ready to sell.' }
+    ]);
+}
+function startPaymentTour() {
+    startWalkthrough([{ targetId: null, title: 'Payments', content: 'Link your bank account to start accepting payments.' }]);
+}
+function startAgentTour() {
+    startWalkthrough([{ targetId: null, title: 'AI Agent', content: 'Configure your assistant here.' }]);
+}
+
+function handleChatEnter(e) {
+    if (e.key === 'Enter') {
+        const input = e.target;
+        const text = input.value.trim();
+        if (!text) return;
+
+        const messages = document.getElementById('help-chat-messages');
+
+        const userMsg = document.createElement('div');
+        userMsg.className = 'message user';
+        userMsg.textContent = text;
+        messages.appendChild(userMsg);
+
+        input.value = '';
+
+        setTimeout(() => {
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'message ai';
+            aiMsg.innerHTML = 'Here is a help article about that: <a href="#">Read the full article &rarr;</a>';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }, 500);
+    }
+}
+</script>
 </body>
+
 </html>
