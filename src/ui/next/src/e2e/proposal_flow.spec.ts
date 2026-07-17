@@ -18,11 +18,11 @@ test.describe('Autonomous Proposal Flow', () => {
     expect(submitResponse.ok()).toBeTruthy();
 
     await page.goto('/dashboard');
-    const quoteCard = page.getByTestId('quote-draft-card').first();
+    const quoteCard = page.getByTestId('proposal-draft-card').first();
     await expect(quoteCard).toBeVisible({ timeout: 15000 });
 
     // 2. Opening the review modal
-    const reviewBtn = page.getByTestId('review-quote-draft').first();
+    const reviewBtn = page.getByTestId('review-proposal-draft').first();
     await reviewBtn.click();
 
     const modal = page.locator('role=dialog');
@@ -34,7 +34,7 @@ test.describe('Autonomous Proposal Flow', () => {
     await priceInput.fill('550.00');
 
     // Verify total updates
-    await expect(modal.getByTestId('modal-quote-total')).toHaveText('$550.00');
+    await expect(modal.getByTestId('modal-proposal-total')).toHaveText('$550.00');
 
     // 4. Toggling the deposit requirement
     const depositSwitch = modal.locator('role=switch');

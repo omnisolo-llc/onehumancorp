@@ -136,10 +136,10 @@ async fn handle_client_intake(
         }
     }
 
-    let customer_id = uuid::Uuid::new_v4();
-    let quote_request_id = uuid::Uuid::new_v4();
-    let quote_id = uuid::Uuid::new_v4();
-    let quote_line_item_id = uuid::Uuid::new_v4();
+    let customer_id = uuid::Uuid::new_v4().to_string();
+    let project_intake_id = uuid::Uuid::new_v4().to_string();
+    let proposal_id = uuid::Uuid::new_v4().to_string();
+    let proposal_line_item_id = uuid::Uuid::new_v4().to_string();
 
     // Begin saving to DB
     let mut tx = match state.orchestrator.db().pool.begin().await {
@@ -151,28 +151,24 @@ async fn handle_client_intake(
     };
 
     // Check if customers table exists and insert a dummy customer to satisfy FK, or just use UUID as text if that's the schema.
-    // Assuming customers table exists and customer_id is a UUID.
-    // In some tables like `quotes`, customer_id is UUID.
     if let Err(e) = sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING")
-        .bind(customer_id)
+        .bind(&customer_id)
         .bind(&tenant_id)
         .bind(&payload.name)
         .bind(&payload.email)
         .execute(&mut *tx)
         .await {
             tracing::error!("Failed to insert customer: {}", e);
-            // It's possible customers table doesn't have these exact constraints, but let's try our best.
-            // If it fails, maybe customer is not strictly enforced. We'll proceed.
     }
 
-    if let Err(e) = sqlx::query("INSERT INTO quote_requests (id, tenant_id, customer_id, status, source, message, created_at, updated_at) VALUES ($1, $2, $3, 'PROPOSAL_DRAFTED', 'WEB', $4, NOW(), NOW())")
-        .bind(quote_request_id)
+    if let Err(e) = sqlx::query("INSERT INTO project_intakes (id, tenant_id, customer_id, status, source, message, created_at, updated_at) VALUES ($1, $2, $3, 'PROPOSAL_DRAFTED', 'WEB', $4, NOW(), NOW())")
+        .bind(&project_intake_id)
         .bind(&tenant_id)
-        .bind(customer_id)
+        .bind(&customer_id)
         .bind(&payload.details)
         .execute(&mut *tx)
         .await {
-            tracing::error!("Failed to insert quote_request: {}", e);
+            tracing::error!("Failed to insert project_intakes: {}", e);
             let _ = tx.rollback().await;
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
@@ -180,27 +176,28 @@ async fn handle_client_intake(
     let total_amount_cents = (suggested_price * 100.0) as i64;
     let deposit_cents = total_amount_cents / 3;
 
-    if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
-        .bind(quote_id)
+    if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, project_intake_id, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())")
+        .bind(&proposal_id)
         .bind(&tenant_id)
-        .bind(customer_id)
+        .bind(&customer_id)
         .bind(total_amount_cents)
         .bind(deposit_cents)
+        .bind(&project_intake_id)
         .execute(&mut *tx)
         .await {
-            tracing::error!("Failed to insert quote: {}", e);
+            tracing::error!("Failed to insert proposals: {}", e);
             let _ = tx.rollback().await;
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
 
-    if let Err(e) = sqlx::query("INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
-        .bind(quote_line_item_id)
-        .bind(quote_id)
+    if let Err(e) = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())")
+        .bind(&proposal_line_item_id)
+        .bind(&proposal_id)
         .bind(&service_name)
         .bind(total_amount_cents)
         .execute(&mut *tx)
         .await {
-            tracing::error!("Failed to insert quote line item: {}", e);
+            tracing::error!("Failed to insert proposal_line_items: {}", e);
             let _ = tx.rollback().await;
             return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
@@ -211,7 +208,7 @@ async fn handle_client_intake(
     }
 
     let action_payload = serde_json::json!({
-        "feature_type": "quote_draft",
+        "feature_type": "proposal_draft",
         "customer_inquiry": payload.details,
         "client_name": payload.name,
         "client_email": payload.email,
@@ -221,7 +218,8 @@ async fn handle_client_intake(
         "generated_response": drafted_message,
         "service": service_name,
         "price": suggested_price,
-        "quote_id": quote_id.to_string(),
+        "proposal_id": proposal_id,
+        "quote_id": proposal_id, // keep quote_id for fallback compatibility
     });
 
     match state.orchestrator.execute_action(
@@ -231,7 +229,7 @@ async fn handle_client_intake(
         ActionRisk::DraftForReview,
         action_payload,
     ).await {
-        Ok(_) => (StatusCode::OK, Json(ClientIntakeResponse { success: true, proposal_drafted: true, quote_id: Some(quote_id.to_string()) })).into_response(),
+        Ok(_) => (StatusCode::OK, Json(ClientIntakeResponse { success: true, proposal_drafted: true, quote_id: Some(proposal_id.to_string()) })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response(),
     }
 }

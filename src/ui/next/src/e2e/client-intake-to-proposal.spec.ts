@@ -35,7 +35,7 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     await expect(proposalsTab).toBeVisible({ timeout: 15000 });
 
     // Verify the "Draft Quote" card is visible
-    const quoteCard = page.getByTestId('quote-draft-card').first();
+    const quoteCard = page.getByTestId('proposal-draft-card').first();
     await expect(quoteCard).toBeVisible();
 
     // Verify card content correctly scoped the request

@@ -31,7 +31,7 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
     // Wait for the "quote_draft" card to appear in the dashboard.
     await expect(async () => {
       await page.reload();
-      const quoteDraftCard = page.getByTestId('quote-draft-card').first();
+      const quoteDraftCard = page.getByTestId('proposal-draft-card').first();
       await expect(quoteDraftCard).toBeVisible({ timeout: 5000 });
     }).toPass({
       intervals: [2000, 5000, 10000],
@@ -39,7 +39,7 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
     });
 
     // Check the contents of the draft proposal
-    const quoteCard = page.getByTestId('quote-draft-card').first();
+    const quoteCard = page.getByTestId('proposal-draft-card').first();
     await expect(quoteCard).toContainText('Draft Quote');
     await expect(quoteCard).toContainText('Calculated Total:');
     await expect(quoteCard).toContainText('Scope of Work:');
