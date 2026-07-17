@@ -530,7 +530,7 @@ export default function POSTerminal() {
                   disabled={parseInt(chargeAmount || '0') === 0}
                   className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-center items-center px-6 shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
-                  Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
+                  Quick Charge ${(parseInt(chargeAmount || '0') / 100).toFixed(2)}
                 </button>
              </div>
            )}

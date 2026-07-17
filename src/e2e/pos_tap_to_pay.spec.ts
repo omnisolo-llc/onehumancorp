@@ -5,32 +5,6 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
 
   test('Completes a Tap-to-Pay transaction and triggers low stock alert on dashboard', async ({ page }) => {
 
-    // Mock network request to return the dashboard data including AI alert
-    await page.route('**/api/dashboard', async (route) => {
-      const response = await route.fetch();
-      let body: any = {};
-      try {
-        body = await response.json();
-      } catch (e) {
-        // use default mock
-      }
-      // Add fake pending review for low stock alert
-      body.pendingReviews = [
-        {
-          id: 'mock-reorder-alert',
-          tenant_id: 'default',
-          action_type: 'Reorder',
-          status: 'Pending',
-          payload: {
-              product_id: 'prod_test_item',
-              remaining_stock: 5,
-              suggested_action: 'Restock Item'
-          }
-        }
-      ];
-      await route.fulfill({ json: body });
-    });
-
     // 1. Mock login as Priya and land on dashboard
     await page.goto('/api/staff');
     await page.evaluate(() => {
@@ -42,13 +16,10 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
         ]));
     });
 
-    await page.goto('/dashboard');
-
-    // 2. Find and click "Sell In Person"
-    await expect(page.locator('text=Sell In Person')).toBeVisible();
-    await page.locator('text=Sell In Person').click();
+    await page.goto('/pos.html');
 
     // 3. POS Terminal Flow
+    await page.waitForLoadState('networkidle');
     await expect(page.locator('text=Terminal Locked')).toBeVisible({ timeout: 15000 });
 
     // Enter PIN: 1234
@@ -60,6 +31,9 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
 
     // Verify unlocked and shows staff name
     await expect(page.locator('text=Priya')).toBeVisible();
+
+    // Switch to Quick Charge tab
+    await page.getByRole('button', { name: 'Quick Charge', exact: true }).click();
 
     // Add item to cart and trigger charge (Quick Charge button is dynamic based on items)
     // The POS page has a custom input for quick charge, let's enter 2500 for $25.00
@@ -73,8 +47,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     await expect(page.locator('text=Payment Successful!').or(page.locator('text=Offline Quick Charge Saved.'))).toBeVisible({ timeout: 15000 });
 
     // 4. Return to Dashboard and check for AI Alert
-    await page.goto('/dashboard');
-    await expect(page.locator('text=Sell In Person')).toBeVisible();
+    await page.goto('/staff.html');
     await expect(page.locator('text=Review and approve restock order').or(page.locator('text=Restock Item'))).toBeVisible();
 
   });

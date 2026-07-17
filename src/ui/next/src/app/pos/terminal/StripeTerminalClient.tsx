@@ -75,7 +75,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const discoverReaders = async () => {
     if (!terminal) return;
     setStatus('Discovering readers...');
-    const discoverResult = await terminal.discoverReaders({ simulated: typeof window !== 'undefined' && window.location.hostname === 'localhost' });
+    const discoverResult = await terminal.discoverReaders({ simulated: typeof window !== 'undefined' && window.location.hostname === 'localhost', discoveryMethod: 'local_mobile' });
     if (discoverResult.error) {
       setStatus('Failed to discover readers: ' + discoverResult.error.message);
     } else if (discoverResult.discoveredReaders.length === 0) {
