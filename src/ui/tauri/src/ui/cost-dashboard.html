@@ -1740,12 +1740,19 @@
         const costDashboardWidget = document.getElementById('cost-dashboard-widget');
 
         if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
-            viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='cost-dashboard.html?view=cost-dashboard'; });
+            viewDetailedCostsBtn.addEventListener('click', () => {
+                myPlanWidget.style.display = 'none';
+                costDashboardWidget.style.display = 'block';
+            });
         }
 
 
         if (backToMyPlanBtn && myPlanWidget && costDashboardWidget) {
-            backToMyPlanBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href='cost-dashboard.html'; });
+            backToMyPlanBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                myPlanWidget.style.display = 'block';
+                costDashboardWidget.style.display = 'none';
+            });
         }
 
         // Auto-show correct widget based on path

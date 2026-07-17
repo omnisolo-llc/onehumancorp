@@ -258,6 +258,14 @@ mod tests {
     use std::thread;
 
     #[test]
+    fn test_truncate_context_zero_max_chars() {
+        // Zero token truncation should always return empty string immediately
+        let text = "This is a sentence.";
+        let res = PromptCache::truncate_context(text, 0);
+        assert_eq!(res, "");
+    }
+
+    #[test]
     fn test_prompt_cache_get_set() {
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set("What is the capital of France?", "Paris", 1);
