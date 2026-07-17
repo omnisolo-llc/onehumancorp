@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import CartRecoveryPage from './page';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -26,7 +27,7 @@ describe('CartRecoveryPage', () => {
     });
 
     it('renders the Cart Recovery page correctly', async () => {
-        render(<CartRecoveryPage />);
+        await act(async () => { await act(async () => { render(<CartRecoveryPage />); }); });
         expect(screen.getByText('Recover Abandoned Carts')).toBeInTheDocument();
         expect(screen.getByText('Generate AI Campaign')).toBeInTheDocument();
     });
