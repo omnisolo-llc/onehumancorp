@@ -1,5 +1,0 @@
-# Disable BuildBuddy BES upload for local development environment to prevent 404 errors
-build --bes_backend=
-build --bes_results_url=
-test --bes_backend=
-test --bes_results_url=
