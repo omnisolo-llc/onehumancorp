@@ -742,7 +742,7 @@ export default function OnboardingWizard() {
               <button
                 type="button"
                 onClick={handleBackToIntro}
-                className="setup-nav-button min-h-[44px]"
+                className="setup-nav-button min-h-[44px] min-w-[44px]"
               >
                 Back
               </button>
@@ -760,7 +760,7 @@ export default function OnboardingWizard() {
             <button
               type="button"
               onClick={handleSkipSetup}
-              className="setup-nav-button min-h-[44px]"
+              className="setup-nav-button min-h-[44px] min-w-[44px]"
             >
               Skip setup
             </button>

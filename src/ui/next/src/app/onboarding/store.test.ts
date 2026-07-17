@@ -24,38 +24,38 @@ describe('useOnboardingStore', () => {
   });
 
   it('should update step', () => {
-    useOnboardingStore.getState().setStep(2);
+    useOnboardingStore.getState().updateState({ step: 2 });
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
   it('should update businessDescription', () => {
-    useOnboardingStore.getState().setBusinessDescription('Test Description');
+    useOnboardingStore.getState().updateState({ businessDescription: 'Test Description' });
     expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
   });
 
   it('should update isLoading', () => {
-    useOnboardingStore.getState().setIsLoading(true);
+    useOnboardingStore.getState().updateState({ isLoading: true });
     expect(useOnboardingStore.getState().isLoading).toBe(true);
   });
 
   it('should update error', () => {
-    useOnboardingStore.getState().setError('Test Error');
+    useOnboardingStore.getState().updateState({ error: 'Test Error' });
     expect(useOnboardingStore.getState().error).toBe('Test Error');
   });
 
   it('should update startResult', () => {
-    useOnboardingStore.getState().setStartResult({ result: 'test' });
+    useOnboardingStore.getState().updateState({ startResult: { result: 'test' } });
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
   });
 
   it('should update new state keys correctly', () => {
-    useOnboardingStore.getState().setBusinessName('Test Business');
-    useOnboardingStore.getState().setBusinessType('Cafe');
-    useOnboardingStore.getState().setCategories(['food', 'drinks']);
-    useOnboardingStore.getState().setWebsiteTemplate('Classic');
-    useOnboardingStore.getState().setFirstProductName('Coffee');
-    useOnboardingStore.getState().setFirstProductPrice('5.00');
-    useOnboardingStore.getState().setDomainChoice('custom');
+    useOnboardingStore.getState().updateState({ businessName: 'Test Business' });
+    useOnboardingStore.getState().updateState({ businessType: 'Cafe' });
+    useOnboardingStore.getState().updateState({ categories: ['food', 'drinks'] });
+    useOnboardingStore.getState().updateState({ websiteTemplate: 'Classic' });
+    useOnboardingStore.getState().updateState({ firstProductName: 'Coffee' });
+    useOnboardingStore.getState().updateState({ firstProductPrice: '5.00' });
+    useOnboardingStore.getState().updateState({ domainChoice: 'custom' });
 
     const state = useOnboardingStore.getState();
     expect(state.businessName).toBe('Test Business');
@@ -81,9 +81,9 @@ describe('useOnboardingStore', () => {
   });
 
   it('should persist state to localStorage', () => {
-    useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().updateState({ step: 3 });
+    useOnboardingStore.getState().updateState({ businessDescription: 'Persisted Description' });
+    useOnboardingStore.getState().updateState({ businessName: 'Persisted Name' });
 
     // The state is persisted in localStorage under 'onboarding-storage-v4'
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
@@ -93,7 +93,7 @@ describe('useOnboardingStore', () => {
   });
 
   it('never persists the administrator password', () => {
-    useOnboardingStore.getState().setStep(2);
+    useOnboardingStore.getState().updateState({ step: 2 });
 
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
     expect(storedState.state.adminPassword).toBeUndefined();

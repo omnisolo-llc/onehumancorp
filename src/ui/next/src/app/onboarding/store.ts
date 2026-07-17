@@ -23,27 +23,6 @@ interface OnboardingState {
   error: string;
   startResult: any;
   instantImageUrl: string;
-  setStep: (step: number) => void;
-  setChatStep: (step: number) => void;
-  setBio: (bio: string) => void;
-  setBusinessDescription: (desc: string) => void;
-  setBusinessGoal: (goal: string) => void;
-  setBusinessName: (name: string) => void;
-  setWhatYouSell: (what: string) => void;
-  setLocation: (location: string) => void;
-  setTargetAudience: (target: string) => void;
-  setBusinessType: (type: string) => void;
-  setCategories: (categories: string[]) => void;
-  setWebsiteTemplate: (template: string) => void;
-  setDomainChoice: (domain: string) => void;
-  setFirstProductName: (name: string) => void;
-  setFirstProductPrice: (price: string) => void;
-  setAiAgents: (agents: string[]) => void;
-  setAiAutoRespond: (autoRespond: boolean) => void;
-  setIsLoading: (loading: boolean) => void;
-  setError: (error: string) => void;
-  setStartResult: (result: any) => void;
-  setInstantImageUrl: (url: string) => void;
   updateState: (updates: Partial<OnboardingState>) => void;
 }
 
@@ -71,27 +50,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       error: '',
       startResult: null,
       instantImageUrl: '',
-      setStep: (step) => set({ step }),
-      setChatStep: (chatStep) => set({ chatStep }),
-      setBio: (bio) => set({ bio }),
-      setBusinessDescription: (businessDescription) => set({ businessDescription }),
-      setBusinessGoal: (businessGoal) => set({ businessGoal }),
-      setBusinessName: (businessName) => set({ businessName }),
-      setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
-      setLocation: (location) => set({ location }),
-      setTargetAudience: (targetAudience) => set({ targetAudience }),
-      setBusinessType: (businessType) => set({ businessType }),
-      setCategories: (categories) => set({ categories }),
-      setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
-  setDomainChoice: (domainChoice) => set({ domainChoice }),
-      setFirstProductName: (firstProductName) => set({ firstProductName }),
-      setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-      setAiAgents: (aiAgents) => set({ aiAgents }),
-      setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
-      setStartResult: (startResult) => set({ startResult }),
-      setInstantImageUrl: (instantImageUrl) => set({ instantImageUrl }),
       updateState: (updates) => set((state) => ({ ...state, ...updates })),
     }),
     {
