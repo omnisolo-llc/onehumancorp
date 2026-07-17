@@ -87,7 +87,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   return (
     <div
       key={approval.id}
-      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
+      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -469,7 +469,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "triage" && (
-              <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-xl">
+              <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-[16px]">
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center text-xl">
                     ✨
