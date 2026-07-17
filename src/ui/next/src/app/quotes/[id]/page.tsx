@@ -146,8 +146,12 @@ export default function QuoteReviewPage() {
               <span>${(quote.total_amount_cents / 100).toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center text-sm text-gray-500">
-              <span>Required Deposit</span>
+              <span>Required Deposit (on approval)</span>
               <span>${(quote.required_deposit_cents / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-gray-500">
+              <span>Remaining Balance (on completion)</span>
+              <span>${((quote.total_amount_cents - quote.required_deposit_cents) / 100).toFixed(2)}</span>
             </div>
           </div>
 
@@ -167,7 +171,7 @@ export default function QuoteReviewPage() {
               id="btn-save-edits"
               onClick={saveQuoteChanges}
               disabled={sending}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50 rounded-lg"
             >
               {sending ? 'Saving...' : 'Save Changes'}
             </button>
@@ -175,7 +179,7 @@ export default function QuoteReviewPage() {
             <button
               onClick={handleSend}
               disabled={sending}
-              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
+              className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50 rounded-lg"
             >
               {sending ? 'Sending...' : 'Approve & Send Quote'}
             </button>
@@ -184,7 +188,7 @@ export default function QuoteReviewPage() {
 
         <button
           onClick={() => router.back()}
-          className="w-full min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="w-full min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all rounded-lg"
         >
           Back to Feed
         </button>

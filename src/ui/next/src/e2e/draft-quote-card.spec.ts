@@ -115,4 +115,42 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
         await page.getByRole('button', { name: 'Approve & Send' }).first().click();
         await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
     });
+
+    test('Draft Quote Review page shows required deposit and remaining balance', async ({ page, loginAs, adminUser }) => {
+        await loginAs(page, adminUser);
+        // Create a quote through the API directly to test the UI layout
+        const res = await page.request.post('/api/v1/quotes', {
+            headers: { 'x-tenant-id': 'tenant-1', 'x-user-id': 'default', 'Content-Type': 'application/json' },
+            data: {
+                customer_id: '00000000-0000-0000-0000-000000000001',
+                status: 'DRAFT',
+                line_items: [
+                    {
+                        description: 'Roof Repair',
+                        unit_price_cents: 100000,
+                        quantity: 1,
+                        is_optional: false
+                    }
+                ],
+                proposed_slot_id: null
+            }
+        });
+        expect(res.ok()).toBeTruthy();
+        const quote = await res.json();
+
+        await page.goto(`/quotes/${quote.id}`);
+
+        // Wait for the quote to load
+        await expect(page.getByText(`Quote #${quote.id.slice(0, 8)}`)).toBeVisible();
+
+        // Verify deposit and remaining balance texts are rendered
+        await expect(page.getByText('Required Deposit (on approval)')).toBeVisible();
+        await expect(page.getByText('Remaining Balance (on completion)')).toBeVisible();
+
+        // Verify massive button
+        const sendBtn = page.getByRole('button', { name: 'Approve & Send Quote' });
+        await expect(sendBtn).toBeVisible();
+        const box = await sendBtn.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44); // Mobile touch target size check
+    });
 });

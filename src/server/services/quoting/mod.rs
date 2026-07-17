@@ -441,6 +441,43 @@ async fn create_quote(
         })?;
     }
 
+    if required_deposit_cents > 0 && total_amount_cents > 0 {
+        let deposit_percentage = (required_deposit_cents as f64 / total_amount_cents as f64) * 100.0;
+        sqlx::query(
+            "INSERT INTO milestone_payments (milestone_id, tenant_id, quote_id, percentage, amount, status, due_condition) VALUES ($1, $2, $3, $4, $5, 'pending', 'on_approval')"
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(&tenant_id)
+        .bind(quote_id)
+        .bind(deposit_percentage)
+        .bind(required_deposit_cents)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create deposit milestone: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        let remaining = total_amount_cents - required_deposit_cents;
+        if remaining > 0 {
+            let remaining_percentage = 100.0 - deposit_percentage;
+            sqlx::query(
+                "INSERT INTO milestone_payments (milestone_id, tenant_id, quote_id, percentage, amount, status, due_condition) VALUES ($1, $2, $3, $4, $5, 'pending', 'on_completion')"
+            )
+            .bind(Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(quote_id)
+            .bind(remaining_percentage)
+            .bind(remaining)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to create remaining milestone: {}", e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        }
+    }
+
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(quote))
@@ -477,17 +514,21 @@ async fn approve_quote(
     // Integrate Stripe deposit logic
     if let Some(mut q) = quote {
         if q.status == "ACCEPTED" {
-            let amount_usd = (q.total_amount_cents as f64) / 100.0;
+            let amount_usd = (q.required_deposit_cents as f64) / 100.0;
             // Use Stripe client to create a checkout session
             let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
             let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
+            let mut metadata = std::collections::HashMap::new();
+            metadata.insert("quote_id".to_string(), q.id.to_string());
+            metadata.insert("tenant_id".to_string(), q.tenant_id.clone());
+
             match stripe_client.create_checkout_session(
-                &format!("Quote #{}", q.id),
+                &format!("Quote #{} Deposit", q.id),
                 &q.customer_id.to_string(),
                 amount_usd,
                 None,
-                None
+                Some(metadata)
             ).await {
                 Ok(url) => {
                     q.stripe_payment_link = Some(url.clone());

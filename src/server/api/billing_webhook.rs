@@ -579,6 +579,10 @@ pub async fn stripe_webhook_handler(
                     .and_then(|m| m.get("proposed_slot_id"))
                     .and_then(|id| id.as_str());
 
+                let quote_id_opt = obj.get("metadata")
+                    .and_then(|m| m.get("quote_id"))
+                    .and_then(|id| id.as_str());
+
                 if let Some(intake_id) = conversational_intake_opt {
                     let _ = sqlx::query("UPDATE conversational_intake_queue SET status = 'BOOKED', updated_at = NOW() WHERE id = $1")
                         .bind(intake_id)
@@ -634,6 +638,30 @@ pub async fn stripe_webhook_handler(
                         .bind(slot_id)
                         .execute(&webhook_state.db.pool)
                         .await;
+                }
+
+                if let Some(quote_id) = quote_id_opt {
+                    if let Ok(quote_uuid) = uuid::Uuid::parse_str(quote_id) {
+                        let _ = sqlx::query("UPDATE quotes SET status = 'DEPOSIT_PAID', updated_at = NOW() WHERE id = $1")
+                            .bind(quote_uuid)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let _ = sqlx::query("UPDATE milestone_payments SET status = 'paid', updated_at = NOW() WHERE quote_id = $1 AND due_condition = 'on_approval'")
+                            .bind(quote_uuid)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        if let Some(tenant_id) = tenant_id_opt {
+                            let feed_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query(r#"INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'omnichannel', '{"feature_type": "autonomous_quote_deposit_paid", "quote_id": "' || $3 || '"}', '{}', 'APPROVED', NOW(), NOW())"#)
+                                .bind(feed_id)
+                                .bind(tenant_id)
+                                .bind(quote_id)
+                                .execute(&webhook_state.db.pool)
+                                .await;
+                        }
+                    }
                 }
 
                 if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
