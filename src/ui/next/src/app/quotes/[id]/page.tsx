@@ -12,6 +12,15 @@ interface LineItem {
   is_optional: boolean;
 }
 
+
+interface MilestonePayment {
+  id: string;
+  percentage: number;
+  amount_cents: number;
+  status: string;
+  due_condition: string;
+}
+
 interface Quote {
   id: string;
   customer_id: string;
@@ -20,6 +29,7 @@ interface Quote {
   required_deposit_cents: number;
   stripe_payment_link?: string;
   line_items?: LineItem[];
+  milestone_payments?: MilestonePayment[];
 }
 
 export default function QuoteReviewPage() {
@@ -140,15 +150,37 @@ export default function QuoteReviewPage() {
             ))}
           </div>
 
+
           <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
             <div className="flex justify-between items-center font-bold">
               <span>Total Amount</span>
               <span>${(quote.total_amount_cents / 100).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500">
-              <span>Required Deposit</span>
-              <span>${(quote.required_deposit_cents / 100).toFixed(2)}</span>
-            </div>
+
+            {quote.milestone_payments && quote.milestone_payments.length > 0 ? (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Milestone Payments</h3>
+                <div className="flex flex-col gap-2">
+                  {quote.milestone_payments.map((milestone) => (
+                    <div key={milestone.id} className="flex justify-between items-center text-sm p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                      <div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{milestone.percentage}% {milestone.due_condition === 'on_approval' ? 'Deposit' : 'Final'}</span>
+                        {milestone.status === 'paid' && (
+                          <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">PAID</span>
+                        )}
+                      </div>
+                      <span className="font-bold text-[#0066FF]">${(milestone.amount_cents / 100).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <span>Required Deposit</span>
+                <span>${(quote.required_deposit_cents / 100).toFixed(2)}</span>
+              </div>
+            )}
+
           </div>
 
           {quote.stripe_payment_link && (
@@ -175,6 +207,7 @@ export default function QuoteReviewPage() {
             <button
               onClick={handleSend}
               disabled={sending}
+              data-testid="approve-send-btn"
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
               {sending ? 'Sending...' : 'Approve & Send Quote'}

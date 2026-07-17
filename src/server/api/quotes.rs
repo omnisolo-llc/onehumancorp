@@ -9,13 +9,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::repository::models::{Quote, QuoteLineItem};
+use crate::domain::repository::models::{Quote, QuoteLineItem, MilestonePayment};
 use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 use std::sync::Arc;
 
 const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
 const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
+const MILESTONE_PAYMENTS_COLUMNS: &str = "id::text AS id, tenant_id, quote_id::text AS quote_id, percentage, amount_cents, status, due_condition, created_at, updated_at";
 
 #[derive(Deserialize)]
 pub struct DraftAgentRequest {
@@ -93,6 +94,7 @@ where
 pub struct QuoteResponse {
     pub quote: Quote,
     pub line_items: Vec<QuoteLineItem>,
+    pub milestone_payments: Vec<crate::domain::repository::models::MilestonePayment>,
 }
 
 #[derive(Deserialize)]
@@ -339,6 +341,7 @@ async fn create_quote(
         }
     }
 
+
     for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
@@ -359,6 +362,46 @@ async fn create_quote(
             tracing::error!("Failed to insert quote line item: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
+    }
+
+    // Insert milestone payments based on required deposit
+    if required_deposit_cents > 0 && required_deposit_cents < total_amount_cents {
+        let deposit_percentage = ((required_deposit_cents as f64 / total_amount_cents as f64) * 100.0) as i32;
+        let deposit_id = Uuid::new_v4();
+        let _ = sqlx::query(
+            "INSERT INTO milestone_payments (id, tenant_id, quote_id, percentage, amount_cents, status, due_condition, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'pending', 'on_approval', NOW(), NOW())"
+        )
+        .bind(deposit_id)
+        .bind(authority.tenant_id())
+        .bind(quote_id)
+        .bind(deposit_percentage)
+        .bind(required_deposit_cents)
+        .execute(&mut *tx)
+        .await;
+
+        let remainder_id = Uuid::new_v4();
+        let _ = sqlx::query(
+            "INSERT INTO milestone_payments (id, tenant_id, quote_id, percentage, amount_cents, status, due_condition, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'pending', 'on_completion', NOW(), NOW())"
+        )
+        .bind(remainder_id)
+        .bind(authority.tenant_id())
+        .bind(quote_id)
+        .bind(100 - deposit_percentage)
+        .bind(total_amount_cents - required_deposit_cents)
+        .execute(&mut *tx)
+        .await;
+    } else {
+        let payment_id = Uuid::new_v4();
+        let _ = sqlx::query(
+            "INSERT INTO milestone_payments (id, tenant_id, quote_id, percentage, amount_cents, status, due_condition, created_at, updated_at) VALUES ($1, $2, $3, 100, $4, 'pending', 'on_approval', NOW(), NOW())"
+        )
+        .bind(payment_id)
+        .bind(authority.tenant_id())
+        .bind(quote_id)
+        .bind(total_amount_cents)
+        .execute(&mut *tx)
+        .await;
+    }
     }
 
     if let Err(e) = tx.commit().await {
@@ -642,10 +685,31 @@ async fn get_quote(
             item.created_at = None;
             item.updated_at = None;
         }
+    }
 
-        (StatusCode::OK, Json(QuoteResponse { quote: q, line_items })).into_response()
+    let milestone_payments_query = format!("SELECT {MILESTONE_PAYMENTS_COLUMNS} FROM milestone_payments WHERE quote_id::text = $1 AND tenant_id = $2");
+    let milestone_payments = match sqlx::query_as::<_, MilestonePayment>(&milestone_payments_query)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(milestone_payments) => milestone_payments,
+        Err(e) => {
+            tracing::error!("Failed to fetch milestone payments: {}", e);
+            vec![]
+        }
+    };
+
+    if mobile_optimized {
+        let mut q = quote.clone();
+        q.created_at = None;
+        q.updated_at = None;
+        q.valid_until = None;
+
+        (StatusCode::OK, Json(QuoteResponse { quote: q, line_items, milestone_payments })).into_response()
     } else {
-        (StatusCode::OK, Json(QuoteResponse { quote, line_items })).into_response()
+        (StatusCode::OK, Json(QuoteResponse { quote, line_items, milestone_payments })).into_response()
     }
 }
 
@@ -653,7 +717,7 @@ async fn get_quote(
 mod tests {
     #[allow(unused_imports)]
     use super::*;
-    use crate::domain::repository::models::{Quote, QuoteLineItem};
+    use crate::domain::repository::models::{Quote, QuoteLineItem, MilestonePayment};
     use axum::{body::Body, extract::Extension, http::Request};
     use tower::ServiceExt;
 
@@ -689,6 +753,9 @@ mod tests {
 
     async fn create_quote_test_tables(pool: &sqlx::PgPool) {
         for statement in [
+            "CREATE TABLE milestone_payments (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, quote_id UUID NOT NULL, percentage INTEGER NOT NULL, amount_cents BIGINT NOT NULL, status TEXT NOT NULL, due_condition TEXT NOT NULL, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
+            "CREATE TABLE invoices (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID, quote_id UUID, total_amount DOUBLE PRECISION, currency TEXT, status TEXT, stripe_invoice_id TEXT)",
+            "CREATE TABLE invoice_line_items (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, invoice_id UUID, description TEXT, quantity INTEGER, unit_price DOUBLE PRECISION, amount DOUBLE PRECISION)",
             "CREATE TABLE quotes (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID NOT NULL, status TEXT NOT NULL, valid_until TIMESTAMPTZ, total_amount_cents BIGINT, required_deposit_cents BIGINT, stripe_payment_link TEXT, proposed_slot_id TEXT, service_id TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE quote_line_items (id UUID PRIMARY KEY, quote_id UUID NOT NULL, tenant_id TEXT NOT NULL, description TEXT NOT NULL, unit_price_cents BIGINT NOT NULL, quantity INTEGER NOT NULL, is_optional BOOLEAN NOT NULL, service_item_id UUID, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE integrations (tenant_id TEXT NOT NULL, provider_id TEXT NOT NULL, api_token TEXT NOT NULL)",
@@ -1155,6 +1222,9 @@ mod tests {
             .expect("connect tenant-scoped quote test pool");
 
         for statement in [
+            "CREATE TABLE milestone_payments (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, quote_id UUID NOT NULL, percentage INTEGER NOT NULL, amount_cents BIGINT NOT NULL, status TEXT NOT NULL, due_condition TEXT NOT NULL, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
+            "CREATE TABLE invoices (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID, quote_id UUID, total_amount DOUBLE PRECISION, currency TEXT, status TEXT, stripe_invoice_id TEXT)",
+            "CREATE TABLE invoice_line_items (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, invoice_id UUID, description TEXT, quantity INTEGER, unit_price DOUBLE PRECISION, amount DOUBLE PRECISION)",
             "CREATE TABLE quotes (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID NOT NULL, status TEXT NOT NULL, valid_until TIMESTAMPTZ, total_amount_cents BIGINT, required_deposit_cents BIGINT, stripe_payment_link TEXT, proposed_slot_id TEXT, service_id TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE quote_line_items (id UUID PRIMARY KEY, quote_id UUID NOT NULL, tenant_id TEXT NOT NULL, description TEXT NOT NULL, unit_price_cents BIGINT NOT NULL, quantity INTEGER NOT NULL, is_optional BOOLEAN NOT NULL, service_item_id UUID, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
             "CREATE TABLE integrations (tenant_id TEXT NOT NULL, provider_id TEXT NOT NULL, api_token TEXT NOT NULL)",
@@ -1491,6 +1561,13 @@ async fn accept_quote(
             );
         }
     }
+
+    // Also save this payment link into the quote itself
+    let _ = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id::text = $2")
+        .bind(&payment_link)
+        .bind(quote_id.to_string())
+        .execute(&mut *tx)
+        .await;
 
     let invoice_res = sqlx::query(
         "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"

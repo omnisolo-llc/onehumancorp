@@ -198,7 +198,8 @@ export default function TeamChatPage() {
                       <div data-testid="quote-draft-card">
                         <p className="text-sm font-semibold text-gray-900 mb-1">Action Required: Approve Estimate for {msg.card.department}</p>
                         <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
-                        <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
+                        <p className="text-sm font-bold text-gray-900 mb-1">Calculated Total: ${msg.card.suggested_price || 0}</p>
+                        <p className="text-xs font-semibold text-[#0066FF] mb-4">Required Deposit: {msg.card.required_deposit_percentage || '50'}%</p>
                       </div>
                     ) : (
                       <>

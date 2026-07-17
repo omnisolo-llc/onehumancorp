@@ -373,6 +373,21 @@ pub struct Quote {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct MilestonePayment {
+    pub id: String,
+    pub tenant_id: String,
+    pub quote_id: String,
+    pub percentage: i32,
+    pub amount_cents: i64,
+    pub status: String,
+    pub due_condition: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct QuoteLineItem {
     pub id: String,
     pub quote_id: String,

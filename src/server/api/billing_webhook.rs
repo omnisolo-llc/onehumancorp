@@ -394,6 +394,13 @@ pub async fn stripe_webhook_handler(
 
                         if let Some((amount, currency)) = payment_info {
                             let tx_id = uuid::Uuid::new_v4().to_string();
+
+                let _ = sqlx::query("UPDATE milestone_payments SET status = 'paid', updated_at = NOW() WHERE quote_id::text = (SELECT quote_id::text FROM quotes WHERE stripe_payment_link LIKE '%' || $1 || '%') AND tenant_id = $2")
+                    .bind(payment_intent_id)
+                    .bind(tenant_id)
+                    .execute(&webhook_state.db.pool)
+                    .await;
+
                             if let Err(e) = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
                                 .bind(tenant_id)
                                 .bind(&tx_id)

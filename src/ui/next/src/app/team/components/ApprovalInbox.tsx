@@ -576,6 +576,10 @@ export default function ApprovalInbox({
                             <span className="text-xs font-semibold text-gray-900">${req.payload.suggested_price}</span>
                           </div>
                           <div className="flex justify-between">
+                            <span className="text-xs text-gray-500">Required Deposit:</span>
+                            <span className="text-xs font-semibold text-[#0066FF]">{req.payload.required_deposit_percentage || '50'}%</span>
+                          </div>
+                          <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Scope of Work:</span>
                             <span className="text-xs font-medium text-gray-800">{req.payload.scope}</span>
                           </div>
