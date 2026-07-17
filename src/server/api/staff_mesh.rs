@@ -681,7 +681,7 @@ pub async fn get_tasks_handler(
                             "id": row.get::<String, _>("id"),
                             "staff_id": row.get::<String, _>("staff_id"),
                             "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
+                            "description": row.get::<Option<String>, _>("description"),
                             "status": row.get::<String, _>("status"),
                             "priority": row.get::<String, _>("priority"),
                         })
@@ -728,7 +728,7 @@ pub async fn get_tasks_handler(
                             "id": row.get::<String, _>("id"),
                             "staff_id": row.get::<String, _>("staff_id"),
                             "title": row.get::<String, _>("title"),
-                            "description": row.get::<String, _>("description"),
+                            "description": row.get::<Option<String>, _>("description"),
                             "status": row.get::<String, _>("status"),
                             "priority": row.get::<String, _>("priority"),
                         })
@@ -1530,7 +1530,7 @@ pub async fn get_staff_tasks_handler(
                 "id": row.get::<String, _>("id"),
                 "tenant_id": row.get::<String, _>("tenant_id"),
                 "staff_id": row.get::<String, _>("staff_id"),
-                "description": row.get::<String, _>("description"),
+                "description": row.get::<Option<String>, _>("description"),
                 "status": row.get::<String, _>("status"),
                 "priority": row.get::<String, _>("priority"),
                 "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()), Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()) },
