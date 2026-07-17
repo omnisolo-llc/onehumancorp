@@ -103,6 +103,11 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
+            "  check-changes:\n    name: Check what files changed\n    runs-on: ubuntu-latest",
+            "  check-changes:\n    name: Check what files changed\n    runs-on: oci-runner",
+            "unreliable check-changes runner",
+        ),
+        (
             "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
             "          sudo apt-get install -y --no-install-recommends postgresql-client",
             "missing protoc bootstrap",
