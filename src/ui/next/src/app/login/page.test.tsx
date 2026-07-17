@@ -12,11 +12,11 @@ vi.mock("next/navigation", () => ({
 describe("login page", () => {
   beforeEach(() => {
     replace.mockReset();
-    vi.mocked(fetch).mockReset();
+    global.fetch = vi.fn();
   });
 
   it("submits controlled credentials and navigates only after success", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
+    global.fetch.mockResolvedValueOnce(
       Response.json({ user: { id: "user-7", username: "Alice", roles: ["ADMIN"], organizationId: "tenant-7" }, next: "/orders?tab=open" }),
     );
     const storage = vi.spyOn(localStorage, "setItem");
@@ -37,7 +37,7 @@ describe("login page", () => {
   });
 
   it("supports keyboard submission and omits an empty organization", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ user: {}, next: "/dashboard" }));
+    global.fetch.mockResolvedValueOnce(Response.json({ user: {}, next: "/dashboard" }));
     render(<Login />);
     const user = userEvent.setup();
     await user.type(screen.getByLabelText(/email or username/i), "alice@example.test");
@@ -66,7 +66,7 @@ describe("login page", () => {
   });
 
   it("announces one generic contained error and keeps credentials out of it", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
+    global.fetch.mockResolvedValueOnce(
       Response.json({ error: "invalid credentials" }, { status: 401 }),
     );
     render(<Login />);

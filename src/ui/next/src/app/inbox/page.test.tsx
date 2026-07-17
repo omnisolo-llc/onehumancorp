@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import InboxPage from './page';
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+
 
 vi.mock('@powersync/react', () => ({
   useQuery: () => ({ data: [] }),
@@ -16,7 +18,7 @@ vi.mock('../components/AppShell', () => ({
 }));
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
-  const { container } = render(<InboxPage />);
+  const { container } = render(<AppRouterContext.Provider value={{} as any}><InboxPage /></AppRouterContext.Provider>);
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
   expect(screen.getByText('Select a database-backed message to inspect it.')).toBeInTheDocument();

@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const API_ROOT = join(process.cwd(), "src/app/api");
+const API_ROOT = join(__dirname, "../../app/api");
 const BACKEND_CONFIGURATION =
   /process\.env\.(?:BACKEND_URL|OHC_API_URL|NEXT_PUBLIC_API_URL|API_URL)/;
 const BROWSER_IDENTITY =
@@ -39,7 +39,7 @@ describe("protected backend transport source contract", () => {
   });
 
   it("does not reintroduce backend rewrites that bypass the server transport", () => {
-    const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+    const config = readFileSync(join(__dirname, "../../../next.config.mjs"), "utf8");
     expect(config).not.toMatch(/\brewrites\s*\(/);
     expect(config).not.toMatch(/destination\s*:.*BACKEND_URL/);
   });

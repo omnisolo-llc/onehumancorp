@@ -13,11 +13,11 @@ describe("LogoutButton", () => {
   beforeEach(() => {
     replace.mockReset();
     refresh.mockReset();
-    vi.mocked(fetch).mockReset();
+    global.fetch = vi.fn();
   });
 
   it("posts logout once and returns to login", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ ok: true }));
+    global.fetch.mockResolvedValueOnce(Response.json({ ok: true }));
     render(<LogoutButton />);
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
@@ -26,7 +26,7 @@ describe("LogoutButton", () => {
   });
 
   it("announces failure and remains usable when the endpoint cannot clear the cookie", async () => {
-    vi.mocked(fetch).mockRejectedValueOnce(new Error("offline"));
+    global.fetch.mockRejectedValueOnce(new Error("offline"));
     render(<LogoutButton />);
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Logout failed. Please try again.");
