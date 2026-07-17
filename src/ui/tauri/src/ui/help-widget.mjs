@@ -477,9 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+                <li style="font-size: 14px; color: #64748b;">Loading articles...</li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <div style="margin-bottom: 8px;">
@@ -569,6 +567,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+    });
+
+    // Fetch articles
+    fetch("/api/v1/help").then(r => r.json()).then(data => {
+        const list = widget.querySelector('#ohc-help-articles-list') || document.getElementById('ohc-help-articles-list');
+        if (list && data && Array.isArray(data)) {
+            list.innerHTML = "";
+            data.slice(0, 3).forEach(article => {
+                list.innerHTML += `<li><a href="/help_article.html?id=${encodeURIComponent(article.id)}" style="color: #2563eb; text-decoration: none; font-size: 14px;">${article.title}</a></li>`;
+            });
+        }
+    }).catch(e => {
+        const list = widget.querySelector('#ohc-help-articles-list') || document.getElementById('ohc-help-articles-list');
+        if (list) list.innerHTML = `<li style="font-size: 14px; color: #64748b;">Failed to load articles.</li>`;
     });
 
     // Chat Logic
