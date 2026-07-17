@@ -147,13 +147,14 @@ impl PredictiveSupplyChainWorker {
             let tenant_id: String = row.get("tenant_id");
             let payload: serde_json::Value = row.get("payload");
 
-            // Use Redlock pattern to prevent duplicate PO drafts (cross-agent coordination)
-            // Lock key pattern: ohc:lock:{tenant_id}:{resource_type}:{resource_id}
-            let product_id = payload["product_id"].as_str().unwrap_or_default();
+            // Support both old "product_id" payloads and new "raw_material_id" payloads
+            let resource_id = payload["raw_material_id"].as_str().or_else(|| payload["product_id"].as_str()).unwrap_or_default();
+            let resource_name = payload["raw_material_name"].as_str().unwrap_or("Supplies");
             let quantity = payload["suggested_quantity"].as_i64().unwrap_or(50) as f64;
 
-            // We lock on the product to avoid multiple agents drafting POs for the same product at the exact same time
-            let lock_key = format!("ohc:lock:{}:purchase_order:{}", tenant_id, product_id);
+            // Use Redlock pattern to prevent duplicate PO drafts (cross-agent coordination)
+            // Lock key pattern: ohc:lock:{tenant_id}:{resource_type}:{resource_id}
+            let lock_key = format!("ohc:lock:{}:purchase_order:{}", tenant_id, resource_id);
             let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
 
             // Acquire lock (simple Redis lock implementation for this worker, similar to what's defined in locks.rs)
@@ -195,7 +196,9 @@ impl PredictiveSupplyChainWorker {
 
             // Generate PO
             let vendor_id = Uuid::new_v4().to_string(); // In a real scenario, map from product supplier
+            let vendor_name = "Default Supplier";
             let po_id = Uuid::new_v4().to_string();
+            let total_cost = quantity * 10.0; // Dummy cost
 
             // Insert dummy vendor if needed
             let _ = sqlx::query(
@@ -203,8 +206,20 @@ impl PredictiveSupplyChainWorker {
             )
             .bind(&vendor_id)
             .bind(&tenant_id)
-            .bind("Default Supplier")
+            .bind(vendor_name)
             .bind("supplier@example.com")
+            .execute(pool)
+            .await;
+
+            // Generate a dummy customer profile as a "System Customer" or Vendor placeholder to satisfy the work_item customer_id requirement
+            let sys_customer_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                "INSERT INTO customer_profile (id, tenant_id, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING"
+            )
+            .bind(&sys_customer_id)
+            .bind(&tenant_id)
+            .bind(vendor_name)
+            .bind("vendor@example.com")
             .execute(pool)
             .await;
 
@@ -215,7 +230,46 @@ impl PredictiveSupplyChainWorker {
             .bind(&po_id)
             .bind(&tenant_id)
             .bind(&vendor_id)
-            .bind(quantity * 10.0) // Dummy cost
+            .bind(total_cost)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            // Insert into Inbox / Action Required queue
+            let work_item_id = Uuid::new_v4().to_string();
+            let agent_draft_id = Uuid::new_v4().to_string();
+
+            let draft_payload = json!({
+                "feature_type": "draft_purchase_order",
+                "po_id": po_id,
+                "vendor_name": vendor_name,
+                "resource_name": resource_name,
+                "suggested_quantity": quantity,
+                "total_cost": total_cost,
+            });
+
+            sqlx::query(
+                "INSERT INTO work_item (id, tenant_id, customer_id, source, payload, status)
+                 VALUES ($1, $2, $3, $4, $5, 'DRAFT')"
+            )
+            .bind(&work_item_id)
+            .bind(&tenant_id)
+            .bind(&sys_customer_id)
+            .bind("Operations Agent")
+            .bind(&draft_payload)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            let response_msg = format!("{} running low. Drafted Purchase Order for {} units.", resource_name, quantity);
+
+            sqlx::query(
+                "INSERT INTO agent_draft (id, work_item_id, response, status)
+                 VALUES ($1, $2, $3, 'DRAFT')"
+            )
+            .bind(&agent_draft_id)
+            .bind(&work_item_id)
+            .bind(&response_msg)
             .execute(pool)
             .await
             .map_err(|e| e.to_string())?;

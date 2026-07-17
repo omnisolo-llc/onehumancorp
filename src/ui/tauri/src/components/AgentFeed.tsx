@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AgentFeedCard, ActionRequiredDraft } from './AgentFeedCard';
 import { PayoutSummaryCard } from './owner_feed/PayoutSummaryCard';
 import { ReviewDraftQuoteCard } from './owner_feed/ReviewDraftQuoteCard';
+import { DraftPurchaseOrderCard } from './owner_feed/DraftPurchaseOrderCard';
 
 export const AgentFeed: React.FC = () => {
     const [drafts, setDrafts] = useState<ActionRequiredDraft[]>([]);
@@ -124,6 +125,22 @@ export const AgentFeed: React.FC = () => {
                             <ReviewDraftQuoteCard
                                 customerName={parsedPayload.customer_name || draft.customer_name || 'Customer'}
                                 projectDescription={parsedPayload.project_description || 'Project'}
+                                totalCost={parsedPayload.total_cost || 0}
+                                onApprove={() => handleApprove(draft.draft_id)}
+                                onEdit={() => handleEdit(draft.draft_id)}
+                            />
+                        </div>
+                    );
+                }
+
+                if (actionType === 'DraftPurchaseOrder' || actionType === 'draft_purchase_order') {
+                    const parsedPayload = draft.proposed_action || draft.context_payload || {};
+                    return (
+                        <div key={draft.draft_id} className="w-full mb-4">
+                            <DraftPurchaseOrderCard
+                                vendorName={parsedPayload.vendor_name || 'Vendor'}
+                                resourceName={parsedPayload.resource_name || 'Supplies'}
+                                suggestedQuantity={parsedPayload.suggested_quantity || 0}
                                 totalCost={parsedPayload.total_cost || 0}
                                 onApprove={() => handleApprove(draft.draft_id)}
                                 onEdit={() => handleEdit(draft.draft_id)}

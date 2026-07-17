@@ -93,6 +93,81 @@ impl SupplyChainRepo {
                     tx.commit().await.map_err(|e| e.to_string())?;
                 }
             }
+
+            // 3. Check if material went below threshold and queue draft_purchase_order if needed
+            let current_mat: Option<RawMaterial> = match &self.db.store {
+                DbStore::Postgres => {
+                    sqlx::query_as("SELECT * FROM raw_materials WHERE id = $1 AND tenant_id = $2")
+                        .bind(&bom.raw_material_id)
+                        .bind(tenant_id)
+                        .fetch_optional(&self.db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                },
+                DbStore::Sqlite(pool) => {
+                    sqlx::query_as("SELECT * FROM raw_materials WHERE id = ? AND tenant_id = ?")
+                        .bind(&bom.raw_material_id)
+                        .bind(tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?
+                }
+            };
+
+            if let Some(mat) = current_mat {
+                if let (Some(current_qty), Some(threshold)) = (mat.current_quantity, mat.reorder_threshold) {
+                    if current_qty <= threshold {
+                        // Queue job if not recently queued
+                        let job_id = Uuid::new_v4().to_string();
+                        let suggested_quantity = threshold * 2; // e.g. order double the threshold
+
+                        let payload = serde_json::json!({
+                            "raw_material_id": mat.id,
+                            "raw_material_name": mat.name,
+                            "suggested_quantity": suggested_quantity
+                        });
+
+                        // We do a simple insert. In a real system, you might want to avoid duplicate pending jobs
+                        match &self.db.store {
+                            DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                                     SELECT $1, $2, 'draft_purchase_order', $3, 'PENDING'
+                                     WHERE NOT EXISTS (
+                                         SELECT 1 FROM ohc_job_queue
+                                         WHERE tenant_id = $2 AND job_type = 'draft_purchase_order'
+                                         AND status = 'PENDING' AND payload->>'raw_material_id' = $4
+                                     )"
+                                )
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind(&payload)
+                                .bind(&mat.id)
+                                .execute(&self.db.pool)
+                                .await;
+                            },
+                            DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                                     SELECT ?, ?, 'draft_purchase_order', ?, 'PENDING'
+                                     WHERE NOT EXISTS (
+                                         SELECT 1 FROM ohc_job_queue
+                                         WHERE tenant_id = ? AND job_type = 'draft_purchase_order'
+                                         AND status = 'PENDING' AND json_extract(payload, '$.raw_material_id') = ?
+                                     )"
+                                )
+                                .bind(&job_id)
+                                .bind(tenant_id)
+                                .bind(&payload)
+                                .bind(tenant_id)
+                                .bind(&mat.id)
+                                .execute(pool)
+                                .await;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Ok(())

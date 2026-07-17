@@ -22,7 +22,12 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
 
   test('Displays PO approval in inbox and allows single-tap approval', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('Action Required')).toBeVisible();
-    await expect(page.getByText('Operations Map')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Agent Feed' })).toBeVisible();
+    await expect(page.getByText('Draft Purchase Order')).toBeVisible();
+    await expect(page.getByText('Approve & Send PO')).toBeVisible();
+    await page.getByTestId('feed-approve-btn').first().click();
+
+    // Optimistic UI updates
+    await expect(page.getByText('Draft Purchase Order')).not.toBeVisible();
   });
 });

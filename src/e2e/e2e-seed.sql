@@ -800,6 +800,26 @@ INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, tex
 ('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold)
+VALUES
+  ('rm-flour-1', 'e2e-tenant', 'Flour', 5, 20)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO customer_profile (id, tenant_id, name, email)
+VALUES
+  ('sys-vendor-1', 'e2e-tenant', 'Default Supplier', 'vendor@example.com')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO work_item (id, tenant_id, customer_id, source, payload, status)
+VALUES
+  ('wi-po-1', 'e2e-tenant', 'sys-vendor-1', 'Operations Agent', '{"feature_type": "draft_purchase_order", "po_id": "po-123", "vendor_name": "Default Supplier", "resource_name": "Flour", "suggested_quantity": 40, "total_cost": 400.0}', 'DRAFT')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO agent_draft (id, work_item_id, response, status)
+VALUES
+  ('draft-po-1', 'wi-po-1', 'Flour running low. Drafted Purchase Order for 40 units.', 'DRAFT')
+ON CONFLICT DO NOTHING;
+
 -- Seed help_articles
 INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
 ('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help/getting-started-1'),
