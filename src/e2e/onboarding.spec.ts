@@ -34,10 +34,10 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 1: Completes the onboarding flow
   test('Completes the onboarding flow and verifies premium translucent glass styling and flexbox layouts', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     // Step 0: Welcome Screen
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -74,7 +74,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   });
 
   test('Verifies capabilities can be toggled via click and keyboard', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     // Click manual configuration
     const startButton = page.locator('[data-next="step-context"]');
@@ -119,8 +119,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   test('Validates 44px touch targets on mobile sizes', async ({ page }) => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -136,8 +136,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 3: Verifies input disabled states
   test('Next button fails validation when input is empty', async ({ page }) => {
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -163,8 +163,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 4: Enter key submits the first step
   test('Enter key submits the input', async ({ page }) => {
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -184,8 +184,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
   // Test 5: Verify text area presence and styling
   test('Verify manual configuration fallback styling', async ({ page }) => {
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
   });
 });
@@ -239,8 +239,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     // Test 1: Verifies Instant Build successful generation flow
   test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Instant Build is now the initial screen
@@ -259,7 +259,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   });
 
   test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
     // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
@@ -272,7 +272,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   });
 
   test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
     // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
@@ -286,8 +286,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 2: Verifies Instant Build handles network error gracefully
   test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
-    await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Instant Build is now the initial screen
@@ -311,7 +311,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 3: Verifies empty input behavior
   test('Instant Build prevents submission when the input is empty', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
     // Instant Build is now the initial screen
 
     const generateButton = page.locator('#generate-storefront-btn');
@@ -327,7 +327,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 4: Smart defaults fallback on partial info
   test('Instant Build handles partial information appropriately by falling back to smart defaults', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
     // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
@@ -343,13 +343,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Go to the real local server root route which should present setup if unconfigured
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     // Wait for the container to load
-    const container = page.locator(".container");
+    const container = page.locator("#setup-screen");
     await expect(container).toBeVisible({ timeout: 15000 });
 
-    // Check .container has no horizontal overflow
+    // Check #setup-screen has no horizontal overflow
     const containerBox = await container.boundingBox();
     expect(containerBox?.width).toBeLessThanOrEqual(375);
 
@@ -376,7 +376,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 5: Mobile responsiveness of the Instant Build component
   test('Instant Build respects mobile viewport constraints (375px) with valid touch targets for the conversational flow', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/setup.html');
+    await page.goto('/onboarding');
 
     // Instant Build is now the initial screen
 
