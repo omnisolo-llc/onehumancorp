@@ -819,8 +819,6 @@ jobs:
           echo "docker-e2e: ${DOCKER_E2E_RESULT}"
           echo "postgres-security: ${POSTGRES_SECURITY_RESULT}"
           sudo rm -rf /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache || true
 
           require_success() {
             local name="$1"
