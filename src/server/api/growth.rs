@@ -403,7 +403,7 @@ where
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
-        .route("/wrapped", get(handle_wrapped).route_layer(axum::middleware::from_fn_with_state(pool.clone(), server_auth::http::optional_auth_middleware)))
+        .route("/wrapped", get(handle_wrapped))
         .route("/upgrade-paywall", get(handle_upgrade_paywall))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
