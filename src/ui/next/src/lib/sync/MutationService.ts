@@ -1,6 +1,7 @@
 import { SyncManager } from './SyncManager';
 import { enqueueAction, OfflineAction as OperationIntent } from '../../app/utils/offlineQueue';
 import { v4 as uuidv4 } from 'uuid';
+import { P2PMeshNetwork } from '../mesh/P2PMeshNetwork';
 
 export class MutationService {
   private static instance: MutationService;
@@ -41,14 +42,28 @@ export class MutationService {
       // 2. Queue the intent
       await enqueueAction(intent);
 
+
       // 3. Trigger sync via SyncManager
       const syncManager = SyncManager.getInstance();
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('ohc_queue_updated'));
       }
+
+      // 4. Notify P2P mesh
+      try {
+         const mesh = P2PMeshNetwork.getInstance();
+         mesh.broadcast({
+             type: 'SYNC_QUEUE_INTENT',
+             intent: intent
+         });
+      } catch (err) {
+         console.warn("Failed to broadcast intent to P2P mesh:", err);
+      }
+
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         syncManager.sync();
       }
+
     } catch (e) {
       console.error('Failed to execute mutation, rolling back:', e);
       rollback();

@@ -6,6 +6,7 @@ import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
+import { P2PMeshNetwork } from '../../../lib/mesh/P2PMeshNetwork';
 
 const t = (text: string) => text;
 
@@ -46,6 +47,9 @@ export default function POSTerminal() {
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
+  const [discoveredPeers, setDiscoveredPeers] = useState<string[]>([]);
+  const [joinedMesh, setJoinedMesh] = useState(false);
+  const [showJoinPrompt, setShowJoinPrompt] = useState(false);
 
 
   useEffect(() => {
@@ -79,6 +83,7 @@ export default function POSTerminal() {
     };
 
 
+
     if (typeof window !== 'undefined') {
         let storedDeviceId = localStorage.getItem('ohc_pos_device_id');
         if (!storedDeviceId) {
@@ -86,6 +91,49 @@ export default function POSTerminal() {
             localStorage.setItem('ohc_pos_device_id', storedDeviceId);
         }
         setDeviceId(storedDeviceId);
+
+        // Initialize Mesh
+        const mesh = P2PMeshNetwork.getInstance();
+        mesh.initialize(storedDeviceId);
+        (window as any).P2PMeshNetwork = P2PMeshNetwork;
+
+        mesh.onPeerDiscovered((peerId) => {
+           setDiscoveredPeers(prev => {
+              if (!prev.includes(peerId)) {
+                 setJoinedMesh(prevJoined => {
+                     if (!prevJoined) {
+                         setShowJoinPrompt(true);
+                     }
+                     return prevJoined;
+                 });
+                 return [...prev, peerId];
+              }
+              return prev;
+           });
+        });
+
+        mesh.onMessage((msg) => {
+           if (msg.type === 'SYNC_INVENTORY') {
+               // Basic CRDT State-based Merge (LWW - Last Write Wins or merge)
+               setInventory(prev => {
+                   if (!prev) return msg.inventory;
+                   const merged = [...prev];
+                   msg.inventory.forEach((remoteItem: any) => {
+                       const localIdx = merged.findIndex(i => i.id === remoteItem.id);
+                       if (localIdx > -1) {
+                           // Keep the lowest inventory count (most conservative for overselling)
+                           if (remoteItem.count < merged[localIdx].count) {
+                               merged[localIdx] = remoteItem;
+                           }
+                       } else {
+                           merged.push(remoteItem);
+                       }
+                   });
+                   return merged;
+               });
+           }
+        });
+
 
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
@@ -689,6 +737,43 @@ export default function POSTerminal() {
             <span>{t('Syncing transactions...')}</span>
           </div>
         )}
+
+        {/* Mesh Join Prompt */}
+        {showJoinPrompt && !joinedMesh && (
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6">
+            <div className="bg-white/80 rounded-3xl p-8 w-full shadow-2xl flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Join Local Register Network</h2>
+              <p className="text-gray-600 font-medium mb-6">Nearby device detected. Join the local offline mesh to keep inventory in sync without internet.</p>
+              <div className="flex w-full space-x-4">
+                <button
+                  onClick={() => setShowJoinPrompt(false)}
+                  className="flex-1 py-3 bg-gray-200 text-gray-800 font-bold rounded-xl"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => {
+                    setJoinedMesh(true);
+                    setShowJoinPrompt(false);
+                    // Broadcast local inventory state
+                    P2PMeshNetwork.getInstance().broadcast({
+                       type: 'SYNC_INVENTORY',
+                       inventory: inventory
+                    });
+                  }}
+                  className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl"
+                  data-testid="btn-join-mesh"
+                >
+                  Join Mesh
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {syncSuccess && !isOffline && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#34C759]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
