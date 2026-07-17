@@ -104,7 +104,7 @@ async fn handle_booking_request(
     if let Err(error) =
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id_clone).await
     {
-        tracing::error!("failed to bind booking request tenant context: {error}"); // pii-safe
+        tracing::error!("failed to bind booking request tenant context: {error}");
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({"error": "internal error"})),

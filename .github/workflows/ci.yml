@@ -27,6 +27,8 @@ jobs:
   check-changes:
     name: Check what files changed
     runs-on: oci-runner
+    env:
+      NODE_DISABLE_COMPILE_CACHE: 1
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
@@ -780,6 +782,8 @@ jobs:
       - postgres-security
     if: ${{ always() }}
     runs-on: oci-runner
+    env:
+      NODE_DISABLE_COMPILE_CACHE: 1
     timeout-minutes: 5
     steps:
       - name: Check required CI results
