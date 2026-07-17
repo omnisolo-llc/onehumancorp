@@ -104,6 +104,15 @@ pub async fn persist_shippo_tracking_update(
     .await
     .map_err(|err| err.to_string())?;
 
+    let _ = sqlx::query(
+        "UPDATE orders SET status = (CASE WHEN $2 = 'DELIVERED' THEN 'fulfilled' ELSE 'shipped' END) WHERE id = (SELECT order_id FROM delivery_tasks WHERE organization_id = $1 AND (provider_delivery_id = $3 OR order_id = $3) LIMIT 1) AND tenant_id = $1",
+    )
+    .bind(tenant_id)
+    .bind(&update.tracking_status)
+    .bind(&update.tracking_number)
+    .execute(&mut *tx)
+    .await;
+
     tx.commit().await.map_err(|err| err.to_string())?;
     Ok(result.rows_affected())
 }

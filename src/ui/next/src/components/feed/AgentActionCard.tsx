@@ -3,6 +3,7 @@ import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
 import React from "react";
+import Link from 'next/link';
 
 type AgentFeedItem = {
   id: string;
@@ -436,20 +437,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     "An order is waiting to be fulfilled."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button
-                    type="button"
+                  <Link
+                    href={`/orders/${approval.context_payload?.order?.id}`}
                     className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]"
-                    onClick={() =>
-                      wrapDecision(approval.id, true, undefined, "order")
-                    }
-                    disabled={loadingAction !== null}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
                   >
                     {isActionLoading("approve") ? (
                       <span className="animate-pulse">Loading...</span>
                     ) : (
                       "Fulfill Order"
                     )}
-                  </button>
+                  </Link>
                   <button
                     type="button"
                     className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
