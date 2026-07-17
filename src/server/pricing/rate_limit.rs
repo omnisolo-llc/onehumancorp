@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use redis::{AsyncCommands, Client};
 use tokio::sync::OnceCell;
 use dashmap::DashMap;

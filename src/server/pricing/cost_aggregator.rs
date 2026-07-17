@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::type_complexity)]
 use sqlx::{PgPool, Row};
 use tracing::{error, warn};
 

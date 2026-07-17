@@ -2,7 +2,6 @@
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
 /// Master Catalog B.5. Prompt Construction
-
 pub struct PromptBuilder;
 
 impl PromptBuilder {
