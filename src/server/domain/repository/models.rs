@@ -372,7 +372,6 @@ pub struct Quote {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MilestonePayment {

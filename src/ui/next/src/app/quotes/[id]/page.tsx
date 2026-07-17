@@ -210,7 +210,7 @@ export default function QuoteReviewPage() {
               data-testid="approve-send-btn"
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
-              {sending ? 'Sending...' : 'Approve & Send Quote'}
+              {sending ? 'Sending...' : 'Approve & Send to Customer'}
             </button>
           )
         )}

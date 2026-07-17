@@ -402,7 +402,6 @@ async fn create_quote(
         .execute(&mut *tx)
         .await;
     }
-    }
 
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
@@ -676,7 +675,7 @@ async fn get_quote(
     };
 
     if mobile_optimized {
-        let mut q = quote;
+        let mut q = quote.clone();
         q.created_at = None;
         q.updated_at = None;
         q.valid_until = None;
@@ -892,7 +891,7 @@ mod tests {
         }];
 
         // Simulate mobile_optimized = true logic
-        let mut q = quote;
+        let mut q = quote.clone();
         q.created_at = None;
         q.updated_at = None;
         q.valid_until = None;
