@@ -140,7 +140,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         // Also update the quote with the stripe link
         if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
             let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
-            sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 ")
+            sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(&stripe_payment_link)
                 .bind(quote_uuid)
                 .bind(tenant_id)
@@ -155,7 +155,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
 }
 
 
-pub async fn handle_project_proposal_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn handle_project_proposal_action(tenant_id: &str, payload: &serde_json::Value, pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     let mut db_price = 0.0;
     let mut db_client_id = String::new();
     let mut db_scope = String::new();
@@ -278,7 +278,7 @@ pub async fn handle_project_proposal_action(tenant_id: &str, payload: &Value, po
         }
 
         let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
-        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 ")
+        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 AND tenant_id = $3")
             .bind(&stripe_payment_link)
             .bind(quote_uuid)
             .bind(tenant_id)

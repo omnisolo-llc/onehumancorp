@@ -1562,6 +1562,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                           </ul>
                       </div>
                   )}
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -1674,6 +1685,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
 
                   {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
                       <div className="mt-4 pt-3 border-t border-gray-200 w-full">
@@ -2246,6 +2268,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                           </ul>
                       </div>
                   )}
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -2340,6 +2373,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ||
             (approval.proposed_action || approval.context_payload)?.feature_type === "project_proposal_draft" ? (
+
+                  {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
+                      <div className="mt-4 pt-3 border-t border-gray-200 w-full">
+                          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Preliminary Tasks</h4>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4 space-y-1">
+                              {approval.proposed_action.preliminary_tasks.map((t: any, i: number) => (
+                                  <li key={i}>{t.title}</li>
+                              ))}
+                          </ul>
+                      </div>
+                  )}
 
                   {approval.proposed_action?.feature_type === "project_proposal_draft" && approval.proposed_action?.preliminary_tasks && (
                       <div className="mt-4 pt-3 border-t border-gray-200 w-full">
