@@ -38,6 +38,19 @@ pub struct Message {
 }
 
 impl Message {
+    /// Iterates over a slice of messages and sets `previous_response_id`
+    /// for each message to the `response_id` of the most recent preceding
+    /// message that has one. This implements the "Lightweight previous_response_id chaining" mechanic.
+    pub fn chain_previous_response_ids(messages: &mut [Message]) {
+        let mut last_id: Option<String> = None;
+        for msg in messages.iter_mut() {
+            msg.previous_response_id = last_id.clone();
+            if let Some(ref id) = msg.response_id {
+                last_id = Some(id.clone());
+            }
+        }
+    }
+
     pub fn user(content: impl Into<String>) -> Self {
         Self {
             role: Role::User,
@@ -433,6 +446,29 @@ mod tests {
         assert_eq!(tr.tool_call_id, "call_1");
         assert_eq!(tr.content, "");
         assert!(tr.error.contains("LLM-Recoverable Tool Error (my_tool): my_error"));
+    }
+
+    #[test]
+    fn test_chain_previous_response_ids() {
+        let mut msg1 = Message::user("Hello");
+        msg1.response_id = Some("req_1".to_string());
+
+        let mut msg2 = Message::assistant("Hi");
+        // no response_id
+
+        let mut msg3 = Message::user("How are you?");
+        msg3.response_id = Some("req_3".to_string());
+
+        let mut msg4 = Message::assistant("I am good");
+
+        let mut messages = vec![msg1, msg2, msg3, msg4];
+
+        Message::chain_previous_response_ids(&mut messages);
+
+        assert_eq!(messages[0].previous_response_id, None);
+        assert_eq!(messages[1].previous_response_id, Some("req_1".to_string()));
+        assert_eq!(messages[2].previous_response_id, Some("req_1".to_string()));
+        assert_eq!(messages[3].previous_response_id, Some("req_3".to_string()));
     }
 }
 
