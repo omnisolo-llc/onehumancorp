@@ -208,8 +208,8 @@ async fn list_feed_items(
                         let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                             id: item.id,
                             event_source: item.event_source,
-                            context_payload: None,
-                            proposed_action: None,
+                            context_payload: item.context_payload,
+                            proposed_action: item.proposed_action,
                             lifecycle_state: item.lifecycle_state,
                             created_at: item.created_at,
                         }).collect();
