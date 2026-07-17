@@ -531,6 +531,18 @@ mod tests {
     }
 
     #[test]
+    fn test_zero_click_input_validation() {
+        assert!(valid_required_text("Valid prompt", MAX_ONBOARDING_INPUT_CHARS));
+        assert!(!valid_required_text("", MAX_ONBOARDING_INPUT_CHARS));
+        assert!(!valid_required_text(&"x".repeat(MAX_ONBOARDING_INPUT_CHARS + 1), MAX_ONBOARDING_INPUT_CHARS));
+
+        assert!(valid_optional_url(None));
+        assert!(valid_optional_url(Some("http://example.com/image.png")));
+        let long_url = format!("http://example.com/{}", "x".repeat(MAX_ONBOARDING_IMAGE_URL_CHARS + 1));
+        assert!(!valid_optional_url(Some(&long_url)));
+    }
+
+    #[test]
     fn authenticated_start_contract_rejects_credentials_and_browser_authority() {
         let request = serde_json::json!({
             "business_type": "Online Store",
