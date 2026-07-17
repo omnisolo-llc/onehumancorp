@@ -30,7 +30,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     });
 
     // 2. Customer visits instant quote page
-    await page.goto(`http://127.0.0.1:18789/api/ui/instant-quote.html?tenant=${tenantId}`);
+    await page.goto(`http://127.0.0.1:18789/api/v1/ui/instant-quote.html?tenant=${tenantId}`);
 
     // Verify UI is loaded
     await expect(page.locator('text=Instant Quote')).toBeVisible();
@@ -63,7 +63,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     // For this e2e test, we will inject a quote_draft event into the mesh to simulate the workflow.
     const quoteId = `quote-${Math.random().toString(36).substring(7)}`;
 
-    await request.post('http://127.0.0.1:8081/api/mesh/publish', {
+    await request.post('http://127.0.0.1:8081/api/v1/mesh/publish', {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'admin'

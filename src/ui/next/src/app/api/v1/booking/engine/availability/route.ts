@@ -1,35 +1,23 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = req.headers.get('x-tenant-id') || 'default';
-  const userId = req.headers.get('x-user-id') || 'default';
-  const authHeader = req.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-  };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
+const decoder = new TextDecoder("utf-8", { fatal: true });
+const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
+export async function POST(request: Request) {
+  const response = await proxyBackendRequest(request, "", {
+    backendMethod: "GET",
+    suppressRequestBody: true,
+    resolveBackendPath(body) {
+      const payload = JSON.parse(decoder.decode(body));
+      if (!SAFE_ID.test(payload?.product_id)) throw new Error("invalid product id");
+      return `/api/v1/booking/available_slots/${payload.product_id}`;
+    },
+  });
+  if (!response.ok) return response;
   try {
-    const body = await req.json();
-    const serviceId = body.product_id;
-    // Assuming backend endpoint is /api/v1/booking/available_slots/{serviceId}
-    const res = await fetch(`${backendUrl}/api/v1/booking/available_slots/${serviceId}`, {
-      method: 'GET',
-      headers,
-    });
-
-    if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json({ available_slots: data.slots });
-    }
-
-    return NextResponse.json({ error: 'Failed to fetch availability' }, { status: res.status });
+    const payload = await response.json();
+    return Response.json({ available_slots: payload.slots ?? [] });
   } catch {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
   }
 }

@@ -1,67 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from './route';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe('POST /api/v1/growth/referrals/click', () => {
-    let mockBackendUrl: string;
+const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
 
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockBackendUrl = 'http://mock-backend';
-        process.env.OHC_BACKEND_URL = mockBackendUrl;
-        global.fetch = vi.fn();
-    });
+import { GET, POST } from "./route";
 
-    it('should proxy the request to the backend with body', async () => {
-        (global.fetch as any).mockResolvedValue({
-            ok: true
-        });
+describe("referral click transport", () => {
+  beforeEach(() => proxyBackendRequest.mockReset());
 
-        const req = new Request('http://localhost/api/v1/growth/referrals/click', {
-            method: 'POST',
-            body: JSON.stringify({ id: 'test-id' })
-        });
+  it("proxies authenticated POST requests", async () => {
+    const upstream = new Response("{}", { status: 200 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request("https://app.example.test/api/v1/growth/referrals/click", { method: "POST", body: "{}" });
+    expect(await POST(request)).toBe(upstream);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/referrals/click");
+  });
 
-        const res = await POST(req);
-
-        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/referrals/click`, {
-            method: 'POST',
-            headers: expect.any(Headers),
-            body: JSON.stringify({ id: 'test-id' })
-        });
-
-        const json = await res.json();
-        expect(json).toEqual({ success: true });
-        expect(res.status).toBe(200);
-    });
-
-    it('should return error response if backend fails', async () => {
-        (global.fetch as any).mockResolvedValue({
-            ok: false,
-            status: 404
-        });
-
-        const req = new Request('http://localhost/api/v1/growth/referrals/click', {
-            method: 'POST',
-            body: JSON.stringify({ id: 'test-id' })
-        });
-
-        const res = await POST(req);
-        expect(res.status).toBe(404);
-        const json = await res.json();
-        expect(json.error).toBe('Failed to record referral click');
-    });
-
-    it('should handle internal server errors', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('Network error'));
-
-        const req = new Request('http://localhost/api/v1/growth/referrals/click', {
-            method: 'POST',
-            body: JSON.stringify({ id: 'test-id' })
-        });
-
-        const res = await POST(req);
-        expect(res.status).toBe(500);
-        const json = await res.json();
-        expect(json.error).toBe('Internal Server Error');
-    });
+  it("records authenticated GET clicks and prevents external redirects", async () => {
+    proxyBackendRequest.mockResolvedValue(new Response("{}", { status: 200 }));
+    const request = new Request("https://app.example.test/api/v1/growth/referrals/click?target=https://evil.test&ref=tenant");
+    const response = await GET(request);
+    expect(response.headers.get("location")).toBe("https://app.example.test/dashboard?ref=tenant");
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/referrals/click", { suppressRequestBody: true });
+  });
 });

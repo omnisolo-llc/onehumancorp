@@ -40,7 +40,7 @@ test.describe('Agentic Field Service Scheduling & Quoting', () => {
     const startTimeStr = startTime.toISOString();
     const endTimeStr = endTime.toISOString();
 
-    const req1 = page.request.post('/api/booking/reserve', {
+    const req1 = page.request.post('/api/v1/booking/reserve', {
       data: {
         customer_id: customerId,
         product_id: serviceId,
@@ -51,7 +51,7 @@ test.describe('Agentic Field Service Scheduling & Quoting', () => {
       },
     });
 
-    const req2 = page.request.post('/api/booking/reserve', {
+    const req2 = page.request.post('/api/v1/booking/reserve', {
       data: {
         customer_id: customerId,
         product_id: serviceId,

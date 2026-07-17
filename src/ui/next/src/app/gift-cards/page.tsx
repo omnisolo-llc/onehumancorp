@@ -14,7 +14,7 @@ export default function GiftCardsPage() {
 
   // Try to load tenant info on mount
   useEffect(() => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
     setTenantId(tenant);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
     setShareLink(`${origin}/gift-card?amount=${value}&ref=${tenant}`);

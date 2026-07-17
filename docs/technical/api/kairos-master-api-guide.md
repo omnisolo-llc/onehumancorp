@@ -47,7 +47,7 @@ graph TD
 
 *   **Broadcast Message**
     *   **Method**: `POST`
-    *   **Path**: `/api/mesh/v2/broadcast`
+    *   **Path**: `/api/v1/mesh/v2/broadcast`
     *   **Description**: Broadcasts a message to a specific mesh channel.
     *   **Payload Example**:
         ```json
@@ -113,7 +113,7 @@ stateDiagram-v2
 
 *   **Enqueue Task**
     *   **Method**: `POST`
-    *   **Path**: `/api/queue/subagent`
+    *   **Path**: `/api/v1/queue/subagent`
     *   **Description**: Queues a new task for sub-agents to claim.
     *   **Payload Example**:
         ```json
@@ -159,13 +159,13 @@ The API queues and routes tasks to the appropriate sub-agents depending on your 
 
 ```mermaid
 graph TD
-    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
+    Manager[Task Manager] -->|Enqueues| API[POST /api/v1/queue/subagent]
     API --> QueueInterface{SubAgent Queue Interface}
     QueueInterface -->|Cloud-Native| Redis[(Redis ZSETs)]
     QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
     Redis -->|Dequeues| Worker[Sub-Agent Worker]
     SQLite -->|Dequeues| Worker
-    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
+    Worker -->|State Transition| V2Mesh[POST /api/v1/mesh/v2/broadcast]
     V2Mesh --> Centrifuge[Centrifuge Node Pub/Sub]
     Centrifuge --> Swarm[Teammate Swarm]
 

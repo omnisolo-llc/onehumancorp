@@ -20,6 +20,7 @@ filegroup(
 
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
+    "README.md",
     "Cargo.lock",
     "Cargo.toml",
     "playwright.config.ts",

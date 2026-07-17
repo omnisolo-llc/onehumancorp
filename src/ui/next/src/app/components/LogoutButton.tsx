@@ -13,7 +13,7 @@ export function LogoutButton() {
     setPending(true);
     setError(false);
     try {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
+      const response = await fetch("/api/v1/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("logout failed");
       router.replace("/login");
       router.refresh();

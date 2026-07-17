@@ -3,7 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
   test('CUJ: Manager creates staff, staff logs in offline via PIN', async ({ page }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
-    await page.goto('/api/staff');
+    await page.goto('/api/v1/staff');
     await page.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',

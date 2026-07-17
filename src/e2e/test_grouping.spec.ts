@@ -4,7 +4,7 @@ test.describe("Unified Agent Feed Grouping", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   test.beforeEach(async ({ page, request }) => {
-    await request.post("/api/e2e/setup", {
+    await request.post("/api/v1/e2e/setup", {
       data: {
         query: `
           DELETE FROM agent_feed_items WHERE id IN ('e2e-group-1', 'e2e-group-2', 'e2e-group-3');
