@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Workaround for CI runner node-compile-cache permission issue in post-job hook
+sudo rm -rf /tmp/node-compile-cache || true
+
+
 scanner_error() {
   local reason="$1"
   shift
