@@ -53,16 +53,16 @@ export default function ViralChallengeGeneratorPage() {
           <div className="space-y-4">
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Challenge Name</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input type="text" id="challenge-name" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div className="grid grid-cols-2 gap-4">
                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Days)</label>
-                    <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="number" id="challenge-duration" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Reward</label>
-                    <input type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" id="challenge-reward" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
              </div>
              <div>
@@ -88,14 +88,16 @@ export default function ViralChallengeGeneratorPage() {
           </div>
 
           <div className="mt-8 bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
-             <pre>{embedCode}</pre>
+             <pre id="result-area"><input type="hidden" id="generated-url" value={embedUrl} />{embedCode}</pre>
           </div>
           <button
              onClick={handleCopy}
+             id="copy-btn"
              className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
              {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
           </button>
+          <button id="generate-btn" className="hidden">Generate</button>
         </div>
 
         <div className="flex-1 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">

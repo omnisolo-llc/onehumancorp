@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { GrowBusinessCard } from './GrowBusinessCard';
+import '@testing-library/jest-dom';
 
 describe('GrowBusinessCard', () => {
   it('renders correctly', () => {
@@ -43,5 +44,8 @@ describe('GrowBusinessCard', () => {
 
     const eventRsvpLink = screen.getByRole('link', { name: /Event RSVP/i });
     expect(eventRsvpLink).toHaveAttribute('href', '/event-rsvp-builder');
+
+    const viralChallengeLink = screen.getByRole('link', { name: /Viral Challenge/i });
+    expect(viralChallengeLink).toHaveAttribute('href', '/viral-challenge-generator');
   });
 });

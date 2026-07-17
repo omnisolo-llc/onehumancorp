@@ -745,6 +745,17 @@ export default function Dashboard() {
               </p>
             </Link>
 
+            <Link href="/viral-challenge-generator" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-amber-200/40 dark:border-amber-800/20 bg-gradient-to-br from-amber-50/40 to-orange-50/40 dark:from-amber-900/10 dark:to-orange-900/10" id="challenge-link">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔥</div>
+                <div className="text-amber-600 dark:text-amber-400 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Viral</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Challenge Generator</h3>
+              <p className="text-sm text-[#86868B] font-medium leading-relaxed">
+                Create engaging challenges and drive community participation.
+              </p>
+            </Link>
+
             <Link href="/feed" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
@@ -990,15 +1001,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Share-to-Unlock Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Require customers to share your page on social media to reveal a discount code.</p>
-            </Link>
-
-            <Link href="/viral-challenge-generator" id="viral-challenge-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Challenge Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create a viral challenge widget to build engagement and streaks.</p>
             </Link>
 
             <Link href="/viral-waitlist-generator" id="viral-waitlist-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
