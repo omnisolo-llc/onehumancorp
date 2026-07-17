@@ -163,6 +163,35 @@ impl OperationsWorker {
                         },
                         _ => {
                             attempts += 1;
+                            if attempts == MAX_RETRIES {
+                                final_status = "PAUSED";
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, 'AI Agent Paused: Operations', 'The AI agent responsible for inventory reconciliation drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory reconciliation.')
+                                            "#
+                                        )
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool)
+                                        .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES (?, ?, 'AI Agent Paused: Operations', 'The AI agent responsible for inventory reconciliation drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory reconciliation.')
+                                            "#
+                                        )
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&tenant_id)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
+                            }
                             tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                         }
                     }

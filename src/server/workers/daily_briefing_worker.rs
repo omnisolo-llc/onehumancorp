@@ -146,6 +146,9 @@ impl DailyBriefingWorker {
                         },
                         _ => {
                             attempts += 1;
+                            if attempts == MAX_RETRIES {
+                                break;
+                            }
                             tokio::time::sleep(ai_retry_backoff(attempts as u32)).await;
                         }
                     }

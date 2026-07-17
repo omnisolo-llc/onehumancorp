@@ -45,22 +45,37 @@ impl RagSyncWorker {
                     // Process sync (e.g., embedding and storing vector)
                     // ... (Mock processing for now)
 
-                    let process_future = async {
-                        // mock processing for now
-                        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-                        Ok::<(), String>(())
-                    };
+                    let mut attempts = 0;
+                    let max_retries = 3;
+                    while attempts < max_retries {
+                        let process_future = async {
+                            // mock processing for now
+                            tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                            Ok::<(), String>(())
+                        };
 
-                    match tokio::time::timeout(tokio::time::Duration::from_secs(60), process_future).await {
-                        Ok(Ok(_)) => {
-                            // Mark as synced
-                            self.rag_service.mark_synced(&self.tenant_id, vec![record.id]).await?;
-                        }
-                        Ok(Err(e)) => {
-                            tracing::error!("Rag sync failed: {}", e);
-                        }
-                        Err(_) => {
-                            tracing::error!("Rag sync exceeded 60-second ML-Resilience timeout rule for record {}", record.id);
+                        match tokio::time::timeout(tokio::time::Duration::from_secs(60), process_future).await {
+                            Ok(Ok(_)) => {
+                                // Mark as synced
+                                self.rag_service.mark_synced(&self.tenant_id, vec![record.id.clone()]).await?;
+                                break;
+                            }
+                            Ok(Err(e)) => {
+                                tracing::error!("Rag sync failed: {}", e);
+                                attempts += 1;
+                                if attempts == max_retries {
+                                    break;
+                                }
+                                tokio::time::sleep(tokio::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                            }
+                            Err(_) => {
+                                tracing::error!("Rag sync exceeded 60-second ML-Resilience timeout rule for record {}", record.id);
+                                attempts += 1;
+                                if attempts == max_retries {
+                                    break;
+                                }
+                                tokio::time::sleep(tokio::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                            }
                         }
                     }
                 }

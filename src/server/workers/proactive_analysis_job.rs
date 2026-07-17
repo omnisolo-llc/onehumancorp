@@ -129,6 +129,9 @@ impl ProactiveAnalysisWorker {
                                 },
                                 _ => {
                                     attempts += 1;
+                                    if attempts == MAX_RETRIES {
+                                        break;
+                                    }
                                     tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
                                 }
                             }
