@@ -156,7 +156,9 @@ impl InventoryLocker for RedisLocker {
 
                 if i < max_retries - 1 {
                     // Random backoff between 50ms and 200ms
-                    let jitter: u64 = rand::random::<u64>() % 150;
+                    use rand::Rng;
+                    let mut rng = rand::thread_rng();
+                    let jitter: u64 = rng.gen_range(0..150);
                     tokio::time::sleep(std::time::Duration::from_millis(50 + jitter)).await;
                 }
             }
