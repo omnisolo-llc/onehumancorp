@@ -1,0 +1,5 @@
+Fix POS Inventory Sync Race Condition in e2e tests
+
+* Replaced sqlite `datetime('now', '+... seconds')` with PG compatible `CURRENT_TIMESTAMP + interval '... seconds'` in `StandaloneInventoryLocker` and `locks.rs`.
+* Fix incorrect unwrap type for redis queries (`redis::cmd(...).query_async::<_, Option<String>>(&mut conn).await.unwrap_or(None).is_some()`) in `RedisLocker` as it caused false on success since `SET NX` returns `OK` (which is `Some("OK")` not `bool` from string).
+* The tests now pass reliably because the lock is correctly acquired and maintained across POS reservation sequences instead of failing silently when querying redis or using PG DB in e2e tests.

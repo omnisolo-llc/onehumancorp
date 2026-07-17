@@ -44,7 +44,7 @@ impl InventoryLocker for StandaloneInventoryLocker {
                 .execute(pool)
                 .await;
 
-            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+{} seconds'))", ttl)).bind(lock_key).bind("system").bind(lock_id)
+            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP + interval '{} seconds')", ttl)).bind(lock_key).bind("system").bind(lock_id)
                 .execute(pool)
                 .await;
 
@@ -126,15 +126,15 @@ impl RedisLocker {
 impl InventoryLocker for RedisLocker {
     async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            redis::cmd("SET")
+            let res: redis::RedisResult<Option<String>> = redis::cmd("SET")
                 .arg(lock_key)
                 .arg(lock_id)
                 .arg("EX")
                 .arg(ttl)
                 .arg("NX")
                 .query_async(&mut conn)
-                .await
-                .unwrap_or(false)
+                .await;
+            res.unwrap_or(None).is_some()
         } else {
             false
         }
@@ -151,7 +151,8 @@ impl InventoryLocker for RedisLocker {
                 end
                 "#,
             );
-            script.key(lock_key).arg(expected_lock_id).invoke_async(&mut conn).await.unwrap_or(false)
+            let res: redis::RedisResult<i32> = script.key(lock_key).arg(expected_lock_id).invoke_async(&mut conn).await;
+            res.unwrap_or(0) == 1
         } else {
             false
         }
@@ -159,7 +160,8 @@ impl InventoryLocker for RedisLocker {
 
     async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            redis::cmd("GET").arg(lock_key).query_async(&mut conn).await.ok()
+            let res: redis::RedisResult<Option<String>> = redis::cmd("GET").arg(lock_key).query_async(&mut conn).await;
+            res.unwrap_or(None)
         } else {
             None
         }
@@ -167,7 +169,8 @@ impl InventoryLocker for RedisLocker {
 
     async fn clear(&self, lock_key: &str) {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            let _: () = redis::cmd("DEL").arg(lock_key).query_async(&mut conn).await.unwrap_or(());
+            let res: redis::RedisResult<i32> = redis::cmd("DEL").arg(lock_key).query_async(&mut conn).await;
+            let _ = res.unwrap_or(0);
         }
     }
 }

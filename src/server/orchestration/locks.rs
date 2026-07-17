@@ -86,7 +86,7 @@ impl StandaloneLock {
                 .execute(pool)
                 .await;
 
-            let result = sqlx::query("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+15 seconds'))")
+            let result = sqlx::query("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP + interval '15 seconds')")
                 .bind(key)
                 .bind(tenant_id)
                 .bind(&val)
