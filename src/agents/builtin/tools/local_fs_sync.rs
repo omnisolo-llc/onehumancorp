@@ -1,22 +1,30 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 use std::path::Path;
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct LocalFSSyncArgs {
+    #[serde(rename = "Action")]
+    pub action: String,
+    #[serde(rename = "Path")]
+    pub path: String,
+    #[serde(rename = "Content")]
+    pub content: Option<String>,
+}
 
 struct LocalFSSyncExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for LocalFSSyncExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string()))?;
-        let path = args["Path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string()))?;
+impl PydanticToolExecutor<LocalFSSyncArgs> for LocalFSSyncExecutor {
+    async fn execute_typed(&self, args: LocalFSSyncArgs) -> Result<String, ToolError> {
+        let action = args.action.as_str();
+        let path = args.path.as_str();
 
         let mut clean_path = Path::new(path).to_path_buf();
         if !clean_path.starts_with(".agent-task/") || path.contains("..") {
@@ -32,7 +40,7 @@ impl ToolExecutor for LocalFSSyncExecutor {
                 Ok(content)
             }
             "write" => {
-                let content = args["Content"].as_str().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
+                let content = args.content.as_deref().ok_or_else(|| ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
                 if let Some(parent) = clean_path.parent() {
                     fs::create_dir_all(parent).await.ok();
                 }
@@ -74,6 +82,6 @@ pub fn local_fs_sync_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["Action", "Path"]
         }),
-        execute: Arc::new(LocalFSSyncExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(LocalFSSyncExecutor { working_dir })),
     }
 }

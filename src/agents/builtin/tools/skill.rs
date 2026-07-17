@@ -2,7 +2,7 @@ use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 
 #[derive(Clone, Debug)]
 pub struct LoadedSkill {
@@ -41,8 +41,8 @@ struct SkillExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for SkillExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+impl PydanticToolExecutor<serde_json::Value> for SkillExecutor {
+    async fn execute_typed(&self, args: serde_json::Value) -> Result<String, ToolError> {
         let task = args
             .get("task")
             .and_then(Value::as_str)
@@ -106,7 +106,8 @@ pub fn skill_tool(skill: LoadedSkill) -> Tool {
             },
             "required": ["task"]
         }),
-        execute: Arc::new(SkillExecutor { skill }),
+        execute: Arc::new(PydanticAdapter::new(SkillExecutor { skill })),
+
     }
 }
 

@@ -5,7 +5,7 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
-use super::{Tool, ToolExecutor, pydantic::{PydanticAdapter, PydanticToolExecutor}};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 use server_ohc::agent::service::{McpServerConfig, McpTransportType};
 use serde::Deserialize;
 
@@ -163,8 +163,8 @@ struct McpConfiguredToolExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for McpConfiguredToolExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+impl PydanticToolExecutor<serde_json::Value> for McpConfiguredToolExecutor {
+    async fn execute_typed(&self, args: serde_json::Value) -> Result<String, ToolError> {
         match McpTransportType::try_from(self.spec.server.transport)
             .unwrap_or(McpTransportType::McpTransportUnspecified)
         {
@@ -194,7 +194,8 @@ pub async fn load_mcp_server_tools(servers: &[McpServerConfig]) -> Vec<Tool> {
                 description: spec.description.clone(),
                 is_read_only: false,
                 parameters: spec.parameters.clone(),
-                execute: Arc::new(McpConfiguredToolExecutor { spec }),
+                execute: Arc::new(PydanticAdapter::new(McpConfiguredToolExecutor { spec })),
+
             });
         }
     }

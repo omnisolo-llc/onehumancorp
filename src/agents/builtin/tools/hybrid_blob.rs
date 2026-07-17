@@ -1,12 +1,13 @@
 #![allow(clippy::collapsible_if)]
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 use std::env;
 use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
+use serde::Deserialize;
 
 #[async_trait::async_trait]
 pub trait BlobManager: Send + Sync {
@@ -152,20 +153,28 @@ impl BlobManager for HybridBlobManager {
 }
 
 
+#[derive(Deserialize)]
+pub struct HybridBlobArgs {
+    #[serde(rename = "Action")]
+    pub action: String,
+    #[serde(rename = "Key")]
+    pub key: Option<String>,
+    #[serde(rename = "Data")]
+    pub data: Option<String>,
+}
+
 struct HybridBlobExecutor {
     manager: Arc<dyn BlobManager>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for HybridBlobExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Action is required".to_string()))?;
-        let key = args["Key"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Key is required".to_string()))?;
+impl PydanticToolExecutor<HybridBlobArgs> for HybridBlobExecutor {
+    async fn execute_typed(&self, args: HybridBlobArgs) -> Result<String, ToolError> {
+        let action = args.action.clone();
+        let key = args.key.as_deref().unwrap_or("");
+        if key.is_empty() { return Err(ToolError::LlmRecoverable("hybrid_blob: Key is required".to_string())); }
 
-        match action {
+        match action.as_str() {
             "read" => {
                 let data = self.manager.read_blob(key).await.map_err(ToolError::LlmRecoverable)?;
                 // Attempt to return as UTF-8 string, otherwise base64 encode
@@ -183,7 +192,7 @@ impl ToolExecutor for HybridBlobExecutor {
                 }).to_string())
             }
             "write" => {
-                let data_str = args["Data"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
+                let data_str = args.data.as_deref().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
                 let data_bytes = data_str.as_bytes();
 
                 self.manager.write_blob(key, data_bytes).await.map_err(ToolError::LlmRecoverable)?;
@@ -243,7 +252,8 @@ pub fn hybrid_blob_tool() -> Tool {
             },
             "required": ["Action", "Key"]
         }),
-        execute: Arc::new(HybridBlobExecutor { manager }),
+        execute: Arc::new(PydanticAdapter::new(HybridBlobExecutor { manager })),
+
     }
 }
 

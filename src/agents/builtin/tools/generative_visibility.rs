@@ -1,18 +1,23 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
 
 pub struct GenerativeVisibilityExecutor;
 
+#[derive(Deserialize)]
+pub struct GenerativeVisibilityArgs {
+    pub content: Option<String>,
+    pub url: Option<String>,
+}
+
+
 #[async_trait::async_trait]
-impl ToolExecutor for GenerativeVisibilityExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let content = args["content"].as_str().unwrap_or("");
-        let url = args["url"].as_str().unwrap_or("");
+impl PydanticToolExecutor<GenerativeVisibilityArgs> for GenerativeVisibilityExecutor {
+    async fn execute_typed(&self, args: GenerativeVisibilityArgs) -> Result<String, ToolError> {
+        let content = args.content.as_deref().unwrap_or("");
+        let url = args.url.as_deref().unwrap_or("");
 
         if content.is_empty() && url.is_empty() {
             return Err(ToolError::LlmRecoverable(
@@ -88,7 +93,7 @@ pub fn generative_visibility_tool() -> Tool {
                 }
             }
         }),
-        execute: Arc::new(GenerativeVisibilityExecutor),
+        execute: Arc::new(PydanticAdapter::new(GenerativeVisibilityExecutor)),
     }
 }
 
@@ -98,9 +103,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_generative_visibility_missing_args() {
-        let executor = GenerativeVisibilityExecutor;
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
         let args = json!({});
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
+        // Pydantic validation handles parsing empty args safely (Option fields),
+        // but the internal logic errors if both are empty.
         assert!(result.is_err());
     }
 
@@ -110,7 +117,8 @@ mod tests {
         let args = json!({
             "content": "We are the best bakery in Austin. We have json-ld schema.org data. ".repeat(10)
         });
-        let result = executor.execute(args).await.unwrap();
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
+        let result = super::super::ToolExecutor::execute(&executor, args).await.unwrap();
         let parsed: Value = serde_json::from_str(&result).unwrap();
 
         assert_eq!(parsed["status"], "success");
@@ -125,7 +133,8 @@ mod tests {
         let args = json!({
             "content": "Bakery store."
         });
-        let result = executor.execute(args).await.unwrap();
+        let executor = PydanticAdapter::new(GenerativeVisibilityExecutor);
+        let result = super::super::ToolExecutor::execute(&executor, args).await.unwrap();
         let parsed: Value = serde_json::from_str(&result).unwrap();
 
         assert_eq!(parsed["status"], "success");

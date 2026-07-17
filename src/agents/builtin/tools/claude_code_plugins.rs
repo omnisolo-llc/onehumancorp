@@ -6,7 +6,7 @@ use tokio::fs;
 use tokio::process::Command;
 use tracing::warn;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 
 /// Ruflo Unique Harness Innovations: 32+ Claude Code plugins
 /// We load plugin definitions dynamically from a directory.
@@ -27,8 +27,8 @@ struct ClaudeCodePluginExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ClaudeCodePluginExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+impl PydanticToolExecutor<serde_json::Value> for ClaudeCodePluginExecutor {
+    async fn execute_typed(&self, args: serde_json::Value) -> Result<String, ToolError> {
         let args_str = serde_json::to_string(&args)
             .map_err(|e| ToolError::LlmRecoverable(format!("Failed to serialize args: {}", e)))?;
 
@@ -88,10 +88,10 @@ pub async fn load_claude_code_plugins(
                         description: manifest.description.clone(),
                         is_read_only: manifest.is_read_only,
                         parameters: manifest.parameters.clone(),
-                        execute: Arc::new(ClaudeCodePluginExecutor {
+                        execute: Arc::new(PydanticAdapter::new(ClaudeCodePluginExecutor {
                             manifest,
                             working_dir: working_dir.clone(),
-                        }),
+                        })),
                     };
                     tools.push(tool);
                 } else {
