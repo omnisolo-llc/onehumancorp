@@ -1103,6 +1103,25 @@
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
                   body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, mutation_type: 'cash_sale' })
               }).then(res => res.json()).then(data => {
+                  if (data.success === false) {
+                      const btn = document.getElementById('record-cash-sale-btn');
+                      if (btn) {
+                          btn.innerText = "Error: Oops! Item just sold out.";
+                          btn.style.background = "rgba(255, 59, 48, 0.1)"; btn.style.backdropFilter = "blur(30px) saturate(210%)"; btn.style.webkitBackdropFilter = "blur(30px) saturate(210%)";
+                          btn.style.color = "#FF3B30";
+                          btn.style.border = "1px solid rgba(255, 59, 48, 0.4)";
+                      }
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'pos-error-overlay';
+                      errorDiv.style = "position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(30px); z-index: 1000;";
+                      errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+                          <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+                          <p style="color: #666;">This item was purchased online just now.</p>
+                          <button onclick="this.parentElement.parentElement.remove(); cancelCharge();" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+                      </div>`;
+                      document.body.appendChild(errorDiv);
+                      return;
+                  }
                   if (data.success && data.invoice_id) {
                       document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
                   } else {
@@ -1125,6 +1144,39 @@
         tapOverlay.style.display = 'flex';
 
         simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
+
+        const tenantId = localStorage.getItem('tenant_id') || 'default';
+
+        // Reserve inventory before requesting token/intent
+        try {
+            const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, ttl_seconds: 15 })
+            });
+
+            const reserveData = await reserveRes.json();
+            if (!reserveData.success) {
+                simulateTapBtn.innerText = "Error: Oops! Item just sold out.";
+                simulateTapBtn.style.background = "rgba(255, 59, 48, 0.1)"; simulateTapBtn.style.backdropFilter = "blur(30px) saturate(210%)"; simulateTapBtn.style.webkitBackdropFilter = "blur(30px) saturate(210%)";
+                simulateTapBtn.style.color = "#FF3B30";
+                simulateTapBtn.style.border = "1px solid rgba(255, 59, 48, 0.4)";
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'pos-error-overlay';
+                errorDiv.style = "position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(30px); z-index: 1000;";
+                errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+                    <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+                    <p style="color: #666;">This item was purchased online just now.</p>
+                    <button onclick="this.parentElement.parentElement.remove(); cancelCharge();" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+                </div>`;
+                document.body.appendChild(errorDiv);
+
+                return; // halt checkout flow
+            }
+        } catch (e) {
+            console.error("Failed to reserve inventory:", e);
+        }
 
         // Request Terminal Token
           const tokenRes = await fetch('/api/v1/payments/terminal/token', {

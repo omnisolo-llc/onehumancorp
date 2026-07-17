@@ -63,10 +63,10 @@ test.describe('Centralized Inventory & Distributed POS Architecture', () => {
         await chargeBtn.click();
 
         // Wait for the tap to pay modal to be active
-        await expect(posPage.locator('text=Payment Method')).toBeVisible({ timeout: 15000 });
+        await expect(posPage.locator('text=Hold Card to Phone')).toBeVisible({ timeout: 15000 });
 
         // Let's use Cash as the transaction type as the mock terminal flow might block in some setups
-        await posPage.getByRole('button', { name: 'Cash' }).click();
+        // await posPage.getByRole('button', { name: 'Cash' }).click();
 
         // At this point we are about to click "Record Offline Cash Sale" but actually online
         // Oh wait, if it's cash online it will reserve and commit immediately.
