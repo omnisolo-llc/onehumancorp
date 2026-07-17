@@ -15,8 +15,8 @@ describe("ExitIntentBuilder", () => {
   it("renders the builder and preview properly", () => {
     render(<ExitIntentBuilder />);
 
-    expect(screen.getByText("Exit-Intent Pop-up Builder")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Wait! Before you go...")).toBeInTheDocument();
+    expect(screen.getByText("Exit-Intent Pop-up Builder")).toBeTruthy();
+    expect(screen.getByDisplayValue("Wait! Before you go...")).toBeTruthy();
 
     // Check preview updates
     const headlineInput = screen.getByDisplayValue("Wait! Before you go...");
@@ -34,13 +34,13 @@ describe("ExitIntentBuilder", () => {
     await userEvent.click(toggleButton);
 
     expect(screen.getAllByText("Remove OHC Branding").length).toBeGreaterThan(0);
-    expect(screen.getByText("Upgrade to Pro")).toBeInTheDocument();
+    expect(screen.getByText("Upgrade to Pro")).toBeTruthy();
 
     // Simulate upgrade
     await userEvent.click(screen.getByText("Upgrade to Pro"));
 
     // Paywall closes, toggle is checked
-    expect(screen.queryByText("Upgrade to Pro")).not.toBeInTheDocument();
+    expect(screen.queryByText("Upgrade to Pro")).not.toBeTruthy();
     expect(toggleButton).toHaveAttribute("aria-checked", "true");
   });
 });

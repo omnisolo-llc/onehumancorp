@@ -21,16 +21,16 @@ describe('ViralGrowthWidget', () => {
     it('renders correctly with default props', () => {
         render(<ViralGrowthWidget />);
 
-        expect(screen.getByText('Invite Your Network')).toBeInTheDocument();
-        expect(screen.getByText('https://ohc.app/join/ohc')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
+        expect(screen.getByText('Invite Your Network')).toBeTruthy();
+        expect(screen.getByText('https://ohc.app/join/ohc')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Copy Link' })).toBeTruthy();
         expect(screen.getByRole('link', { name: /post/i })).toHaveAttribute('href', expect.stringContaining('https://twitter.com/intent/tweet'));
         expect(screen.getByRole('link', { name: /share/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/'));
     });
 
     it('renders correctly with custom tenantId', () => {
         render(<ViralGrowthWidget tenantId="my-custom-store" />);
-        expect(screen.getByText('https://ohc.app/join/my-custom-store')).toBeInTheDocument();
+        expect(screen.getByText('https://ohc.app/join/my-custom-store')).toBeTruthy();
     });
 
     it('copies to clipboard and shows copied state', async () => {
@@ -43,12 +43,12 @@ describe('ViralGrowthWidget', () => {
         });
 
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/join/test-store');
-        expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Copied!' })).toBeTruthy();
 
         await act(async () => {
             vi.advanceTimersByTime(2500);
         });
 
-        expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Copy Link' })).toBeTruthy();
     });
 });

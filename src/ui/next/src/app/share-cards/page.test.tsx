@@ -11,11 +11,11 @@ describe('ShareCardsPage', () => {
     render(<ShareCardsPage />);
 
     const twitterLink = screen.getByText(/Share on X/i);
-    expect(twitterLink).toBeInTheDocument();
+    expect(twitterLink).toBeTruthy();
     expect(twitterLink.closest('a')).toHaveAttribute('href', expect.stringContaining('twitter.com/intent/tweet'));
 
     const facebookLink = screen.getByText(/Share on Facebook/i);
-    expect(facebookLink).toBeInTheDocument();
+    expect(facebookLink).toBeTruthy();
     expect(facebookLink.closest('a')).toHaveAttribute('href', expect.stringContaining('facebook.com/sharer/sharer.php'));
   });
 

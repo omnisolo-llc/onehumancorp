@@ -7,7 +7,7 @@ global.fetch = vi.fn();
 describe("ExpertTeamPage", () => {
   it("renders correctly", () => {
     render(<ExpertTeamPage />);
-    expect(screen.getByText("Collaborative Expert Team")).toBeInTheDocument();
+    expect(screen.getByText("Collaborative Expert Team")).toBeTruthy();
   });
 
   it("handles valid execution", async () => {
@@ -32,7 +32,7 @@ describe("ExpertTeamPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Final Delivered Output/i)).toBeInTheDocument();
+      expect(screen.getByText(/Final Delivered Output/i)).toBeTruthy();
     });
   });
 
@@ -59,7 +59,7 @@ describe("ExpertTeamPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Pre-flight failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/Pre-flight failed/i)).toBeTruthy();
     });
   });
 });

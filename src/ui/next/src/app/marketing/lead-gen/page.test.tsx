@@ -5,6 +5,6 @@ import { describe, it, expect } from 'vitest';
 describe('LeadGenCampaignPage', () => {
   it('renders the page correctly', () => {
     render(<LeadGenCampaignPage />);
-    expect(screen.getByText('Local Lead Generator')).toBeInTheDocument();
+    expect(screen.getByText('Local Lead Generator')).toBeTruthy();
   });
 });

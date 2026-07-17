@@ -4,7 +4,7 @@ import { GrowBusinessCard } from './GrowBusinessCard';
 describe('GrowBusinessCard', () => {
   it('renders correctly', () => {
     render(<GrowBusinessCard />);
-    expect(screen.getByText('Grow Business')).toBeInTheDocument();
+    expect(screen.getByText('Grow Business')).toBeTruthy();
   });
 
   it('contains correct links', () => {

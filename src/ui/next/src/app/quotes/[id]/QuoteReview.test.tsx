@@ -52,7 +52,7 @@ describe('QuoteReviewPage', () => {
       </TooltipProvider>
     );
 
-    await waitFor(() => expect(screen.getByText('Item 1 (x1)')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Item 1 (x1)')).toBeTruthy());
     expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0);
 
     const approveBtn = screen.getByText('Approve & Send Quote');
@@ -63,7 +63,7 @@ describe('QuoteReviewPage', () => {
     });
 
     fireEvent.click(approveBtn);
-    await waitFor(() => expect(screen.getByText('ACCEPTED')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('ACCEPTED')).toBeTruthy());
     expect(global.alert).toHaveBeenCalled();
   });
 });

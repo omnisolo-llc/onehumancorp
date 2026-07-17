@@ -9,8 +9,8 @@ beforeEach(() => {
 
 test('renders Ralph Loop page', () => {
   render(<RalphLoopPage />);
-  expect(screen.getByText('The Ralph Loop (Long-Running Agent)')).toBeInTheDocument();
-  expect(screen.getByText(/Enter a complex task spanning multiple context windows/)).toBeInTheDocument();
+  expect(screen.getByText('The Ralph Loop (Long-Running Agent)')).toBeTruthy();
+  expect(screen.getByText(/Enter a complex task spanning multiple context windows/)).toBeTruthy();
   expect(screen.getByRole('button', { name: /Start Ralph Loop/ })).toBeDisabled();
 });
 
@@ -31,13 +31,13 @@ test('can type task and execute successfully', async () => {
 
   fireEvent.click(button);
 
-  expect(screen.getByRole('button', { name: /Ralph Loop Executing/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Ralph Loop Executing/ })).toBeTruthy();
 
   await waitFor(() => {
-    expect(screen.getByTestId('success-message')).toBeInTheDocument();
+    expect(screen.getByTestId('success-message')).toBeTruthy();
   });
 
-  expect(screen.getByText(/features_completed/)).toBeInTheDocument();
+  expect(screen.getByText(/features_completed/)).toBeTruthy();
 });
 
 test('handles errors correctly', async () => {
@@ -54,8 +54,8 @@ test('handles errors correctly', async () => {
   fireEvent.click(screen.getByRole('button', { name: /Start Ralph Loop/ }));
 
   await waitFor(() => {
-    expect(screen.getByTestId('error-message')).toBeInTheDocument();
+    expect(screen.getByTestId('error-message')).toBeTruthy();
   });
 
-  expect(screen.getByText(/Backend failed to process/)).toBeInTheDocument();
+  expect(screen.getByText(/Backend failed to process/)).toBeTruthy();
 });

@@ -29,8 +29,8 @@ describe('ZeroClickBuilderPage', () => {
 
   it('renders the initial form', () => {
     render(<ZeroClickBuilderPage />);
-    expect(screen.getByText('Tell us about your business')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
+    expect(screen.getByText('Tell us about your business')).toBeTruthy();
+    expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeTruthy();
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons[buttons.length - 1];
     expect(submitBtn).toBeDisabled();
@@ -82,12 +82,12 @@ describe('ZeroClickBuilderPage', () => {
 
     // Wait for the result to appear
     await waitFor(() => {
-      expect(screen.getByText('Your business is live!')).toBeInTheDocument();
+      expect(screen.getByText('Your business is live!')).toBeTruthy();
     }, { timeout: 3000 });
 
-    expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
+    expect(screen.getByTitle('Live Storefront Preview')).toBeTruthy();
     const launch = screen.getByRole('button', { name: /Launch My Store/i });
-    expect(launch).toBeInTheDocument();
+    expect(launch).toBeTruthy();
     const startBody = JSON.parse(
       String(vi.mocked(global.fetch).mock.calls[1]?.[1]?.body),
     );

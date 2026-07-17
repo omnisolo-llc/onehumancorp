@@ -7,7 +7,7 @@ global.fetch = vi.fn();
 describe("DeerFlowOrchestrationPage", () => {
   it("renders correctly", () => {
     render(<DeerFlowOrchestrationPage />);
-    expect(screen.getByText("DeerFlow Sub-agent Orchestration")).toBeInTheDocument();
+    expect(screen.getByText("DeerFlow Sub-agent Orchestration")).toBeTruthy();
   });
 
   it("handles execution", async () => {
@@ -32,7 +32,7 @@ describe("DeerFlowOrchestrationPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Final Synthesis/i)).toBeInTheDocument();
+      expect(screen.getByText(/Final Synthesis/i)).toBeTruthy();
     });
   });
 
@@ -59,7 +59,7 @@ describe("DeerFlowOrchestrationPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Orchestration Failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/Orchestration Failed/i)).toBeTruthy();
     });
   });
 });

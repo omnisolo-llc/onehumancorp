@@ -35,19 +35,19 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Agent Marketplace')).toBeInTheDocument();
+      expect(screen.getByText('Agent Marketplace')).toBeTruthy();
     });
-    expect(screen.getByPlaceholderText('Search for agents...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search for agents...')).toBeTruthy();
   });
 
   it('fetches and displays agents on load', async () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Senior Rust Developer')).toBeInTheDocument();
+      expect(screen.getByText('Senior Rust Developer')).toBeTruthy();
     });
-    expect(screen.getByText('An expert in Rust capable of building concurrent and safe systems.')).toBeInTheDocument();
-    expect(screen.getByText(/By AutoGPT/)).toBeInTheDocument();
+    expect(screen.getByText('An expert in Rust capable of building concurrent and safe systems.')).toBeTruthy();
+    expect(screen.getByText(/By AutoGPT/)).toBeTruthy();
 
   });
 
@@ -60,7 +60,7 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No agents found/)).toBeInTheDocument();
+      expect(screen.getByText(/No agents found/)).toBeTruthy();
     });
   });
 
@@ -85,7 +85,7 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch agents/)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to fetch agents/)).toBeTruthy();
     });
   });
 });

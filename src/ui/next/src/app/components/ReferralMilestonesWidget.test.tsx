@@ -21,7 +21,7 @@ describe('ReferralMilestonesWidget', () => {
   it('renders loading state initially', () => {
     mockFetch.mockImplementationOnce(() => new Promise(() => {})); // Never resolves
     const { container } = render(<ReferralMilestonesWidget tenantId="test-tenant" />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeTruthy();
   });
 
   it('renders milestones when data is loaded', async () => {
@@ -42,14 +42,14 @@ describe('ReferralMilestonesWidget', () => {
     render(<ReferralMilestonesWidget tenantId="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Unlock Rewards')).toBeInTheDocument();
+      expect(screen.getByText('Unlock Rewards')).toBeTruthy();
     });
 
-    expect(screen.getByText('First Referral')).toBeInTheDocument();
-    expect(screen.getByText('Team Builder')).toBeInTheDocument();
-    expect(screen.getByText('2 Referrals')).toBeInTheDocument();
-    expect(screen.getByText('Progress to Team Builder')).toBeInTheDocument();
-    expect(screen.getByText('3 more to get 1 Month Free Pro')).toBeInTheDocument();
+    expect(screen.getByText('First Referral')).toBeTruthy();
+    expect(screen.getByText('Team Builder')).toBeTruthy();
+    expect(screen.getByText('2 Referrals')).toBeTruthy();
+    expect(screen.getByText('Progress to Team Builder')).toBeTruthy();
+    expect(screen.getByText('3 more to get 1 Month Free Pro')).toBeTruthy();
   });
 
   it('handles copy link button', async () => {
@@ -69,13 +69,13 @@ describe('ReferralMilestonesWidget', () => {
     render(<ReferralMilestonesWidget tenantId="test-tenant" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Copy Referral Link')).toBeInTheDocument();
+      expect(screen.getByText('Copy Referral Link')).toBeTruthy();
     });
 
     const user = userEvent.setup();
     await user.click(screen.getByText('Copy Referral Link'));
 
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
+    expect(screen.getByText('Copied!')).toBeTruthy();
   });
 
   it('renders nothing when data fetch fails', async () => {

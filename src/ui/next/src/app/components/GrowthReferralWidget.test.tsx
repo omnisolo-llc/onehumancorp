@@ -19,8 +19,8 @@ describe('GrowthReferralWidget', () => {
 
   it('renders correctly', () => {
     const { container } = render(<GrowthReferralWidget />);
-    expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
-    expect(screen.getByText('Invite to Cloud Team')).toBeInTheDocument();
+    expect(screen.getByText('Grow Your Team')).toBeTruthy();
+    expect(screen.getByText('Invite to Cloud Team')).toBeTruthy();
     // Validate aesthetic token existence
     expect(container.firstChild).toHaveClass('ohc-growth-card');
   });
@@ -36,14 +36,14 @@ describe('GrowthReferralWidget', () => {
     const button = screen.getByText('Invite to Cloud Team');
     fireEvent.click(button);
 
-    expect(screen.getByText('Generating...')).toBeInTheDocument();
+    expect(screen.getByText('Generating...')).toBeTruthy();
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeTruthy();
     });
 
-    expect(screen.getByText('Copy')).toBeInTheDocument();
-    expect(screen.getByText('Share on WhatsApp')).toBeInTheDocument();
+    expect(screen.getByText('Copy')).toBeTruthy();
+    expect(screen.getByText('Share on WhatsApp')).toBeTruthy();
   });
 
   it('handles error when generating link', async () => {
@@ -57,7 +57,7 @@ describe('GrowthReferralWidget', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to generate invite')).toBeInTheDocument();
+      expect(screen.getByText('Failed to generate invite')).toBeTruthy();
     });
   });
 
@@ -71,13 +71,13 @@ describe('GrowthReferralWidget', () => {
     fireEvent.click(screen.getByText('Invite to Cloud Team'));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeTruthy();
     });
 
     const copyButton = screen.getByText('Copy');
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/invite/123');
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
+    expect(screen.getByText('Copied!')).toBeTruthy();
   });
 });

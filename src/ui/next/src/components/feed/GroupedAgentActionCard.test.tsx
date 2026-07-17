@@ -41,11 +41,11 @@ describe('GroupedAgentActionCard', () => {
       setEditContent={vi.fn()}
       editContent=""
     />);
-    expect(screen.getByText('2 new Tasks')).toBeInTheDocument();
-    expect(screen.getByText('2 items')).toBeInTheDocument();
+    expect(screen.getByText('2 new Tasks')).toBeTruthy();
+    expect(screen.getByText('2 items')).toBeTruthy();
 
     // Check if the bulk action buttons are present
-    expect(screen.getByText('Approve All')).toBeInTheDocument();
+    expect(screen.getByText('Approve All')).toBeTruthy();
   });
 
   it('handles approve all click', () => {
@@ -85,14 +85,14 @@ describe('GroupedAgentActionCard', () => {
     />);
 
     // Initially not expanded
-    expect(screen.queryByTestId('expanded-items-group_1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('expanded-items-group_1')).not.toBeTruthy();
 
     // Click expand
     fireEvent.click(screen.getByText('Review Individually'));
-    expect(screen.getByTestId('expanded-items-group_1')).toBeInTheDocument();
+    expect(screen.getByTestId('expanded-items-group_1')).toBeTruthy();
 
     // Click collapse
     fireEvent.click(screen.getByText('Collapse'));
-    expect(screen.queryByTestId('expanded-items-group_1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('expanded-items-group_1')).not.toBeTruthy();
   });
 });

@@ -92,7 +92,7 @@ describe('HelpWidget', () => {
     await act(async () => {
       render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
     });
-    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeTruthy();
   });
 
   it('fetches dynamic walkthroughs when clicked and handles fallback data', async () => {
@@ -144,7 +144,7 @@ describe('HelpWidget', () => {
     const chatTab = screen.getByText('Ask anything');
     await user.click(chatTab);
 
-    expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask anything...')).toBeTruthy();
 
     const input = screen.getByPlaceholderText('Ask anything...');
     await user.type(input, 'Test message');
@@ -153,8 +153,8 @@ describe('HelpWidget', () => {
     await user.click(sendBtn);
 
     await waitFor(() => {
-        expect(screen.getByText('Test message')).toBeInTheDocument();
-        expect(screen.getByText('Hello from AI')).toBeInTheDocument();
+        expect(screen.getByText('Test message')).toBeTruthy();
+        expect(screen.getByText('Hello from AI')).toBeTruthy();
     });
   });
 
@@ -183,7 +183,7 @@ describe('HelpWidget', () => {
     await user.click(videosTab);
 
     await waitFor(() => {
-        expect(screen.getByText('Test Video')).toBeInTheDocument();
+        expect(screen.getByText('Test Video')).toBeTruthy();
     });
 
     const videoCard = screen.getByText('Test Video').parentElement?.parentElement;
@@ -192,13 +192,13 @@ describe('HelpWidget', () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+      expect(screen.getByLabelText('Close video')).toBeTruthy();
     });
 
     await user.click(screen.getByLabelText('Close video'));
 
     await waitFor(() => {
-        expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Close video')).not.toBeTruthy();
     });
   });
 
@@ -213,7 +213,7 @@ describe('HelpWidget', () => {
     await user.click(videosTab);
 
     await waitFor(() => {
-        expect(screen.getByText('Test Video')).toBeInTheDocument();
+        expect(screen.getByText('Test Video')).toBeTruthy();
     });
 
     const videoCard = screen.getByText('Test Video').parentElement?.parentElement;
@@ -222,12 +222,12 @@ describe('HelpWidget', () => {
     }
 
     const modalBackdrop = await screen.findByRole('dialog');
-    expect(modalBackdrop).toBeInTheDocument();
+    expect(modalBackdrop).toBeTruthy();
 
     await user.click(modalBackdrop);
 
     await waitFor(() => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeTruthy();
     });
   });
 
@@ -242,7 +242,7 @@ describe('HelpWidget', () => {
     await user.click(videosTab);
 
     await waitFor(() => {
-        expect(screen.getByText('Test Video')).toBeInTheDocument();
+        expect(screen.getByText('Test Video')).toBeTruthy();
     });
 
     const videoCard = screen.getByText('Test Video').parentElement?.parentElement;
@@ -251,13 +251,13 @@ describe('HelpWidget', () => {
     }
 
     const modalBackdrop = await screen.findByRole('dialog');
-    expect(modalBackdrop).toBeInTheDocument();
+    expect(modalBackdrop).toBeTruthy();
 
     // Since getByText('Test Video') returns multiple elements (one in list, one in modal), we need to query by role
     const heading = screen.getAllByRole('heading', { name: 'Test Video' })[1];
     await user.click(heading);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
   it('switches to the What is New tab and renders content', async () => {
@@ -273,8 +273,8 @@ describe('HelpWidget', () => {
     await user.click(newTab);
 
     await waitFor(() => {
-        expect(screen.getByText("What's New")).toBeInTheDocument();
-        expect(screen.getByText("New AI Store Builder")).toBeInTheDocument();
+        expect(screen.getByText("What's New")).toBeTruthy();
+        expect(screen.getByText("New AI Store Builder")).toBeTruthy();
     });
   });
 
@@ -288,16 +288,16 @@ describe('HelpWidget', () => {
     await user.click(helpBtn);
 
     await waitFor(() => {
-        expect(screen.getByText('Test Article')).toBeInTheDocument();
-        expect(screen.getByText('Another Article')).toBeInTheDocument();
+        expect(screen.getByText('Test Article')).toBeTruthy();
+        expect(screen.getByText('Another Article')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help...');
     await user.type(searchInput, 'nonexistent');
 
     await waitFor(() => {
-        expect(screen.queryByText('Test Article')).not.toBeInTheDocument();
-        expect(screen.queryByText('Another Article')).not.toBeInTheDocument();
+        expect(screen.queryByText('Test Article')).not.toBeTruthy();
+        expect(screen.queryByText('Another Article')).not.toBeTruthy();
     });
   });
 
@@ -311,7 +311,7 @@ describe('HelpWidget', () => {
     const closeBtn = screen.getByLabelText('Close Help Widget');
     await user.click(closeBtn);
 
-    expect(screen.queryByText('In-App Help Center')).not.toBeInTheDocument();
+    expect(screen.queryByText('In-App Help Center')).not.toBeTruthy();
   });
 
   it('opens chat on open-help-chat event', async () => {
@@ -323,7 +323,7 @@ describe('HelpWidget', () => {
         window.dispatchEvent(new CustomEvent('open-help-chat'));
     });
 
-    expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask anything...')).toBeTruthy();
   });
 
   it('handles chat fetch error', async () => {
@@ -353,7 +353,7 @@ describe('HelpWidget', () => {
     await user.click(sendBtn);
 
     await waitFor(() => {
-        expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+        expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeTruthy();
     });
   });
 

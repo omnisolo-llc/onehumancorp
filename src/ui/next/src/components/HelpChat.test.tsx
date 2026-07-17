@@ -23,26 +23,26 @@ describe('HelpChat Component', () => {
 
   it('renders the floating button by default', () => {
     render(<HelpChat />);
-    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeTruthy();
   });
 
   it('opens the chat interface when the button is clicked', () => {
     render(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
-    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('Ask anything...')).toBeTruthy();
   });
 
   it('closes the chat when the close button is clicked', () => {
     render(<HelpChat />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
-    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close help chat' }));
-    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeTruthy();
   });
 
   it('sends a message and displays the response', async () => {
@@ -63,14 +63,14 @@ describe('HelpChat Component', () => {
     fireEvent.click(submitBtn);
 
     // Check if user message is immediately displayed
-    expect(screen.getByText('Test message')).toBeInTheDocument();
+    expect(screen.getByText('Test message')).toBeTruthy();
 
     // Check input is disabled during loading
     expect(input).toBeDisabled();
 
     // Fast-forward fetch
     await waitFor(() => {
-      expect(screen.getByText('Hello from AI')).toBeInTheDocument();
+      expect(screen.getByText('Hello from AI')).toBeTruthy();
     });
 
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({
@@ -97,7 +97,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeTruthy();
     });
   });
 
@@ -121,7 +121,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Sorry, the connection timed out. Please try again later or check your network connection.")).toBeInTheDocument();
+      expect(screen.getByText("Sorry, the connection timed out. Please try again later or check your network connection.")).toBeTruthy();
     });
   });
 
@@ -140,35 +140,35 @@ describe('HelpChat Component', () => {
     });
     fireEvent.click(submitBtn);
 
-    await waitFor(() => expect(screen.getByText('Test message')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Test message')).toBeTruthy());
 
     // Check message is displayed
-    expect(screen.getByText('Test message')).toBeInTheDocument();
+    expect(screen.getByText('Test message')).toBeTruthy();
 
     // Check clear button appears and click it
     const clearBtn = screen.getByRole('button', { name: 'Clear chat' });
-    expect(clearBtn).toBeInTheDocument();
+    expect(clearBtn).toBeTruthy();
 
     fireEvent.click(clearBtn);
 
     // Verify messages are cleared (back to initial)
-    expect(screen.queryByText('Test message')).not.toBeInTheDocument();
-    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
+    expect(screen.queryByText('Test message')).not.toBeTruthy();
+    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeTruthy();
 
 
     // Clear button should disappear
-    expect(screen.queryByRole('button', { name: 'Clear chat' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear chat' })).not.toBeTruthy();
   });
 
   it('opens the chat interface when open-help-chat event is dispatched', () => {
     render(<HelpChat />);
-    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeTruthy();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('open-help-chat'));
     });
 
-    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeTruthy();
   });
 });
 
@@ -177,7 +177,7 @@ describe('HelpChat accessibility', () => {
     render(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toBeInTheDocument();
+    expect(dialog).toBeTruthy();
     expect(dialog).toHaveAttribute('aria-labelledby', 'ai-chat-header-title');
     expect(dialog).toHaveAttribute('aria-modal', 'false');
   });
@@ -185,7 +185,7 @@ describe('HelpChat accessibility', () => {
     render(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
     const log = screen.getByRole('log');
-    expect(log).toBeInTheDocument();
+    expect(log).toBeTruthy();
     expect(log).toHaveAttribute('aria-live', 'polite');
   });
 });
@@ -226,10 +226,10 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Here is a link')).toBeInTheDocument();
+      expect(screen.getByText('Here is a link')).toBeTruthy();
     });
 
-    expect(screen.queryByText('Read the full article →')).not.toBeInTheDocument();
+    expect(screen.queryByText('Read the full article →')).not.toBeTruthy();
   });
 
   it('handles invalid chat responses by throwing an error that is caught', async () => {
@@ -250,7 +250,7 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
 
     await waitFor(() => {
-      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeTruthy();
     });
 
     global.fetch = vi.fn(() =>
@@ -325,11 +325,11 @@ describe('HelpChat safe link handling', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Here is a link')).toBeInTheDocument();
+      expect(screen.getByText('Here is a link')).toBeTruthy();
     });
 
     const link = screen.getByText('Read the full article →');
-    expect(link).toBeInTheDocument();
+    expect(link).toBeTruthy();
     expect(link).toHaveAttribute('href', 'https://example.com/safe');
   });
 });
@@ -351,7 +351,7 @@ describe('HelpChat remaining branches', () => {
     window.history.replaceState({}, '', '?test_chat=true');
 
     render(<HelpChat />);
-    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeTruthy();
 
     process.env.NEXT_PUBLIC_E2E = originalEnv;
     window.history.replaceState({}, '', originalUrl);
@@ -376,6 +376,6 @@ describe('HelpChat remaining branches', () => {
 
     fireEvent.submit(submitBtn.closest('form')!);
 
-    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
+    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeTruthy();
   });
 });

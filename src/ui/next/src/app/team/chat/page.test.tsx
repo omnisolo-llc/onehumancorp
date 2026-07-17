@@ -35,8 +35,8 @@ test('shows a latency state while an AI action is being drafted', async () => {
   });
   fireEvent.click(screen.getByTestId('team-chat-send'));
 
-  expect(await screen.findByText('Working on your request...')).toBeInTheDocument();
-  expect(screen.getByText('The team is still drafting the action.')).toBeInTheDocument();
+  await waitFor(() => { expect(screen.getByText('Working on your request...')).toBeTruthy(); });
+  expect(screen.getByText('The team is still drafting the action.')).toBeTruthy();
 
   resolveFetch(
     new Response(
@@ -49,9 +49,9 @@ test('shows a latency state while an AI action is being drafted', async () => {
   );
 
   await waitFor(() => {
-    expect(screen.queryByText('Working on your request...')).not.toBeInTheDocument();
+    expect(screen.queryByText('Working on your request...')).toBeNull();
   });
-  expect(screen.getByText('Draft quote for Plumbing Fix')).toBeInTheDocument();
+  expect(screen.getByText('Draft quote for Plumbing Fix')).toBeTruthy();
 });
 
 test('renders an actionable error card when AI action execution fails', async () => {
@@ -69,7 +69,7 @@ test('renders an actionable error card when AI action execution fails', async ()
   });
   fireEvent.click(screen.getByTestId('team-chat-send'));
 
-  expect(await screen.findByText('Action needs attention')).toBeInTheDocument();
-  expect(screen.getByText('AI Budget exhausted')).toBeInTheDocument();
-  expect(screen.getByText('Try again')).toBeInTheDocument();
+  await waitFor(() => { expect(screen.getByText('Action needs attention')).toBeTruthy(); });
+  expect(screen.getByText('AI Budget exhausted')).toBeTruthy();
+  expect(screen.getByText('Try again')).toBeTruthy();
 });

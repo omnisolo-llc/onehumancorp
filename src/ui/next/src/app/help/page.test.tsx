@@ -63,11 +63,11 @@ describe('HelpCenterPage', () => {
   it('renders articles loaded from API', async () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
-    expect(screen.getByText('In-App Help Center')).toBeInTheDocument();
+    expect(screen.getByText('In-App Help Center')).toBeTruthy();
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
-      expect(screen.getByText('Adding Products')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
+      expect(screen.getByText('Adding Products')).toBeTruthy();
     });
   });
 
@@ -76,15 +76,15 @@ describe('HelpCenterPage', () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
     await user.type(searchInput, 'products');
 
     await waitFor(() => {
-      expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
-      expect(screen.getByText('Adding Products')).toBeInTheDocument();
+      expect(screen.queryByText('Getting Started')).not.toBeTruthy();
+      expect(screen.getByText('Adding Products')).toBeTruthy();
     });
   });
 
@@ -93,15 +93,15 @@ describe('HelpCenterPage', () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
     await user.type(searchInput, 'nonexistentxyz123');
 
     await waitFor(() => {
-      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
-      expect(screen.getByText(/"nonexistentxyz123"/)).toBeInTheDocument();
+      expect(screen.getByText(/No results found matching/)).toBeTruthy();
+      expect(screen.getByText(/"nonexistentxyz123"/)).toBeTruthy();
     });
   });
 
@@ -109,8 +109,8 @@ describe('HelpCenterPage', () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
-      expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
+      expect(screen.getByText('How to set up your first store easily')).toBeTruthy();
+      expect(screen.getByText('Linking your own website name')).toBeTruthy();
     });
   });
 
@@ -118,7 +118,7 @@ describe('HelpCenterPage', () => {
     const user = userEvent.setup();
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
     await waitFor(() => {
-      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
+      expect(screen.getByText('How to set up your first store easily')).toBeTruthy();
     });
     // The video card container has changed in VideoTutorialList
     const videoTitle = screen.getByText('How to set up your first store easily');
@@ -127,12 +127,12 @@ describe('HelpCenterPage', () => {
       await user.click(videoCard);
     }
     await waitFor(() => {
-      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+      expect(screen.getByLabelText('Close video')).toBeTruthy();
     });
     const closeBtn = screen.getByLabelText('Close video');
     await user.click(closeBtn);
     await waitFor(() => {
-      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Close video')).not.toBeTruthy();
     });
   });
 
@@ -140,15 +140,15 @@ describe('HelpCenterPage', () => {
     const user = userEvent.setup();
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
     await user.type(searchInput, 'nonexistentxyz123');
 
     await waitFor(() => {
-      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
-      expect(screen.queryByText('Video Tutorials')).not.toBeInTheDocument();
+      expect(screen.getByText(/No results found matching/)).toBeTruthy();
+      expect(screen.queryByText('Video Tutorials')).not.toBeTruthy();
     });
   });
 });

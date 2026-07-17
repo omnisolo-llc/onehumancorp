@@ -19,7 +19,7 @@ describe('HelpArticlePage', () => {
     global.fetch = vi.fn(() => new Promise<Response>(() => {})); // Never resolves
 
     render(<HelpArticlePage />);
-    expect(screen.getByText('Loading article...')).toBeInTheDocument();
+    expect(screen.getByText('Loading article...')).toBeTruthy();
   });
 
   it('renders article content on successful fetch', async () => {
@@ -35,10 +35,10 @@ describe('HelpArticlePage', () => {
     render(<HelpArticlePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started')).toBeTruthy();
     });
 
-    expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to OneHumanCorp!')).toBeTruthy();
   });
 
   it('renders error state on failed fetch', async () => {
@@ -50,9 +50,9 @@ describe('HelpArticlePage', () => {
     render(<HelpArticlePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Oops!')).toBeInTheDocument();
+      expect(screen.getByText('Oops!')).toBeTruthy();
     });
 
-    expect(screen.getByText('Article not found')).toBeInTheDocument();
+    expect(screen.getByText('Article not found')).toBeTruthy();
   });
 });

@@ -13,14 +13,14 @@ describe('VideoTutorialsPage', () => {
 
     // Verify back link
     const backLink = screen.getByRole('link', { name: /Back to Help Center/i });
-    expect(backLink).toBeInTheDocument();
+    expect(backLink).toBeTruthy();
     expect(backLink).toHaveAttribute('href', '/help');
 
     // Verify Title and Subtitle
-    expect(screen.getByText('Video Guides')).toBeInTheDocument();
-    expect(screen.getByText('Watch quick, simple tutorials to learn how to manage your store like a pro.')).toBeInTheDocument();
+    expect(screen.getByText('Video Guides')).toBeTruthy();
+    expect(screen.getByText('Watch quick, simple tutorials to learn how to manage your store like a pro.')).toBeTruthy();
 
     // Verify component
-    expect(screen.getByTestId('mock-video-tutorial-list')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-video-tutorial-list')).toBeTruthy();
   });
 });

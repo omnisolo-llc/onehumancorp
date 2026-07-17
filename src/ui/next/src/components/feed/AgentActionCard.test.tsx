@@ -19,9 +19,9 @@ describe('AgentActionCard', () => {
 
   it('renders standard layout without error', () => {
     render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
-    expect(screen.getAllByText('Test event')[0]).toBeInTheDocument();
-    expect(screen.getByTestId('feed-approve-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('feed-dismiss-btn')).toBeInTheDocument();
+    expect(screen.getAllByText('Test event')[0]).toBeTruthy();
+    expect(screen.getByTestId('feed-approve-btn')).toBeTruthy();
+    expect(screen.getByTestId('feed-dismiss-btn')).toBeTruthy();
   });
 
   it('handles approve click', () => {
@@ -51,8 +51,8 @@ describe('AgentActionCard', () => {
   it('renders editing state', () => {
     render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId="msg_1" setEditContent={vi.fn()} editContent="Edit text" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
 
-    expect(screen.getByTestId('edit-proposal-textarea')).toBeInTheDocument();
-    expect(screen.getByTestId('save-proposal')).toBeInTheDocument();
-    expect(screen.getByTestId('cancel-edit-proposal')).toBeInTheDocument();
+    expect(screen.getByTestId('edit-proposal-textarea')).toBeTruthy();
+    expect(screen.getByTestId('save-proposal')).toBeTruthy();
+    expect(screen.getByTestId('cancel-edit-proposal')).toBeTruthy();
   });
 });

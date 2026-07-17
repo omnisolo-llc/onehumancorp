@@ -36,24 +36,24 @@ describe('AnalyticsPage', () => {
 
   it('renders basic analytics', () => {
     render(<TooltipProvider><AnalyticsPage /></TooltipProvider>);
-    expect(screen.getByText('Business Analytics 📊')).toBeInTheDocument();
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-    expect(screen.getByText('Active Customers')).toBeInTheDocument();
-    expect(screen.getByText('Conversion Rate')).toBeInTheDocument();
+    expect(screen.getByText('Business Analytics 📊')).toBeTruthy();
+    expect(screen.getByText('Total Revenue')).toBeTruthy();
+    expect(screen.getByText('Active Customers')).toBeTruthy();
+    expect(screen.getByText('Conversion Rate')).toBeTruthy();
   });
 
   it('shows soft paywall when trying to unlock advanced insights', () => {
     render(<TooltipProvider><AnalyticsPage /></TooltipProvider>);
 
     // Check that advanced section is locked
-    expect(screen.getByText('Unlock Advanced Insights')).toBeInTheDocument();
+    expect(screen.getByText('Unlock Advanced Insights')).toBeTruthy();
 
     // Click to unlock
     fireEvent.click(screen.getByText('Unlock Now'));
 
     // Check that soft paywall appears
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
-    expect(screen.getByText('Share on X to unlock 7 Days Free')).toBeInTheDocument();
+    expect(screen.getByText('Share on X to unlock 7 Days Free')).toBeTruthy();
   });
 
   it('grants pro status after sharing', async () => {
@@ -73,7 +73,7 @@ describe('AnalyticsPage', () => {
     expect(window.localStorage.setItem).toHaveBeenCalledWith('has_pro', 'true');
 
     await waitFor(() => {
-        expect(screen.queryByText('Unlock Now')).not.toBeInTheDocument();
+        expect(screen.queryByText('Unlock Now')).not.toBeTruthy();
     }, { timeout: 1000 });
   });
 });

@@ -48,10 +48,10 @@ describe('PreOrderWidgetPage', () => {
 
   it('renders the configuration form correctly', () => {
     render(<PreOrderWidgetPage />);
-    expect(screen.getByText('Pre-Order Waitlist Engine')).toBeInTheDocument();
-    expect(screen.getByText('Product Name')).toBeInTheDocument();
-    expect(screen.getByText('Special Offer (Optional)')).toBeInTheDocument();
-    expect(screen.getByText('Theme')).toBeInTheDocument();
+    expect(screen.getByText('Pre-Order Waitlist Engine')).toBeTruthy();
+    expect(screen.getByText('Product Name')).toBeTruthy();
+    expect(screen.getByText('Special Offer (Optional)')).toBeTruthy();
+    expect(screen.getByText('Theme')).toBeTruthy();
   });
 
   it('updates the live preview when form is filled', () => {
@@ -60,19 +60,19 @@ describe('PreOrderWidgetPage', () => {
     fireEvent.change(nameInput, { target: { value: 'Limited Sneakers' } });
 
     // Check that live preview reflects the change
-    expect(screen.getByText('Limited Sneakers')).toBeInTheDocument();
+    expect(screen.getByText('Limited Sneakers')).toBeTruthy();
   });
 
   it('shows the embed modal when button is clicked', () => {
     render(<PreOrderWidgetPage />);
 
     // Check that modal is not initially visible
-    expect(screen.queryByText('Embed Your Waitlist')).not.toBeInTheDocument();
+    expect(screen.queryByText('Embed Your Waitlist')).not.toBeTruthy();
 
     const embedButton = screen.getByText('Get Widget Embed Code');
     fireEvent.click(embedButton);
 
     // Check that modal is visible
-    expect(screen.getByText('Embed Your Waitlist')).toBeInTheDocument();
+    expect(screen.getByText('Embed Your Waitlist')).toBeTruthy();
   });
 });

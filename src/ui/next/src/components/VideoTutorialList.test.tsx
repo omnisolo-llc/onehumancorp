@@ -15,7 +15,7 @@ describe('VideoTutorialList', () => {
     global.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
 
     const { container } = render(<VideoTutorialList />);
-    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(container.querySelector('.animate-spin')).toBeTruthy();
   });
 
   it('renders videos correctly', async () => {
@@ -37,10 +37,10 @@ describe('VideoTutorialList', () => {
     render(<VideoTutorialList />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test Video 1')).toBeInTheDocument();
-      expect(screen.getByText('1:23')).toBeInTheDocument();
-      expect(screen.getByText('Test Video 2')).toBeInTheDocument();
-      expect(screen.getByText('4:56')).toBeInTheDocument();
+      expect(screen.getByText('Test Video 1')).toBeTruthy();
+      expect(screen.getByText('1:23')).toBeTruthy();
+      expect(screen.getByText('Test Video 2')).toBeTruthy();
+      expect(screen.getByText('4:56')).toBeTruthy();
     });
   });
 
@@ -52,7 +52,7 @@ describe('VideoTutorialList', () => {
     render(<VideoTutorialList />);
 
     await waitFor(() => {
-      expect(screen.getByText('No video tutorials available right now.')).toBeInTheDocument();
+      expect(screen.getByText('No video tutorials available right now.')).toBeTruthy();
     });
   });
 
@@ -67,16 +67,16 @@ describe('VideoTutorialList', () => {
     render(<VideoTutorialList />);
 
     await waitFor(() => {
-      expect(screen.getByText('How to setup your store')).toBeInTheDocument();
-      expect(screen.getByText('Adding new products')).toBeInTheDocument();
+      expect(screen.getByText('How to setup your store')).toBeTruthy();
+      expect(screen.getByText('Adding new products')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search videos...');
     fireEvent.change(searchInput, { target: { value: 'setup' } });
 
     await waitFor(() => {
-      expect(screen.getByText('How to setup your store')).toBeInTheDocument();
-      expect(screen.queryByText('Adding new products')).not.toBeInTheDocument();
+      expect(screen.getByText('How to setup your store')).toBeTruthy();
+      expect(screen.queryByText('Adding new products')).not.toBeTruthy();
     });
   });
 
@@ -90,15 +90,15 @@ describe('VideoTutorialList', () => {
     render(<VideoTutorialList />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test Video 1')).toBeInTheDocument();
+      expect(screen.getByText('Test Video 1')).toBeTruthy();
     });
 
     const searchInput = screen.getByPlaceholderText('Search videos...');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
 
     await waitFor(() => {
-      expect(screen.queryByText('Test Video 1')).not.toBeInTheDocument();
-      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
+      expect(screen.queryByText('Test Video 1')).not.toBeTruthy();
+      expect(screen.getByText(/No results found matching/)).toBeTruthy();
     });
   });
 });
@@ -113,7 +113,7 @@ describe('VideoTutorialList', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load video tutorials', expect.any(Error));
     });
 
-    expect(screen.getByText('No video tutorials available right now.')).toBeInTheDocument();
+    expect(screen.getByText('No video tutorials available right now.')).toBeTruthy();
 
     consoleErrorSpy.mockRestore();
   });
@@ -125,7 +125,7 @@ describe('VideoTutorialList', () => {
 
     render(<VideoTutorialList videos={externalVideos} loading={false} />);
 
-    expect(screen.getByText('External Video')).toBeInTheDocument();
+    expect(screen.getByText('External Video')).toBeTruthy();
   });
 
   it('opens and closes the video modal', async () => {
@@ -150,7 +150,7 @@ describe('VideoTutorialList', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Modal Video')).toBeInTheDocument();
+      expect(screen.getByText('Modal Video')).toBeTruthy();
     });
 
     const videoTitle = screen.getByText('Modal Video');
@@ -158,13 +158,13 @@ describe('VideoTutorialList', () => {
     fireEvent.click(videoCard!);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+      expect(screen.getByLabelText('Close video')).toBeTruthy();
     });
 
     const closeBtn = screen.getByLabelText('Close video');
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Close video')).not.toBeTruthy();
     });
   });

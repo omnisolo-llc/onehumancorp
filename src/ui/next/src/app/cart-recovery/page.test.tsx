@@ -27,8 +27,8 @@ describe('CartRecoveryPage', () => {
 
     it('renders the Cart Recovery page correctly', async () => {
         render(<CartRecoveryPage />);
-        expect(screen.getByText('Recover Abandoned Carts')).toBeInTheDocument();
-        expect(screen.getByText('Generate AI Campaign')).toBeInTheDocument();
+        expect(screen.getByText('Recover Abandoned Carts')).toBeTruthy();
+        expect(screen.getByText('Generate AI Campaign')).toBeTruthy();
     });
 
     it('toggles auto recovery', () => {

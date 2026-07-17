@@ -44,10 +44,10 @@ describe("SubscriptionsPage", () => {
 
     render(<SubscriptionsPage />);
 
-    expect(await screen.findByText("$25.00 / month")).toBeInTheDocument();
-    expect(screen.getByText("Customer #custom")).toBeInTheDocument();
-    expect(screen.getByText("Ship on 2026-08-01")).toBeInTheDocument();
-    expect(screen.getByText("3 boxes")).toBeInTheDocument();
+    expect(await screen.findByText("$25.00 / month")).toBeTruthy();
+    expect(screen.getByText("Customer #custom")).toBeTruthy();
+    expect(screen.getByText("Ship on 2026-08-01")).toBeTruthy();
+    expect(screen.getByText("3 boxes")).toBeTruthy();
   });
 
   test("shows an accessible error for a non-OK response", async () => {

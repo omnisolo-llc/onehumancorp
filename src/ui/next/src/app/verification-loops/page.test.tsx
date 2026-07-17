@@ -8,7 +8,7 @@ global.fetch = vi.fn();
 describe("VerificationLoopsPage", () => {
   it("renders correctly", () => {
     render(<VerificationLoopsPage />);
-    expect(screen.getByText("Verification Loops")).toBeInTheDocument();
+    expect(screen.getByText("Verification Loops")).toBeTruthy();
   });
 
   it("handles valid execution", async () => {

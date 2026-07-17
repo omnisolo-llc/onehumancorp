@@ -23,7 +23,7 @@ describe('ProjectShowcasePage', () => {
 
     const brandingElements = screen.getAllByTestId('powered-by-ohc');
     expect(brandingElements.length).toBeGreaterThan(0);
-    expect(brandingElements[0]).toBeInTheDocument();
+    expect(brandingElements[0]).toBeTruthy();
   });
 
   it('shows paywall when free user tries to remove branding', () => {
@@ -33,10 +33,10 @@ describe('ProjectShowcasePage', () => {
     const toggle = screen.getByRole('checkbox');
     fireEvent.click(toggle);
 
-    expect(screen.getByText('Upgrade to Pro')).toBeInTheDocument();
+    expect(screen.getByText('Upgrade to Pro')).toBeTruthy();
 
     const brandingElements = screen.getAllByTestId('powered-by-ohc');
-    expect(brandingElements[0]).toBeInTheDocument();
+    expect(brandingElements[0]).toBeTruthy();
   });
 
   it('allows pro users to remove branding', () => {

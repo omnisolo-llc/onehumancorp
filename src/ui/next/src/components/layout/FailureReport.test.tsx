@@ -7,14 +7,14 @@ import '@testing-library/jest-dom';
 describe('FailureReport', () => {
   it('renders title and message correctly', () => {
     render(<FailureReport title="System Error" message="Something went wrong." />);
-    expect(screen.getByText('System Error')).toBeInTheDocument();
-    expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
+    expect(screen.getByText('System Error')).toBeTruthy();
+    expect(screen.getByText('Something went wrong.')).toBeTruthy();
   });
 
   it('renders without a title', () => {
     render(<FailureReport message="Just a message." />);
-    expect(screen.getByText('Just a message.')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
+    expect(screen.getByText('Just a message.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { level: 3 })).not.toBeTruthy();
   });
 
   it('renders error rate data correctly', () => {
@@ -24,11 +24,11 @@ describe('FailureReport', () => {
     ];
     render(<FailureReport message="Data present" errorRateData={errorRateData} />);
 
-    expect(screen.getByText('Error Rate Over Time')).toBeInTheDocument();
-    expect(screen.getByText('10:00')).toBeInTheDocument();
-    expect(screen.getByText('5%')).toBeInTheDocument();
-    expect(screen.getByText('10:05')).toBeInTheDocument();
-    expect(screen.getByText('10%')).toBeInTheDocument();
+    expect(screen.getByText('Error Rate Over Time')).toBeTruthy();
+    expect(screen.getByText('10:00')).toBeTruthy();
+    expect(screen.getByText('5%')).toBeTruthy();
+    expect(screen.getByText('10:05')).toBeTruthy();
+    expect(screen.getByText('10%')).toBeTruthy();
   });
 
   it('renders latency data correctly', () => {
@@ -38,9 +38,9 @@ describe('FailureReport', () => {
     ];
     render(<FailureReport message="Data present" latencyData={latencyData} />);
 
-    expect(screen.getByText('Latency Histogram')).toBeInTheDocument();
-    expect(screen.getByText('0-100ms')).toBeInTheDocument();
-    expect(screen.getByText('100-200ms')).toBeInTheDocument();
+    expect(screen.getByText('Latency Histogram')).toBeTruthy();
+    expect(screen.getByText('0-100ms')).toBeTruthy();
+    expect(screen.getByText('100-200ms')).toBeTruthy();
   });
 
   it('contains proper translucent classes', () => {

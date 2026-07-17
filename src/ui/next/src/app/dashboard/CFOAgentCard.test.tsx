@@ -20,11 +20,11 @@ describe("CFOAgentCard", () => {
     render(<CFOAgentCard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Profit & Tax Card")).toBeInTheDocument();
+      expect(screen.getByText("Profit & Tax Card")).toBeTruthy();
     });
 
-    expect(screen.getByText("$500.00")).toBeInTheDocument();
-    expect(screen.getByText("$100.00")).toBeInTheDocument();
-    expect(screen.getByText("$50.00")).toBeInTheDocument();
+    expect(screen.getByText("$500.00")).toBeTruthy();
+    expect(screen.getByText("$100.00")).toBeTruthy();
+    expect(screen.getByText("$50.00")).toBeTruthy();
   });
 });

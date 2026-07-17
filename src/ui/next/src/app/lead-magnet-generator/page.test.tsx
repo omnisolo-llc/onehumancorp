@@ -25,14 +25,14 @@ describe('LeadMagnetGeneratorPage', () => {
       </TooltipProvider>
     );
 
-    expect(screen.getByText('Lead Magnet Generator')).toBeInTheDocument();
+    expect(screen.getByText('Lead Magnet Generator')).toBeTruthy();
 
     // Check inputs
     const headlineInput = screen.getByDisplayValue('Unlock the Ultimate Business Checklist');
-    expect(headlineInput).toBeInTheDocument();
+    expect(headlineInput).toBeTruthy();
 
     // Check embed code generated
-    expect(screen.getByText(/<iframe src="https:\/\/ohc.app\/api\/v1\/growth\/lead-magnet\/embed/)).toBeInTheDocument();
+    expect(screen.getByText(/<iframe src="https:\/\/ohc.app\/api\/v1\/growth\/lead-magnet\/embed/)).toBeTruthy();
   });
 
   it('updates embed code when inputs change', async () => {
@@ -47,7 +47,7 @@ describe('LeadMagnetGeneratorPage', () => {
     fireEvent.change(headlineInput, { target: { value: 'New Custom Headline' } });
 
     await waitFor(() => {
-        expect(screen.getByText(/title=New%20Custom%20Headline/)).toBeInTheDocument();
+        expect(screen.getByText(/title=New%20Custom%20Headline/)).toBeTruthy();
     });
   });
 
@@ -62,7 +62,7 @@ describe('LeadMagnetGeneratorPage', () => {
     fireEvent.click(checkbox);
 
     await waitFor(() => {
-        expect(screen.getByText('Upgrade to OHC Pro')).toBeInTheDocument();
+        expect(screen.getByText('Upgrade to OHC Pro')).toBeTruthy();
     });
   });
 
@@ -79,9 +79,9 @@ describe('LeadMagnetGeneratorPage', () => {
 
     await waitFor(() => {
         // The modal should NOT appear
-        expect(screen.queryByText('Upgrade to OHC Pro')).not.toBeInTheDocument();
+        expect(screen.queryByText('Upgrade to OHC Pro')).not.toBeTruthy();
         // The embed code should include hideBranding=true
-        expect(screen.getByText(/hideBranding=true/)).toBeInTheDocument();
+        expect(screen.getByText(/hideBranding=true/)).toBeTruthy();
     });
   });
 

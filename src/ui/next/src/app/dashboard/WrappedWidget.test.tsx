@@ -32,12 +32,12 @@ describe('WrappedWidget', () => {
 
     // Wait for the data to load and component to render
     await waitFor(() => {
-      expect(screen.getByTestId('wrapped-widget')).toBeInTheDocument();
+      expect(screen.getByTestId('wrapped-widget')).toBeTruthy();
     });
 
-    expect(screen.getByText('Your Year in Review 🎉')).toBeInTheDocument();
-    expect(screen.getByText('$14,250')).toBeInTheDocument();
-    expect(screen.getByText('342')).toBeInTheDocument();
-    expect(screen.getByText('128')).toBeInTheDocument();
+    expect(screen.getByText('Your Year in Review 🎉')).toBeTruthy();
+    expect(screen.getByText('$14,250')).toBeTruthy();
+    expect(screen.getByText('342')).toBeTruthy();
+    expect(screen.getByText('128')).toBeTruthy();
   });
 });

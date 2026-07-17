@@ -18,7 +18,7 @@ describe('ContextCard', () => {
     );
 
     render(<ContextCard tenantId="t1" customerId="c1" />);
-    expect(screen.getByText('Loading context...')).toBeInTheDocument();
+    expect(screen.getByText('Loading context...')).toBeTruthy();
   });
 
   it('renders correctly with data', async () => {
@@ -38,11 +38,11 @@ describe('ContextCard', () => {
     render(<ContextCard tenantId="t1" customerId="c1" />);
 
     await waitFor(() => {
-      expect(screen.getByText('VIP')).toBeInTheDocument();
+      expect(screen.getByText('VIP')).toBeTruthy();
     });
 
-    expect(screen.getByText('Email')).toBeInTheDocument();
-    expect(screen.getByText(/5 past orders/)).toBeInTheDocument();
+    expect(screen.getByText('Email')).toBeTruthy();
+    expect(screen.getByText(/5 past orders/)).toBeTruthy();
   });
 
   it('renders fallback when no segments or preferences', async () => {
@@ -62,10 +62,10 @@ describe('ContextCard', () => {
     render(<ContextCard tenantId="t1" customerId="c1" />);
 
     await waitFor(() => {
-      expect(screen.getByText('New customer.')).toBeInTheDocument();
+      expect(screen.getByText('New customer.')).toBeTruthy();
     });
 
-    expect(screen.getByText(/0 past orders/)).toBeInTheDocument();
-    expect(screen.getByText(/Last order: N\/A/)).toBeInTheDocument();
+    expect(screen.getByText(/0 past orders/)).toBeTruthy();
+    expect(screen.getByText(/Last order: N\/A/)).toBeTruthy();
   });
 });

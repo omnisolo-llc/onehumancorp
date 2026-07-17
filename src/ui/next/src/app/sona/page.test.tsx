@@ -13,7 +13,7 @@ describe("SonaPatternsPage", () => {
   it("renders loading initially", () => {
     (global.fetch as any).mockImplementationOnce(() => new Promise(() => {}));
     render(<SonaPatternsPage />);
-    expect(screen.getByText("Loading patterns...")).toBeInTheDocument();
+    expect(screen.getByText("Loading patterns...")).toBeTruthy();
   });
 
   it("renders patterns", async () => {
@@ -25,8 +25,8 @@ describe("SonaPatternsPage", () => {
     render(<SonaPatternsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Test context")).toBeInTheDocument();
-      expect(screen.getByText("1. tool1")).toBeInTheDocument();
+      expect(screen.getByText("Test context")).toBeTruthy();
+      expect(screen.getByText("1. tool1")).toBeTruthy();
     });
   });
 
@@ -39,7 +39,7 @@ describe("SonaPatternsPage", () => {
     render(<SonaPatternsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No patterns recorded yet.")).toBeInTheDocument();
+      expect(screen.getByText("No patterns recorded yet.")).toBeTruthy();
     });
   });
 
@@ -52,7 +52,7 @@ describe("SonaPatternsPage", () => {
     render(<SonaPatternsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No patterns recorded yet.")).toBeInTheDocument();
+      expect(screen.getByText("No patterns recorded yet.")).toBeTruthy();
     });
 
     (global.fetch as any)
@@ -74,7 +74,7 @@ describe("SonaPatternsPage", () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("New task")).toBeInTheDocument();
+      expect(screen.getByText("New task")).toBeTruthy();
     });
   });
 });
