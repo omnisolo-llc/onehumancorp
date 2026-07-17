@@ -35,6 +35,19 @@ export default function ApiDocsPage() {
       });
   }, []);
 
+  const handleDownload = () => {
+    if (!spec) return;
+    const blob = new Blob([JSON.stringify(spec, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "openapi.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-4 sm:p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center overflow-x-hidden w-full max-w-[100vw]">
       <style dangerouslySetInnerHTML={{__html: `
@@ -53,12 +66,20 @@ export default function ApiDocsPage() {
         .swagger-ui .opblock .opblock-summary-method { min-width: 60px; font-size: 12px; }
         .swagger-ui .opblock .opblock-summary-path { font-size: 14px; max-width: calc(100vw - 120px); overflow-wrap: break-word; word-break: break-all; }
       `}} />
-      <div data-testid="api-docs-title" className="w-full max-w-6xl bg-yellow-50/80 backdrop-blur-[30px] saturate-[210%] border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
+      <div data-testid="api-docs-title" className="w-full max-w-6xl bg-yellow-50/80 backdrop-blur-[30px] saturate-[210%] border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter flex justify-between items-center flex-wrap gap-4">
         <div className="text-yellow-700 text-sm">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
         </div>
+        {mounted && spec && (
+          <button
+            onClick={handleDownload}
+            className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors"
+          >
+            Download OpenAPI Spec
+          </button>
+        )}
       </div>
       {mounted && error && (
         <div className="w-full max-w-6xl flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px]">
