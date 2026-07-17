@@ -1264,7 +1264,7 @@ export default function OnboardingWizard() {
                     Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-                    What do you sell?
+                    What are you selling?
                   </h2>
                   <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
@@ -1294,7 +1294,7 @@ export default function OnboardingWizard() {
                           const val = e.target.value;
                           updateState({ whatYouSell: val });
                           if (!val.trim()) {
-                            setValidationError("Please tell us what you sell.");
+                            setValidationError("Please tell us what you are selling.");
                           } else {
                             setValidationError("");
                           }
@@ -1304,7 +1304,7 @@ export default function OnboardingWizard() {
                             e.preventDefault();
                             if (!whatYouSell.trim()) {
                               setValidationError(
-                                "Please tell us what you sell.",
+                                "Please tell us what you are selling.",
                               );
                               return;
                             }
@@ -1314,7 +1314,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us what you sell." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
+                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us what you are selling." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
                       />
                     </div>
                   </div>
@@ -1328,7 +1328,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={() => {
                         if (!whatYouSell.trim()) {
-                          setValidationError("Please tell us what you sell.");
+                          setValidationError("Please tell us what you are selling.");
                           return;
                         }
                         setValidationError("");

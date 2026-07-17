@@ -774,7 +774,7 @@ describe("OnboardingWizard", () => {
 
     // Wait for the mock fetch to resolve and state to update
     await waitFor(() => {
-      screen.getByText("What do you sell?");
+      screen.getByText("What are you selling?");
     });
 
     screen.getByDisplayValue("Draft Products");
@@ -919,8 +919,8 @@ describe("OnboardingWizard", () => {
     const nextBtn = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(nextBtn);
 
-    // On step 2, wait for "What do you sell" or another input indicating step 2 is active
-    await screen.findByText(/What do you sell\?/i);
+    // On step 2, wait for "What are you selling" or another input indicating step 2 is active
+    await screen.findByText(/What are you selling\?/i);
 
     // Try finding the url inputs
     const urlInputs = screen.queryAllByPlaceholderText(
@@ -1265,7 +1265,7 @@ describe("OnboardingWizard", () => {
     await user.click(continueButton);
 
     await waitFor(() => {
-      expect(screen.queryByText("Please tell us what you sell.")).toBeInTheDocument();
+      expect(screen.queryByText("Please tell us what you are selling.")).toBeInTheDocument();
     });
   });
 
