@@ -22,6 +22,7 @@ pub struct Proposal {
     pub total_amount_cents: i64,
     pub required_deposit_cents: i64,
     pub checkout_url: Option<String>,
+    pub project_intake_id: Option<String>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -345,6 +346,18 @@ async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) ->
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    let _ = sqlx::query("UPDATE project_intakes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = (SELECT project_intake_id FROM proposals WHERE id = $1)")
+        .bind(&id)
+        .execute(&mut *tx)
+        .await;
+
+    // Activate any pending project tasks for this customer since we just approved the proposal.
+    let _ = sqlx::query("UPDATE project_tasks SET status = 'Active', updated_at = NOW() WHERE tenant_id = $1 AND project_id IN (SELECT id FROM projects WHERE customer_id = $2)")
+        .bind(&proposal.tenant_id)
+        .bind(&proposal.customer_id)
+        .execute(&mut *tx)
+        .await;
 
     let line_items = match sqlx::query_as::<_, ProposalLineItem>(
         "SELECT * FROM proposal_line_items WHERE proposal_id = $1",

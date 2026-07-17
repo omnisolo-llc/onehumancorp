@@ -1469,6 +1469,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        project_intake_id TEXT,
                         tenant_id TEXT NOT NULL DEFAULT '',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
@@ -2347,6 +2348,16 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS project_intakes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        inquiry TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROPOSAL_DRAFTED', 'PROPOSAL_SENT', 'ACCEPTED', 'REJECTED')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS proposals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -2355,6 +2366,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         total_amount_cents INTEGER NOT NULL DEFAULT 0,
                         required_deposit_cents INTEGER NOT NULL DEFAULT 0,
                         valid_until TIMESTAMP,
+                        project_intake_id TEXT,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
