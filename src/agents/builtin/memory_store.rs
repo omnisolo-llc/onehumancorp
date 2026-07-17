@@ -1740,7 +1740,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         {
             results.push(format!("Index:\n{}", index));
         }
-        if let Ok(mut transcripts) = LongTermMemory::search_transcripts(self, query, limit).await {
+        if let Ok(mut transcripts) = self.search_transcripts(query, limit).await {
             results.append(&mut transcripts);
         }
         Ok(results)
