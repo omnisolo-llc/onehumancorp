@@ -444,7 +444,9 @@ pub async fn get_daily_work_handler(
 
     match res {
         Ok(items) => {
-            (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::json!({"items": items}), fields);
+            (axum::http::StatusCode::OK, Json(shaped)).into_response()
         },
         Err(error) => {
             ::server_telemetry::record_error_signal("[bug] Failed to load daily work");

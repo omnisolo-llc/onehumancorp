@@ -916,6 +916,13 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_get_daily_work_mobile_payload() {
+        super::bench_get_daily_work_mobile_payload().await;
+    }
+
+
+
+    #[tokio::test]
     async fn test_bench_ui_dashboard_unified_agent_feed_latency() {
         super::bench_ui_dashboard_unified_agent_feed_latency().await;
     }
@@ -2594,6 +2601,46 @@ pub async fn bench_get_daily_work_latency() {
         tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
     }
 }
+
+
+
+pub async fn bench_get_daily_work_mobile_payload() {
+    tracing::info!("Benchmarking get_daily_work_handler (Mobile Payload Optimization)...");
+
+    let raw_payload = serde_json::json!({
+        "items": [
+            {
+                "id": "item1",
+                "intent": "intent1",
+                "status": "status1",
+                "customer_info": {"name": "test"},
+                "suggested_actions": ["action1"]
+            }
+        ]
+    });
+
+    let start_sim = std::time::Instant::now();
+    let fields = Some("items(id,status)");
+    let shaped = ::server_utils::payload_shaper::shape_payload(raw_payload.clone(), fields);
+    let duration = start_sim.elapsed();
+
+    assert!(shaped.get("items").unwrap().as_array().unwrap()[0].get("customer_info").is_none());
+    assert!(shaped.get("items").unwrap().as_array().unwrap()[0].get("id").is_some());
+
+    tracing::info!(
+        "  - get_daily_work_handler Mobile Payload Optimization (Shaping): {:?}",
+        duration
+    );
+    tracing::info!(
+        "    (Mobile Payload Optimization verified: payload_shaper correctly trims payload)"
+    );
+}
+
+
+
+
+
+
 
 pub async fn bench_ui_triage_mobile_payload() {
     tracing::info!("Benchmarking UI Triage Mobile Payload Optimization...");
