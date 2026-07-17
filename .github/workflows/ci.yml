@@ -145,6 +145,7 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /tmp/node-compile-cache
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -294,6 +295,7 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /tmp/node-compile-cache
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -370,6 +372,7 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /tmp/node-compile-cache
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -487,6 +490,7 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /tmp/node-compile-cache
 
       - name: Install Kubernetes tools
         run: |
@@ -615,6 +619,7 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /tmp/node-compile-cache
 
       - name: Verify Docker is available
         run: |
