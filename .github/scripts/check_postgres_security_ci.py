@@ -72,6 +72,10 @@ EXPECTED_HYGIENE_LINES = (
 EXPECTED_PYYAML_BOOTSTRAP_LINES = (
     "sudo apt-get update && sudo apt-get install -y python3-yaml",
 )
+EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
+    "sudo apt-get update",
+    "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
+)
 
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
@@ -396,6 +400,15 @@ def check_workflow(path: Path) -> None:
         raise ContractError("postgres-security job env does not match the exact required allowlist")
     if not any("pg_isready" in line for line in active_config_lines(security)):
         raise ContractError("service health check: missing active pg_isready configuration")
+
+    toolchain_step = named_step(security, "Install PostgreSQL client")
+    require_exact_step_keys(toolchain_step, ("run",), "PostgreSQL test toolchain")
+    require_unconditional_step(toolchain_step, "PostgreSQL test toolchain")
+    toolchain_style, toolchain_run = toolchain_step.run()
+    if toolchain_style != "block":
+        raise ContractError("PostgreSQL test toolchain must be an active block run step")
+    if active_script(toolchain_run, "PostgreSQL test toolchain") != EXPECTED_POSTGRES_TOOLCHAIN_LINES:
+        raise ContractError("PostgreSQL test toolchain does not match the exact install commands")
 
     role_step = named_step(security, "Provision and verify non-superuser application role")
     require_exact_step_keys(role_step, ("run",), "application-role proof")

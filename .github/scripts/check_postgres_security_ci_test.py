@@ -103,6 +103,11 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
+            "          sudo apt-get install -y --no-install-recommends postgresql-client",
+            "missing protoc bootstrap",
+        ),
+        (
             "      - name: Install PyYAML\n        run: |\n          sudo apt-get update && sudo apt-get install -y python3-yaml\n\n",
             "",
             "missing PyYAML bootstrap",
