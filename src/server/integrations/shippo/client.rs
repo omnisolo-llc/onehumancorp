@@ -193,4 +193,39 @@ mod tests {
         let err = client.purchase_label("rate_123").await.unwrap_err();
         assert!(err.contains("Shippo API token is required"));
     }
+
+    #[test]
+    fn test_shippo_rate_serialization() {
+        let rate = ShippoRate {
+            id: "rate_123".to_string(),
+            carrier: "USPS".to_string(),
+            service: "Priority Mail".to_string(),
+            amount: "7.50".to_string(),
+            days: 2,
+        };
+        let serialized = serde_json::to_string(&rate).unwrap();
+        assert!(serialized.contains("rate_123"));
+        assert!(serialized.contains("USPS"));
+    }
+
+    #[test]
+    fn test_purchase_label_response_serialization() {
+        let resp = PurchaseLabelResponse {
+            success: true,
+            label_url: "https://example.com/label.pdf".to_string(),
+            tracking_number: "9400100000000000000000".to_string(),
+            carrier: "USPS".to_string(),
+        };
+        let serialized = serde_json::to_string(&resp).unwrap();
+        assert!(serialized.contains("labelUrl"));
+        assert!(serialized.contains("trackingNumber"));
+    }
+
+    #[tokio::test]
+    async fn fetch_rates_handles_invalid_dimensions() {
+        // use a real-looking token that bypasses validate_credentials
+        let client = ShippoClient::new("shippo_test_12345".to_string());
+        let err = client.fetch_rates(-5.0, "invalid_dimensions").await.unwrap_err();
+        assert!(err.contains("shipment weight must be positive"));
+    }
 }
