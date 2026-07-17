@@ -87,7 +87,7 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       await route.fulfill({ status: 200, body: 'Success'   });
       });
     // Submit setup
-    await page.evaluate(() => { document.getElementById('finish-btn').click(); }); await page.waitForTimeout(500);
+    await page.evaluate(() => { document.getElementById('finish-btn').click();   });
     });
   test('should support 375px mobile view without horizontal scroll and minimum 44px touch targets', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812   });
@@ -239,10 +239,10 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       });
     await page.reload();
     await page.getByTestId('template-selection').selectOption('Modern', { force: true   });
-    await page.evaluate(() => { document.getElementById('finish-btn').click(); }); await page.waitForTimeout(500);
+    await page.evaluate(() => { document.getElementById('finish-btn').click();   });
     // Check error message
     const errorMsg = page.locator('#submit-error');
-    await expect(errorMsg).toBeVisible({ timeout: 10000 });
+    await expect(errorMsg).toBeVisible();
     await expect(errorMsg).toHaveText('Backend is broken');
     });
 test.describe('OHC Setup Wizard Form Configuration', () => {
@@ -279,7 +279,7 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     const textInput = page.locator('#instant-bio');
     // Inputs also use glassmorphism but might be overridden to 8px.
     // However, the mandate specifies containers need 16px.
-    await expect(textInput).toHaveCSS('border-radius', /8px|16px/);
+    await expect(textInput).toHaveCSS('border-radius', '8px');
     });
   test('should support 375px mobile view without horizontal scroll', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812   });
@@ -335,14 +335,14 @@ test.describe('OHC Setup Wizard Dark Mode', () => {
 
     // Check container dark mode background
     const container = page.locator('.container.glassmorphism').first();
-    await expect(container).toHaveCSS('background-color', /rgba?\(.*22,\s*22,\s*26\s*.*\)|rgba?\(.*0,\s*0,\s*0\s*.*\)/);
+    await expect(container).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
 
     // Playwright evaluates body background color as rgb(0, 0, 0)
     const body = page.locator('body');
-    await expect(body).toHaveCSS('background-color', /rgba?\(.*0,\s*0,\s*0\s*.*\)/);
+    await expect(body).toHaveCSS('background-color', 'rgb(0, 0, 0)');
 
     // Check text input dark mode styling
     const textInput = page.locator('#instant-bio');
-    await expect(textInput).toHaveCSS('background-color', /rgba?\(.*22,\s*22,\s*26\s*.*\)|rgba?\(.*0,\s*0,\s*0\s*.*\)|rgba?\(.*255,\s*255,\s*255\s*.*\)/);
+    await expect(textInput).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
   });
 });
