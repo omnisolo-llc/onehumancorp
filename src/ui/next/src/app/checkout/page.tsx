@@ -108,7 +108,7 @@ function CheckoutContent() {
     setIsCheckingDelivery(true);
     setDeliveryError(null);
     try {
-      const response = await fetch("/api/v1/checkout/delivery-quote", {
+      const response = await fetch("/api/v1/checkout/delivery-proposal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tenant_id: tenant, deliveryAddress }),
@@ -363,7 +363,7 @@ function CheckoutContent() {
                     type="text"
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="Enter address for delivery quote"
+                    placeholder="Enter address for delivery proposal"
                     className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <button

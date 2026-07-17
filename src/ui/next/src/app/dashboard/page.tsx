@@ -886,7 +886,7 @@ export default function Dashboard() {
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Embed</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or proposal widgets for your site.</p>
             </Link>
 
             <Link href="/subscriptions" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -1010,12 +1010,12 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create a viral waitlist to build hype for your new product or service.</p>
             </Link>
 
-            <Link href="/interactive-quote-generator" id="interactive-quote-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/interactive-proposal-generator" id="interactive-proposal-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧮</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Quote Widget</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Proposal Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Build a pricing calculator to embed on your site to capture leads and drive referrals.</p>
             </Link>
 

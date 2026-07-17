@@ -110,7 +110,7 @@ function GiveawayEnterContent() {
                             X
                          </a>
                          <a
-                            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&quote=${encodeURIComponent(shareText)}`}
+                            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&proposal=${encodeURIComponent(shareText)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#166fe5] transition-all"

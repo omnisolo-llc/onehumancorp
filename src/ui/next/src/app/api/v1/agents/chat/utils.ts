@@ -1,11 +1,11 @@
 export function routeIntent(message: string): { department_assigned: string, agent: string, description: string } {
     const lowerMessage = message.toLowerCase();
 
-    if (lowerMessage.includes('quote') || lowerMessage.includes('lead')) {
+    if (lowerMessage.includes('proposal') || lowerMessage.includes('lead')) {
         return {
             department_assigned: 'sales',
             agent: 'The Salesperson',
-            description: `Handle ${lowerMessage.includes('quote') ? 'quote' : 'lead'} for sales`
+            description: `Handle ${lowerMessage.includes('proposal') ? 'proposal' : 'lead'} for sales`
         };
     }
 

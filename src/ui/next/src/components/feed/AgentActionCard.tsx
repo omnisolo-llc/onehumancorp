@@ -21,12 +21,12 @@ interface AgentActionCardProps {
   queuedActionIds: Set<string>;
   editingId: string | null;
   editContent: string;
-  editQuotePrice: string;
-  editQuoteScope: string;
+  editProposalPrice: string;
+  editProposalScope: string;
   setEditingId: (id: string | null) => void;
   setEditContent: (content: string) => void;
-  setEditQuotePrice: (price: string) => void;
-  setEditQuoteScope: (scope: string) => void;
+  setEditProposalPrice: (price: string) => void;
+  setEditProposalScope: (scope: string) => void;
   handleDecision: (
     id: string,
     approved: boolean,
@@ -40,12 +40,12 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   queuedActionIds,
   editingId,
   editContent,
-  editQuotePrice,
-  editQuoteScope,
+  editProposalPrice,
+  editProposalScope,
   setEditingId,
   setEditContent,
-  setEditQuotePrice,
-  setEditQuoteScope,
+  setEditProposalPrice,
+  setEditProposalScope,
   handleDecision,
 }) => {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
@@ -134,7 +134,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.remaining_stock !== undefined ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ||
+            ?.feature_type === "proposal_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "create_product" ||
           (approval.proposed_action || approval.context_payload)
@@ -656,10 +656,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
-              ?.feature_type === "autonomous_booking_quote" && (
+              ?.feature_type === "autonomous_booking_proposal" && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
-                data-testid="autonomous-booking-quote-card"
+                data-testid="autonomous-booking-proposal-card"
               >
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                   <svg
@@ -675,7 +675,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  Draft quote and propose schedule for{" "}
+                  Draft proposal and propose schedule for{" "}
                   {(approval.proposed_action || approval.context_payload)
                     .service || "Emergency Handyman Service"}
                 </div>
@@ -687,7 +687,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   >
                     <div className="bg-white dark:bg-gray-900 p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col gap-4">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        Review Booking Quote
+                        Review Booking Proposal
                       </h3>
 
                       <div className="flex flex-col gap-2">
@@ -736,7 +736,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         </span>
                         <span
                           className="font-bold text-lg text-gray-900 dark:text-gray-100"
-                          data-testid="modal-quote-total"
+                          data-testid="modal-proposal-total"
                         >
                           $
                           {Number(
@@ -869,10 +869,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
-              ?.feature_type === "quote_draft" && (
+              ?.feature_type === "proposal_draft" && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
-                data-testid="quote-draft-card"
+                data-testid="proposal-draft-card"
               >
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                   <svg
@@ -901,7 +901,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
                 <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px] relative mt-2">
                   <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">
-                    AI Proposed Quote
+                    AI Proposed Proposal
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
@@ -1325,7 +1325,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
-                ?.feature_type === "quote_draft" ? (
+                ?.feature_type === "proposal_draft" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-500 dark:text-gray-400">
@@ -2301,7 +2301,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           )
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "proposal_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <div className="flex flex-col gap-1">
@@ -2311,9 +2311,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <input
                   type="number"
                   className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all"
-                  value={editQuotePrice}
-                  onChange={(e) => setEditQuotePrice(e.target.value)}
-                  data-testid="edit-quote-price"
+                  value={editProposalPrice}
+                  onChange={(e) => setEditProposalPrice(e.target.value)}
+                  data-testid="edit-proposal-price"
                   autoFocus
                 />
               </div>
@@ -2324,9 +2324,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <textarea
                   className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                   rows={3}
-                  value={editQuoteScope}
-                  onChange={(e) => setEditQuoteScope(e.target.value)}
-                  data-testid="edit-quote-scope"
+                  value={editProposalScope}
+                  onChange={(e) => setEditProposalScope(e.target.value)}
+                  data-testid="edit-proposal-scope"
                 />
               </div>
               <div className="flex gap-3 mt-2">
@@ -2336,8 +2336,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       approval.id,
                       true,
                       JSON.stringify({
-                        price: parseFloat(editQuotePrice),
-                        scope: editQuoteScope,
+                        price: parseFloat(editProposalPrice),
+                        scope: editProposalScope,
                       }),
                       approval.event_source,
                     );
@@ -2356,7 +2356,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <button
                   onClick={() => setEditingId(null)}
                   className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                  data-testid="cancel-edit-quote"
+                  data-testid="cancel-edit-proposal"
                 >
                   Cancel
                 </button>
@@ -2375,7 +2375,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 }
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                 aria-label="Approve & Send"
-                data-testid="approve-quote-draft"
+                data-testid="approve-proposal-draft"
                 disabled={loadingAction !== null}
               >
                 {isActionLoading("approve") ? (
@@ -2386,11 +2386,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
               <button
                 onClick={() => {
-                  window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`;
+                  window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.proposal_id || approval.id}`;
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
-                data-testid="edit-quote-draft"
+                data-testid="edit-proposal-draft"
               >
                 Edit
               </button>
@@ -2637,7 +2637,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           </>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "proposal_draft" ? (
           <>
             <button
               onClick={() =>
@@ -2661,7 +2661,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <a
-                href={`/quotes/${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
+                href={`/proposals/${(approval.proposed_action || approval.context_payload)?.proposal_id || approval.id}`}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
                 data-testid="edit-proposal"

@@ -6,38 +6,38 @@ import { SyncManager } from '../../lib/sync/SyncManager';
 
 function QuotingContent() {
   const searchParams = useSearchParams();
-  const quoteId = searchParams.get('id');
+  const proposalId = searchParams.get('id');
 
-  const [quoteData, setQuoteData] = useState<any>(null);
+  const [proposalData, setProposalData] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    if (!quoteId) {
-      setError('Quote ID is missing');
+    if (!proposalId) {
+      setError('Proposal ID is missing');
       setLoading(false);
       return;
     }
 
-    const fetchQuote = async () => {
+    const fetchProposal = async () => {
       try {
         const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
-        const res = await fetch(`/api/v1/quotes?id=${quoteId}`, {
+        const res = await fetch(`/api/v1/proposals?id=${proposalId}`, {
           headers: {
             'x-tenant-id': tenantId
           }
         });
         if (res.ok) {
           const data = await res.json();
-          setQuoteData(data);
+          setProposalData(data);
           setLineItems(data.line_items || []);
-          if (data.quote.status === 'ACCEPTED') {
+          if (data.proposal.status === 'ACCEPTED') {
             setAccepted(true);
           }
         } else {
-          setError('Failed to fetch quote');
+          setError('Failed to fetch proposal');
         }
       } catch (err) {
         setError('Error connecting to server');
@@ -46,8 +46,8 @@ function QuotingContent() {
       }
     };
 
-    fetchQuote();
-  }, [quoteId]);
+    fetchProposal();
+  }, [proposalId]);
 
   const handleItemChange = (id: string, field: string, value: any) => {
     setLineItems(prev => prev.map(item => {
@@ -59,7 +59,7 @@ function QuotingContent() {
   };
 
   const handleApproveAndSend = async () => {
-    if (!quoteData || !quoteId) return;
+    if (!proposalData || !proposalId) return;
 
     const totalAmountCents = lineItems.reduce((sum: number, item: any) => sum + (item.unit_price_cents * item.quantity), 0);
 
@@ -74,50 +74,50 @@ function QuotingContent() {
     };
 
     // Optimistic UI updates
-    setQuoteData({ ...quoteData, quote: { ...quoteData.quote, status: 'ACCEPTED' } });
+    setProposalData({ ...proposalData, proposal: { ...proposalData.proposal, status: 'ACCEPTED' } });
     setAccepted(true);
 
     try {
       if (navigator.onLine) {
         const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
-        const updateRes = await fetch(`/api/v1/quotes?id=${quoteId}`, {
+        const updateRes = await fetch(`/api/v1/proposals?id=${proposalId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
           body: JSON.stringify(updatePayload)
         });
         if (!updateRes.ok) throw new Error('Update failed');
 
-        const approveRes = await fetch(`/api/v1/quotes/${quoteId}/approve`, {
+        const approveRes = await fetch(`/api/v1/proposals/${proposalId}/approve`, {
           method: 'PATCH',
           headers: { 'x-tenant-id': tenantId }
         });
         if (!approveRes.ok) throw new Error('Approve failed');
       } else {
         await SyncManager.getInstance().enqueue({
-          type: 'update_quote',
-          quoteId: quoteId,
+          type: 'update_proposal',
+          proposalId: proposalId,
           payload: updatePayload
         });
         await SyncManager.getInstance().enqueue({
-          type: 'approve_quote',
-          quoteId: quoteId
+          type: 'approve_proposal',
+          proposalId: proposalId
         });
       }
     } catch (err) {
-      console.error('Failed to accept quote:', err);
+      console.error('Failed to accept proposal:', err);
       alert('Your changes have been saved offline and will sync when reconnected.');
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Loading quote...</div>;
+    return <div className="p-8 text-center">Loading proposal...</div>;
   }
 
-  if (error || !quoteData) {
-    return <div className="p-8 text-center text-red-600">{error || 'Quote not found'}</div>;
+  if (error || !proposalData) {
+    return <div className="p-8 text-center text-red-600">{error || 'Proposal not found'}</div>;
   }
 
-  const { quote } = quoteData;
+  const { proposal } = proposalData;
   const totalCents = lineItems.reduce((sum: number, item: any) => sum + (item.unit_price_cents * item.quantity), 0);
   const total = (totalCents / 100).toFixed(2);
 
@@ -126,14 +126,14 @@ function QuotingContent() {
       <header className="px-6 py-4 bg-white/65 backdrop-blur-3xl saturate-200 border-b border-white/40 sticky top-0 z-10 flex items-center justify-between shadow-sm">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F]">Project Proposal</h1>
         <div className="text-sm px-3 py-1 bg-[#0066FF]/10 text-[#0066FF] rounded-full font-medium">
-          {accepted ? 'Accepted' : quote.status}
+          {accepted ? 'Accepted' : proposal.status}
         </div>
       </header>
 
       <main className="p-4 md:p-10 flex-1 max-w-3xl mx-auto w-full">
         <div className="bg-white/65 backdrop-blur-3xl saturate-200 shadow-sm border border-white/40 overflow-hidden">
           <div className="p-6 md:p-8 border-b border-gray-100">
-            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">Quote Summary</h2>
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">Proposal Summary</h2>
             <p className="text-gray-600">Review the scope and pricing below. You can adjust the quantity and price if needed.</p>
           </div>
 
@@ -155,7 +155,7 @@ function QuotingContent() {
                         onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
                         className="w-16 px-2 py-1.5 text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-center text-[#1D1D1F]"
                         disabled={accepted}
-                        data-testid={`quote-item-quantity-${item.id}`}
+                        data-testid={`proposal-item-quantity-${item.id}`}
                       />
                     </div>
                     <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ function QuotingContent() {
                         onChange={(e) => handleItemChange(item.id, 'unit_price_cents', Math.round(parseFloat(e.target.value || '0') * 100))}
                         className="w-24 px-2 py-1.5 text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-right text-[#1D1D1F]"
                         disabled={accepted}
-                        data-testid={`quote-item-price-${item.id}`}
+                        data-testid={`proposal-item-price-${item.id}`}
                       />
                     </div>
                   </div>
@@ -178,7 +178,7 @@ function QuotingContent() {
               <div className="pt-6 mt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-bold text-[#1D1D1F] font-outfit">Total Estimate</span>
-                  <span className="text-2xl font-bold text-[#0066FF] font-outfit" data-testid="quote-total">${total}</span>
+                  <span className="text-2xl font-bold text-[#0066FF] font-outfit" data-testid="proposal-total">${total}</span>
                 </div>
               </div>
             </div>
@@ -189,7 +189,7 @@ function QuotingContent() {
               <button
                 onClick={handleApproveAndSend}
                 className="w-full min-h-[44px] py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
-                data-testid="quote-approve-btn"
+                data-testid="proposal-approve-btn"
               >
                 Approve & Send
               </button>
@@ -199,7 +199,7 @@ function QuotingContent() {
             <div className="p-6 bg-[#34C759]/10 border-t border-[#34C759]/20 text-center">
               <div className="text-[#34C759] text-4xl mb-2">✅</div>
               <h3 className="text-lg font-bold text-[#1D1D1F]">Proposal Accepted</h3>
-              <p className="text-gray-600 text-sm mt-1">Thank you! This quote has been approved.</p>
+              <p className="text-gray-600 text-sm mt-1">Thank you! This proposal has been approved.</p>
             </div>
           )}
         </div>

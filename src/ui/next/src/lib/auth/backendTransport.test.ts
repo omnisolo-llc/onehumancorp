@@ -247,7 +247,7 @@ describe("server-only authenticated backend transport", () => {
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/v1/quotes?id=quote-7", {
+    const input = await request(deps, "/api/v1/proposals?id=proposal-7", {
       method: "POST",
       body: '{"status":"SENT"}',
       headers: { "content-type": "application/json" },
@@ -255,7 +255,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       input,
-      "/api/v1/quotes/quote-7",
+      "/api/v1/proposals/proposal-7",
       deps,
       { backendMethod: "PUT" },
     );
@@ -293,7 +293,7 @@ describe("server-only authenticated backend transport", () => {
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/v1/quotes/quote-7/accept", {
+    const input = await request(deps, "/api/v1/proposals/proposal-7/accept", {
       method: "POST",
       body: '{"attacker":"payload"}',
       headers: { "content-type": "application/json" },
@@ -301,7 +301,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       input,
-      "/api/v1/quotes/quote-7/accept",
+      "/api/v1/proposals/proposal-7/accept",
       deps,
       { suppressRequestBody: true },
     );

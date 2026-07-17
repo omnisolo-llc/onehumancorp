@@ -94,8 +94,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<string>("");
-  const [editQuotePrice, setEditQuotePrice] = useState<string>("");
-  const [editQuoteScope, setEditQuoteScope] = useState<string>("");
+  const [editProposalPrice, setEditProposalPrice] = useState<string>("");
+  const [editProposalScope, setEditProposalScope] = useState<string>("");
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -759,12 +759,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     queuedActionIds={queuedActionIds}
                     editingId={editingId}
                     editContent={editContent}
-                    editQuotePrice={editQuotePrice}
-                    editQuoteScope={editQuoteScope}
+                    editProposalPrice={editProposalPrice}
+                    editProposalScope={editProposalScope}
                     setEditingId={setEditingId}
                     setEditContent={setEditContent}
-                    setEditQuotePrice={setEditQuotePrice}
-                    setEditQuoteScope={setEditQuoteScope}
+                    setEditProposalPrice={setEditProposalPrice}
+                    setEditProposalScope={setEditProposalScope}
                     handleDecision={handleDecision}
                   />
                 );
@@ -778,12 +778,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   queuedActionIds={queuedActionIds}
                   editingId={editingId}
                   editContent={editContent}
-                  editQuotePrice={editQuotePrice}
-                  editQuoteScope={editQuoteScope}
+                  editProposalPrice={editProposalPrice}
+                  editProposalScope={editProposalScope}
                   setEditingId={setEditingId}
                   setEditContent={setEditContent}
-                  setEditQuotePrice={setEditQuotePrice}
-                  setEditQuoteScope={setEditQuoteScope}
+                  setEditProposalPrice={setEditProposalPrice}
+                  setEditProposalScope={setEditProposalScope}
                   handleDecision={handleDecision}
                 />
               );

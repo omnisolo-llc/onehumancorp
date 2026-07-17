@@ -119,7 +119,7 @@ function BookingForm() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Request Sent!</h2>
-          <p className="text-gray-600 mb-8">We've received your request. We're currently generating a quote for you and will send it over shortly for your review!</p>
+          <p className="text-gray-600 mb-8">We've received your request. We're currently generating a proposal for you and will send it over shortly for your review!</p>
         </div>
       </div>
     );

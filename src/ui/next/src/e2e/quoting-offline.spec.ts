@@ -1,11 +1,11 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
-test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
-  test('Owner reviews a draft quote, modifies it, and sends it offline', async ({ page, loginAs, adminUser }) => {
+test.describe('Offline-Tolerant Proposal to Invoice CUJ', () => {
+  test('Owner reviews a draft proposal, modifies it, and sends it offline', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
 
-    // 1. Setup a draft quote by calling the API
-    const createQuoteRes = await page.request.post('/api/v1/quotes', {
+    // 1. Setup a draft proposal by calling the API
+    const createProposalRes = await page.request.post('/api/v1/proposals', {
       headers: {
         'x-tenant-id': 'tenant-1'
       },
@@ -23,14 +23,14 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
       }
     });
 
-    const quoteData = await createQuoteRes.json();
-    const quoteId = quoteData.id;
+    const proposalData = await createProposalRes.json();
+    const proposalId = proposalData.id;
 
     // Navigate to the quoting page for this ID
-    await page.goto(`/quoting?id=${quoteId}`);
+    await page.goto(`/quoting?id=${proposalId}`);
 
     // 2. Wait for the page to load
-    await expect(page.getByText('Quote Summary')).toBeVisible();
+    await expect(page.getByText('Proposal Summary')).toBeVisible();
     await expect(page.getByText('Drywall Repair')).toBeVisible();
 
     // 3. Edit the quantity of the line item
@@ -39,7 +39,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
 
     // 4. Verify total updates
     // Drywall Repair: 150.00 * 2 = 300.00
-    await expect(page.getByTestId('quote-total')).toHaveText('$300.00');
+    await expect(page.getByTestId('proposal-total')).toHaveText('$300.00');
 
     // 5. Go offline using CDP to simulate offline environment
     const context = page.context();
@@ -47,12 +47,12 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await expect(page.getByText("Working offline. Changes saved.")).toBeVisible();
 
     // 6. Click Approve & Send
-    const approveBtn = page.getByTestId('quote-approve-btn');
+    const approveBtn = page.getByTestId('proposal-approve-btn');
     await approveBtn.click();
 
     // 7. Verify optimistic UI update (Proposal Accepted)
     await expect(page.getByText('Proposal Accepted')).toBeVisible();
-    await expect(page.getByText('Thank you! This quote has been approved.')).toBeVisible();
+    await expect(page.getByText('Thank you! This proposal has been approved.')).toBeVisible();
 
     // 8. Restore connection and wait for sync
     await context.setOffline(false);
@@ -61,18 +61,18 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await page.waitForTimeout(2000);
 
     // 9. Verify the backend status via API
-    const getQuoteRes = await page.request.get(`/api/v1/quotes?id=${quoteId}`, {
+    const getProposalRes = await page.request.get(`/api/v1/proposals/${proposalId}`, {
       headers: {
         'x-tenant-id': 'tenant-1'
       }
     });
 
-    const updatedQuoteData = await getQuoteRes.json();
-    expect(updatedQuoteData.quote.status).toBe('ACCEPTED');
-    expect(updatedQuoteData.quote.total_amount).toBe(30000);
+    const updatedProposalData = await getProposalRes.json();
+    expect(updatedProposalData.proposal.status).toBe('ACCEPTED');
+    expect(updatedProposalData.proposal.total_amount).toBe(30000);
 
     // Check line items got updated
-    const lineItem = updatedQuoteData.line_items.find((i: any) => i.description === 'Drywall Repair');
+    const lineItem = updatedProposalData.line_items.find((i: any) => i.description === 'Drywall Repair');
     expect(lineItem.quantity).toBe(2);
   });
 });

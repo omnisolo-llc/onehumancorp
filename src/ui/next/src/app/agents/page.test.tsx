@@ -200,14 +200,14 @@ test('preserves approvals and activity feed operations', async () => {
     eventSources[0].emit({
       id: 'evt-1',
       department: 'sales',
-      description: 'Draft quote for priority lead',
+      description: 'Draft proposal for priority lead',
       status: 'Draft',
     });
   });
-  expect(await screen.findByText('Draft quote for priority lead')).toBeDefined();
+  expect(await screen.findByText('Draft proposal for priority lead')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: /Needs Approval/i }));
-  expect(screen.getByText('Draft quote for priority lead')).toBeDefined();
+  expect(screen.getByText('Draft proposal for priority lead')).toBeDefined();
   expect(screen.getByText('Approve & Send')).toBeDefined();
 });
 

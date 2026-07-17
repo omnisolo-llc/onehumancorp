@@ -46,7 +46,7 @@ describe("resolveShellRoute", () => {
     expect(resolveShellRoute(pathname).owner).toBe("page");
   });
 
-  test.each(["/dashboard/campaigns", "/proposals/example", "/quotes/example"])(
+  test.each(["/dashboard/campaigns", "/proposals/example", "/proposals/example"])(
     "uses page ownership for shell-owning descendant %s",
     (pathname) => {
       expect(resolveShellRoute(pathname).owner).toBe("page");

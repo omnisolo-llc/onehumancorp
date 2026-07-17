@@ -88,7 +88,7 @@ describe('FieldOpsJobsPage', () => {
       expect(screen.getByText('Alice Smith')).toBeInTheDocument();
     });
 
-    const textareas = screen.getAllByPlaceholderText(/E.g., Needs a replacement quote./);
+    const textareas = screen.getAllByPlaceholderText(/E.g., Needs a replacement proposal./);
     fireEvent.change(textareas[0], { target: { value: 'Needs new piping' } });
 
     const headingButtons = screen.getAllByText('Heading to Job');

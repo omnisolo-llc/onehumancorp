@@ -195,7 +195,7 @@ export default function MilestoneAlertsPage() {
                                     Share to WhatsApp
                                 </a>
                                 <a
-                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}&quote=${encodeURIComponent(getShareText())}`}
+                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}&proposal=${encodeURIComponent(getShareText())}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#166fe5] transition-all hover:-translate-y-0.5"

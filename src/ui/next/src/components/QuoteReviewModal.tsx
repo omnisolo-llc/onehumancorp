@@ -8,14 +8,14 @@ interface LineItem {
   quantity: number;
 }
 
-interface QuoteReviewModalProps {
+interface ProposalReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApprove: (updatedPayload: any) => void;
   initialPayload: any;
 }
 
-export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }: QuoteReviewModalProps) {
+export function ProposalReviewModal({ isOpen, onClose, onApprove, initialPayload }: ProposalReviewModalProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [requireDeposit, setRequireDeposit] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
         aria-modal="true"
       >
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
-          <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Review Quote</h2>
+          <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Review Proposal</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -171,7 +171,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
           <div className="pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
             <div className="flex justify-between items-center">
               <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Total Amount</span>
-              <span className="text-2xl font-bold font-outfit text-[#0066FF]" data-testid="modal-quote-total">${totalDisplay}</span>
+              <span className="text-2xl font-bold font-outfit text-[#0066FF]" data-testid="modal-proposal-total">${totalDisplay}</span>
             </div>
           </div>
         </div>

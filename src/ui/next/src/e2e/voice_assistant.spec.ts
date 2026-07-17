@@ -61,7 +61,7 @@ test.describe('Voice Assistant Mobile Command Center', () => {
 
     // 6. Verify the proposed action appears in the Agent Feed (optimistic UI)
     // Looking for the title we mocked in the backend route
-    const newProposal = page.getByText(/Voice Command: Send Quote/i);
+    const newProposal = page.getByText(/Voice Command: Send Proposal/i);
     await expect(newProposal).toBeVisible({ timeout: 5000 });
 
     // 7. Verify the proposal is an actionable card (has Approve & Send Proposal button)

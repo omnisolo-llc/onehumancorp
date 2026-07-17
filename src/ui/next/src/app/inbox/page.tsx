@@ -159,10 +159,10 @@ function InboxWorkspace({
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
-  async function handleDraftQuoteWithAI(message: Message) {
+  async function handleDraftProposalWithAI(message: Message) {
     try {
-      setActionStatus("Drafting quote with AI...");
-      const res = await fetch("/api/v1/quotes/draft_agent", {
+      setActionStatus("Drafting proposal with AI...");
+      const res = await fetch("/api/v1/proposals/draft_agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,14 +170,14 @@ function InboxWorkspace({
           customer_id: message.customer_id || message.sender_id || "unknown",
         }),
       });
-      if (!res.ok) throw new Error("Failed to draft quote");
+      if (!res.ok) throw new Error("Failed to draft proposal");
       const data = await res.json();
       if (data.id) {
-        setActionStatus("Quote drafted successfully!");
-        router.push(`/quotes/${data.id}`);
+        setActionStatus("Proposal drafted successfully!");
+        router.push(`/proposals/${data.id}`);
       }
     } catch (err: any) {
-      setActionStatus(`Error drafting quote: ${err.message}`);
+      setActionStatus(`Error drafting proposal: ${err.message}`);
     } finally {
       setTimeout(() => setActionStatus(""), 3000);
     }
@@ -410,14 +410,14 @@ function InboxWorkspace({
                         try {
                           parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
                         } catch(e) {}
-                        if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
+                        if (parsedPayload && parsedPayload.action_type === "Draft Proposal") {
                            let amount = 0;
                            if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {
                               amount = parsedPayload.total_amount_cents / 100;
                            } else if (parsedPayload.total_amount !== undefined && parsedPayload.total_amount !== null) {
                               amount = parsedPayload.total_amount;
                            }
-                           buttonText = `✨ Send quote for $${amount.toFixed(2)}`;
+                           buttonText = `✨ Send proposal for $${amount.toFixed(2)}`;
                         } else if (parsedPayload && parsedPayload.action_type === "Draft Booking") {
                            buttonText = "✨ Approve booking";
                         } else if (parsedPayload && parsedPayload.action_type === "Draft Reply") {
@@ -440,9 +440,9 @@ function InboxWorkspace({
                 {!activeApproval && (
                   <div className="mt-4 flex flex-col gap-4">
                     <button
-                      onClick={() => handleDraftQuoteWithAI(selected)}
+                      onClick={() => handleDraftProposalWithAI(selected)}
                       className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
-                    >✨ Draft Quote with AI</button>
+                    >✨ Draft Proposal with AI</button>
                   </div>
                 )}
               </div>
