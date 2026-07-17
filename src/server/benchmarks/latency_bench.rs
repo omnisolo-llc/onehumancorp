@@ -2668,7 +2668,7 @@ pub async fn bench_ui_ledger_mobile_payload() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, event_type, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
@@ -2693,7 +2693,7 @@ pub async fn bench_ui_ledger_mobile_payload() {
         let pool1 = sqlite_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, event_type, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
@@ -2726,7 +2726,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
@@ -2751,7 +2751,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
         let pool1 = sqlite_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
