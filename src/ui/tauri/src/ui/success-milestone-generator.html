@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Success Milestone Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f1f5f9;
+      --card-bg: rgba(255, 255, 255, 0.7);
+      --text-color: #1d1d1f;
+      --text-muted: #64748b;
+      --primary-color: #0066FF;
+      --border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      color: var(--text-color);
+      box-sizing: border-box;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #0052cc;
+    }
+
+    .card-preview {
+      margin-top: 32px;
+      padding: 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .milestone-badge {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #FFD700 0%, #F5A623 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: white;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 16px rgba(245, 166, 35, 0.3);
+    }
+
+    .milestone-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      background: linear-gradient(135deg, #FFD700 0%, #F5A623 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .milestone-subtitle {
+      font-size: 16px;
+      color: var(--text-color);
+      margin: 0 0 24px;
+      opacity: 0.8;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, #ff0 10%, transparent 20%),
+        radial-gradient(circle, #f0f 10%, transparent 20%),
+        radial-gradient(circle, #0ff 10%, transparent 20%);
+      background-size: 20px 20px, 15px 15px, 25px 25px;
+      background-position: 10% 10%, 50% 50%, 80% 80%;
+      opacity: 0.2;
+    }
+
+    .powered-by {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Success Milestone Generator</h1>
+      <p>Create viral share cards for your business achievements</p>
+    </div>
+
+    <div class="glassmorphism" style="padding: 24px;">
+      <div class="form-group">
+        <label for="milestone-type">Milestone Type</label>
+        <select id="milestone-type" onchange="updatePreview()">
+          <option value="10th Order!">10th Order!</option>
+          <option value="100th Customer!">100th Customer!</option>
+          <option value="$1K Revenue!">$1K Revenue!</option>
+          <option value="1 Year Anniversary!">1 Year Anniversary!</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="custom-title-group" style="display: none;">
+        <label for="custom-title">Custom Title</label>
+        <input type="text" id="custom-title" value="My Milestone!" oninput="updatePreview()">
+      </div>
+
+      <div class="form-group">
+        <label for="milestone-message">Message</label>
+        <textarea id="milestone-message" rows="3" oninput="updatePreview()">Thank you to all our amazing customers for helping us reach this milestone!</textarea>
+      </div>
+
+      <div class="form-group">
+         <label for="badge-emoji">Badge Emoji</label>
+         <input type="text" id="badge-emoji" value="🎉" oninput="updatePreview()" maxlength="2">
+      </div>
+
+      <button class="btn" onclick="generateShareable()">Generate Share Link</button>
+    </div>
+
+    <div class="glassmorphism card-preview" id="preview-card">
+      <div class="confetti"></div>
+      <div class="milestone-badge" id="preview-badge">🎉</div>
+      <h2 class="milestone-title" id="preview-title">10th Order!</h2>
+      <p class="milestone-subtitle" id="preview-message">Thank you to all our amazing customers for helping us reach this milestone!</p>
+
+      <div class="powered-by">
+        ⚡ Powered by OHC
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updatePreview() {
+      const type = document.getElementById('milestone-type').value;
+      const customTitle = document.getElementById('custom-title').value;
+      const message = document.getElementById('milestone-message').value;
+      const emoji = document.getElementById('badge-emoji').value;
+
+      document.getElementById('custom-title-group').style.display = type === 'Custom' ? 'block' : 'none';
+
+      document.getElementById('preview-title').innerText = type === 'Custom' ? customTitle : type;
+      document.getElementById('preview-message').innerText = message;
+      document.getElementById('preview-badge').innerText = emoji || '🎉';
+    }
+
+    function generateShareable() {
+      const btn = document.querySelector('.btn');
+      btn.innerText = 'Copied to Clipboard!';
+      btn.style.background = '#10B981';
+
+      setTimeout(() => {
+        btn.innerText = 'Generate Share Link';
+        btn.style.background = 'var(--primary-color)';
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

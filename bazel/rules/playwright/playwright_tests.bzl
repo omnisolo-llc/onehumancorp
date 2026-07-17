@@ -45,6 +45,9 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "PLAYWRIGHT_RETRIES": "0",
         "PLAYWRIGHT_TEST_TIMEOUT": "180000",
         "PLAYWRIGHT_VIDEO": "off",
+        "OHC_AGENT_TOKEN": "e2e_agent_token_that_is_long_enough_for_test",
+        "OHC_AGENT_SPIFFE_ID": "spiffe://example.org/agent",
+        "OHC_AGENT_AUTH_KEY": "test_key_that_is_at_least_32_bytes_long_123",
     }
     env.update(extra_env)
     attrs = {

@@ -108,7 +108,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const sliderTitle = await page.locator('h1', { hasText: 'Before & After Slider' });
     await expect(sliderTitle).toBeVisible();
 
-    await page.goto('/viral-leaderboard-generator');
+    await page.goto('/referral-leaderboard-generator');
 
 
     // Check that there is either a leaderboard or an empty state loaded
@@ -127,4 +127,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await page.goto('/ui/viral-pwyw-generator.html');
     await page.waitForTimeout(1000);
     await expect(page.locator('h1', { hasText: 'Viral PWYW Drop Generator' })).toBeVisible();
+
+    await page.goto('/ui/success-milestone-generator.html');
+    await page.waitForTimeout(1000);
+    await expect(page.locator('h1', { hasText: 'Success Milestone Generator' })).toBeVisible();
 }
