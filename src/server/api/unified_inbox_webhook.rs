@@ -1,6 +1,6 @@
 use crate::db::DB;
 use axum::{
-    extract::{Json, Query, State},
+    extract::{Extension, Json, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -77,8 +77,6 @@ pub struct UnifiedFeedItem {
 
 #[derive(Deserialize)]
 pub struct LocalUiTenantQuery {
-    pub tenant_id: Option<String>,
-    pub tenant: Option<String>,
     pub mobile_optimized: Option<bool>,
 }
 
@@ -196,14 +194,6 @@ async fn generate_draft_reply(
     }
 }
 
-fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
-    query
-        .tenant_id
-        .clone()
-        .or(query.tenant.clone())
-        .unwrap_or_else(|| "default".to_string())
-}
-
 pub fn router(db: Arc<DB>) -> Router {
     let state = AppState { db };
     Router::new()
@@ -211,14 +201,22 @@ pub fn router(db: Arc<DB>) -> Router {
             "/api/v1/webhooks/unified_inbox",
             post(handle_unified_webhook),
         )
-        .route("/api/ui/unified_inbox_feed", get(get_unified_feed))
+        .route("/api/v1/ui/unified_inbox_feed", get(get_unified_feed))
         .with_state(state)
 }
 
 pub async fn handle_unified_webhook(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<UnifiedWebhookPayload>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
+        return (
+            StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({"error": "tenant mismatch"})),
+        )
+            .into_response();
+    }
     let tenant_id = &payload.tenant_id;
 
     if let Some(redis_client) = crate::get_redis_client() {
@@ -404,9 +402,16 @@ static UI_WEBHOOK_FEED_CACHE: std::sync::OnceLock<
 
 pub async fn get_unified_feed(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Query(query): Query<LocalUiTenantQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = get_ui_tenant_id(&query);
+    let Some(tenant_id) = claims.organization_id.filter(|tenant| !tenant.trim().is_empty()) else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(serde_json::json!({"error": "tenant context required"})),
+        )
+            .into_response();
+    };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_webhook_feed:{}:mobile:{}", tenant_id, mobile_optimized);

@@ -20,6 +20,23 @@ const SAFE_RESPONSE_HEADERS = new Set([
 const SAFE_IDENTITY_VALUE = /^[\x21-\x7e]{1,2048}$/;
 const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;
 const FATAL_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const UTF8_ENCODER = new TextEncoder();
+const BROWSER_IDENTITY_FIELDS = new Set([
+  "access_token",
+  "auth_token",
+  "authorization",
+  "cookie",
+  "org_id",
+  "organization_id",
+  "role",
+  "roles",
+  "spiffe_id",
+  "tenant",
+  "tenant_id",
+  "token",
+  "user",
+  "user_id",
+]);
 
 export type BackendTransportDependencies = ServerSessionDependencies &
   Readonly<{
@@ -48,6 +65,19 @@ export function validateJsonRequestBody(
 ): Uint8Array<ArrayBuffer> {
   JSON.parse(FATAL_UTF8_DECODER.decode(body));
   return body;
+}
+
+export function stripBrowserIdentityJsonRequestBody(
+  body: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> {
+  const value: unknown = JSON.parse(FATAL_UTF8_DECODER.decode(body));
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("expected a JSON object");
+  }
+  const sanitized = Object.fromEntries(
+    Object.entries(value).filter(([key]) => !BROWSER_IDENTITY_FIELDS.has(key)),
+  );
+  return UTF8_ENCODER.encode(JSON.stringify(sanitized));
 }
 
 function privateHeaders(contentType?: string): Headers {

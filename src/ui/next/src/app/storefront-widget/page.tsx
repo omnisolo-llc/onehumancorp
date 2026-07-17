@@ -14,7 +14,7 @@ export default function StorefrontWidgetPage() {
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant') || 'my-store';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
     document.title = "Embed Your Store | OHC";

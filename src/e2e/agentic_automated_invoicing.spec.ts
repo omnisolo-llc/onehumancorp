@@ -8,7 +8,7 @@ test.describe('Agentic Automated Invoicing & Cash Flow Management', () => {
 
     // Hit the simulation API route from the browser to carry auth cookies
     await page.evaluate(async () => {
-      await fetch('/api/agents/approvals/simulate-invoice-draft', { method: 'POST' });
+      await fetch('/api/v1/agents/approvals/simulate-invoice-draft', { method: 'POST' });
     });
 
     // Navigate to the Unified Agent Feed

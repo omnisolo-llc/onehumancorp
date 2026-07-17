@@ -11,7 +11,7 @@ test.describe('Actionable Daily Briefing on Dashboard', () => {
     };
 
     // Seed data
-    const res = await request.post(`/api/ui/triage/create?tenant_id=${tenantId}`, {
+    const res = await request.post(`/api/v1/ui/triage/create?tenant_id=${tenantId}`, {
       data: {
         source: 'Decision Assistant',
         priority: 'High',

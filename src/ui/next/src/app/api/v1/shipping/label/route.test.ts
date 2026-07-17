@@ -1,56 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+
 import { POST } from "./route";
 
 describe("POST /api/v1/shipping/label", () => {
-  beforeEach(() => {
-    vi.stubEnv("BACKEND_URL", "http://backend.internal");
-    global.fetch = vi.fn();
-  });
+  beforeEach(() => proxyBackendRequest.mockReset());
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
-
-  it("forwards label purchase to the Shippo-backed Rust backend", async () => {
-    const backendResponse = {
-      success: true,
-      labelUrl: "https://api.goshippo.com/v1/labels/real.pdf",
-      trackingNumber: "9400111899223859123456",
-      carrier: "USPS",
-    };
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => backendResponse,
-    });
-
-    const body = {
-      orderId: "order-1",
-      rateId: "rate_real_1",
-    };
-    const req = new Request("http://localhost/api/v1/shipping/label", {
+  it("delegates identity and backend I/O to the authenticated transport", async () => {
+    const upstream = new Response("{}", { status: 200 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request(`https://app.example.test/api/v1/shipping/label?tenant_id=forged`, {
       method: "POST",
-      headers: {
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
+      headers: { "content-type": "application/json", "x-tenant-id": "forged" },
+      body: "{}",
     });
 
-    const res = await POST(req);
+    const response = await POST(request);
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/shipping/label", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
-    });
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/shipping/label");
+    expect(response).toBe(upstream);
   });
 });

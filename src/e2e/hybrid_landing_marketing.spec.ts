@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Hybrid Landing Page Growth Test', () => {
   test('should display the core local-first value propositions and CTA', async ({ page }) => {
     // Navigate to the hybrid landing page
-    await page.goto('/api/ui/hybrid-landing.html');
+    await page.goto('/api/v1/ui/hybrid-landing.html');
 
     // Verify main heading
     const mainHeading = page.locator('h1', { hasText: 'The Hybrid Agentic OS' });

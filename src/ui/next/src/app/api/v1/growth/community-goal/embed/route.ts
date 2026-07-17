@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from '@/lib/auth/backendTransport';
 
 function escapeHtml(unsafe: string) {
     if (!unsafe) return unsafe;
@@ -12,38 +13,30 @@ function escapeHtml(unsafe: string) {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const tenant = searchParams.get('tenant') || 'e2e-tenant';
     const target = searchParams.get('target') || '500';
     const reward = searchParams.get('reward') || '50% off for everyone!';
 
-    // In actual production this would connect to the database.
-    // Since there's no pre-existing backend for `community_goal`, we will use 0 for now as an empty state representation, or maybe pull the total referrals.
-    // Since we don't have a direct hook right here in Next.js without setting up full db conn, let's use the actual referral system API.
-
     let current = 0;
-
     try {
-        const hostUrl = request.headers.get('host') ? `http://${request.headers.get('host')}` : 'http://localhost:3000';
-        // Check if we can fetch referrals to show actual growth loop progress
-        const res = await fetch(`${hostUrl}/api/v1/growth/referrals/metrics?tenant_id=${tenant}`);
+        const res = await proxyBackendRequest(request, '/api/v1/growth/referrals/stats', {
+            forwardQuery: false,
+            suppressRequestBody: true,
+        });
         if (res.ok) {
            const data = await res.json();
-           // Assume total_referrals or similar metric
            if (data && data.metrics && data.metrics.total_referrals !== undefined) {
                current = data.metrics.total_referrals;
-           } else if (data && data.total_invites !== undefined) {
-               current = data.total_invites;
+           } else if (data && data.invites_sent !== undefined) {
+               current = data.invites_sent;
            }
         }
-    } catch(e) {
-        console.error("Failed to fetch current progress", e);
+    } catch {
+        return new NextResponse('Backend service unavailable', { status: 502 });
     }
 
     const percentage = Math.min(100, Math.round((current / parseInt(target, 10)) * 100));
 
-    // Determine the host for API calls
-    const hostUrl = request.headers.get('host') ? `https://${request.headers.get('host')}` : 'https://ohc.network';
-    const trackingUrl = `${hostUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+    const trackingUrl = '/api/v1/growth/referrals/click?target=/onboarding';
 
     const html = `
 <!DOCTYPE html>
@@ -99,7 +92,7 @@ export async function GET(request: Request) {
     return new NextResponse(html, {
         headers: {
             'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'public, max-age=60, s-maxage=60'
+            'Cache-Control': 'private, no-store'
         },
     });
 }

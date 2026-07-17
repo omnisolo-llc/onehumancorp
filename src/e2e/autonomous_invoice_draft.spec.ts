@@ -27,7 +27,7 @@ test.describe('Autonomous Invoice Generation & Collection Workflow E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', {
+    const feedRes = await request.post('/api/v1/feed', {
       data: feedItemPayload
     });
 

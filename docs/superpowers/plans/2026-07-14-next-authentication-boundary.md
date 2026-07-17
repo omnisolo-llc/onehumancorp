@@ -23,8 +23,8 @@ Add exact Origin plus Fetch Metadata tests for same-origin unsafe requests, cros
 
 **Files:**
 
-- Create `src/ui/next/src/app/api/auth/login/route.ts`
-- Create `src/ui/next/src/app/api/auth/login/route.test.ts`
+- Create `src/ui/next/src/app/api/v1/auth/login/route.ts`
+- Create `src/ui/next/src/app/api/v1/auth/login/route.test.ts`
 - Update `src/ui/next/src/lib/auth/types.ts`
 - Update `src/ui/next/src/lib/auth/publicRoutes.ts`
 - Update `src/ui/next/src/lib/auth/publicRoutes.test.ts`
@@ -39,11 +39,11 @@ Call only the configured backend `POST /api/v1/auth/login`, with redirects disab
 
 - Rewrite `src/ui/next/src/app/login/page.tsx`
 - Create `src/ui/next/src/app/login/page.test.tsx`
-- Create `src/ui/next/src/app/api/auth/logout/route.ts`
-- Create `src/ui/next/src/app/api/auth/logout/route.test.ts`
+- Create `src/ui/next/src/app/api/v1/auth/logout/route.ts`
+- Create `src/ui/next/src/app/api/v1/auth/logout/route.test.ts`
 - Add/update the shell logout control that currently owns sign-out navigation
 
-Use a native form with controlled identifier, password, and optional organization fields; keyboard submission; disabled duplicate submit; generic contained errors; and accessible status announcements. Navigate only after `/api/auth/login` succeeds.
+Use a native form with controlled identifier, password, and optional organization fields; keyboard submission; disabled duplicate submit; generic contained errors; and accessible status announcements. Navigate only after `/api/v1/auth/login` succeeds.
 
 Logout validates same-origin mutation headers, decrypts the cookie when possible, calls Rust `POST /api/v1/auth/logout` with the recovered bearer token, and always deletes the local cookie. It is idempotent and returns private no-store success even when backend revocation is unavailable, while recording only safe static telemetry.
 
@@ -68,7 +68,7 @@ Middleware performs only route classification and bounded local JWE validation. 
 - Create `src/ui/next/src/lib/auth/serverSession.ts`
 - Create `src/ui/next/src/lib/auth/backendTransport.ts`
 - Create `src/ui/next/src/lib/auth/backendTransport.test.ts`
-- Replace `src/ui/next/src/app/api/ui/backendProxy.ts`
+- Replace `src/ui/next/src/app/api/v1/ui/backendProxy.ts`
 - Replace authentication-sensitive rewrites in `src/ui/next/next.config.mjs` with route handlers using the transport
 - Migrate protected route handlers in bounded groups
 
@@ -80,7 +80,7 @@ Add a source-contract test that inventories protected route handlers and fails i
 
 **Files:**
 
-- Create a server-derived `/api/auth/session` metadata endpoint if client display metadata is required
+- Create a server-derived `/api/v1/auth/session` metadata endpoint if client display metadata is required
 - Update client components currently reading `token`, `auth_token`, `tenant_id`, `tenant`, `user_id`, roles, or SPIFFE identity from `localStorage` for protected requests
 - Update static HTML surfaces under `src/ui/next/public/` that use demo identities
 - Add a residue/source-contract test

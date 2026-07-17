@@ -1,41 +1,5 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
 export async function POST(request: Request) {
-  try {
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://127.0.0.1:18789';
-    const body = await request.json();
-
-    const headers = new Headers({
-      'Content-Type': 'application/json',
-    });
-    const authHeader = request.headers.get('authorization');
-    if (authHeader) {
-      headers.set('authorization', authHeader);
-    }
-    const cookie = request.headers.get('cookie');
-    if (cookie) {
-      headers.set('cookie', cookie);
-    }
-
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/referrals/convert`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-
-    if (backendRes.ok) {
-        return NextResponse.json({ success: true });
-    } else {
-        return NextResponse.json(
-            { error: 'Failed to record referral conversion' },
-            { status: backendRes.status }
-        );
-    }
-  } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error recording referral conversion:", error);
-    return NextResponse.json(
-        { error: 'Internal Server Error' },
-        { status: 500 }
-    );
-  }
+  return proxyBackendRequest(request, "/api/v1/growth/referrals/convert");
 }

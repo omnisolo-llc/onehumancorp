@@ -5,7 +5,7 @@ test.describe("Agent Feed - Dynamic Action Router Protocol", () => {
 
   test.beforeEach(async ({ page, request }) => {
     // 1. Seed the database with a test inbox message and a feed item that proposes to reply to it
-    await request.post("/api/chaos/sql", {
+    await request.post("/api/v1/chaos/sql", {
       data: {
         query: `
           DELETE FROM agent_feed_items WHERE id = 'e2e-action-router-feed-test';
@@ -56,7 +56,7 @@ test.describe("Agent Feed - Dynamic Action Router Protocol", () => {
     await expect(feedItem).toHaveCount(0);
 
     // 4. Verify the database was actually updated by the new Action Router
-    const verifyResp = await request.post("/api/chaos/sql", {
+    const verifyResp = await request.post("/api/v1/chaos/sql", {
       data: {
         query: `
           SELECT status, draft_reply

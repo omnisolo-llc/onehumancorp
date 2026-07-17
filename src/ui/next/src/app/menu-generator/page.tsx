@@ -15,7 +15,7 @@ export default function MenuGeneratorPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
   }, []);

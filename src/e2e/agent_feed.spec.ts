@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Agentic Unified Intake & Action Feed', () => {
   test('should display agent feed and process actions', async ({ page }) => {
     // MOCK API if we want to test ui reliably without backend
-    await page.route('**/api/agent-feed*', async route => {
+    await page.route('**/api/v1/agent-feed*', async route => {
         if (route.request().method() === 'GET') {
           await route.fulfill({
             status: 200,

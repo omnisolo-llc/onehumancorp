@@ -26,7 +26,7 @@ export default function ReferralMilestonesWidget({
   useEffect(() => {
     let currentTenant = tenantId;
     if (typeof window !== "undefined") {
-      const storedTenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant");
+      const storedTenant = localStorage.getItem("business_display_name");
       if (storedTenant) {
          currentTenant = storedTenant;
       }

@@ -1,35 +1,25 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { POST, GET } from "./route";
-import { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("GET/POST /api/v1/growth/team-invites", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    global.fetch = vi.fn();
-  });
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
 
-  it("should return 500 on fetch error", async () => {
-    (global.fetch as any).mockRejectedValue(new Error("Network Error"));
-    const req = new NextRequest("http://localhost/api/v1/growth/team-invites", {
-      method: "GET",
+import { GET, POST } from "./route";
+
+describe("team invite transport", () => {
+  beforeEach(() => proxyBackendRequest.mockReset());
+
+  it.each([["GET", GET], ["POST", POST]] as const)("delegates %s", async (method, handler) => {
+    const upstream = new Response("{}", { status: 200 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request("https://app.example.test/api/v1/growth/team-invites", {
+      method,
+      body: method === "POST" ? "{}" : undefined,
     });
-
-    const res = await GET(req);
-    expect(res.status).toBe(500);
+    expect(await handler(request)).toBe(upstream);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/v1/growth/team-invites",
+      ...(method === "GET" ? [{ suppressRequestBody: true }] : []),
+    );
   });
-
-  it("should return 500 on fetch error for POST", async () => {
-    (global.fetch as any).mockRejectedValue(new Error("Network Error"));
-    const req = new NextRequest("http://localhost/api/v1/growth/team-invites", {
-      method: "POST",
-      body: JSON.stringify({ team_id: "1" }),
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(500);
-  });
-
 });

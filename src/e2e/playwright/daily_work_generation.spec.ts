@@ -14,7 +14,7 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
       payload: { text: "Do you do vegan cakes for Saturday?" }
     };
 
-    const res = await request.post(`/api/dev/simulate-triage-item?tenant_id=${tenantId}`, {
+    const res = await request.post(`/api/v1/dev/simulate-triage-item?tenant_id=${tenantId}`, {
       data: payload
     });
     expect(res.ok()).toBeTruthy();

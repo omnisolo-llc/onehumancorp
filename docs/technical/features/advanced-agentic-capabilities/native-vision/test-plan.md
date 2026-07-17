@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
 - **Action:** Submit a base64 encoded image of a receipt. Verify the native vision model correctly extracts the total amount without any outbound network calls to external APIs.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

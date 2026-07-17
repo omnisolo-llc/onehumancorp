@@ -11,7 +11,7 @@ export default function ViralTierListGeneratorPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
-      const t = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+      const t = localStorage.getItem('business_display_name');
       if (t) setTenant(t);
     }
   }, []);

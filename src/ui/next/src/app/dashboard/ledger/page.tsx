@@ -23,7 +23,7 @@ export default function LedgerPage() {
   useEffect(() => {
     async function fetchLedger() {
       try {
-        const response = await fetch('/api/ledger/entries');
+        const response = await fetch('/api/v1/ledger/entries');
         if (!response.ok) {
           throw new Error('Failed to fetch ledger entries');
         }

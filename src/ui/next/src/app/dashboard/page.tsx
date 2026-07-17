@@ -1,7 +1,4 @@
 "use client";
-import { AIPaywallWidget } from "../components/AIPaywallWidget";
-import { FloatingActionButton } from "./FAB";
-import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
@@ -82,7 +79,7 @@ const emptyMetrics: DashboardMetrics = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return localStorage.getItem("business_display_name") || "default";
 }
 
 function money(value: number | undefined) {
@@ -137,10 +134,9 @@ export default function Dashboard() {
 
   const handleApproveDraft = async (approvalId: string) => {
     try {
-      const token = localStorage.getItem("token") || "";
       const res = await fetch(`/api/v1/agents/approvals/${approvalId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved: true })
       });
       if (res.ok) {
@@ -219,28 +215,25 @@ export default function Dashboard() {
     };
 
     async function loadDashboard() {
-      const tenant = encodeURIComponent(tenantId());
       setLoading(true);
       setError("");
 
       try {
-        const userId = localStorage.getItem("user_id") || "default";
-
-        const unifiedPromise = fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`)
+        const unifiedPromise = fetch(`/api/v1/ui/dashboard/unified-feed?mobile_optimized=${window.innerWidth < 768}`)
           .then(res => {
             if (!res.ok) throw new Error("Unified UI feed endpoint failed");
             return res.json();
           });
 
-        const onboardingPromise = fetch(`/api/v1/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+        const onboardingPromise = fetch(`/api/v1/onboarding/state`)
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const ledgerPromise = fetch("/api/ledger/accounts")
+        const ledgerPromise = fetch("/api/v1/ledger/accounts")
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const usagePromise = fetch(`/api/user/usage?tenant_id=${tenant}`)
+        const usagePromise = fetch('/api/v1/user/usage')
           .then(res => res.ok ? res.json() : { remainingActions: 9 })
           .catch(() => ({ remainingActions: 9 }));
 
@@ -347,7 +340,6 @@ export default function Dashboard() {
 
   return (
     <>
-    <AIPaywallWidget remainingActions={remainingActions} />
     <AppShell
       title="Dashboard"
       subtitle="Network-style command center for your store operations."
@@ -375,8 +367,6 @@ export default function Dashboard() {
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <NeighborhoodPulseCard tenant={tenantId()} />
-      <FloatingActionButton />
-      <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />

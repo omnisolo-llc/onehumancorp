@@ -6,7 +6,7 @@ test.describe('Omni-Context Sub-Agent Routing for Customer Inquiries', () => {
         const customerPhone = '+15551239999';
 
         // 1. Setup tenant & user
-        await request.post('/api/dev/db-seed', {
+        await request.post('/api/v1/dev/db-seed', {
             data: {
                 query: `
                     INSERT INTO users (id, email, name, is_admin)

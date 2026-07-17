@@ -46,6 +46,6 @@ Configure your Thin Client `.env` with:
 - `VITE_OHC_REMOTE_HUB_URL=https://api.onehumancorp.com`
 - `VITE_OHC_AUTH_DOMAIN=auth.onehumancorp.com`
 
-When properly connected, the client utilizes the Centrifuge WebSocket (`/api/mesh/v2/broadcast`) connection to stream real-time task coordination directly into the local view.
+When properly connected, the client utilizes the Centrifuge WebSocket (`/api/v1/mesh/v2/broadcast`) connection to stream real-time task coordination directly into the local view.
 
 </div>

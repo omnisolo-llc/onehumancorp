@@ -35,6 +35,7 @@ const pageOwnedExactRoutes = new Set([
   "/services",
   "/settings",
   "/staff",
+  "/staff/manager",
   "/triage",
   "/viral-product-widget",
 ]);

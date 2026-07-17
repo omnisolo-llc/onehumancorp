@@ -1,61 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
 
-export const runtime = 'nodejs';
-
-async function proxyToAgent(method: string, params: any) {
-  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
-
+async function unwrapResult(response: Response): Promise<Response> {
+  if (!response.ok) return response;
   try {
-    const res = await fetch(`${agentUrl}/rpc`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: crypto.randomUUID(),
-        method,
-        params,
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data.error) {
-        throw new Error(data.error.message || 'JSON-RPC Error');
-      }
-      return data.result;
-    }
-
-    throw new Error(`Failed to call agent RPC: ${res.status}`);
-  } catch (e: any) {
-    throw e;
+    const payload = await response.json();
+    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
+    return Response.json(payload?.result ?? null);
+  } catch {
+    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
   }
 }
 
-export async function GET(request: NextRequest) {
-  const method = request.nextUrl.searchParams.get('method');
-
-  try {
-    if (method === 'fetch') {
-      const agent_id = request.nextUrl.searchParams.get('agent_id');
-      const result = await proxyToAgent('am_fetch_agent', { agent_id });
-      return NextResponse.json(result);
-    } else {
-      const q = request.nextUrl.searchParams.get('q') || '';
-      const result = await proxyToAgent('am_search_agents', { query: q });
-      return NextResponse.json(result);
-    }
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const fetchOne = url.searchParams.get("method") === "fetch";
+  const transform = fetchOne
+    ? jsonRpcRequestTransform("am_fetch_agent", () => ({
+        agent_id: url.searchParams.get("agent_id"),
+      }))
+    : jsonRpcRequestTransform("am_search_agents", () => ({
+        query: url.searchParams.get("q") ?? "",
+      }));
+  return unwrapResult(await proxyBackendRequest(request, "/api/v1/rpc", {
+    backendMethod: "POST",
+    forwardQuery: false,
+    requestContentType: "application/json",
+    transformRequestBody: transform,
+  }));
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const result = await proxyToAgent('am_publish_agent', body);
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+export async function POST(request: Request) {
+  return unwrapResult(await proxyBackendRequest(request, "/api/v1/rpc", {
+    requestContentType: "application/json",
+    transformRequestBody: jsonRpcRequestTransform("am_publish_agent", (input) => input),
+  }));
 }

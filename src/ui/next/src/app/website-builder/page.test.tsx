@@ -314,7 +314,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('handles load from server state', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('onboarding/state') && url.includes('/api/')) {
+      if (url.includes('onboarding/state') && url.includes('/api/v1/')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({

@@ -53,11 +53,25 @@ pub struct StorefrontRouter;
 impl StorefrontRouter {
     pub async fn handle_edge_request(
         Extension(state): Extension<Arc<EdgeWorkerState>>,
+        Extension(claims): Extension<::server_common::Claims>,
         Path((tenant_id_str, site_id_str)): Path<(String, String)>,
         headers: axum::http::HeaderMap,
     ) -> Result<Response<Body>, axum::http::StatusCode> {
-        handle_edge_request_impl(Extension(state), Path((tenant_id_str, site_id_str)), headers).await
+        handle_edge_request_impl(
+            Extension(state),
+            Extension(claims),
+            Path((tenant_id_str, site_id_str)),
+            headers,
+        )
+        .await
     }
+}
+
+fn edge_tenant_matches_claims(claims: &::server_common::Claims, tenant_id: &str) -> bool {
+    claims
+        .organization_id
+        .as_deref()
+        .is_some_and(|organization_id| !organization_id.is_empty() && organization_id == tenant_id)
 }
 
 
@@ -115,9 +129,13 @@ pub async fn inject_dynamic_inventory(
 }
 pub async fn handle_edge_request_impl(
     Extension(state): Extension<Arc<EdgeWorkerState>>,
+    Extension(claims): Extension<::server_common::Claims>,
     Path((tenant_id_str, site_id_str)): Path<(String, String)>,
     headers: axum::http::HeaderMap,
 ) -> Result<Response<Body>, axum::http::StatusCode> {
+    if !edge_tenant_matches_claims(&claims, &tenant_id_str) {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
@@ -505,4 +523,36 @@ pub async fn regenerate_cache(
     cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
     Ok((html, tags))
+}
+
+#[cfg(test)]
+mod tenant_tests {
+    use super::*;
+
+    fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "user-1".to_string(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: organization_id.map(str::to_string),
+            username: String::new(),
+            email: String::new(),
+            roles: vec![],
+            session_id: None,
+            jti: "test".to_string(),
+        }
+    }
+
+    #[test]
+    fn edge_tenant_must_match_signed_claims() {
+        assert!(edge_tenant_matches_claims(
+            &claims(Some("11111111-1111-1111-1111-111111111111")),
+            "11111111-1111-1111-1111-111111111111",
+        ));
+        assert!(!edge_tenant_matches_claims(
+            &claims(Some("11111111-1111-1111-1111-111111111111")),
+            "22222222-2222-2222-2222-222222222222",
+        ));
+        assert!(!edge_tenant_matches_claims(&claims(None), "tenant-a"));
+    }
 }

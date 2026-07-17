@@ -16,7 +16,7 @@ export default function ReferralsPage() {
 
   useEffect(() => {
     const fallbackReferralLink = () => {
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       return `${origin}/onboarding?ref=${tenant}`;
     };

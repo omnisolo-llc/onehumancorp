@@ -24,7 +24,7 @@ test.describe('Viral Chat Embed Loop', () => {
     const copyBtn = page.locator('#dashboard-embed-chat-btn');
     await expect(copyBtn).toHaveText('Copied!');
 
-    const clipboardText = '<iframe src="https://ohc.app/api/ui/chat-embed.html?tenant=e2e-tenant" />';
+    const clipboardText = '<iframe src="https://ohc.app/api/v1/ui/chat-embed.html?tenant=e2e-tenant" />';
     expect(clipboardText).toContain('<iframe src="');
     expect(clipboardText).toContain('chat-embed.html');
 

@@ -6,7 +6,7 @@ test.describe('Newsletter Draft Approval', () => {
     await page.goto('/dashboard');
 
     // Trigger the real-time event by inserting it via backend API
-    await request.post('/api/agents/approvals/simulate-newsletter-draft', {
+    await request.post('/api/v1/agents/approvals/simulate-newsletter-draft', {
       headers: {
         'x-tenant-id': 'default'
       }

@@ -18,7 +18,7 @@ test.describe('Offline POS Sync', () => {
 
     expect(payload.mutations).toHaveLength(1);
 
-    const health = await request.get('/api/health');
+    const health = await request.get('/api/v1/health');
     expect([200, 404]).toContain(health.status());
   });
 });

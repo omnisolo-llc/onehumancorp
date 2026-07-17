@@ -30,7 +30,7 @@ test.describe('Smart Pricing autonomous workflow', () => {
     });
 
     // We can also trigger the cron via mesh endpoint (we know HubService handles it)
-    await request.post('http://127.0.0.1:8081/api/mesh/publish', {
+    await request.post('http://127.0.0.1:8081/api/v1/mesh/publish', {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'admin'
@@ -57,7 +57,7 @@ test.describe('Smart Pricing autonomous workflow', () => {
 
     // Wait for the API call to complete instead of using a hardcoded timeout
     await page.waitForResponse(response =>
-      response.url().includes('/api/agents/approvals') && response.status() === 200
+      response.url().includes('/api/v1/agents/approvals') && response.status() === 200
     );
 
     // Assert the Smart Pricing card is there

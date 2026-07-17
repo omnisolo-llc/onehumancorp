@@ -11,7 +11,7 @@ export default function AffiliateBadgeBuilderPage() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    const tenant = localStorage.getItem('tenant') || 'my-store';
+    const tenant = localStorage.getItem('business_display_name') || 'my-store';
     setTenantId(tenant);
   }, []);
 

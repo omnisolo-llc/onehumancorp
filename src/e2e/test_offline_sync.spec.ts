@@ -24,7 +24,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
     });
     expect(createRes.ok()).toBeTruthy();
 
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
@@ -73,7 +73,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
     });
     expect(createRes.ok()).toBeTruthy();
 
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
@@ -163,7 +163,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
         data: { title: productTitle, price_cents: 500, inventory_count: 10 }
     });
 
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });

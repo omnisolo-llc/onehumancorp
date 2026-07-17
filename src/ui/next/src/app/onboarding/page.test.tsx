@@ -67,6 +67,19 @@ describe("OnboardingWizard", () => {
     cleanup();
   });
 
+  it("shows a visible loading state while onboarding data is restored", () => {
+    global.fetch = vi.fn(() => new Promise(() => {})) as any;
+
+    render(
+      <TooltipProvider>
+        <OnboardingWizard />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole("status", { name: "Loading onboarding" })).toBeVisible();
+    expect(screen.getByText("Preparing your setup…")).toBeVisible();
+  });
+
   it("Step 1: Renders initial screen correctly", async () => {
     const user = userEvent.setup({ delay: null });
     await renderOnboardingWizard();

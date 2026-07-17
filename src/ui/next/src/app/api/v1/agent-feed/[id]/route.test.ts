@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const proxyBackendPut = vi.hoisted(() => vi.fn(async () => Response.json({})));
-vi.mock("@/app/api/ui/backendProxy", () => ({ proxyBackendPut }));
+vi.mock("@/app/api/v1/ui/backendProxy", () => ({ proxyBackendPut }));
 
 import { PUT } from "./route";
 

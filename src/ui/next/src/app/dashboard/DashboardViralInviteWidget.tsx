@@ -10,7 +10,7 @@ export function DashboardViralInviteWidget() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+      const storedTenant = localStorage.getItem('business_display_name');
       const finalTenant = storedTenant || "default-team";
       setTenantId(finalTenant);
     }
@@ -25,15 +25,12 @@ export function DashboardViralInviteWidget() {
         const link = await w.__TAURI__.core.invoke('generate_referral_link');
         setReferralLink(link);
       } else {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-        const token = localStorage.getItem('token') || localStorage.getItem('ohc_token');
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['authorization'] = `Bearer ${token}`;
 
         const res = await fetch('/api/v1/growth/referrals/generate', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ tenant_id: tenantId, custom_message: "" })
+          body: JSON.stringify({ custom_message: "" })
         });
         const data = await res.json();
         setReferralLink(data.referral_link || `https://ohc.app/ref/${tenantId}`);

@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
 - **Action:** Attempt to call the `/deploy` tool using an SVID issued to a `QA` agent. Verify the request is rejected with a 403 Forbidden and the attempt is logged to the immutable audit trail.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

@@ -39,7 +39,7 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', {
+    const feedRes = await request.post('/api/v1/feed', {
       data: feedItemPayload
     });
 
@@ -87,7 +87,7 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', { data: feedItemPayload });
+    const feedRes = await request.post('/api/v1/feed', { data: feedItemPayload });
     expect(feedRes.ok()).toBeTruthy();
 
     await page.goto('/feed');
@@ -122,7 +122,7 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', { data: feedItemPayload });
+    const feedRes = await request.post('/api/v1/feed', { data: feedItemPayload });
     expect(feedRes.ok()).toBeTruthy();
 
     await page.goto('/feed');
@@ -157,7 +157,7 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', { data: feedItemPayload });
+    const feedRes = await request.post('/api/v1/feed', { data: feedItemPayload });
     expect(feedRes.ok()).toBeTruthy();
 
     await page.goto('/feed');
@@ -196,7 +196,7 @@ test.describe('Autonomous Billing & Invoice Recovery Agent E2E', () => {
       }
     };
 
-    const feedRes = await request.post('/api/feed', { data: feedItemPayload });
+    const feedRes = await request.post('/api/v1/feed', { data: feedItemPayload });
     expect(feedRes.ok()).toBeTruthy();
 
     await page.goto('/feed');

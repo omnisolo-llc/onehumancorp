@@ -1,115 +1,47 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { POST } from './route';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe('POST /api/v1/growth/waitlist', () => {
-    let mockBackendUrl = 'http://mock-backend';
+const { proxyBackendRequest } = vi.hoisted(() => ({
+  proxyBackendRequest: vi.fn(),
+}));
+vi.mock("@/lib/auth/backendTransport", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth/backendTransport")>()),
+  proxyBackendRequest,
+}));
 
-    beforeEach(() => {
-        vi.stubEnv('OHC_CORE_URL', mockBackendUrl);
-        // Reset fetch mock before each test
-        global.fetch = vi.fn();
+import { POST } from "./route";
+
+describe("POST /api/v1/growth/waitlist", () => {
+  beforeEach(() => proxyBackendRequest.mockReset());
+
+  it("uses the authenticated backend transport", async () => {
+    const upstream = Response.json({ success: true, position: 10 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request("https://app.example.test/api/v1/growth/waitlist", {
+      method: "POST",
+      body: JSON.stringify({ email: "test@example.com" }),
     });
 
-    afterEach(() => {
-        vi.unstubAllEnvs();
-        vi.resetAllMocks();
+    expect(await POST(request)).toBe(upstream);
+    expect(proxyBackendRequest).toHaveBeenCalledWith(
+      request,
+      "/api/v1/growth/waitlist",
+      expect.objectContaining({ requestContentType: "application/json" }),
+    );
+  });
+
+  it("removes browser-selected identity from the forwarded body", async () => {
+    proxyBackendRequest.mockResolvedValue(Response.json({ success: true }));
+    const request = new Request("https://app.example.test/api/v1/growth/waitlist", {
+      method: "POST",
+      body: JSON.stringify({ email: "test@example.com", tenant_id: "forged" }),
     });
-
-    it('submits waitlist entry successfully via backend API', async () => {
-        // Mock successful backend response
-        const mockResponse = {
-            success: true,
-            position: 10,
-            referral_link: 'https://ohc.app/waitlist?ref=user-123'
-        };
-
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockResponse
-        });
-
-        const req = new Request('http://localhost/api/v1/growth/waitlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store', features: ['AI Agents'] })
-        });
-
-        const response = await POST(req);
-        const data = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(data).toEqual(mockResponse);
-        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/waitlist`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'test@example.com', tenant_id: 'my-store', features: ['AI Agents'] })
-        });
+    await POST(request);
+    const transform = proxyBackendRequest.mock.calls[0][2].transformRequestBody;
+    const transformed = transform(new TextEncoder().encode(
+      JSON.stringify({ email: "test@example.com", tenant_id: "forged" }),
+    ));
+    expect(JSON.parse(new TextDecoder().decode(transformed))).toEqual({
+      email: "test@example.com",
     });
-
-    it('escapes user input to prevent XSS', async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({})
-        });
-
-        const req = new Request('http://localhost/api/v1/growth/waitlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: 'test@example.com',
-                tenantId: '<script>alert(1)</script>',
-                features: ['<script>alert(2)</script>', 'Valid Feature']
-            })
-        });
-
-        await POST(req);
-
-        // Verify the payload sent to backend is escaped
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.objectContaining({
-                body: JSON.stringify({
-                    email: 'test@example.com',
-                    tenant_id: '&lt;script&gt;alert(1)&lt;/script&gt;',
-                    features: ['&lt;script&gt;alert(2)&lt;/script&gt;', 'Valid Feature']
-                })
-            })
-        );
-    });
-
-    it('falls back gracefully if backend API fails', async () => {
-        // Mock failed backend response (e.g. 500 server error)
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error'
-        });
-
-        const req = new Request('http://localhost/api/v1/growth/waitlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store' })
-        });
-
-        const response = await POST(req);
-        const data = await response.json();
-
-        expect(response.status).toBe(502);
-    });
-
-    it('falls back gracefully if fetch throws an exception (network error)', async () => {
-        // Mock network error
-        (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
-
-        const req = new Request('http://localhost/api/v1/growth/waitlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store' })
-        });
-
-        const response = await POST(req);
-        const data = await response.json();
-
-        expect(response.status).toBe(502);
-    });
+  });
 });

@@ -36,7 +36,7 @@ export default function StorefrontBuilderPage() {
   }, [selectedBlockIndex]);
 
   useEffect(() => {
-    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
+    const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
 
     const savedBio = localStorage.getItem("ohc_builder_bio");
@@ -61,13 +61,6 @@ export default function StorefrontBuilderPage() {
   useEffect(() => {
     // Only save to server if there's actual state to save that deviates from idle
     if (status !== 'idle' || bio !== '' || blocks.length > 0) {
-      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-            let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-      if (!userId && typeof localStorage !== 'undefined') {
-        userId = crypto.randomUUID();
-        localStorage.setItem('user_id', userId);
-      }
-
       const payload = {
         builderState: { bio, blocks, status }
       };
@@ -75,7 +68,7 @@ export default function StorefrontBuilderPage() {
       const timer = setTimeout(() => {
         fetch('/api/v1/onboarding/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         })
         .then(res => {
@@ -97,15 +90,7 @@ export default function StorefrontBuilderPage() {
 
   // Read state from server on mount
   useEffect(() => {
-    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-          let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
-      if (!userId && typeof localStorage !== 'undefined') {
-        userId = crypto.randomUUID();
-        localStorage.setItem('user_id', userId);
-      }
-    fetch('/api/v1/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
-    })
+    fetch('/api/v1/onboarding/state')
     .then(res => res.json())
     .then(data => {
       if (data && data.builderState) {

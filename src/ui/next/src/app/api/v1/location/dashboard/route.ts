@@ -1,69 +1,73 @@
-import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-export async function GET() {
+type StaffTask = Readonly<{
+  id?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+}>;
+
+type StaffSummary = Readonly<{
+  id?: string;
+  summary_text?: string;
+}>;
+
+type StaffMember = Readonly<{
+  id?: string;
+  name?: string;
+  role?: string;
+}>;
+
+async function responseJson(response: Response): Promise<Record<string, unknown>> {
+  if (!response.ok) throw new Error("backend unavailable");
+  const value: unknown = await response.json();
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("invalid backend response");
+  }
+  return value as Record<string, unknown>;
+}
+
+export async function GET(request: Request) {
+  const [tasksResponse, summariesResponse, staffResponse] = await Promise.all([
+    proxyBackendRequest(request, "/api/v1/staff/tasks", { suppressRequestBody: true }),
+    proxyBackendRequest(request, "/api/v1/staff/summaries", { suppressRequestBody: true }),
+    proxyBackendRequest(request, "/api/v1/staff", { suppressRequestBody: true }),
+  ]);
   try {
-    const backendUrl = process.env.API_BASE_URL || 'http://localhost:8080';
-
-    // We fetch shift summaries, tasks, and alerts to build the dashboard.
-    const tenantId = 'e2e-tenant';
-    const spiffeId = 'spiffe://ohc/org/test_tenant/agent/test_agent';
-    const headers = {
-        'Content-Type': 'application/json',
-        'x-spiffe-id': spiffeId,
-        'x-tenant-id': tenantId
-    };
-
-    const [tasksRes, summariesRes] = await Promise.all([
-      fetch(`${backendUrl}/api/v1/staff/tasks`, { headers }),
-      fetch(`${backendUrl}/api/v1/staff/summaries`, { headers })
+    const [tasksPayload, summariesPayload, staffPayload] = await Promise.all([
+      responseJson(tasksResponse),
+      responseJson(summariesResponse),
+      responseJson(staffResponse),
     ]);
-
-    let tasks = [];
-    if (tasksRes.ok) {
-        const tasksData = await tasksRes.json();
-        tasks = (tasksData.tasks || []).map((t: any) => ({
-            id: t.id,
-            title: t.description,
-            status: t.status.toUpperCase(),
-            priority: t.priority
-        }));
-    }
-
-    let alerts = [];
-    if (summariesRes.ok) {
-        const summariesData = await summariesRes.json();
-        const summaries = summariesData.summaries || [];
-        // Map summaries into something we can display as alerts or summary blocks
-        if (summaries.length > 0) {
-            alerts.push({
-                id: summaries[0].id,
-                message: summaries[0].summary_text,
-                severity: 'info'
-            });
-        }
-    }
-
-    // Since we don't have a specific GET staff route implemented that fits this shape, we'll fetch from db using another route
-    // or just return the active staff state directly from shifts
-    const staffRes = await fetch(`${backendUrl}/api/v1/staff`, { headers });
-    let staffList = [];
-    if (staffRes.ok) {
-        const staffData = await staffRes.json();
-        staffList = (staffData.staff || []).map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            role: s.role,
-            status: 'Active'
-        }));
-    }
-
-    return NextResponse.json({
-        tasks,
-        alerts,
-        staff: staffList
-    });
-  } catch (error) {
-    console.error("Error fetching location dashboard:", error);
-    return NextResponse.json({ error: 'Internal Server Error', tasks: [], alerts: [], staff: [] }, { status: 500 });
+    const tasks = Array.isArray(tasksPayload.tasks)
+      ? (tasksPayload.tasks as StaffTask[]).map((task) => ({
+          id: task.id,
+          title: task.description,
+          status: task.status?.toUpperCase(),
+          priority: task.priority,
+        }))
+      : [];
+    const summaries = Array.isArray(summariesPayload.summaries)
+      ? (summariesPayload.summaries as StaffSummary[])
+      : [];
+    const alerts = summaries.slice(0, 1).map((summary) => ({
+      id: summary.id,
+      message: summary.summary_text,
+      severity: "info",
+    }));
+    const staff = Array.isArray(staffPayload.staff)
+      ? (staffPayload.staff as StaffMember[]).map((member) => ({
+          id: member.id,
+          name: member.name,
+          role: member.role,
+          status: "Active",
+        }))
+      : [];
+    return Response.json({ tasks, alerts, staff });
+  } catch {
+    return Response.json(
+      { error: "Backend unavailable", tasks: [], alerts: [], staff: [] },
+      { status: 502 },
+    );
   }
 }

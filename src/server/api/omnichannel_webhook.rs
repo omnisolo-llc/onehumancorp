@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::{Extension, Json, State},
     response::IntoResponse,
     http::StatusCode,
     routing::post,
@@ -147,8 +147,16 @@ pub fn router(state: AppState) -> Router {
 
 pub async fn handle_omnichannel_webhook(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<OmnichannelPayload>,
 ) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(WebhookResponse { success: false, message_id: None }),
+        )
+            .into_response();
+    }
     let tenant_id = &payload.tenant_id;
     let channel = &payload.channel;
     let sender_id = &payload.sender_id;

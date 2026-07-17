@@ -21,7 +21,7 @@ test.describe('The Ralph Loop UI E2E', () => {
     // Assuming the backend is running and responds with a success status or handled error.
 
     // We will just verify the button changes state and an API request is made
-    const requestPromise = page.waitForRequest(req => req.url().includes('/api/ralph-loop') && req.method() === 'POST');
+    const requestPromise = page.waitForRequest(req => req.url().includes('/api/v1/ralph-loop') && req.method() === 'POST');
 
     await executeButton.click();
 

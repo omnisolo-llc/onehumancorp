@@ -12,7 +12,7 @@ export function UnlockProFeaturesWidget() {
   useEffect(() => {
     let currentTenant = "default";
     if (typeof localStorage !== "undefined") {
-      currentTenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      currentTenant = localStorage.getItem("business_display_name") || "default";
       setTenantId(currentTenant);
     }
 

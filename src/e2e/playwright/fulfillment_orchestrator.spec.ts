@@ -22,7 +22,7 @@ test.describe('Fulfillment Orchestrator', () => {
     await expect(page.locator('#dashboard-title')).toBeVisible();
 
     // 3. Inject event by simulating via our mock api
-    await request.post(`/api/dev/simulate-fulfillment-draft?tenant_id=${tenantId}`);
+    await request.post(`/api/v1/dev/simulate-fulfillment-draft?tenant_id=${tenantId}`);
 
     // Force refresh the feed
     await page.evaluate(() => {

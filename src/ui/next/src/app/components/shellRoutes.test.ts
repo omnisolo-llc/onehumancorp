@@ -40,6 +40,7 @@ describe("resolveShellRoute", () => {
     "/services",
     "/settings",
     "/staff",
+    "/staff/manager",
     "/triage",
     "/viral-product-widget",
   ])("assigns exact shell-owning route %s to the page", (pathname) => {

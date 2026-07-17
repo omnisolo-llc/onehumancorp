@@ -7,7 +7,7 @@ test.describe("Mobile Payload Optimization", () => {
     await loginAs(page, unlimitedAdminUser);
 
     // Call the endpoint directly with mobile_optimized=true
-    const response = await request.get('/api/ui/supply?mobile_optimized=true', {
+    const response = await request.get('/api/v1/ui/supply?mobile_optimized=true', {
       headers: {
         "x-tenant-id": unlimitedAdminUser.tenantId || "e2e-tenant",
         "Authorization": `Bearer ${unlimitedAdminUser.token || "e2e-token"}`
@@ -31,7 +31,7 @@ test.describe("Mobile Payload Optimization", () => {
   test('list_jobs returns mobile_optimized payload', async ({ page, loginAs, unlimitedAdminUser, request }) => {
     await loginAs(page, unlimitedAdminUser);
     // Call the endpoint directly with mobile_optimized=true
-    const response = await request.get('/api/ohc-job-queue/?mobile_optimized=true', {
+    const response = await request.get('/api/v1/ohc-job-queue/?mobile_optimized=true', {
       headers: {
         "x-tenant-id": unlimitedAdminUser.tenantId || "e2e-tenant",
         "Authorization": `Bearer ${unlimitedAdminUser.token || "e2e-token"}`

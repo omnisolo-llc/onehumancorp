@@ -1,8 +1,8 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test('Staff Manager handles data format correctly without crashing', async ({ page }) => {
-  // Mock the /api/staff endpoint to return the format the backend uses
-  await page.route('**/api/staff', async (route) => {
+  // Mock the /api/v1/staff endpoint to return the format the backend uses
+  await page.route('**/api/v1/staff', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,

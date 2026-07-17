@@ -112,7 +112,7 @@
 
             for (const action of actions) {
                 try {
-                    let url = '/api/staff/tasks';
+                    let url = '/api/v1/staff/tasks';
                     let method = 'POST';
                     let body = null;
 
@@ -146,7 +146,7 @@
         async function loadTasks() {
             const list = document.getElementById('task-list');
             try {
-                const res = await fetch('/api/staff/tasks', { headers: await getHeaders() });
+                const res = await fetch('/api/v1/staff/tasks', { headers: await getHeaders() });
                 if (res.ok) {
                     const tasks = await res.json();
                     list.innerHTML = '';
@@ -231,7 +231,7 @@
                 await queueAction({ type: 'create', title });
             } else {
                 try {
-                    const res = await fetch('/api/staff/tasks', {
+                    const res = await fetch('/api/v1/staff/tasks', {
                         method: 'POST',
                         headers: await getHeaders(),
                         body: JSON.stringify({ title, staff_id: 'default' })
@@ -278,7 +278,7 @@
                 await queueAction({ type: 'update', taskId: id, title });
             } else {
                 try {
-                    const res = await fetch(`/api/staff/tasks/${id}`, {
+                    const res = await fetch(`/api/v1/staff/tasks/${id}`, {
                         method: 'POST',
                         headers: await getHeaders(),
                         body: JSON.stringify({ title, status: 'PENDING' })
@@ -304,7 +304,7 @@
                 await queueAction({ type: 'delete', taskId: id });
             } else {
                 try {
-                    const res = await fetch(`/api/staff/tasks/${id}`, {
+                    const res = await fetch(`/api/v1/staff/tasks/${id}`, {
                         method: 'DELETE',
                         headers: await getHeaders()
                     });

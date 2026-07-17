@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { proxyBackendRequest } from '@/lib/auth/backendTransport';
 
 export async function POST(request: Request) {
   try {
@@ -10,24 +11,24 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const tenant = searchParams.get('tenant') || 'my-business';
 
-    // Notify backend of work intake
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-    try {
-      await fetch(`${backendUrl}/api/v1/agents/webhook`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tenant_id: tenant,
-          source: 'work_intake',
-          message: details,
-          customer_name: name,
-          customer_email: email,
-        }),
-      });
-    } catch (e) {
-      console.error('Failed to notify backend of work intake:', e);
+    const backendRequest = new Request(request.url, {
+      method: 'POST',
+      headers: new Headers(request.headers),
+      body: JSON.stringify({
+        source: 'work_intake',
+        message: details,
+        customer_name: name,
+        customer_email: email,
+      }),
+      signal: request.signal,
+    });
+    backendRequest.headers.set('content-type', 'application/json');
+    const backendResponse = await proxyBackendRequest(backendRequest, '/api/v1/agents/webhook', {
+      forwardQuery: false,
+      requestContentType: 'application/json',
+    });
+    if (!backendResponse.ok) {
+      return new NextResponse('Unable to submit request', { status: backendResponse.status });
     }
 
     const html = `

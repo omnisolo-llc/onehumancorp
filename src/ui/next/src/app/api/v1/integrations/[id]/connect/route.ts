@@ -1,45 +1,19 @@
-import { NextResponse } from "next/server";
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
 
-type ConnectContext = {
-  params: Promise<{ id: string }>;
-};
+type ConnectContext = { params: Promise<{ id: string }> };
+const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const decoder = new TextDecoder("utf-8", { fatal: true });
+const encoder = new TextEncoder();
 
-export async function POST(req: Request, context: ConnectContext) {
+export async function POST(request: Request, context: ConnectContext) {
   const { id } = await context.params;
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
-  const tenantId = req.headers.get("x-tenant-id") || "default";
-  const userId = req.headers.get("x-user-id") || "default";
-  const authHeader = req.headers.get("authorization");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-tenant-id": tenantId,
-    "x-user-id": userId,
-  };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
-
-  try {
-    let body = { integration_id: id };
-    try {
-      const parsed = await req.clone().json();
-      body = { ...body, ...parsed };
-    } catch {}
-
-    const targetId = id === 'whatsapp' ? 'twilio' : encodeURIComponent(id);
-
-    const res = await fetch(`${backendUrl}/api/v1/integrations/${targetId}/connect`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      return NextResponse.json(await res.json());
-    }
-
-    return NextResponse.json({ error: "Failed to start integration connection" }, { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
-  }
+  if (!SAFE_ID.test(id)) return Response.json({ error: "invalid integration" }, { status: 400 });
+  const targetId = id === "whatsapp" ? "twilio" : id;
+  return proxyBackendRequest(request, `/api/v1/integrations/${targetId}/connect`, {
+    requestContentType: "application/json",
+    transformRequestBody(body) {
+      const payload = body.byteLength === 0 ? {} : JSON.parse(decoder.decode(body));
+      return encoder.encode(JSON.stringify({ integration_id: id, ...payload }));
+    },
+  });
 }

@@ -63,7 +63,7 @@ const emptyMetrics: DashboardMetrics = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return localStorage.getItem("business_display_name") || "default";
 }
 
 function money(value?: number) {
@@ -97,7 +97,7 @@ export default function CampaignOrchestrationPage() {
       setError("");
 
       try {
-        const unifiedRes = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`);
+        const unifiedRes = await fetch(`/api/v1/ui/dashboard/unified-feed?tenant_id=${tenant}`);
 
         if (!unifiedRes.ok) {
           throw new Error("Campaign context could not be loaded from the backend UI endpoints.");

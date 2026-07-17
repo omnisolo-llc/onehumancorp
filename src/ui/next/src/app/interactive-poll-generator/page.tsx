@@ -19,7 +19,7 @@ export default function InteractivePollGeneratorPage() {
 
   useEffect(() => {
     const checkState = () => {
-      const tid = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store') : 'my-store';
+      const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
       setTenant(tid);
       if (typeof window !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');

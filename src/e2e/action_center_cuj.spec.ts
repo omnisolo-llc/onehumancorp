@@ -13,7 +13,7 @@ test.describe('Advisor Agent CUJ', () => {
     };
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
+    const response = await request.post(`${apiBase}/api/v1/agents/webhook`, {
       data: {
         tenant_id: tenantId,
         event_type: 'tenant.report.weekly_health',

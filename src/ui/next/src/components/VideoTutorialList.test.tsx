@@ -56,6 +56,20 @@ describe('VideoTutorialList', () => {
     });
   });
 
+  it('treats a non-array service error payload as an empty list', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: () => Promise.resolve({ error: 'backend unavailable' }),
+    });
+
+    render(<VideoTutorialList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No video tutorials available right now.')).toBeInTheDocument();
+    });
+  });
+
   it('filters videos correctly based on search query', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve([

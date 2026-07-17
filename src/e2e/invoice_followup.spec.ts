@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Intelligent Accounts Receivable & Dunning Engine', () => {
     test('should display overdue invoice nudge in triage and allow approval', async ({ page }) => {
         // Simulate the overdue invoice
-        const res = await page.request.post('/api/dev/simulate-invoice-followup');
+        const res = await page.request.post('/api/v1/dev/simulate-invoice-followup');
         expect(res.ok()).toBeTruthy();
 
         // Navigate to dashboard

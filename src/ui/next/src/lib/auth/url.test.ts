@@ -4,7 +4,7 @@ import { canonicalRawPath, safeReturnPath } from "./url";
 describe("canonicalRawPath", () => {
   it.each([
     "/login",
-    "/api/auth/login",
+    "/api/v1/auth/login",
     "/API/auth/login",
     "/login/",
     "/base/en/login",
@@ -18,7 +18,7 @@ describe("canonicalRawPath", () => {
     "",
     "login",
     "//login",
-    "/api//auth/login",
+    "/api/v1//auth/login",
     "/api\\auth\\login",
     "/../login",
     "/./login",
@@ -71,7 +71,7 @@ describe("safeReturnPath", () => {
     "/dashboard#%00",
     "/dashboard#\u0000",
     "/login",
-    "/api/auth/login",
+    "/api/v1/auth/login",
   ])("falls back for unsafe destination %j", (value) => {
     expect(safeReturnPath(value)).toBe("/dashboard");
   });

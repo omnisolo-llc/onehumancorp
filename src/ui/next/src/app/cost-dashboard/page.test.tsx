@@ -258,7 +258,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch cost data:", 500);
+    expect(consoleSpy).not.toHaveBeenCalled();
 
     // Data is null, formatting should return $0.00
     const zeroElements = screen.getAllByText('$0.00');
@@ -719,7 +719,8 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(consoleSpy).toHaveBeenCalledWith("Error fetching cost data", expect.any(Error));
+    expect(consoleSpy).not.toHaveBeenCalled();
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
     consoleSpy.mockRestore();
   });
   test('handles upgrade routing', async () => {

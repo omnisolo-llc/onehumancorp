@@ -18,7 +18,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       }
     });
 
-    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=${tenantId}`);
 
     // Check if it appears in triage
     const itemCard = page.getByTestId('triage-card-omni-msg-1');
@@ -40,7 +40,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       }
     });
 
-    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard = page.getByTestId('triage-card-omni-msg-2');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
@@ -67,7 +67,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       }
     });
 
-    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard = page.getByTestId('triage-card-omni-msg-3');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
@@ -102,7 +102,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       }
     });
 
-    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard = page.getByTestId('triage-card-omni-msg-4');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
@@ -130,7 +130,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       }
     });
 
-    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard5 = page.getByTestId('triage-card-omni-msg-5');
     await expect(itemCard5).not.toBeVisible({ timeout: 5000 });
@@ -151,7 +151,7 @@ test.describe('Omni Inbox Triage Integration', () => {
     });
 
     // Trigger webhook so it gets triaged
-    await request.post('/api/webhook/omnichannel', {
+    await request.post('/api/v1/webhook/omnichannel', {
       data: {
         tenant_id: 'tenant-rag',
         channel: 'Instagram DM',
@@ -163,7 +163,7 @@ test.describe('Omni Inbox Triage Integration', () => {
     // Wait for the worker to triage the message (it runs every 1 second)
     await page.waitForTimeout(2000);
 
-    await page.goto(`/api/ui/triage.html?tenant_id=tenant-rag`);
+    await page.goto(`/api/v1/ui/triage.html?tenant_id=tenant-rag`);
 
     // We can't know the exact omni-msg id since it's a uuid generated on webhook insert
     // But we know there will be a card with the text "Do you still have vegan options?"

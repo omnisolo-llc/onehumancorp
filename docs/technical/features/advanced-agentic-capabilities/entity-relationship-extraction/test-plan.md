@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
 - **Action:** Ingest a project spec containing 'Alice manages Project X'. Query the graph for 'Who manages Project X' and verify the system resolves the relationship.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

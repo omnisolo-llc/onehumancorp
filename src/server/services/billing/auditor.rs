@@ -637,9 +637,9 @@ mod tests {
         let config = CostConfig::default();
         let auditor = CostAuditor::new(config);
 
-        auditor.record_api_call("tenant1", "/api/test");
-        auditor.record_api_call("tenant1", "/api/test");
-        auditor.record_api_call("tenant2", "/api/other");
+        auditor.record_api_call("tenant1", "/api/v1/test");
+        auditor.record_api_call("tenant1", "/api/v1/test");
+        auditor.record_api_call("tenant2", "/api/v1/other");
 
         {
             let calls = auditor.tenant_api_calls.lock().unwrap();

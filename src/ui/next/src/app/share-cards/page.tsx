@@ -16,7 +16,7 @@ export default function ShareCardsPage() {
   const [trialStatus, setTrialStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     setShareLink(`${origin}/onboarding?ref=${tenant}`);
     if (typeof localStorage !== 'undefined') {
@@ -33,7 +33,7 @@ export default function ShareCardsPage() {
   };
 
   const claimTrialExtension = () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {

@@ -43,7 +43,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
-      setTenant(localStorage.getItem("tenant") || "my-store");
+      setTenant(localStorage.getItem("business_display_name") || "my-store");
     }
   }, []);
 
@@ -69,14 +69,14 @@ function CheckoutContent() {
             }
           }
         })
-        .catch(console.error);
+        .catch(() => setProductData(null));
     }
   }, [productId, tenant, tier]);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
       const customerId = localStorage.getItem("customer_id") || "guest";
-      const currentTenant = localStorage.getItem("tenant") || "my-store";
+      const currentTenant = localStorage.getItem("business_display_name") || "my-store";
       fetch(
         `/api/v1/growth/loyalty?tenant_id=${currentTenant}&customer_id=${customerId}`,
       )
@@ -142,10 +142,6 @@ function CheckoutContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(typeof localStorage !== "undefined" &&
-          localStorage.getItem("token")
-            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            : {}),
         },
         body: JSON.stringify({
           tier,

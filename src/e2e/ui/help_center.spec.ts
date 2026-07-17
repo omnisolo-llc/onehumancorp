@@ -5,7 +5,7 @@ test.describe('Help Center & Documentation Features', () => {
   test('Owner can navigate Help Center, use search, and play a video tutorial', async ({ page }) => {
 
     // 1. Owner opens Help Center from navigation or direct URL
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // 2. Help Center Page is loaded
     await expect(page.locator('h1:has-text("In-App Help Center")')).toBeVisible();
@@ -31,7 +31,7 @@ test.describe('Help Center & Documentation Features', () => {
   test('Owner can access API docs and see Advanced user tooltips', async ({ page }) => {
 
     // 1. Go to Help Center
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // 2. Click the API Documentation link in Advanced section
     const apiLink = page.locator('a:has-text("API Documentation")');
@@ -55,7 +55,7 @@ test.describe('Help Center & Documentation Features', () => {
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {
 
     // 1. Ensure the Walkthrough can trigger on any page by adding test query param
-    await page.goto('/api/ui/help.html?test_walkthrough=true');
+    await page.goto('/api/v1/ui/help.html?test_walkthrough=true');
 
     // 2. Open the Help Widget (floating ? button)
     const helpButton = page.locator('button[aria-label="Help"]');
@@ -91,7 +91,7 @@ test.describe('Help Center & Documentation Features', () => {
   test('Owner can access Help Chat from widget', async ({ page }) => {
 
     // 1. Go to a regular page
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // 2. Open the Help Widget
     const helpButton = page.locator('button[aria-label="Help"]');
@@ -118,7 +118,7 @@ test.describe('Help Center & Documentation Features', () => {
 
   test('Owner can view Changelog from Help Center widget', async ({ page }) => {
 
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // Open widget
     const helpButton = page.locator('button[aria-label="Help"]');

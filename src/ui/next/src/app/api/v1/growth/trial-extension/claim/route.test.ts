@@ -1,24 +1,25 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { POST } from './route';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-describe('Trial Extension API', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
+vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
 
-  it('should return error when backend fails', async () => {
-    // Stub fetch to reject with a connection error
-    global.fetch = vi.fn().mockRejectedValue(new Error('fetch failed'));
+import { POST } from "./route";
 
-    const req = new NextRequest('http://localhost:3000/api/v1/growth/trial-extension/claim', {
-      method: 'POST',
+describe("POST /api/v1/growth/trial-extension/claim", () => {
+  beforeEach(() => proxyBackendRequest.mockReset());
+
+  it("delegates identity and backend I/O to the authenticated transport", async () => {
+    const upstream = new Response("{}", { status: 200 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request(`https://app.example.test/api/v1/growth/trial-extension/claim?tenant_id=forged`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-tenant-id": "forged" },
+      body: "{}",
     });
 
-    const response = await POST(req);
-    const data = await response.json();
+    const response = await POST(request);
 
-    expect(response.status).toBe(502);
-    expect(data.error).toBe('Failed to claim trial extension');
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/trial-extension/claim");
+    expect(response).toBe(upstream);
   });
 });

@@ -26,8 +26,7 @@ function tenantId() {
   const urlTenant = urlParams.get("tenant_id");
   if (urlTenant) return urlTenant;
   return (
-    localStorage.getItem("tenant_id") ||
-    localStorage.getItem("tenant") ||
+    localStorage.getItem("business_display_name") ||
     "default"
   );
 }

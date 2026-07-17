@@ -3,13 +3,13 @@ import { test, expect } from './fixtures';
 test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
   test('Priya views and approves a stockout reorder and price action', async ({ page, request }) => {
     // 1. Log in via magic test route
-    await page.goto('/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
+    await page.goto('/api/v1/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
     // 2. Clear existing approvals
-    await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
+    await request.post('http://127.0.0.1:18789/api/v1/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
 
     // 3. Simulate the stockout
-    await request.post('http://127.0.0.1:18789/api/agents/approvals/simulate-stockout-reorder', {
+    await request.post('http://127.0.0.1:18789/api/v1/agents/approvals/simulate-stockout-reorder', {
       headers: {
         'x-tenant-id': 'tenant-priya',
         'x-user-id': 'user-priya',
@@ -45,11 +45,11 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
   });
 
   test('Priya views and approves an inventory reconciliation action', async ({ page, request }) => {
-    await page.goto('/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
+    await page.goto('/api/v1/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
-    await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
+    await request.post('http://127.0.0.1:18789/api/v1/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
 
-    await request.post('http://127.0.0.1:18789/api/agents/approvals/simulate-inventory-reconciliation', {
+    await request.post('http://127.0.0.1:18789/api/v1/agents/approvals/simulate-inventory-reconciliation', {
       headers: {
         'x-tenant-id': 'tenant-priya',
         'x-user-id': 'user-priya',

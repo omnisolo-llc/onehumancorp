@@ -127,7 +127,7 @@ describe('TooltipRegistry', () => {
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
   });
 
-  it('handles fetch errors gracefully', async () => {
+  it('falls back silently when the optional tooltip service is unavailable', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false, status: 500, json: async () => ({}) }));
     await act(async () => {
@@ -135,7 +135,7 @@ describe('TooltipRegistry', () => {
       await new Promise(r => setTimeout(r, 20));
     });
     expect(global.fetch).toHaveBeenCalled();
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load tooltips', expect.any(Error));
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
 

@@ -23,7 +23,7 @@ export default function WinBackCampaignPage() {
   const generateDraft = () => {
     setIsGenerating(true);
     setTimeout(() => {
-      const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Our Store' : 'Our Store';
+      const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'Our Store' : 'Our Store';
       const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'my-store';
       const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: /bio/${storeSlug}\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
       setGeneratedDraft(draft);
@@ -42,7 +42,7 @@ export default function WinBackCampaignPage() {
   };
 
   const claimTrialExtension = () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {

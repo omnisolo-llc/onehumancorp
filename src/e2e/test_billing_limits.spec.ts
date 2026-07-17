@@ -5,7 +5,7 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
 
   // Wait explicitly for navigation to complete without relying on pure networkidle
   // Report high cost to trigger the limit
-  await page.request.post('/api/billing/report-cost', {
+  await page.request.post('/api/v1/billing/report-cost', {
       data: {
           metric_name: 'ohc_llm_cost_total_cents',
           value: 2000000,

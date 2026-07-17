@@ -3,7 +3,9 @@ try-import %workspace%/.bazelrc.local
 
 build --color=yes
 build --config=remote-cache
-build --config=bes
+# Tests and builds execute on the local host. Remote storage is cache-only;
+# explicitly clear any executor inherited from a user or platform rc file.
+build --remote_executor=
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -101,19 +103,11 @@ build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
 
-common:bes --bes_timeout=600s
-common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-
 # ── BuildBuddy  ──────────────────────────────────────
-# Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
-common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+# Self-hosted BuildBuddy cache. The web hostname multiplexes authenticated gRPC;
+# the legacy -grpc hostname returns a plain HTTP 404 for REAPI capabilities.
+common:buildbuddy --remote_cache=grpcs://buildbuddy.phslc.com
 common:buildbuddy --remote_cache_compression
-# Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-# common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --experimental_remote_downloader_local_fallback
-common:buildbuddy --jobs=50
 common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
 common:buildbuddy-readonly --remote_upload_local_results=false
@@ -121,17 +115,18 @@ common:buildbuddy-readonly --remote_upload_local_results=false
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
 common:nativelink --experimental_build_event_upload_strategy=local
-common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
+common:nativelink --remote_cache=grpcs://nativelink.phslc.com
 common:nativelink --remote_instance_name=main
-# common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
 common:nativelink --remote_local_fallback
 # Nativelink doesn't support cache compression
 common:nativelink --remote_cache_compression=false
-common:nativelink --jobs=50
-# Read only Bazel cache
-common:nativelink --remote_upload_local_results=false
+# The default NativeLink cache is read/write so local work warms shared cache.
+# Use --config=nativelink-readonly only when an explicitly read-only workflow is required.
+common:nativelink-readonly --config=nativelink
+common:nativelink-readonly --remote_upload_local_results=false
 
 common:remote-cache --config=nativelink
+common:remote-cache --remote_executor=
 common:remote-cache --remote_download_minimal
 common:remote-cache --remote_local_fallback
 common:remote-cache --remote_timeout=10m

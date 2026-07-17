@@ -429,8 +429,8 @@
 
         try {
             const [planRes, costRes] = await Promise.all([
-                fetch('/api/billing/my-plan', { headers }),
-                fetch('/api/billing/cost-dashboard', { headers })
+                fetch('/api/v1/billing/my-plan', { headers }),
+                fetch('/api/v1/billing/cost-dashboard', { headers })
             ]);
 
             if (planRes.ok) {
@@ -495,7 +495,7 @@
             const planMessageDiv = document.getElementById('plan-message');
 
             document.getElementById('download-invoice-btn').addEventListener('click', async () => {
-                const res = await fetch('/api/billing/download-invoice', { method: 'POST', headers });
+                const res = await fetch('/api/v1/billing/download-invoice', { method: 'POST', headers });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.url) {
@@ -513,7 +513,7 @@
 
             document.getElementById('manage-billing-btn').addEventListener('click', async () => {
                 try {
-                    const res = await fetch('/api/billing/create-billing-portal-session', { method: 'POST', headers });
+                    const res = await fetch('/api/v1/billing/create-billing-portal-session', { method: 'POST', headers });
                     if (res.ok) {
                         const data = await res.json();
                         if (data.url) {
@@ -531,7 +531,7 @@
 
             document.getElementById('cancel-subscription-btn').addEventListener('click', async () => {
                 if (confirm('Are you sure you want to cancel your subscription?')) {
-                    const res = await fetch('/api/billing/cancel-subscription', { method: 'POST', headers });
+                    const res = await fetch('/api/v1/billing/cancel-subscription', { method: 'POST', headers });
                     if (res.ok) {
                         planMessageDiv.innerText = 'Subscription canceled successfully.';
                         planMessageDiv.style.color = '#34C759';

@@ -43,11 +43,11 @@ test.describe('Zero-Click Universal Multi-Currency Payout Ledger', () => {
     // If the API requires signatures, the e2e test environment might bypass it or we need a specific mock.
     // Given the prompt "ZERO mock data in UI code", we push this to the DB via the real API if possible.
 
-    await request.post(`/api/webhooks/stripe`, {
+    await request.post(`/api/v1/webhooks/stripe`, {
         data: usdPayload
     });
 
-    await request.post(`/api/webhooks/stripe`, {
+    await request.post(`/api/v1/webhooks/stripe`, {
         data: eurPayload
     });
 

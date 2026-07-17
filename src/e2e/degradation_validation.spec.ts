@@ -10,7 +10,7 @@ test.describe('Degradation Validation (Mobile/Thin Client)', () => {
     });
     expect(loginRes.ok()).toBeTruthy();
 
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
@@ -24,7 +24,7 @@ test.describe('Degradation Validation (Mobile/Thin Client)', () => {
     await memberPage.getByRole('button', { name: 'Clock In' }).click();
 
     // Now inject 2.5s network delay
-    await memberPage.route('**/api/**', async route => {
+    await memberPage.route('**/api/v1/**', async route => {
         await new Promise(resolve => setTimeout(resolve, 2500));
         await route.continue();
     });

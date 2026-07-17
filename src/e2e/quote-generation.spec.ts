@@ -51,7 +51,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
 
     // According to standard user journey, the owner navigates from Dashboard -> Quotes/Triage.
     // Wait for the triage UI to load via direct URL since some environments don't map triage to dashboard nav link
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/api/v1/ui/triage.html');
 
     // Attempt to locate and click the specific quote item in the triage feed to view its details.
     // If it doesn't render in the specific generic UI state, gracefully fall back to the direct quote UI url.
@@ -60,7 +60,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
         await item.waitFor({ state: 'visible', timeout: 5000 });
         await item.click();
     } catch (e) {
-        await page.goto(`/api/ui/quote.html?id=${quoteId}`);
+        await page.goto(`/api/v1/ui/quote.html?id=${quoteId}`);
     }
 
     // Verify Quote Draft details
@@ -99,7 +99,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
     });
     const quoteId = (await res.json()).id;
 
-    await page.goto('/api/ui/quote.html?id=' + quoteId);
+    await page.goto('/api/v1/ui/quote.html?id=' + quoteId);
     const rejectBtn = page.locator('button', { hasText: /Reject|Cancel/i }).first();
     if (await rejectBtn.isVisible()) {
         await rejectBtn.click();
@@ -113,7 +113,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
     });
     const quoteId = (await res.json()).id;
 
-    await page.goto('/api/ui/quote.html?id=' + quoteId);
+    await page.goto('/api/v1/ui/quote.html?id=' + quoteId);
     const editBtn = page.getByTestId('btn-edit-quote');
     await expect(editBtn).toBeVisible({ timeout: 5000 });
     await editBtn.click();
@@ -126,7 +126,7 @@ test.describe('Autonomous AI Quoting Engine (CUJ)', () => {
     });
     const quoteId = (await res.json()).id;
 
-    await page.goto('/api/ui/quote.html?id=' + quoteId);
+    await page.goto('/api/v1/ui/quote.html?id=' + quoteId);
     const editBtn = page.getByTestId('btn-edit-quote');
     await expect(editBtn).toBeVisible({ timeout: 5000 });
     await editBtn.click();

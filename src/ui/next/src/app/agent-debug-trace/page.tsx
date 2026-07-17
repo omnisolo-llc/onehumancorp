@@ -19,11 +19,12 @@ export default function AgentDebugTracePage() {
   useEffect(() => {
     async function fetchTrace() {
       try {
-        const res = await fetch("/api/agent-debug-trace");
+        const res = await fetch("/api/v1/agent-debug-trace");
+        if (!res.ok) throw new Error("Failed to load agent trace");
         const data = await res.json();
-        setEvents(data);
-      } catch (err) {
-        console.error(err);
+        setEvents(Array.isArray(data) ? data : []);
+      } catch {
+        setEvents([]);
       } finally {
         setLoading(false);
       }

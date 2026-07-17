@@ -15,7 +15,7 @@ export default function InteractiveDemoPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
-      setTenant(localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT');
+      setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
     }
   }, []);
 

@@ -44,13 +44,16 @@ export default function ChangelogPage() {
 
   useEffect(() => {
     fetch("/api/v1/changelog")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load changelog");
+        return res.json();
+      })
       .then((data) => {
-        setSections(data);
+        setSections(Array.isArray(data) ? data : []);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Failed to load changelog", err);
+      .catch(() => {
+        setSections([]);
         setLoading(false);
       });
   }, []);

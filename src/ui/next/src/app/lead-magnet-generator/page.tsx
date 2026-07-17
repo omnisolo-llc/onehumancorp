@@ -18,7 +18,7 @@ export default function LeadMagnetGeneratorPage() {
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant') || 'my-store';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }

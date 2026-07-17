@@ -8,6 +8,7 @@ import {
   isCoverageComplete,
   shouldFailAudit,
 } from './visual-audit-policy.mjs';
+import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
 const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/ohc-visual-audit';
@@ -20,34 +21,73 @@ const MAX_ERROR_LENGTH = 500;
 const MAX_BODY_SAMPLE_LENGTH = 2_000;
 const MAX_BODY_SUMMARY_LENGTH = 800;
 
-const routes = [
-  '/dashboard',
-  '/assistant',
-  '/orders',
-  '/inventory',
-  '/inbox',
-  '/agents',
-  '/settings',
-  '/business-analytics',
-  '/integrations',
-  '/calendar',
-  '/diagnostics',
-  '/agent-marketplace',
-  '/visual-workflow',
-  '/website-builder',
-  '/booking-widget',
-  '/storefront-widget',
-  '/onboarding',
-  '/login',
-];
+const routes = await discoverPageRoutes(path.resolve(import.meta.dirname, '../src/app'));
 
 const viewports = {
   desktop: { width: 1440, height: 1000 },
   mobile: { width: 390, height: 844 },
 };
 
-const auditCases = Object.entries(viewports).flatMap(([viewportName, viewport]) =>
+const allAuditCases = Object.entries(viewports).flatMap(([viewportName, viewport]) =>
   routes.map((route) => ({ route, viewportName, viewport })));
+const shardTotal = Number(process.env.VISUAL_AUDIT_SHARD_TOTAL ?? '1');
+const shardIndex = Number(process.env.VISUAL_AUDIT_SHARD_INDEX ?? '0');
+const auditCases = shardAuditCases(allAuditCases, shardTotal, shardIndex);
+
+function base64url(value) {
+  return Buffer.from(value).toString('base64url');
+}
+
+async function createAuditSessionCookie() {
+  const keyId = process.env.OHC_WEB_SESSION_KEY_ID;
+  const encodedSecret = process.env.OHC_WEB_SESSION_SECRET;
+  if (!keyId || !encodedSecret) {
+    throw new Error('OHC_WEB_SESSION_KEY_ID and OHC_WEB_SESSION_SECRET are required for authenticated visual auditing');
+  }
+  const keyBytes = Buffer.from(encodedSecret, 'base64url');
+  if (keyBytes.byteLength !== 32) throw new Error('visual audit session secret must contain 32 bytes');
+  const origin = new URL(baseUrl).origin;
+  const cookieName = new URL(origin).protocol === 'https:' ? '__Host-ohc_session' : 'ohc_session';
+  const now = Math.floor(Date.now() / 1000);
+  const protectedSegment = base64url(JSON.stringify({
+    alg: 'dir',
+    enc: 'A256GCM',
+    typ: 'ohc-session+jwe',
+    kid: keyId,
+  }));
+  const payload = Buffer.from(JSON.stringify({
+    version: 1,
+    iat: now,
+    exp: now + 3_600,
+    accessToken: 'visual-audit-backend-token',
+    user: {
+      id: 'visual-audit-user',
+      username: 'Visual Audit',
+      roles: ['ADMIN'],
+      organizationId: 'visual-audit-organization',
+    },
+    aud: origin,
+    purpose: cookieName,
+  }));
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({
+    name: 'AES-GCM',
+    iv,
+    additionalData: Buffer.from(protectedSegment),
+    tagLength: 128,
+  }, key, payload));
+  const ciphertext = encrypted.subarray(0, encrypted.byteLength - 16);
+  const tag = encrypted.subarray(encrypted.byteLength - 16);
+  return {
+    name: cookieName,
+    value: `${protectedSegment}..${base64url(iv)}.${base64url(ciphertext)}.${base64url(tag)}`,
+    url: origin,
+    httpOnly: true,
+    secure: new URL(origin).protocol === 'https:',
+    sameSite: 'Lax',
+  };
+}
 
 function redactAndLimit(value, maxLength = MAX_ERROR_LENGTH) {
   const redacted = String(value ?? '')
@@ -100,6 +140,7 @@ function createResult({ route, viewportName, viewport }, attempted = true) {
     attempted,
     completed: false,
     status: null,
+    finalPathname: null,
     ...emptyMetrics(viewport),
     consoleErrors: [],
     expectedServiceErrors: [],
@@ -132,6 +173,7 @@ try {
     ...(allowNoSandbox ? { args: ['--no-sandbox'] } : {}),
   };
   browser = await chromium.launch(launchOptions);
+  const auditSessionCookie = await createAuditSessionCookie();
 
   for (const auditCase of auditCases) {
     const result = createResult(auditCase);
@@ -140,6 +182,9 @@ try {
 
     try {
       context = await browser.newContext({ viewport: auditCase.viewport });
+      if (auditCase.route !== '/login') {
+        await context.addCookies([auditSessionCookie]);
+      }
       page = await context.newPage();
 
       const recordBounded = (collection, diagnostic) => {
@@ -179,6 +224,7 @@ try {
           timeout: 30_000,
         });
         result.status = response?.status() ?? null;
+        result.finalPathname = new URL(page.url()).pathname;
         await page.waitForFunction(() => document.querySelectorAll('.app-sidebar').length === 1
           && document.querySelectorAll('.app-topbar').length === 1
           && document.querySelectorAll('.app-main').length === 1, undefined, { timeout: 30_000 });
@@ -341,6 +387,7 @@ process.stdout.write(`${JSON.stringify({
   fatalError,
   reportPath,
   screenshots: results.filter((result) => result.screenshotWritten).length,
+  shard: { index: shardIndex, total: shardTotal },
 }, null, 2)}\n`);
 
 if (shouldFailAudit({ results, expectedCases: auditCases, fatalError, outputReady })) process.exitCode = 1;

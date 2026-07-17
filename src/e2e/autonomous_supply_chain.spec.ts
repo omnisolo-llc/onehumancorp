@@ -8,7 +8,7 @@ test.describe('Autonomous Supply Chain & Vendor Mesh', () => {
 
   test('UI displays database-backed supply navigation', async ({ page }) => {
     await expect(page.getByText('Raw Materials')).toBeVisible();
-    await expect(page.getByText('Loaded from `/api/ui/supply`.')).toBeVisible();
+    await expect(page.getByText('Loaded from `/api/v1/ui/supply`.')).toBeVisible();
   });
 
   test('Displays vendor state from the supply endpoint', async ({ page }) => {

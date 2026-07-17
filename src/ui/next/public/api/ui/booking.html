@@ -216,7 +216,7 @@
 
       serviceSelect.innerHTML = `<option value="${urlService}">Selected Service</option>`;
 
-      fetch(`/api/v1/booking/available_slots/${urlService}`, { headers: { 'x-tenant-id': tenantId }})
+      fetch(`/api/v1/booking/available_slots/${urlService}`)
         .then(res => res.json())
         .then(data => {
             if (data.slots && data.slots.length > 0) {
@@ -250,8 +250,7 @@
           const res = await fetch('/api/v1/booking/reserve', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'x-tenant-id': tenantId
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               service_id: serviceVal,

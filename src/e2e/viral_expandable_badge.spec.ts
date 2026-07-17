@@ -8,7 +8,7 @@ test.describe('Viral Expandable Soft Signup Badge', () => {
         // The most hermetic way is to hit the Next UI which serves the static fallback routes
         // Wait, the Next UI server is brought up in E2E. The file is in src/ui/tauri/src/ui/bio.html
         // We will fetch it from the next UI server since the E2E script hosts the whole dir
-        await page.goto(`${e2eBaseUrl}/api/ui/bio.html?tenant=e2e-tenant`).catch(() => {});
+        await page.goto(`${e2eBaseUrl}/api/v1/ui/bio.html?tenant=e2e-tenant`).catch(() => {});
 
         // If the URL routing fails (404), we fallback to the raw static file route exported in the e2e workspace
         if (page.url() === 'about:blank' || (await page.title()).includes('Error')) {

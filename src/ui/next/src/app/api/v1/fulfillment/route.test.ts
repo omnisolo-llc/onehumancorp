@@ -12,7 +12,7 @@ beforeEach(() => proxyBackendRequest.mockClear());
 
 test("delegates GET without forwarding inbound queries", async () => {
   const request = new Request(
-    "http://localhost/api/fulfillment?status=preparing&tenant_id=untrusted",
+    "http://localhost/api/v1/fulfillment?status=preparing&tenant_id=untrusted",
   );
 
   const response = await GET(request);

@@ -14,7 +14,7 @@ type InventoryPrediction = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return localStorage.getItem("business_display_name") || "default";
 }
 
 export default function PrepForecast() {
@@ -27,7 +27,7 @@ export default function PrepForecast() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/prep-forecast?tenant_id=${encodeURIComponent(tenantId())}`);
+        const res = await fetch(`/api/v1/ui/prep-forecast?tenant_id=${encodeURIComponent(tenantId())}`);
         if (!res.ok) throw new Error("Failed to load prep forecast from the database");
         const data = await res.json();
         setPredictions(Array.isArray(data?.predictions) ? data.predictions : []);
@@ -42,7 +42,7 @@ export default function PrepForecast() {
 
   const approvePlan = async (prediction: InventoryPrediction) => {
     try {
-      const res = await fetch(`/api/ui/prep-forecast/approve`, {
+      const res = await fetch(`/api/v1/ui/prep-forecast/approve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

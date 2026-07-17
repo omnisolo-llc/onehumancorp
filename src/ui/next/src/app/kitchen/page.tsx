@@ -15,14 +15,10 @@ export default function KitchenView() {
 
     const fetchOrdersAndMenu = async () => {
       try {
-        const tenantId = localStorage.getItem("tenant_id") || "default";
-
         // Fetch active orders (simulate using pos orders or ui orders if backend supports it)
         // Here we try to fetch orders via POS endpoint which might exist.
         // We'll just try to get anything, if fails, we show empty state correctly without fake data.
-        const ordersRes = await fetch("/api/v1/pos/orders", {
-          headers: { "x-tenant-id": tenantId }
-        });
+        const ordersRes = await fetch("/api/v1/pos/orders");
         if (ordersRes.ok) {
           const data = await ordersRes.json();
           // Filter to 'new' or 'pending' orders if applicable
@@ -30,9 +26,7 @@ export default function KitchenView() {
         }
 
         // Fetch products/menu via inventory
-        const menuRes = await fetch("/api/v1/pos/inventory", {
-           headers: { "x-tenant-id": tenantId }
-        });
+        const menuRes = await fetch("/api/v1/pos/inventory");
         if (menuRes.ok) {
            const data = await menuRes.json();
            setMenu(data.items || data || []);
