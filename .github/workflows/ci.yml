@@ -35,6 +35,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Free runner disk space
+        run: sudo rm -rf /tmp/node-compile-cache || true
+
       - name: Reject active Chatwoot residue
         run: bash deploy/tests/no_chatwoot_residue_test.sh
 
