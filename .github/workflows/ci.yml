@@ -721,7 +721,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler
 
       - name: Provision and verify non-superuser application role
         run: |
