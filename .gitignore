@@ -137,4 +137,3 @@ dummy_*
 .next/
 /*.patch
 *.pid
-src/ui/next/test-results
