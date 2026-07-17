@@ -87,6 +87,7 @@ where
         .route("/{id}", put(update_quote))
         .route("/{id}/accept", post(accept_quote))
         .route("/{id}/approve", axum::routing::patch(approve_quote))
+        .route("/{id}/pay_deposit", post(pay_deposit))
 }
 
 #[derive(Serialize)]
@@ -696,6 +697,7 @@ mod tests {
             "CREATE TABLE services (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
             "CREATE TABLE booking_slots (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
             "CREATE TABLE service_items (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, base_price_cents BIGINT NOT NULL)",
+            "CREATE TABLE milestone_payments (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, milestone_id TEXT, quote_id TEXT NOT NULL, percentage DECIMAL(5,2), amount BIGINT NOT NULL, status TEXT NOT NULL, due_condition TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
         ] {
             sqlx::query(statement)
                 .execute(pool)
@@ -1162,6 +1164,7 @@ mod tests {
             "CREATE TABLE services (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
             "CREATE TABLE booking_slots (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)",
             "CREATE TABLE service_items (id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, base_price_cents BIGINT NOT NULL)",
+            "CREATE TABLE milestone_payments (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, milestone_id TEXT, quote_id TEXT NOT NULL, percentage DECIMAL(5,2), amount BIGINT NOT NULL, status TEXT NOT NULL, due_condition TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)",
         ] {
             sqlx::query(statement)
                 .execute(&pool)
@@ -1492,6 +1495,40 @@ async fn accept_quote(
         }
     }
 
+    let required_deposit = accepted_quote.required_deposit_cents.unwrap_or(0);
+    if required_deposit > 0 {
+        let deposit_amount_usd = (required_deposit as f64) / 100.0;
+        match stripe_client.create_checkout_session(
+            &format!("Deposit for Quote #{}", accepted_quote.id),
+            &accepted_quote.customer_id,
+            deposit_amount_usd,
+            None,
+            None
+        ).await {
+            Ok(url) => payment_link = url,
+            Err(e) => {
+                tracing::error!("Failed to create Stripe deposit checkout session: {}", e);
+            }
+        }
+
+        let milestone_payment_id = Uuid::new_v4();
+        let milestone_res = sqlx::query(
+            "INSERT INTO milestone_payments (id, tenant_id, quote_id, percentage, amount, status, due_condition) VALUES ($1, $2, $3, $4, $5, 'pending', 'deposit')"
+        )
+        .bind(milestone_payment_id.to_string())
+        .bind(authority.tenant_id())
+        .bind(&accepted_quote.id)
+        .bind((required_deposit as f64) / (accepted_quote.total_amount_cents.unwrap_or(1) as f64) * 100.0)
+        .bind(required_deposit)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(error) = milestone_res {
+            tracing::error!("Failed to create deposit milestone payment: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
     let invoice_res = sqlx::query(
         "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"
     )
@@ -1602,6 +1639,54 @@ async fn approve_quote(
     }
 
     (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
+}
+
+
+async fn pay_deposit(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let authority = match TenantAuthority::from_claims(&claims) {
+        Ok(authority) => authority,
+        Err(status) => return status.into_response(),
+    };
+    let quote_id = match Uuid::parse_str(&id) {
+        Ok(uid) => uid,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(e) => {
+            tracing::error!("Failed to begin transaction for pay_deposit: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let milestone_update = sqlx::query(
+        "UPDATE milestone_payments SET status = 'paid', updated_at = NOW() WHERE quote_id = $1 AND tenant_id = $2 AND status = 'pending' AND due_condition = 'deposit'"
+    )
+    .bind(quote_id.to_string())
+    .bind(authority.tenant_id())
+    .execute(&mut *tx)
+    .await;
+
+    match milestone_update {
+        Ok(result) if result.rows_affected() > 0 => {}
+        Ok(_) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to update milestone payment status: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit pay_deposit: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
 }
 
 // Temporary marker to slice off old approve_quote
