@@ -138,7 +138,7 @@ pub async fn get_tooltips(
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe // pii-safe
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR
                 })?;
             let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
@@ -231,7 +231,7 @@ pub async fn update_tooltip(
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe // pii-safe
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR
                 })?;
             let result = sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text")
@@ -284,7 +284,7 @@ pub async fn delete_tooltip(
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe // pii-safe
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR
                 })?;
             let result = sqlx::query("DELETE FROM tooltips WHERE id = $1 AND tenant_id = $2")
