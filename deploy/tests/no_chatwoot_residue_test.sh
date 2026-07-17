@@ -242,5 +242,3 @@ for path in "${historical[@]}"; do
     exit 1
   fi
 done
-
-sudo rm -rf /tmp/node-compile-cache || true
