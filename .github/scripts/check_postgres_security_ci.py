@@ -69,6 +69,9 @@ EXPECTED_HYGIENE_LINES = (
     "python3 .github/scripts/check_postgres_security_ci_test.py",
     "python3 .github/scripts/check_postgres_security_ci.py",
 )
+EXPECTED_PYYAML_BOOTSTRAP_LINES = (
+    "sudo apt-get update && sudo apt-get install -y python3-yaml",
+)
 
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
@@ -463,7 +466,20 @@ def check_workflow(path: Path) -> None:
     if not (markdown_if < else_index < enforcement_index < fi_index):
         raise ContractError("postgres-security enforcement is not in the active non-markdown branch")
 
+    pyyaml_step = named_step(changes, "Install PyYAML")
+    require_exact_step_keys(pyyaml_step, ("run",), "PyYAML bootstrap")
+    require_unconditional_step(pyyaml_step, "PyYAML bootstrap")
+    pyyaml_style, pyyaml_run = pyyaml_step.run()
+    if pyyaml_style != "block":
+        raise ContractError("PyYAML bootstrap must be an active block run step")
+    if active_script(pyyaml_run, "PyYAML bootstrap") != EXPECTED_PYYAML_BOOTSTRAP_LINES:
+        raise ContractError("PyYAML bootstrap does not match the exact install command")
+
     hygiene_step = named_step(changes, "Check tracked artifacts")
+    if changes.index("      - name: Install PyYAML") >= changes.index(
+        "      - name: Check tracked artifacts"
+    ):
+        raise ContractError("PyYAML bootstrap must run before tracked-artifact checks")
     require_exact_step_keys(hygiene_step, ("run",), "check-changes hygiene")
     require_unconditional_step(hygiene_step, "check-changes hygiene")
     hygiene_style, hygiene_run = hygiene_step.run()
