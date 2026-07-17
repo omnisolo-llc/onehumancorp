@@ -122,7 +122,7 @@ where
         .route("/activity", get(list_activity_feed))
         .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
-        .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-proposal-draft", post(simulate_proposal_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
         .route("/simulate-promoter-draft", post(simulate_promoter_draft))
@@ -187,7 +187,7 @@ async fn simulate_newsletter_draft(
     }
 }
 
-async fn simulate_quote_draft(
+async fn simulate_proposal_draft(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
