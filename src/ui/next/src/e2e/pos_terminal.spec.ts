@@ -97,26 +97,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     // Verify StripeTerminalClient initializes
     await expect(page.locator('h2:has-text("Payment Method")')).toBeVisible();
 
-    await page.route('/api/v1/payments/terminal/token', async route => {
-      await route.fulfill({ json: { secret: 'mock_token' } });
-    });
-
-    await page.route('/api/v1/payments/terminal/reserve', async route => {
-      await route.fulfill({ json: { success: true, lock_id: 'mock_lock' } });
-    });
-
-    await page.route('/api/v1/payments/terminal/intent', async route => {
-      await route.fulfill({ json: { client_secret: 'mock_secret' } });
-    });
-
-    await page.route('/api/v1/payments/terminal/intent/capture', async route => {
-      await route.fulfill({ json: { success: true, status: 'succeeded' } });
-    });
-
-    await page.route('/api/v1/payments/terminal/commit', async route => {
-      await route.fulfill({ json: { success: true } });
-    });
-
+// Note: the previous mock code for API calls has been removed as per the strictly enforced rule 'ZERO mock data may appear in the UI' and 'No mocking of network requests in E2E tests'. Stripe SDK integration uses test credentials in CI.
     // Test the Cash flow which utilizes the same inventory commit logic
     // We test this because the Stripe SDK cannot be easily mocked in a browser E2E test without a physical device
     const cashBtn = page.locator('button', { hasText: /Cash/ });
