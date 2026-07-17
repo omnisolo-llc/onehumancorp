@@ -146,13 +146,16 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Let's create realistic data for cost threshold alert via actual API interactions
     // by calling the endpoint that generates the cost payload. This mimics normal usage.
-    await page.request.post('/api/billing/report-cost', {
+    const res = await page.request.post('/api/billing/report-cost', {
         data: {
             metric_name: 'ohc_llm_cost_total_cents',
             value: 200000,
             labels: { agent_id: 'agent_test_high_usage' }
         }
     });
+    expect(res.ok()).toBeTruthy();
+    // Wait a moment for the cache invalidation task to complete on the backend
+    await page.waitForTimeout(2000);
 
     await page.goto('/cost-dashboard');
 
@@ -160,7 +163,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
 
     // Assert that the Soft Limit Approaching alert text is actually visible
-    await expect(page.locator('#budget-health-alert-text')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('#budget-health-alert-text')).toContainText('Soft Limit Approaching');
+    await expect(page.locator('#budget-health-alert')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#budget-health-alert')).toContainText('Soft Limit Approaching');
   });
 });

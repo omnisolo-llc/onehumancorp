@@ -5,13 +5,16 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
 
   // Wait explicitly for navigation to complete without relying on pure networkidle
   // Report high cost to trigger the limit
-  await page.request.post('/api/billing/report-cost', {
+  const res = await page.request.post('/api/billing/report-cost', {
       data: {
           metric_name: 'ohc_llm_cost_total_cents',
           value: 2000000,
           labels: { agent_id: 'agent_test_high_usage' }
       }
   });
+  expect(res.ok()).toBeTruthy();
+  // Wait a moment for the cache invalidation task to complete on the backend
+  await page.waitForTimeout(2000);
 
   await page.goto('/cost-dashboard', { waitUntil: 'load' });
 
@@ -26,6 +29,6 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
   // For the purpose of the test, we'll ensure the Cost Dashboard loads its key metrics
   await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible({ timeout: 15000 });
 
-  await expect(page.locator('#budget-health-alert-text')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#budget-health-alert-text')).toContainText('Soft Limit Approaching');
+  await expect(page.locator('#budget-health-alert')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#budget-health-alert')).toContainText('Soft Limit Approaching');
 });

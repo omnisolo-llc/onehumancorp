@@ -5,6 +5,8 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
     "//src/ui/next:src/e2e/code-native.spec.ts",
+    "//src/ui/next:src/e2e/test_billing_limits.spec.ts",
+    "//src/ui/next:src/e2e/miser_cost_features.spec.ts",
 
     "//src/ui/next:src/e2e/viral_tier_list_generator.spec.ts",
     "//src/ui/next:src/e2e/viral_powered_by_ohc_widget.spec.ts",

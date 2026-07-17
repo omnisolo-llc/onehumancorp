@@ -417,6 +417,10 @@ export OHC_API_URL="$API_BASE_URL"
 export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
+  export OHC_AGENT_TOKEN="test_agent_token"
+  export OHC_AGENT_AUTH_KEY="test_agent_auth_key_that_is_at_least_32_bytes_long"
+  export OHC_AGENT_SPIFFE_ID="spiffe://ohc.network/agent"
+  export OHC_ENV="test"
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
   if [ "$USE_STANDALONE_MODE" = true ]; then
     DB_URL="sqlite://$TEST_TMPDIR/ohc-e2e.db?mode=rwc"
