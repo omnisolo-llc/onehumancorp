@@ -226,7 +226,9 @@ export default function Dashboard() {
       try {
         const userId = localStorage.getItem("user_id") || "default";
 
-        const unifiedPromise = fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`)
+        const isMobile = window.innerWidth < 768;
+        const fieldsParams = isMobile ? "&fields=triage,priority_tasks,orders(id,customer_name,total_amount,status),metrics(pending_orders,total_sales,active_customers),approvals(approvals(id,status,lifecycle_state)),agent_feed,supply(vendors(id),raw_materials(id,current_quantity,reorder_threshold),bom_items(id)),inbox(id)" : "";
+        const unifiedPromise = fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${isMobile}${fieldsParams}`)
           .then(res => {
             if (!res.ok) throw new Error("Unified UI feed endpoint failed");
             return res.json();

@@ -401,9 +401,15 @@
 
     async function fetchSummaries() {
       try {
-        const response = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/shift-summaries`);
-        if (!response.ok) throw new Error('Network error');
-        const summaries = await response.json();
+        const [response, taskResponse] = await Promise.all([
+          fetch(`${baseUrl}/api/v1/tenant/${tenantId}/shift-summaries`),
+          fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`)
+        ]);
+        if (!response.ok || !taskResponse.ok) throw new Error('Network error');
+        const [summaries, tasks] = await Promise.all([
+          response.json(),
+          taskResponse.json()
+        ]);
 
         const content = document.getElementById('shift-summary-content');
         if (summaries.length === 0) {
@@ -411,10 +417,6 @@
         } else {
           content.innerHTML = summaries[0].summary_text;
         }
-
-        // Also fetch high priority tasks to show in escalations
-        const taskResponse = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`);
-        const tasks = await taskResponse.json();
         const escalations = tasks.filter(t => t.priority === 'high' && t.status !== 'completed');
 
         const escContainer = document.getElementById('escalations-container');
