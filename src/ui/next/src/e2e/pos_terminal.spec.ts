@@ -53,7 +53,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     await expect(page.locator('h2:has-text("Current Order")')).toBeVisible();
 
     // Verify StripeTerminalClient initializes
-    await expect(page.locator('h2:has-text("Tap to Pay via Terminal")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Payment Method")')).toBeVisible();
 
     // Mock API requests to simulate backend logic for tap to pay
     await page.route('/api/v1/payments/terminal/token', async route => {
@@ -76,9 +76,9 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await route.fulfill({ json: { success: true } });
     });
 
-    // Test the Record Cash Sale flow which utilizes the same inventory commit logic
+    // Test the Cash flow which utilizes the same inventory commit logic
     // We test this because the Stripe SDK cannot be easily mocked in a browser E2E test without a physical device
-    const cashBtn = page.locator('button', { hasText: /Record Cash Sale/ });
+    const cashBtn = page.locator('button', { hasText: /Cash/ });
     if (await cashBtn.isVisible()) {
       await cashBtn.click();
       await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 15000 });
