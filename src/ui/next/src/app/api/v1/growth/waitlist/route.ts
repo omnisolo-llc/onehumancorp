@@ -1,43 +1,11 @@
-import { NextResponse } from 'next/server';
+import {
+  proxyBackendRequest,
+  stripBrowserIdentityJsonRequestBody,
+} from "@/lib/auth/backendTransport";
 
 export async function POST(request: Request) {
-  try {
-    const { email, tenantId, features } = await request.json();
-
-    // Use environment variable for backend URL, default to a sensible local value for testing
-    const backendUrl = process.env.OHC_CORE_URL || 'http://localhost:8080';
-
-    const escapeHtml = (unsafe: string) => {
-        if (!unsafe) return unsafe;
-        return unsafe
-             .replace(/&/g, "&amp;")
-             .replace(/</g, "&lt;")
-             .replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&#039;");
-    };
-
-    const safeEmail = escapeHtml(email);
-    const safeTenantId = escapeHtml(tenantId) || 'demo';
-    const safeFeatures = Array.isArray(features) ? features.map(escapeHtml) : [];
-
-    // Call the Rust core backend API to submit the waitlist entry
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/waitlist`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: safeEmail,
-        tenant_id: safeTenantId,
-        features: safeFeatures
-      })
-    });
-
-    if (!backendRes.ok) { return NextResponse.json({ error: "Backend error" }, { status: 502 }); }
-
-    const data = await backendRes.json();
-    return NextResponse.json(data);
-
-  } catch (error) { return NextResponse.json({ error: "Network error" }, { status: 502 }); }
+  return proxyBackendRequest(request, "/api/v1/growth/waitlist", {
+    requestContentType: "application/json",
+    transformRequestBody: stripBrowserIdentityJsonRequestBody,
+  });
 }

@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Mobile Payload Optimization Verification', () => {
 
   test('should verify mobile_optimized trims unified feed payload', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/dashboard/unified-feed?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/dashboard/unified-feed?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -25,7 +25,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims orders payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/orders?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/orders?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -42,7 +42,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims bookings payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/bookings?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/bookings?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -59,7 +59,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims inbox payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/inbox?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/inbox?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -76,7 +76,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims supply payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/supply?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/supply?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -109,7 +109,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims priority tasks payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/priority-tasks?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/priority-tasks?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();
@@ -122,7 +122,7 @@ test.describe('Mobile Payload Optimization Verification', () => {
   });
 
   test('should verify mobile_optimized trims daily work payload natively', async ({ memberPage }) => {
-    const response = await memberPage.request.get('/api/ui/dashboard/daily-work?mobile_optimized=true');
+    const response = await memberPage.request.get('/api/v1/ui/dashboard/daily-work?mobile_optimized=true');
     expect(response.status()).toBe(200);
 
     const data = await response.json();

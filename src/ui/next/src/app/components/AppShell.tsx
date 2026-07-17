@@ -6,6 +6,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { VoiceAssistant } from "../../components/VoiceAssistant";
 import { Omnibox } from "./Omnibox";
 import { InteractiveWalkthrough } from "../../components/Walkthrough";
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
+import { InteractiveWalkthrough } from "../../components/Walkthrough";
 import { LogoutButton } from "./LogoutButton";
 
 type StatusItem = {

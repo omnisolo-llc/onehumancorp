@@ -9,7 +9,10 @@ export default function ProductsPage() {
   const [importedProducts, setImportedProducts] = useState<any[]>([]);
   useEffect(() => {
     fetch('/api/v1/catalog/products')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load products');
+        return res.json();
+      })
       .then(data => {
         if (Array.isArray(data)) {
             setImportedProducts(data.map(p => ({
@@ -19,7 +22,7 @@ export default function ProductsPage() {
             })));
         }
       })
-      .catch(console.error);
+      .catch(() => setImportedProducts([]));
   }, []);
   const [selectedProduct, setSelectedProduct] = useState<{ name: string; price: string; status: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);

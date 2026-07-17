@@ -9,7 +9,7 @@ test.describe("In-App Help Center", () => {
   test("should allow user to navigate to help center from dashboard", async ({
     page,
   }) => {
-    await page.goto("/api/ui/dashboard.html");
+    await page.goto("/api/v1/ui/dashboard.html");
 
     // Should see help button in the main navigation or shell
     const helpButton = page.locator("nav").locator("a", { hasText: "Help" });
@@ -21,7 +21,7 @@ test.describe("In-App Help Center", () => {
   test("should provide help resources and allow searching", async ({
     page,
   }) => {
-    await page.goto("/api/ui/help.html");
+    await page.goto("/api/v1/ui/help.html");
 
     // Help center title should be visible
     await expect(
@@ -41,7 +41,7 @@ test.describe("In-App Help Center", () => {
   });
 
   test("should display contact support option", async ({ page }) => {
-    await page.goto("/api/ui/help.html");
+    await page.goto("/api/v1/ui/help.html");
 
     // Should see contact options
     const searchInput = page.locator('input[placeholder*="Search"]');

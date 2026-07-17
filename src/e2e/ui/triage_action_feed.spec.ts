@@ -14,7 +14,7 @@ test.describe('Triage Action Feed UI', () => {
     };
 
     // Attempt to seed data
-    const res = await page.request.post(`/api/ui/triage/create?tenant_id=${tenantId}`, {
+    const res = await page.request.post(`/api/v1/ui/triage/create?tenant_id=${tenantId}`, {
         data: {
           customer_id: 'cust_test',
           ...seedData
@@ -28,7 +28,7 @@ test.describe('Triage Action Feed UI', () => {
         window.localStorage.setItem('tenant', t);
     }, tenantId);
 
-    await page.goto('/api/ui/triage');
+    await page.goto('/api/v1/ui/triage');
 
     // We expect either the empty state or the list to eventually appear.
     const emptyState = page.locator('.app-empty').first();

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('In-Person Payment (POS) Flow', () => {
   test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
-    await page.goto('/api/staff');
+    await page.goto('/api/v1/staff');
     await page.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',

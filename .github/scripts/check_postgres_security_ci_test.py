@@ -103,6 +103,11 @@ def main() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     mutations = (
         (
+            "      - name: Install PyYAML\n        run: |\n          sudo apt-get update && sudo apt-get install -y python3-yaml\n\n",
+            "",
+            "missing PyYAML bootstrap",
+        ),
+        (
             '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
             '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"\n  BASH_ENV: /tmp/skip-security.sh',
             "workflow BASH_ENV override",

@@ -8,7 +8,7 @@ test.describe('Documentation Flows', () => {
 
   test('Help Widget interactions and Videos', async ({ page }) => {
     // Wait for the help page to load
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // Make sure the title renders
     await expect(page.locator('h1:has-text("In-App Help Center")')).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('Documentation Flows', () => {
 
   test('Tooltips load and display properly', async ({ page }) => {
     // Go to the dashboard
-    await page.goto('/api/ui/dashboard.html');
+    await page.goto('/api/v1/ui/dashboard.html');
 
     // Make sure the help button exists
     const walkBtn = page.locator('#dashboard-walkthrough-btn');
