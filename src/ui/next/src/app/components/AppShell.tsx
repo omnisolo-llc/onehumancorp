@@ -211,8 +211,8 @@ export function AppShell({
                 {action.label}
               </Link>
             ))}
-            <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link href="/help" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
+            <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
+              <Link href="/help" id="ohc-floating-help-btn" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>

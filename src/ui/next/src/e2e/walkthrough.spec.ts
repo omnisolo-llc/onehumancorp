@@ -11,7 +11,7 @@ test.describe('Interactive Walkthroughs', () => {
     await helpButton.click();
 
     // Click on the store setup walkthrough
-    const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
     await expect(tourButton).toBeVisible();
     await tourButton.click();
 
@@ -47,7 +47,7 @@ test.describe('Interactive Walkthroughs', () => {
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
-    const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
     await expect(tourButton).toBeVisible();
     await tourButton.click();
 

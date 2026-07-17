@@ -14,7 +14,7 @@ test.describe("Documentation Walkthrough E2E", () => {
     await expect(widget).toBeVisible();
 
     // Verify Walkthrough is present
-    const walkthroughBtn = page.locator('button', { hasText: 'Tour: Set up your store' }).first();
+    const walkthroughBtn = page.locator('button', { hasText: 'Tour: Store Setup' }).first();
     // Sometimes it's in the help widget, let's just make sure we find it
     if (await walkthroughBtn.isVisible()) {
         await walkthroughBtn.click({ force: true });
