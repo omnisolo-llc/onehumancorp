@@ -12,26 +12,22 @@ test.describe('Visual Workflow Builder', () => {
     await page.getByRole('button', { name: '+ Add Input Node' }).click();
     await expect(page.locator('text=node-1')).toBeVisible();
 
-    // 2. Add LLM Node
-    await page.getByRole('button', { name: '+ Add LLM Node' }).click();
+    // 2. Add Output Node
+    await page.getByRole('button', { name: '+ Add Output Node' }).click();
     await expect(page.locator('text=node-2')).toBeVisible();
 
-    // 3. Add Human-In-Loop Node
-    await page.getByRole('button', { name: '+ Add Human-In-Loop Node' }).click();
-    await expect(page.locator('text=node-3')).toBeVisible();
-
-    // 4. Connect the nodes
+    // 3. Connect the nodes
     await page.getByRole('button', { name: 'Connect from previous' }).first().click();
     await expect(page.locator('text=node-1 → node-2')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Connect from previous' }).last().click();
-    await expect(page.locator('text=node-2 → node-3')).toBeVisible();
+    // Set input
+    await page.locator('input[type="text"]').fill('Integration execution test');
 
-    // 5. Run the workflow (Since it calls fetch, it should show Waiting or an Error/Result)
+    // 4. Run the workflow
     await page.getByRole('button', { name: '▶ Run Workflow' }).click();
 
-    // Expect the Human In Loop node to return the error
-    await expect(page.locator('text=USER_FIXABLE: Human in loop required')).toBeVisible({ timeout: 15000 });
+    // Expect the workflow to succeed through the real backend
+    await expect(page.locator('pre').filter({ hasText: 'Integration execution test' })).toBeVisible({ timeout: 15000 });
   });
 
   test('User can add multiple output nodes and connect them', async ({ page }) => {

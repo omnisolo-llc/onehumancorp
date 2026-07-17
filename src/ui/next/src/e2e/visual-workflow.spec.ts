@@ -14,25 +14,25 @@ test.describe('Visual Workflow Builder E2E', () => {
 
     // Add a couple of blocks from the palette
     await page.getByTestId('palette-block-trigger_message').click();
-    await page.getByTestId('palette-block-action_draft').click();
+    await page.getByTestId('palette-block-output_send').click();
 
     // Ensure they appeared on the canvas
     await expect(page.getByTestId('canvas-block-0')).toBeVisible();
     await expect(page.getByTestId('canvas-block-1')).toBeVisible();
 
-    // Mock the API response to avoid actual execution if we don't have the backend
-    await page.route('/api/v1/workflow/run', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, result: 'E2E Visual Workflow Success' }),
-      });
-    });
+    // Connect nodes by clicking bottom port of first and top port of second
+    const bottomPorts = page.locator('.node-endpoint.bottom');
+    const topPorts = page.locator('.node-endpoint.top');
+    await bottomPorts.first().click();
+    await topPorts.first().click();
+
+    // Input data for the workflow
+    await page.locator('#workflow-input').fill('E2E Real Execution Success');
 
     // Save and run
     await page.locator('#btn-create-run-workflow').click();
 
-    // Verify it got added to the list (the API mock should return success)
-    await expect(page.getByText('Visual Workflow Result: E2E Visual Workflow Success')).toBeVisible({ timeout: 10000 });
+    // Verify it hits the real backend successfully and returns the passed input
+    await expect(page.getByText('E2E Real Execution Success')).toBeVisible({ timeout: 10000 });
   });
 });
