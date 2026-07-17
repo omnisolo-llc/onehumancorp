@@ -221,7 +221,7 @@ pub async fn handle_conversational_chat(
         // Query real metrics for growth advice
         let abandoned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM carts WHERE status = 'abandoned' AND tenant_id = $1")
             .bind(&tenant_id)
-            .fetch_one(&state.pool)
+            .fetch_one(&state.db.pool)
             .await
             .unwrap_or(0);
 
@@ -240,7 +240,7 @@ pub async fn handle_conversational_chat(
     } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
         let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
             .bind(&tenant_id)
-            .fetch_one(&state.pool)
+            .fetch_one(&state.db.pool)
             .await
             .unwrap_or(0.0);
 
@@ -322,7 +322,7 @@ pub async fn handle_conversational_execute(
     }))
 }
 
-pub fn router<S>(pool: PgPool, hub: Arc<Hub>, viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Router<S>
+pub fn router<S>(db: std::sync::Arc<crate::db::DB>, hub: Arc<Hub>, viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -405,7 +405,7 @@ where
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
         .route("/upgrade-paywall", get(handle_upgrade_paywall))
-        .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
+        .layer(Extension(GrowthState { db, hub, viral_loop_tracker }))
 }
 
 #[derive(Debug, Serialize)]
@@ -422,7 +422,7 @@ async fn handle_upgrade_paywall(
 
     let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
         .bind(parsed_uuid)
-        .fetch_one(&state.pool)
+        .fetch_one(&state.db.pool)
         .await;
 
     let mut conversions: i64 = 0;
@@ -451,7 +451,7 @@ async fn handle_referral_tier(
 ) -> Result<Json<ReferralTierResponse>, StatusCode> {
     let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
         .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
+        .fetch_one(&state.db.pool)
         .await;
 
     let mut conversions: i64 = 0;
@@ -490,55 +490,108 @@ pub struct TimeSavingsResponse {
 }
 
 async fn fetch_time_savings_data(
-    pool: &sqlx::PgPool,
+    db: &crate::db::DB,
     parsed_uuid: uuid::Uuid,
     tenant_id_str: &str,
 ) -> Result<TimeSavingsResponse, sqlx::Error> {
-    let f1 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let f1 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+                    .bind(parsed_uuid)
+                    .fetch_one(&db.pool)
+                    .await
+            };
 
-    let f2 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
+            let f2 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+                    .bind(parsed_uuid)
+                    .fetch_one(&db.pool)
+                    .await
+            };
 
-    let f3 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
+            let f3 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+                    .bind(parsed_uuid)
+                    .fetch_one(&db.pool)
+                    .await
+            };
 
-    let f4 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-            .bind(tenant_id_str)
-            .fetch_one(pool)
-            .await
-    };
+            let f4 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+                    .bind(tenant_id_str)
+                    .fetch_one(&db.pool)
+                    .await
+            };
 
-    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+            let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+            let inquiries_handled = res1?;
+            let appointments_scheduled = res2?;
+            let carts_recovered = res3?;
+            let auto_replied = res4?;
 
-    let inquiries_handled = res1?;
-    let appointments_scheduled = res2?;
-    let carts_recovered = res3?;
-    let auto_replied = res4?;
+            let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
+            let hours_saved = (base_hours * 10.0).round() / 10.0;
 
-    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
-    let hours_saved = (base_hours * 10.0).round() / 10.0;
+            Ok(TimeSavingsResponse {
+                hours_saved,
+                inquiries_handled,
+                appointments_scheduled,
+                carts_recovered,
+                auto_replied,
+            })
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let uuid_str = parsed_uuid.to_string();
+            let f1 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = ? OR organization_id = ?) AND LOWER(title) LIKE LOWER('%inquiry%') AND status = 'COMPLETED'")
+                    .bind(&uuid_str)
+                    .bind(&uuid_str)
+                    .fetch_one(pool)
+                    .await
+            };
 
-    Ok(TimeSavingsResponse {
-        hours_saved,
-        inquiries_handled,
-        appointments_scheduled,
-        carts_recovered,
-        auto_replied,
-    })
+            let f2 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = ? OR organization_id = ?) AND LOWER(title) LIKE LOWER('%appointment%') AND status = 'COMPLETED'")
+                    .bind(&uuid_str)
+                    .bind(&uuid_str)
+                    .fetch_one(pool)
+                    .await
+            };
+
+            let f3 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = ? OR organization_id = ?) AND LOWER(title) LIKE LOWER('%cart%') AND status = 'COMPLETED'")
+                    .bind(&uuid_str)
+                    .bind(&uuid_str)
+                    .fetch_one(pool)
+                    .await
+            };
+
+            let f4 = async {
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'")
+                    .bind(tenant_id_str)
+                    .fetch_one(pool)
+                    .await
+            };
+
+            let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+            let inquiries_handled = res1?;
+            let appointments_scheduled = res2?;
+            let carts_recovered = res3?;
+            let auto_replied = res4?;
+
+            let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
+            let hours_saved = (base_hours * 10.0).round() / 10.0;
+
+            Ok(TimeSavingsResponse {
+                hours_saved,
+                inquiries_handled,
+                appointments_scheduled,
+                carts_recovered,
+                auto_replied,
+            })
+        }
+    }
 }
 
 async fn handle_time_savings(
@@ -560,12 +613,12 @@ async fn handle_time_savings(
             return Ok(Json(cached_res));
         }
 
-        let pool_bg = state.pool.clone();
+        let db_bg = state.db.clone();
         let cache_key_bg = cache_key.clone();
         let tenant_id_str_bg = tenant_id_str.clone();
 
         tokio::spawn(async move {
-            match fetch_time_savings_data(&pool_bg, parsed_uuid, &tenant_id_str_bg).await {
+            match fetch_time_savings_data(&db_bg, parsed_uuid, &tenant_id_str_bg).await {
                 Ok(response) => {
                     if let Some(c) = TIME_SAVINGS_CACHE.get() {
                         c.set(&cache_key_bg, response, std::time::Duration::from_secs(60)).await;
@@ -580,7 +633,7 @@ async fn handle_time_savings(
         return Ok(Json(cached_res));
     }
 
-    match fetch_time_savings_data(&state.pool, parsed_uuid, &tenant_id_str).await {
+    match fetch_time_savings_data(&state.db, parsed_uuid, &tenant_id_str).await {
         Ok(response) => {
             cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(response))
@@ -611,13 +664,13 @@ async fn handle_trial_extension_claim(
             sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $2")
                 .bind(uid)
                 .bind(org_id_str)
-                .fetch_optional(&state.pool)
+                .fetch_optional(&state.db.pool)
                 .await
         },
         None => {
             sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE tenant_id = $1")
                 .bind(org_id_str)
-                .fetch_optional(&state.pool)
+                .fetch_optional(&state.db.pool)
                 .await
         }
     }.map_err(|e| {
@@ -638,13 +691,13 @@ async fn handle_trial_extension_claim(
             sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $2")
                 .bind(uid)
                 .bind(org_id_str)
-                .execute(&state.pool)
+                .execute(&state.db.pool)
                 .await
         },
         None => {
             sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE tenant_id = $1")
                 .bind(org_id_str)
-                .execute(&state.pool)
+                .execute(&state.db.pool)
                 .await
         }
     };
@@ -840,7 +893,7 @@ pub struct TeamInvitesResponse {
 
 #[derive(Clone)]
 pub struct GrowthState {
-    pool: PgPool,
+    db: std::sync::Arc<crate::db::DB>,
     hub: Arc<Hub>,
     pub viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
 }
@@ -1123,7 +1176,7 @@ async fn handle_send_cart(
     // Fallback to "my-store" if tenant_id is not in request and not in token
     let tenant_id = req.tenant_id.or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or_else(|| "my-store".to_string());
 
-    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres }));
+    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: state.db.pool.clone(), store: crate::db::DbStore::Postgres }));
     let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id,
@@ -1199,7 +1252,7 @@ async fn handle_create_lead_gen_campaign(
 ) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
     let tenant_id = auth_info.org_id.clone();
 
-    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.db.pool.clone());
 
     let campaign = crate::domain::repository::models::LeadGenCampaign {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1237,7 +1290,7 @@ async fn handle_send_campaign(
     let target_emails: i64 = if req.target_segment == "abandoned_carts" {
         match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
             .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
+            .fetch_one(&state.db.pool)
             .await
         {
             Ok(c) => c,
@@ -1303,7 +1356,7 @@ async fn handle_affiliate_generate_link(
         .bind(&affiliate_code)
         .bind(discount)
         .bind(commission)
-        .execute(&state.pool)
+        .execute(&state.db.pool)
         .await
     {
         Ok(_) => {
@@ -1346,13 +1399,13 @@ async fn handle_affiliate_stats(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
-                .fetch_one(&state.pool)
+                .fetch_one(&state.db.pool)
                 .await
         },
         async {
             sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
-                .fetch_one(&state.pool)
+                .fetch_one(&state.db.pool)
                 .await
         }
     );
@@ -1428,7 +1481,7 @@ async fn handle_post_purchase_embed(
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await;
 
         if let Ok(Some(plan)) = is_pro_res {
@@ -1544,7 +1597,7 @@ async fn handle_customer_referral_embed(
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await;
 
         if let Ok(Some(plan)) = is_pro_res {
@@ -1845,7 +1898,7 @@ async fn handle_viral_goal_tracker(
     if query.hide_branding.as_deref() == Some("true") {
         let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await;
 
         if let Ok(Some(plan)) = is_pro_res {
@@ -2000,7 +2053,7 @@ async fn handle_storefront_embed(
     if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await
             .unwrap_or_default();
         if let Some(plan) = row {
@@ -2232,7 +2285,7 @@ async fn handle_og_card(
     if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
         let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await
             .unwrap_or_default();
         if let Some(plan) = row {
@@ -2280,7 +2333,7 @@ async fn handle_check_milestones(
     } else {
         let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
             .bind(tenant_id)
-            .fetch_all(&state.pool)
+            .fetch_all(&state.db.pool)
             .await
             .unwrap_or_default();
         use sqlx::Row;
@@ -2389,7 +2442,7 @@ async fn handle_get_milestone(
     if tenant_id != "DEFAULT" {
         let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
             .bind(tenant_id)
-            .fetch_all(&state.pool)
+            .fetch_all(&state.db.pool)
             .await
             .unwrap_or_default();
 
@@ -2513,7 +2566,7 @@ pub async fn handle_get_referral_milestones(
         "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
     )
     .bind(tenant_id.clone())
-    .fetch_optional(&state.pool)
+    .fetch_optional(&state.db.pool)
     .await
     .unwrap_or(Some(0))
     .unwrap_or(0);
@@ -2566,7 +2619,7 @@ pub async fn handle_get_milestone_card(
     if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(&tenant_id).is_ok() {
         let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await
             .unwrap_or_default();
         if let Some((name, plan_tier)) = row {
@@ -2691,7 +2744,7 @@ async fn handle_get_team_invites(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let limit = query.limit.unwrap_or(20);
@@ -2740,10 +2793,10 @@ async fn handle_team_invites_metrics(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let pool_clone = state.pool.clone();
+    let pool_clone = state.db.pool.clone();
     let team_id = query.team_id.clone();
     let active_referrals_fut = async {
         sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
@@ -2784,7 +2837,7 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&state.pool).await
+        .fetch_all(&state.db.pool).await
     {
         Ok(rows) => {
 
@@ -2808,7 +2861,7 @@ async fn handle_referral_click_post(
 ) -> Result<axum::response::Response, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
         .bind(&req.id)
-        .execute(&state.pool)
+        .execute(&state.db.pool)
         .await
     {
         Ok(result) => {
@@ -2845,7 +2898,7 @@ async fn handle_referral_click_get(
     // Record click if it maps to an actual referral code
     let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
         .bind(tenant_ref)
-        .execute(&state.pool)
+        .execute(&state.db.pool)
         .await;
 
     // Redirect user to the intended target (or dashboard if not specified)
@@ -2876,7 +2929,7 @@ async fn handle_referral_leaderboard(
 ) -> Result<Json<ReferralLeaderboardResponse>, StatusCode> {
     let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
         .bind(&auth_info.org_id)
-        .fetch_all(&state.pool)
+        .fetch_all(&state.db.pool)
         .await;
 
     let mut leaderboard = Vec::new();
@@ -2904,7 +2957,7 @@ async fn handle_referral_stats(
     let mut active_referrals: i64 = 0;
     let mut invites_sent: i64 = 0;
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     if let Ok(count) = tracker.get_total_invites_count(&auth_info.org_id).await {
@@ -2915,7 +2968,7 @@ async fn handle_referral_stats(
 
     let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
         .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
+        .fetch_one(&state.db.pool)
         .await;
 
     if let Ok(r) = row {
@@ -2941,7 +2994,7 @@ async fn handle_referral_convert(
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
         .bind(&req.id)
-        .execute(&state.pool)
+        .execute(&state.db.pool)
         .await
     {
         Ok(result) => {
@@ -2973,7 +3026,7 @@ async fn handle_referral_generate(
         .bind(&auth_info.agent_id)
         .bind(&ref_code)
         .bind(now)
-        .execute(&state.pool)
+        .execute(&state.db.pool)
         .await
     {
         Ok(_) => {
@@ -2991,7 +3044,7 @@ async fn handle_team_invite_accept(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
 
     // Before accepting, fetch the invite to get the team_id to invalidate cache
@@ -3030,7 +3083,7 @@ async fn handle_create_team_invite(
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
@@ -3124,8 +3177,9 @@ mod tests {
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
         let state = GrowthState {
-            pool: pool.clone(),
+            db: db_inst,
             hub,
             viral_loop_tracker: tracker,
         };
@@ -3185,7 +3239,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -3264,7 +3319,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -3314,7 +3370,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -3354,7 +3411,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let test_tenant = format!("test-org-{}", uuid::Uuid::new_v4());
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -3412,7 +3470,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -3443,7 +3502,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let tenant_id = "test-org";
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO NOTHING")
@@ -3503,7 +3563,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
@@ -3542,7 +3603,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
 
@@ -3559,7 +3621,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
         let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
@@ -3576,7 +3639,8 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GenerateCartRequest {
             customer_name: Some("Bob".to_string()),
@@ -3608,7 +3672,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -3643,7 +3708,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")
@@ -3666,7 +3732,8 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Pro', 'pro') ON CONFLICT (id) DO UPDATE SET plan_tier = 'pro'")
             .bind("11111111-1111-1111-1111-111111111111")
@@ -3702,10 +3769,10 @@ async fn handle_aggregated_team_invites_metrics(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    let pool_clone = state.pool.clone();
+    let pool_clone = state.db.pool.clone();
     let org_id_clone = auth_info.org_id.clone();
     let active_referrals_fut = async {
         sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
@@ -3740,7 +3807,7 @@ async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
-    let pool = &state.pool;
+    let pool = &state.db.pool;
 
     let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
         .bind(&auth_info.org_id)
@@ -3774,7 +3841,7 @@ async fn handle_cloud_bridge_invite(
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CloudBridgeInviteRequest>,
 ) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.db.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
@@ -3809,7 +3876,8 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::SpinToWinQuery { tenant: Some("test-tenant".to_string()), campaign: Some("Summer Spin".to_string()), reward: Some("Free Coffee".to_string()) };
         let res = super::handle_spin_to_win_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
@@ -3831,7 +3899,8 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None, hide_branding: None };
         let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
@@ -3853,7 +3922,8 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::BirthdayClubEmbedQuery {
             tenant: Some("test-tenant".to_string()),
@@ -3900,7 +3970,8 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = super::BirthdayClubCaptureRequest {
             tenant_id: "test-tenant".to_string(),
@@ -3918,7 +3989,8 @@ mod cloud_bridge_tests {
         let pool = setup_db().await;
         let (tx, _) = tokio::sync::mpsc::channel(10);
         let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::CommunityGoalEmbedQuery {
             tenant: Some("test-tenant".to_string()),
@@ -3958,7 +4030,8 @@ mod cloud_bridge_tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant".to_string()), theme: None, title: Some("Test Title".to_string()), branding: Some(true) };
         let res = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
@@ -3996,7 +4069,8 @@ mod cloud_bridge_tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+        let db_inst = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let state = GrowthState { db: db_inst, hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CloudBridgeInviteRequest {
             team_id: "test-team-cb".to_string(),
@@ -4320,7 +4394,7 @@ pub async fn handle_community_goal_embed(
 
     let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
         .bind(&raw_tenant)
-        .fetch_one(&state.pool)
+        .fetch_one(&state.db.pool)
         .await;
 
     let mut conversions: i64 = 0;
@@ -4597,7 +4671,7 @@ pub async fn handle_embed_widget(
     if w_type == "leaderboard" {
         let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
             .bind(&tenant)
-            .fetch_all(&state.pool)
+            .fetch_all(&state.db.pool)
             .await;
 
         let mut leaderboard_html = String::new();
@@ -4717,7 +4791,7 @@ async fn handle_simulate_event(
     let customer_id = req.customer_id;
     let order_id = req.order_id.unwrap_or_default();
 
-    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let review_id = uuid::Uuid::new_v4().to_string();
@@ -4781,7 +4855,7 @@ async fn handle_reputation_stats(
 
     let (rating_res, credits_res) = tokio::join!(
         async {
-            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let mut tx = state.db.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -4793,7 +4867,7 @@ async fn handle_reputation_stats(
             Ok::<_, StatusCode>(res)
         },
         async {
-            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let mut tx = state.db.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: f64 = sqlx::query_scalar(
                 "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
@@ -4824,7 +4898,7 @@ async fn handle_simulate_referral_checkout(
     Json(req): Json<SimulateReferralCheckoutRequest>,
 ) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
-    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     // find customer_id by referral_code
@@ -4953,7 +5027,7 @@ pub async fn handle_get_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
     axum::extract::Path(tenant): axum::extract::Path<String>
 ) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant).await;
 
     let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
@@ -4993,7 +5067,7 @@ pub async fn handle_post_link_in_bio(
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id;
-    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let config = LinkInBioConfig {
@@ -5490,7 +5564,7 @@ pub async fn handle_birthday_club_embed(
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&safe_tenant)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&state.db.pool)
             .await;
 
         if let Ok(Some(plan)) = is_pro_res {
