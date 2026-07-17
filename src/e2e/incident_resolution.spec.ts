@@ -12,7 +12,7 @@ test.describe('AI Incident Resolution & Escalation Assistant Flow', () => {
           role: 'owner',
         }
       });
-    } catch(e) {}
+    } catch (e) { console.error(e); }
   });
 
   test('Owner can log an incident and approve the AI resolution plan', async ({ page }) => {

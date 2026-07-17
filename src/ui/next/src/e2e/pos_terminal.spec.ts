@@ -101,7 +101,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await pinInput.fill('1234');
       await page.click('button:has-text("Unlock")');
       await page.waitForTimeout(1000);
-    } catch (e) {}
+    } catch (e) { console.error(e); }
 
     // Verify offline mode indicator
     await expect(page.getByText('Offline Mode Active')).toBeVisible({ timeout: 5000 }).catch(() => {});

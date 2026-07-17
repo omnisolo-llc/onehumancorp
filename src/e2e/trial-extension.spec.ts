@@ -7,7 +7,7 @@ async function navigateToTrialExtension(page: any) {
   } catch (e) {
     try {
       await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch(e) {}
+    } catch (e) { console.error(e); }
   }
 }
 

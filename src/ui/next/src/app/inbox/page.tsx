@@ -409,7 +409,7 @@ function InboxWorkspace({
                       if (activeApproval && activeApproval.payload) {
                         try {
                           parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
-                        } catch(e) {}
+                        } catch (e) { console.error(e); }
                         if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
                            let amount = 0;
                            if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {

@@ -65,7 +65,7 @@ test.describe('Viral Chat Embed Loop', () => {
               aiMsg.textContent = "I'm a demo agent embedded from OHC! In a real environment, I would connect to the backend API to answer your request.";
               messages!.appendChild(aiMsg);
               messages!.scrollTop = messages!.scrollHeight;
-          } catch(e) {}
+          } catch (e) { console.error(e); }
         }
 
         sendBtn!.addEventListener('click', sendMessage);

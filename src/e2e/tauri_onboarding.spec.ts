@@ -240,7 +240,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     await newPage.evaluate((stateStr) => {
         if (stateStr) {
-            try { sessionStorage.setItem('mockState', stateStr); } catch(e) {}
+            try { sessionStorage.setItem('mockState', stateStr); } catch (e) { console.error(e); }
         }
     }, savedStateStr);
 

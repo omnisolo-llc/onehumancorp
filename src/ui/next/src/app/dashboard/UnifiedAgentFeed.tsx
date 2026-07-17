@@ -134,7 +134,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           if (a.payload && a.payload.id) ids.add(a.payload.id);
         });
         setQueuedActionIds(ids);
-      } catch (err) {}
+      } catch (e) { console.error(e); }
     };
     updateOfflineCount();
 

@@ -55,7 +55,7 @@ export default function ActionCenterPage() {
       try {
         const actions = await getActions();
         setOfflineActionsCount(actions.length);
-      } catch (err) {}
+      } catch (e) { console.error(e); }
     };
     updateOfflineCount();
 

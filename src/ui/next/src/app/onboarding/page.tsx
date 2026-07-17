@@ -90,7 +90,7 @@ export default function OnboardingWizard() {
           try {
             const result = await response.clone().json();
             errMsg = result.error || result.message || errMsg;
-          } catch (e) {}
+          } catch (e) { console.error(e); }
           throw new Error(errMsg);
         }
         return response;

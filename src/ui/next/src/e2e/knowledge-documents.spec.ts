@@ -30,6 +30,6 @@ test.describe('Knowledge & Documents Sync UX', () => {
     // Cleanup test file
     try {
         require('fs').unlinkSync(tempFile);
-    } catch(e) {}
+    } catch (e) { console.error(e); }
   });
 });

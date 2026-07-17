@@ -393,6 +393,8 @@ if [[ -n "${MINIMAX_API_KEY:-}" ]]; then
   export MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M3}"
 fi
 export OHC_AGENT_TASK_TIMEOUT_SECS="${OHC_AGENT_TASK_TIMEOUT_SECS:-240}"
+export OHC_AGENT_TOKEN="test-agent-token-12345678901234"
+export OHC_AGENT_AUTH_KEY="test-agent-auth-key-1234567890123"
 export OHC_LLM_TIMEOUT_SECS="${OHC_LLM_TIMEOUT_SECS:-180}"
 if [[ -n "$AGENT_BIN" ]]; then
   if [[ -z "${OHC_BUILTIN_AGENT_BINARY:-}" || ! -x "${OHC_BUILTIN_AGENT_BINARY:-}" ]]; then
