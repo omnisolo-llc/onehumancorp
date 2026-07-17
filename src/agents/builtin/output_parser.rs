@@ -55,7 +55,7 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
                 return self.validate_schema(data);
             } else {
                 return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        "Validation Error: Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
             }
         }
@@ -97,7 +97,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 return self.validate_schema(data);
             } else {
                 return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        "Validation Error: Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
             }
         }
@@ -143,27 +143,26 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut current_req = req.clone();
 
-        // Inject the schema as a tool definition to encourage the model to use tool_calls API
-        let schema_tool = crate::types::ToolDefinition {
-            name: "structured_output".to_string(),
-            description: "Call this tool to output the parsed structured data.".to_string(),
-            parameters: serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "data": {
-                        "type": "object",
-                        "description": "The structured data matching the requested schema."
-                    }
-                },
-                "required": ["data"]
-            }),
-        };
-
         if !current_req
             .tools
             .iter()
             .any(|t| t.name == "structured_output")
         {
+            // Inject the schema as a tool definition to encourage the model to use tool_calls API
+            let schema_tool = crate::types::ToolDefinition {
+                name: "structured_output".to_string(),
+                description: "Call this tool to output the parsed structured data.".to_string(),
+                parameters: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "data": {
+                            "type": "object",
+                            "description": "The structured data matching the requested schema."
+                        }
+                    },
+                    "required": ["data"]
+                }),
+            };
             current_req.tools.push(schema_tool);
         }
 
@@ -216,8 +215,6 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     }
     fn generate_feedback_message(current_req: &mut ChatRequest, msg: &Message, parse_error_msg: &str) {
         if !msg.tool_calls.is_empty() {
-            current_req.messages.push(msg.clone());
-
             let mut tool_results = vec![];
             for tc in &msg.tool_calls {
                 // Find the schema for this tool
@@ -254,6 +251,10 @@ Expected Schema:
                 ));
             }
 
+            // Push original message
+            current_req.messages.push(msg.clone());
+
+            // Feed the original prompt, the failed completion, and the parsing error back
             current_req.messages.push(Message {
                 role: crate::types::Role::Tool,
                 content: String::new(),
@@ -263,7 +264,6 @@ Expected Schema:
                 previous_response_id: msg.response_id.clone(),
             });
         } else {
-            current_req.messages.push(msg.clone());
             let error_context = if parse_error_msg.contains("Expected native tool_calls") {
                 format!(
                     "Validation Error: You returned plain text instead of using a tool call. You MUST use the `structured_output` tool call. Do not return raw JSON text.\nFailed completion: {}",
@@ -280,15 +280,18 @@ Expected Schema:
                     msg.content, parse_error_msg
                 )
             };
-            let mut error_msg = Message {
+
+            // Push original message
+            current_req.messages.push(msg.clone());
+
+            let error_msg = Message {
                 role: crate::types::Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
                 tool_results: vec![crate::types::ToolResult::new_llm_recoverable("call_1".to_string(), "structured_output", &error_context)],
                 response_id: None,
-                previous_response_id: None,
+                previous_response_id: msg.response_id.clone(),
             };
-            error_msg.previous_response_id = msg.response_id.clone();
             current_req.messages.push(error_msg);
         }
     }
