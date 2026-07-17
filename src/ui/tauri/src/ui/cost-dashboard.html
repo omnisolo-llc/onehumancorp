@@ -332,7 +332,8 @@
                 </svg>
                 <div>
                     <h3 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #92400e; font-family: 'Outfit', sans-serif;">Budget Alert</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Heads up! Your projected monthly cost is reaching your plan's soft limit. Soft Limit Approaching Upgrade to a higher tier to avoid disruption and secure better bulk rates!</p>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309; margin-bottom: 8px;">Heads up! Your usage is approaching your plan's soft limit. Upgrade to a higher tier to avoid disruption!</p>
+                    <button class="btn-primary" style="padding: 4px 12px; font-size: 13px;" onclick="window.location.href='pricing.html'">Upgrade</button>
                 </div>
             </div>
 
@@ -489,7 +490,13 @@
                     warningDiv.style.display = 'block';
                 }
 
+
                 document.getElementById('my-plan-next-bill').innerText = formatCents(planData.next_bill_estimated);
+
+                if (planData.soft_limit_reached) {
+                    document.getElementById('budget-health-alert').style.display = 'flex';
+                }
+
             }
 
             const planMessageDiv = document.getElementById('plan-message');
@@ -564,10 +571,10 @@
                     }
                 }
 
+
                 if (costData.budget_health_alert || (costData.department_tier_usage && costData.department_tier_usage.departments && costData.department_tier_usage.departments.some(d => d.soft_limit_reached))) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Heads up! Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching Upgrade to a higher tier to avoid disruption and secure better bulk rates!`;
-                } else {
+                } else if (!planData || !planData.soft_limit_reached) {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
 

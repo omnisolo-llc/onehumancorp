@@ -27,5 +27,5 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
   await expect(page.locator('#cost-dashboard-total-costs')).toBeVisible({ timeout: 15000 });
 
   await expect(page.locator('#budget-health-alert-text')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#budget-health-alert-text')).toContainText('Soft Limit Approaching');
+  await expect(page.locator('#budget-health-alert-text')).toContainText('soft limit. Upgrade to a higher tier');
 });
