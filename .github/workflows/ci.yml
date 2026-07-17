@@ -140,9 +140,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo chmod -R 777 /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache
-
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
@@ -292,9 +289,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo chmod -R 777 /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache
-
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
@@ -371,9 +365,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo chmod -R 777 /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache
-
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
@@ -491,9 +482,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo chmod -R 777 /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache
-
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
@@ -622,9 +610,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo chmod -R 777 /tmp/node-compile-cache || true
-          sudo rm -rf /tmp/node-compile-cache
-
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
