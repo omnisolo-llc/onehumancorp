@@ -59,6 +59,7 @@ export default function TriagePage() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
@@ -265,9 +266,11 @@ export default function TriagePage() {
                     if (isSelected) {
                         setSelectedItemId(null);
                         setEditingId(null);
+                        setReviewingId(null);
                     } else {
                         setSelectedItemId(item.id);
                         setEditingId(null);
+                        setReviewingId(null);
                     }
                   }}
                   data-testid={`triage-card-header-${item.id}`}
@@ -301,9 +304,11 @@ export default function TriagePage() {
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                           Proposed Action: {item.action_type}
                         </div>
-                        <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-                          {item.action_payload || "No specific payload"}
-                        </div>
+                        {reviewingId === item.id && (
+                          <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
+                            {item.action_payload || "No specific payload"}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -349,25 +354,41 @@ export default function TriagePage() {
                       <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                         {item.action_type ? (
                           <>
-                            <button
-                              disabled={isProcessing}
-                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                              data-testid={`triage-review-btn-${item.id}`}
-                              onClick={() => {
-                                setEditingId(item.id);
-                                setEditValue(item.action_payload || "");
-                              }}
-                            >
-                              Review Draft
-                            </button>
-                            <button
-                              disabled={isProcessing}
-                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                              data-testid={`triage-approve-${item.id}`}
-                              onClick={() => handleDecision(item.id, true)}
-                            >
-                              {isProcessing ? "Processing..." : "Approve as-is"}
-                            </button>
+                            {reviewingId !== item.id && (
+                              <button
+                                disabled={isProcessing}
+                                className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                                data-testid={`triage-review-btn-${item.id}`}
+                                onClick={() => {
+                                  setReviewingId(item.id);
+                                }}
+                              >
+                                Review Draft
+                              </button>
+                            )}
+                            {reviewingId === item.id && (
+                              <>
+                                <button
+                                  disabled={isProcessing}
+                                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                                  data-testid={`triage-edit-btn-${item.id}`}
+                                  onClick={() => {
+                                    setEditingId(item.id);
+                                    setEditValue(item.action_payload || "");
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  disabled={isProcessing}
+                                  className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                                  data-testid={`triage-approve-${item.id}`}
+                                  onClick={() => handleDecision(item.id, true)}
+                                >
+                                  {isProcessing ? "Processing..." : "Approve as-is"}
+                                </button>
+                              </>
+                            )}
                           </>
                         ) : (
                           <button

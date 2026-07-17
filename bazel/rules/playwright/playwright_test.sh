@@ -49,7 +49,11 @@ cd "$workspace_root"
 # Resolve spec files to absolute paths if passed as arguments.
 ABS_SPEC_FILES=()
 for spec_file in "$@"; do
-  ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
+  if [[ "$spec_file" == -* ]]; then
+    ABS_SPEC_FILES+=("$spec_file")
+  else
+    ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
+  fi
 done
 
 playwright_spec_workspace_name() {
@@ -160,11 +164,15 @@ mkdir -p "$WORK_DIR/src/e2e"
 PLAYWRIGHT_SPEC_ARGS=()
 if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
   for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
-    abs_spec_file="$(realpath "$abs_spec_file")"
-    spec_workspace_name="$(playwright_spec_workspace_name "$abs_spec_file")"
-    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
-    copy_spec_fixtures "$abs_spec_file"
-    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_workspace_name")
+    if [[ "$abs_spec_file" == -* ]]; then
+      PLAYWRIGHT_SPEC_ARGS+=("$abs_spec_file")
+    else
+      abs_spec_file="$(realpath "$abs_spec_file")"
+      spec_workspace_name="$(playwright_spec_workspace_name "$abs_spec_file")"
+      cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
+      copy_spec_fixtures "$abs_spec_file"
+      PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_workspace_name")
+    fi
   done
 else
   while IFS= read -r -d '' spec_file; do
