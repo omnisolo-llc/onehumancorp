@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Workaround for GitHub Actions Node 24 compile cache permission issues
+if [ -d /tmp/node-compile-cache ]; then
+  sudo rm -rf /tmp/node-compile-cache 2>/dev/null || true
+fi
+
 scanner_error() {
   local reason="$1"
   shift
