@@ -613,28 +613,6 @@ Output JSON format:
                         return Ok(false);
                     }
 
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, \'CustomerSuccess\', $3::jsonb, $4::jsonb, \'PENDING_APPROVAL\', NOW(), NOW())")
-                    .bind(&agent_feed_item_id)
-                    .bind(&tenant_id)
-                    .bind(serde_json::json!({"description": context_summary}))
-                    .bind(serde_json::json!({
-                        "feature_type": event_source,
-                        "original_message": customer_message,
-                        "generated_response": action_payload,
-                        "context_used": context_summary,
-                        "inbox_message_id": message_id,
-                        "source": source,
-                        "sender_id": sender_id,
-                        "customer_id": customer_id_val,
-                    }))
-                    .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert agent approvals item: {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
-                            .bind(&job_id)
-                            .execute(&self.db.pool).await;
-                        return Ok(false);
-                    }
 
                     let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = NOW() WHERE payload->>'message' = $1 AND tenant_id = $2").bind(customer_message).bind(&tenant_id).execute(&self.db.pool).await;
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
@@ -742,28 +720,6 @@ Output JSON format:
                         return Ok(false);
                     }
 
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, \'CustomerSuccess\', ?, ?, \'PENDING_APPROVAL\', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                    .bind(&agent_feed_item_id)
-                    .bind(&tenant_id)
-                    .bind(serde_json::json!({"description": context_summary}).to_string())
-                    .bind(serde_json::json!({
-                        "feature_type": event_source,
-                        "original_message": customer_message,
-                        "generated_response": action_payload,
-                        "context_used": context_summary,
-                        "inbox_message_id": message_id,
-                        "source": source,
-                        "sender_id": sender_id,
-                        "customer_id": customer_id_val,
-                    }).to_string())
-                    .execute(&*sqlite_pool).await {
-                        tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(&job_id)
-                            .execute(&*sqlite_pool).await;
-                        return Ok(false);
-                    }
 
                     let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE json_extract(payload, '$.message') = ? AND tenant_id = ?").bind(customer_message).bind(&tenant_id).execute(&*sqlite_pool).await;
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
