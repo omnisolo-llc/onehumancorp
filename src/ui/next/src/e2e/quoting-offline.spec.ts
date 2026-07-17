@@ -5,7 +5,7 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await loginAs(page, adminUser);
 
     // 1. Setup a draft quote by calling the API
-    const createQuoteRes = await page.request.post('/api/v1/quotes', {
+    const createQuoteRes = await page.request.post('/api/v1/proposals', {
       headers: {
         'x-tenant-id': 'tenant-1'
       },
@@ -23,11 +23,11 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
       }
     });
 
-    const quoteData = await createQuoteRes.json();
-    const quoteId = quoteData.id;
+    const proposalData = await createQuoteRes.json();
+    const proposalId = proposalData.id;
 
     // Navigate to the quoting page for this ID
-    await page.goto(`/quoting?id=${quoteId}`);
+    await page.goto(`/quoting?id=${proposalId}`);
 
     // 2. Wait for the page to load
     await expect(page.getByText('Quote Summary')).toBeVisible();
@@ -61,15 +61,15 @@ test.describe('Offline-Tolerant Quote to Invoice CUJ', () => {
     await page.waitForTimeout(2000);
 
     // 9. Verify the backend status via API
-    const getQuoteRes = await page.request.get(`/api/v1/quotes?id=${quoteId}`, {
+    const getQuoteRes = await page.request.get(`/api/v1/proposals/${proposalId}`, {
       headers: {
         'x-tenant-id': 'tenant-1'
       }
     });
 
     const updatedQuoteData = await getQuoteRes.json();
-    expect(updatedQuoteData.quote.status).toBe('ACCEPTED');
-    expect(updatedQuoteData.quote.total_amount).toBe(30000);
+    expect(updatedQuoteData.proposal.status).toBe('ACCEPTED');
+    expect(updatedQuoteData.proposal.total_amount_cents).toBe(30000);
 
     // Check line items got updated
     const lineItem = updatedQuoteData.line_items.find((i: any) => i.description === 'Drywall Repair');

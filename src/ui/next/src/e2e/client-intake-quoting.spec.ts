@@ -19,12 +19,12 @@ test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
     const result = await res.json();
     expect(result.success).toBe(true);
     expect(result.proposal_drafted).toBe(true);
-    expect(result.quote_id).toBeDefined();
+    expect(result.proposal_id).toBeDefined();
 
-    const quoteId = result.quote_id;
+    const proposalId = result.proposal_id;
 
     // Now Carlos navigates to the Quoting page
-    await page.goto(`/quotes/${quoteId}`);
+    await page.goto(`/proposals/${proposalId}`);
 
     // Expect the line item description for the service
     await expect(page.locator('text=x1')).toBeVisible({ timeout: 15000 });

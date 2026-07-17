@@ -29,7 +29,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
     // Find the dynamic approval card (which we've mapped using data-testid or just looking for the buttons)
     const approveBtn = page.getByTestId('feed-approve-btn').first();
-    const editBtn = page.getByTestId('edit-proposal').first();
+    const editBtn = page.getByTestId('edit-quote').first();
 
     // In case there are no items to approve, we will skip the rest of the assertions safely.
     // In a real E2E environment we would seed this, but this guarantees the script runs.
@@ -131,21 +131,21 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     const approveBtn = page.getByTestId('feed-approve-btn').first();
-    const editBtn = page.getByTestId('edit-proposal').first();
+    const editBtn = page.getByTestId('edit-quote').first();
 
     if (await editBtn.isVisible({ timeout: 10000 }).catch(() => false)) {
       // Click edit
       await editBtn.click();
 
       // Verify textarea appears
-      const textarea = page.getByTestId('edit-proposal-textarea');
+      const textarea = page.getByTestId('edit-quote-textarea');
       await expect(textarea).toBeVisible();
 
       // Modify the text
       await textarea.fill('This is my manually edited draft text');
 
       // Click cancel first
-      const cancelBtn = page.getByTestId('cancel-edit-proposal');
+      const cancelBtn = page.getByTestId('cancel-edit-quote');
       await cancelBtn.click();
       await expect(textarea).not.toBeVisible();
 
