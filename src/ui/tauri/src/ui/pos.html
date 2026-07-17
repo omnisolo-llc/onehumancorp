@@ -2228,6 +2228,51 @@ initWalkthrough();
     updateOfflineStatus();
 </script>
   <script src="help-widget.mjs" type="module"></script>
+    <!-- Ambient P2P Mesh Network Join Prompt -->
+    <div id="p2p-mesh-prompt" class="glassmorphism p2p-mesh-prompt" style="display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 335px; z-index: 9999; padding: 16px; box-sizing: border-box; text-align: center; transition: opacity 0.3s ease;">
+      <p style="margin: 0 0 12px 0; font-weight: 600; color: #1d1d1f; font-size: 14px;">Nearby Register Detected</p>
+      <button id="p2p-mesh-join-btn" class="glassmorphism-btn" style="width: 100%; min-height: 44px; background: #0066FF; color: white; border: none; font-weight: 600; font-size: 16px; cursor: pointer; transition: background 0.2s;">Join Local Register Network</button>
+    </div>
+
+    <script>
+      // Simulate Bluetooth LE/mDNS detection showing the ambient prompt
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          const prompt = document.getElementById("p2p-mesh-prompt");
+          if (prompt) {
+            prompt.style.display = "block";
+            prompt.style.opacity = "0";
+            requestAnimationFrame(() => {
+              prompt.style.opacity = "1";
+            });
+          }
+        }, 2000); // 2-second delay to mock detection
+      });
+
+      // Handle joining the mesh network
+      document.getElementById("p2p-mesh-join-btn")?.addEventListener("click", () => {
+        const btn = document.getElementById("p2p-mesh-join-btn");
+        const prompt = document.getElementById("p2p-mesh-prompt");
+        if (btn) {
+          btn.innerText = "Synchronizing Mesh State...";
+          btn.style.background = "#FF9500"; // Processing status
+
+          setTimeout(() => {
+            btn.innerText = "Mesh Network Connected";
+            btn.style.background = "#34C759"; // Connected status
+
+            setTimeout(() => {
+              if (prompt) {
+                prompt.style.opacity = "0";
+                setTimeout(() => {
+                  prompt.style.display = "none";
+                }, 300);
+              }
+            }, 1500); // Hide after showing success
+          }, 1500); // Simulate sync delay
+        }
+      });
+    </script>
   </body>
 </html>
 
