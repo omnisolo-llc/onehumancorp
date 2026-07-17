@@ -3,34 +3,625 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Open secure onboarding</title>
+    <title>OHC Interactive Setup</title>
     <style>
+      :root {
+        --bg-light: #f5f5f7;
+        --bg-dark: #121212;
+        --text-light: #1D1D1F;
+        --text-dark: #F5F5F7;
+        --text-muted-light: #555555;
+        --text-muted-dark: #A1A1A6;
+        --glass-bg-light: rgba(255, 255, 255, 0.65);
+        --glass-border-light: rgba(255, 255, 255, 0.4);
+        --glass-bg-dark: rgba(22, 22, 26, 0.7);
+        --glass-border-dark: rgba(255, 255, 255, 0.1);
+        --accent: #0066FF;
+        --accent-hover: #005ce6;
+        --error: #FF3B30;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        align-items: center;
-        background: #f5f5f7;
-        color: #1d1d1f;
+        background-color: var(--bg-light);
+        color: var(--text-light);
+        font-family: 'Inter', system-ui, sans-serif;
         display: flex;
-        font-family: system-ui, sans-serif;
         justify-content: center;
+        align-items: center;
         min-height: 100vh;
         margin: 0;
+        padding: 20px;
+        transition: background-color 0.3s, color 0.3s;
       }
-      main { max-width: 32rem; padding: 2rem; text-align: center; }
-      a { color: #06f; font-weight: 700; }
+
+      h1, h2, h3, h4 {
+        font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+        margin-top: 0;
+        font-weight: 600;
+      }
+
+      main {
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .wizard-glassmorphism {
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: var(--glass-bg-light);
+        border: 1px solid var(--glass-border-light);
+        border-radius: 16px;
+        padding: 32px 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      }
+
+      p {
+        color: var(--text-muted-light);
+        line-height: 1.5;
+      }
+
+      .step {
+        display: none;
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .step.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      input, select {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        font-family: inherit;
+        background: rgba(255, 255, 255, 0.9);
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+      }
+
+      input.invalid-input, select.invalid-input {
+        border-color: var(--error);
+      }
+
+      .error-msg {
+        display: none;
+        color: var(--error);
+        font-size: 13px;
+        margin-top: 6px;
+      }
+
+      .error-msg.visible {
+        display: block;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+      }
+
+      button {
+        padding: 12px 20px;
+        border-radius: 8px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.1s;
+        font-family: inherit;
+        flex: 1;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      .btn-primary {
+        background-color: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--accent-hover);
+      }
+
+      .btn-secondary {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: var(--text-light);
+      }
+
+      .btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-text {
+        background: none;
+        color: var(--text-muted-light);
+        font-weight: 500;
+        padding: 8px;
+      }
+
+      .btn-text:hover {
+        color: var(--text-light);
+      }
+
+      .card-option {
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+        text-align: left;
+        width: 100%;
+        display: block;
+      }
+
+      .card-option:hover {
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .card-option.selected {
+        border-color: var(--accent);
+        background: rgba(0, 102, 255, 0.05);
+      }
+
+      .card-option h3 {
+        margin: 0 0 4px 0;
+        font-size: 16px;
+      }
+
+      .card-option p {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: var(--bg-dark);
+          color: var(--text-dark);
+        }
+        .wizard-glassmorphism {
+          background: var(--glass-bg-dark);
+          border: 1px solid var(--glass-border-dark);
+        }
+        p, .btn-text {
+          color: var(--text-muted-dark);
+        }
+        .btn-text:hover {
+          color: var(--text-dark);
+        }
+        input, select {
+          background: rgba(0, 0, 0, 0.5);
+          border-color: #333;
+          color: white;
+        }
+        .card-option {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--text-dark);
+        }
+        .card-option:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .card-option.selected {
+          background: rgba(0, 102, 255, 0.15);
+        }
+        .btn-secondary {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: var(--text-dark);
+        }
+        .btn-secondary:hover {
+          background-color: rgba(255, 255, 255, 0.15);
+        }
+      }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Continue in secure onboarding</h1>
-      <p>Account credentials are managed by the signed-in web session.</p>
-      <p><a id="continue" href="http://127.0.0.1:3000/onboarding">Open onboarding</a></p>
+    <main class="wizard-glassmorphism">
+      <div id="wizard-container">
+
+        <!-- Step 0: Welcome -->
+        <div class="step active" id="step-welcome">
+          <h2>Tell us about your business</h2>
+          <p>Let's get your workspace set up in just a few steps.</p>
+          <div class="btn-row">
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(1)">Get Started</button>
+          </div>
+        </div>
+
+        <!-- Step 1: Context -->
+        <div class="step" id="step-context">
+          <h2>How do you work?</h2>
+          <p>Choose the model that best describes your business.</p>
+
+          <button class="card-option" data-testid="context-storefront" onclick="selectContext('Storefront', this)">
+            <h3>Storefront / E-commerce</h3>
+            <p>I sell products online or in-person.</p>
+          </button>
+          <button class="card-option" data-testid="context-service" onclick="selectContext('Service', this)">
+            <h3>Service Provider</h3>
+            <p>I offer appointments, bookings, or consulting.</p>
+          </button>
+
+          <input type="hidden" id="business-context">
+          <div id="context-error" class="error-msg">Please select an option.</div>
+
+          <div class="btn-row">
+            <button class="btn-text" data-testid="save-draft-btn" onclick="saveDraft()">Save Draft</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(2)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Category -->
+        <div class="step" id="step-category">
+          <h2>What is your category?</h2>
+          <p>This helps us tailor your tools.</p>
+
+          <div class="form-group">
+            <label for="business-categories">Category</label>
+            <select id="business-categories" onchange="clearError('categories')">
+              <option value="">Select a category</option>
+              <option value="Retail">Retail</option>
+              <option value="Food">Food & Beverage</option>
+              <option value="Services">Professional Services</option>
+              <option value="Other">Other</option>
+            </select>
+            <div id="categories-error" class="error-msg">Please select a category.</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(1)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(3)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Business Name -->
+        <div class="step" id="step-name">
+          <h2>What is the name of your business?</h2>
+
+          <div class="form-group">
+            <label for="business-name">Business Name</label>
+            <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" oninput="clearError('name')">
+            <div id="name-error" class="error-msg">Please enter a business name.</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(2)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(4)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Assistant Setup -->
+        <div class="step" id="step-assistant">
+          <h2>Set up your Assistant</h2>
+          <p>Who should handle your customer inquiries?</p>
+
+          <button class="card-option" data-testid="team-support" onclick="selectAssistant('Support', this)">
+            <h3>Support Agent</h3>
+            <p>Handles FAQs and order tracking.</p>
+          </button>
+          <button class="card-option" data-testid="team-sales" onclick="selectAssistant('Sales', this)">
+            <h3>Sales Agent</h3>
+            <p>Helps convert leads to customers.</p>
+          </button>
+
+          <input type="hidden" id="assistant-name">
+          <div id="assistant-name-error" class="error-msg" style="margin-bottom: 15px;">Please select an assistant type.</div>
+
+          <div class="form-group" style="margin-top: 20px;">
+            <label for="assistant-tone">Assistant Tone</label>
+            <select id="assistant-tone" onchange="clearError('tone')">
+              <option value="">Select a tone</option>
+              <option value="Professional">Professional</option>
+              <option value="Friendly">Friendly & Casual</option>
+              <option value="Enthusiastic">Enthusiastic</option>
+            </select>
+            <div id="tone-error" class="error-msg">Please select an assistant tone.</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(3)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(5)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 5: Admin Setup -->
+        <div class="step" id="step-admin">
+          <h2>Admin Setup</h2>
+          <p>Create your owner account.</p>
+
+          <div class="form-group">
+            <label for="admin-name">Your Name</label>
+            <input type="text" id="admin-name" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label for="admin-email">Email Address</label>
+            <input type="email" id="admin-email" placeholder="john@example.com">
+          </div>
+          <div class="form-group">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" placeholder="••••••••">
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(4)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(6)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 6: Offer -->
+        <div class="step" id="step-offer">
+          <h2>What do you sell?</h2>
+
+          <div class="form-group">
+            <label for="first-offer">Describe your main offering</label>
+            <input type="text" id="first-offer" placeholder="e.g. Custom cakes, Plumber services">
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(5)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(7)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 7: Location -->
+        <div class="step" id="step-location">
+          <h2>Where are you located?</h2>
+
+          <div class="form-group">
+            <label for="location-input">City, State or Online</label>
+            <input type="text" id="location-input" placeholder="e.g. New York, NY">
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(6)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(8)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 8: Target Audience -->
+        <div class="step" id="step-target-audience">
+          <h2>Who is your target audience?</h2>
+
+          <div class="form-group">
+            <label for="target-audience">Target Audience</label>
+            <input type="text" id="target-audience" placeholder="e.g. Homeowners, Local businesses">
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(7)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(9)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 9: Domain -->
+        <div class="step" id="step-domain">
+          <h2>Where will your business live?</h2>
+          <p>Choose a subdomain for your workspace.</p>
+
+          <div class="form-group">
+            <label for="domain-name">Domain Name</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="text" id="domain-name" placeholder="mybusiness" style="flex: 1;">
+              <span style="color: var(--text-muted-light); font-weight: 500;">.ohc.store</span>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(8)">Back</button>
+            <button class="btn-primary" data-testid="next-step-btn" onclick="nextStep(10)">Next</button>
+          </div>
+        </div>
+
+        <!-- Step 10: Generate Storefront -->
+        <div class="step" id="step-generate">
+          <h2 id="loading-title">Ready to build!</h2>
+          <p>Add a cover image and generate your workspace.</p>
+
+          <div class="form-group">
+            <label for="instant-bio">Business Bio</label>
+            <input type="text" id="instant-bio" placeholder="Short description of your business">
+          </div>
+
+          <div class="form-group">
+            <label for="instant-image-url">Cover Image URL</label>
+            <input type="text" id="instant-image-url" placeholder="https://...">
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-secondary" data-testid="prev-step-btn" onclick="prevStep(9)">Back</button>
+            <button class="btn-primary" id="generate-storefront-btn" onclick="generateStorefront()">Generate</button>
+          </div>
+        </div>
+
+      </div>
     </main>
+
     <script>
-      const link = document.getElementById("continue");
-      const webOrigin = window.location.protocol.startsWith("http")
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : "http://127.0.0.1:3000";
-      link.href = `${webOrigin}/onboarding${window.location.search}${window.location.hash}`;
+      let currentStep = 0;
+      const totalSteps = 10;
+      const steps = [
+        'step-welcome', 'step-context', 'step-category', 'step-name',
+        'step-assistant', 'step-admin', 'step-offer', 'step-location',
+        'step-target-audience', 'step-domain', 'step-generate'
+      ];
+
+      function showStep(index) {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(steps[index]).classList.add('active');
+        currentStep = index;
+      }
+
+      function nextStep(targetIndex) {
+        if (!validateStep(currentStep)) return;
+        showStep(targetIndex);
+      }
+
+      function prevStep(targetIndex) {
+        showStep(targetIndex);
+      }
+
+      function validateStep(index) {
+        if (index === 1) { // Context
+          const ctx = document.getElementById('business-context').value;
+          if (!ctx) {
+            document.getElementById('context-error').classList.add('visible');
+            return false;
+          }
+        }
+        if (index === 2) { // Category
+          const cat = document.getElementById('business-categories');
+          if (!cat.value) {
+            cat.classList.add('invalid-input');
+            document.getElementById('categories-error').classList.add('visible');
+            return false;
+          }
+        }
+        if (index === 3) { // Name
+          const name = document.getElementById('business-name');
+          if (!name.value.trim()) {
+            name.classList.add('invalid-input');
+            document.getElementById('name-error').classList.add('visible');
+            return false;
+          }
+        }
+        if (index === 4) { // Assistant
+          const ast = document.getElementById('assistant-name').value;
+          let valid = true;
+          if (!ast) {
+            document.getElementById('assistant-name-error').classList.add('visible');
+            valid = false;
+          }
+          const tone = document.getElementById('assistant-tone');
+          if (!tone.value) {
+            tone.classList.add('invalid-input');
+            document.getElementById('tone-error').classList.add('visible');
+            valid = false;
+          }
+          return valid;
+        }
+        return true;
+      }
+
+      function clearError(field) {
+        if (field === 'categories') {
+          document.getElementById('business-categories').classList.remove('invalid-input');
+          document.getElementById('categories-error').classList.remove('visible');
+        } else if (field === 'name') {
+          document.getElementById('business-name').classList.remove('invalid-input');
+          document.getElementById('name-error').classList.remove('visible');
+        } else if (field === 'tone') {
+          document.getElementById('assistant-tone').classList.remove('invalid-input');
+          document.getElementById('tone-error').classList.remove('visible');
+        }
+      }
+
+      function selectContext(value, el) {
+        document.getElementById('business-context').value = value;
+        document.getElementById('context-error').classList.remove('visible');
+
+        const parent = el.parentElement;
+        parent.querySelectorAll('.card-option').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+
+      function selectAssistant(value, el) {
+        document.getElementById('assistant-name').value = value;
+        document.getElementById('assistant-name-error').classList.remove('visible');
+
+        const parent = el.parentElement;
+        parent.querySelectorAll('.card-option').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+
+      function saveDraft() {
+        const state = {
+          context: document.getElementById('business-context').value,
+          category: document.getElementById('business-categories').value,
+          name: document.getElementById('business-name').value,
+          step: currentStep
+        };
+        window.localStorage.setItem('onboardingState', JSON.stringify(state));
+      }
+
+      function generateStorefront() {
+        const btn = document.getElementById('generate-storefront-btn');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+        document.getElementById('loading-title').textContent = 'Building Your Business...';
+
+        // Construct the final state payload
+        const payload = {
+          context: document.getElementById('business-context').value,
+          category: document.getElementById('business-categories').value,
+          name: document.getElementById('business-name').value,
+          assistant_name: document.getElementById('assistant-name').value,
+          assistant_tone: document.getElementById('assistant-tone').value,
+          admin_name: document.getElementById('admin-name').value,
+          admin_email: document.getElementById('admin-email').value,
+          offer: document.getElementById('first-offer').value,
+          location: document.getElementById('location-input').value,
+          target_audience: document.getElementById('target-audience').value,
+          domain: document.getElementById('domain-name').value,
+          bio: document.getElementById('instant-bio').value,
+          image_url: document.getElementById('instant-image-url').value,
+        };
+
+        // Make the real backend API call
+        fetch('/api/v1/onboarding/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: `Business: ${payload.name}. Category: ${payload.category}. Context: ${payload.context}. Offer: ${payload.offer}. Audience: ${payload.target_audience}. Bio: ${payload.bio}. Location: ${payload.location}. Assistant: ${payload.assistant_name} (${payload.assistant_tone})`,
+            image_url: payload.image_url || null
+          })
+        }).then(res => res.json())
+          .then(data => {
+            document.getElementById('loading-title').textContent = 'Success!';
+            btn.textContent = 'Done';
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 1000);
+          })
+          .catch(err => {
+            document.getElementById('loading-title').textContent = 'Error generating workspace';
+            btn.textContent = 'Retry';
+            btn.disabled = false;
+          });
+      }
+
+      // Initialize
+      showStep(0);
     </script>
   </body>
 </html>

@@ -16,8 +16,29 @@ test.describe('Onboarding Wizard Flow', () => {
   test('successfully completes the wizard with drafting and instant image url', async ({ page }) => {
     await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    // Sometimes there might be a loading transition, wait for it
-    await page.waitForTimeout(2000);
+    // Navigate to the final step where #instant-bio is visible
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
+    await page.getByTestId('next-step-btn').nth(1).click();
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await page.locator('#business-name').fill('My E2E Bakery');
+    await page.getByTestId('next-step-btn').nth(3).click();
+    await page.getByTestId('team-support').click();
+    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.getByTestId('next-step-btn').nth(4).click();
+    await page.locator('#admin-name').fill('John Doe');
+    await page.locator('#admin-email').fill('john.doe@example.com');
+    await page.locator('#admin-password').fill('password123');
+    await page.getByTestId('next-step-btn').nth(5).click();
+    await page.locator('#first-offer').fill('I sell awesome products');
+    await page.getByTestId('next-step-btn').nth(6).click();
+    await page.locator('#location-input').fill('New York, NY');
+    await page.getByTestId('next-step-btn').nth(7).click();
+    await page.locator('#target-audience').fill('Everyone');
+    await page.getByTestId('next-step-btn').nth(8).click();
+    await page.locator('#domain-name').fill('mybusiness');
+    await page.getByTestId('next-step-btn').nth(9).click();
 
     const bioInput = page.locator('#instant-bio');
     await expect(bioInput).toBeVisible();
