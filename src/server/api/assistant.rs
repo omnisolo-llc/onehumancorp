@@ -1473,7 +1473,7 @@ async fn search_cross_session_memory(
     }
     let pattern = literal_like_pattern(query);
 
-    let snippets = match &db.store {
+    let mut snippets = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT task_id, role, substr(content, 1, 1001) AS content FROM assistant_messages
