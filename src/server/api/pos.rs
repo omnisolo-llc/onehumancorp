@@ -232,6 +232,16 @@ async fn post_inventory_handler(
                         .execute(&mut *tx)
                         .await;
 
+                    if quantity_change < 0 {
+                        let _ = sqlx::query("INSERT INTO inventory_reservations (id, tenant_id, product_id, quantity, expires_at) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '10 minutes')")
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(item_id)
+                            .bind(-quantity_change)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+
                     if update_legacy.is_ok() {
                         let _ = tx.commit().await;
 
