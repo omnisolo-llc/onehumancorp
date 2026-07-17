@@ -96,6 +96,7 @@ async function main() {
       REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
       OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
       OHC_AGENT_TOKEN: process.env.OHC_AGENT_TOKEN ?? 'e2e-agent-token',
+      OHC_AGENT_AUTH_KEY: process.env.OHC_AGENT_AUTH_KEY ?? 'e2e-agent-auth-key-must-be-very-long',
     },
   });
 
