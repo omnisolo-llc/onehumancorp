@@ -90,6 +90,11 @@
         }
     });
 
+    document.addEventListener('touchmove', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    }, { passive: true });
+
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
         hideTooltip();
