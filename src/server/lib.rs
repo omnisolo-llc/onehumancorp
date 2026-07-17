@@ -4261,8 +4261,17 @@ pub async fn update_ui_triage_action_handler(
                     action_payload_opt = Some(edited.clone());
                 }
 
-                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
+                if let (Some(action_type), Some(mut action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
+                        if action_payload.contains("{{payment_link}}") {
+                            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                            // Default to $50 deposit per requirement if {{payment_link}} is detected in plain text.
+                            if let Ok(link) = stripe_client.create_payment_link("Deposit for Quote", 5000).await {
+                                action_payload = action_payload.replace("{{payment_link}}", &link);
+                            }
+                        }
+
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
@@ -4532,8 +4541,17 @@ pub async fn update_ui_triage_action_handler(
                     }
                 }
 
-                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
+                if let (Some(action_type), Some(mut action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
+                        if action_payload.contains("{{payment_link}}") {
+                            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                            // Default to $50 deposit per requirement if {{payment_link}} is detected in plain text.
+                            if let Ok(link) = stripe_client.create_payment_link("Deposit for Quote", 5000).await {
+                                action_payload = action_payload.replace("{{payment_link}}", &link);
+                            }
+                        }
+
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
