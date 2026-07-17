@@ -996,6 +996,12 @@ mod tests {
     #[tokio::test]
     async fn test_bench_ui_inbox_latency() {
         bench_ui_inbox_latency().await;
+        bench_ui_inbox_mobile_payload().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_omni_inbox_mobile_payload() {
+        bench_ui_omni_inbox_mobile_payload().await;
     }
 
     #[tokio::test]
