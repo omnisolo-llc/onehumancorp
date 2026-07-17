@@ -2318,7 +2318,7 @@
 
 
 
-            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft' || item.payload?.feature_type === 'quote_draft' || (item.payload && typeof item.payload === 'string' && item.payload.includes('quote_draft'))) {
+            if (item.proposed_action?.feature_type === 'proposal_draft' || item.context_payload?.feature_type === 'proposal_draft' || actionType === 'proposal_draft' || item.action_payload?.feature_type === 'proposal_draft' || item.payload?.feature_type === 'proposal_draft' || (item.payload && typeof item.payload === 'string' && item.payload.includes('proposal_draft'))) {
               let payload = item.proposed_action || item.context_payload || item.payload || {};
               if (typeof payload === 'string') {
                   try { payload = JSON.parse(payload); } catch(e){}

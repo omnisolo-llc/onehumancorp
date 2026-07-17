@@ -72,7 +72,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
         topic: 'agent.sales.quote_drafted',
         event_id: `evt-${Date.now()}`,
         payload: {
-          feature_type: 'quote_draft',
+          feature_type: 'proposal_draft',
           id: quoteId,
           description: 'Sink Repair Quote',
           amount: 7800

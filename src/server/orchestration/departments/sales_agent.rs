@@ -349,7 +349,7 @@ impl Department for SalesAgent {
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "quote_draft" {
+                    if feature_type == "proposal_draft" {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
@@ -551,7 +551,7 @@ impl Department for SalesAgent {
                     "service_lead_id": service_lead_id,
                     "estimate_id": estimate_id,
                     "deposit_requirement_id": deposit_requirement_id,
-                    "feature_type": "quote_draft",
+                    "feature_type": "proposal_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
                     "scope": scope,

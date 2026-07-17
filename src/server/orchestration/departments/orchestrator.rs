@@ -465,7 +465,7 @@ pub async fn execute_action(
 
         if req.action_risk == ActionRisk::DraftForReview {
             if let Some(payload) = &req.payload {
-                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("proposal_draft") {
                     let task_id = uuid::Uuid::new_v4().to_string();
                     let action_payload_str = serde_json::to_string(payload).unwrap_or_default();
                     let context_msg = req.description.clone();
@@ -1132,7 +1132,7 @@ pub async fn execute_action(
                         }
                     }
 
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("proposal_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
                         let total_amount_cents = (price * 100.0) as i64;
@@ -1440,7 +1440,7 @@ pub async fn execute_action(
                         if let Err(e) = self.dispatch_event(approved_event).await {
                             tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
                         }
-                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("proposal_draft") {
                         let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                         let _generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");

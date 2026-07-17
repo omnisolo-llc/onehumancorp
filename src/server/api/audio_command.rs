@@ -92,7 +92,7 @@ pub async fn handle_voice_command(
          feature_type (order_intake, task_intake, quote_draft), \
          description (human readable description of the translated text), \
          payload (JSON object with extracted fields like items, quantities, special_requests, materials_cents, labor_cents, required_deposit_cents). \
-         If it's a quote, ensure 'feature_type' is 'quote_draft', 'department' is 'Sales', and extract 'materials_cents', 'labor_cents' and calculate 'required_deposit_cents' if mentioned (e.g. 50% deposit).",
+         If it's a quote, ensure 'feature_type' is 'proposal_draft', 'department' is 'Sales', and extract 'materials_cents', 'labor_cents' and calculate 'required_deposit_cents' if mentioned (e.g. 50% deposit).",
         transcription, preferred_language
     );
 
@@ -104,7 +104,7 @@ pub async fn handle_voice_command(
             let total = 35000;
             let deposit = 17500;
             (DepartmentType::Sales, format!("Drafted Quote for Voice Request: ${:.2} total, ${:.2} deposit.", total as f64 / 100.0, deposit as f64 / 100.0), serde_json::json!({
-                "feature_type": "quote_draft",
+                "feature_type": "proposal_draft",
                 "materials_cents": 15000,
                 "labor_cents": 20000,
                 "total_amount_cents": total,
@@ -128,7 +128,7 @@ pub async fn handle_voice_command(
                 let clean_res = raw_json.trim_matches('`').trim_start_matches("json\n").trim_end();
                 if let Ok(val) = serde_json::from_str::<serde_json::Value>(clean_res) {
                     let mut d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations").to_string();
-                    if val.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                    if val.get("feature_type").and_then(|v| v.as_str()) == Some("proposal_draft") {
                         d_str = "Sales".to_string();
                     }
                     let d = DepartmentType::from_str(&d_str).unwrap_or(DepartmentType::Operations);
@@ -151,7 +151,7 @@ pub async fn handle_voice_command(
 
 
     // If this is a quote_draft, we need to generate a quote, get a payment link, and enrich the action card.
-    if action_payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+    if action_payload.get("feature_type").and_then(|v| v.as_str()) == Some("proposal_draft") {
         let materials_cents = action_payload.get("materials_cents").and_then(|v| v.as_i64()).unwrap_or(0);
         let labor_cents = action_payload.get("labor_cents").and_then(|v| v.as_i64()).unwrap_or(0);
         let total_amount_cents = action_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(materials_cents + labor_cents);

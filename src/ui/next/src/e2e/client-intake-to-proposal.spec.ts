@@ -19,8 +19,8 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
 
     expect(submitResponse.ok()).toBeTruthy();
 
-    // The backend now parses "Plumbing Fix" via LLM and generates the 'quote_draft' intent
-    // which gets broadcasted and SalesAgent creates a 'quote_draft' Approval in the DB.
+    // The backend now parses "Plumbing Fix" via LLM and generates the 'proposal_draft' intent
+    // which gets broadcasted and SalesAgent creates a 'proposal_draft' Approval in the DB.
 
     // To prevent flakiness and due to async nature of the system, we manually trigger
     // the simulation endpoint used by 'draft-quote-card.spec.ts' if needed, but the e2e test
@@ -45,7 +45,7 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     await expect(page.getByText('Suggested Time:')).toBeVisible();
 
     // Step 3: Owner taps "Approve & Send"
-    const approveBtn = page.getByTestId('approve-quote-draft').first();
+    const approveBtn = page.getByTestId('approve-proposal-draft').first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
 

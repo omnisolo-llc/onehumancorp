@@ -5,7 +5,7 @@ import React from 'react';
 
 describe('QuoteReviewModal', () => {
   const mockPayload = {
-    feature_type: 'quote_draft',
+    feature_type: 'proposal_draft',
     service: 'Test Service',
     price: 100.0,
     customer_inquiry: 'I need a test service'

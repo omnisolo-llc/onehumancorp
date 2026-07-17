@@ -194,7 +194,7 @@ export default function TeamChatPage() {
                       )}
                     </div>
 
-                    {msg.card.feature_type === 'quote_draft' ? (
+                    {msg.card.feature_type === 'proposal_draft' ? (
                       <div data-testid="quote-draft-card">
                         <p className="text-sm font-semibold text-gray-900 mb-1">Action Required: Approve Estimate for {msg.card.department}</p>
                         <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
@@ -214,7 +214,7 @@ export default function TeamChatPage() {
                           className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
                           data-testid="approve-action-btn"
                         >
-                          {msg.card.feature_type === 'quote_draft' ? 'Approve & Send' : 'Approve & Execute'}
+                          {msg.card.feature_type === 'proposal_draft' ? 'Approve & Send' : 'Approve & Execute'}
                         </button>
                         <button
                           type="button"
@@ -223,7 +223,7 @@ export default function TeamChatPage() {
                         >
                           Edit Details
                         </button>
-                        {msg.card.feature_type === 'quote_draft' && (
+                        {msg.card.feature_type === 'proposal_draft' && (
                            <button
                              type="button"
                              onClick={() => setMessages(prev => prev.filter(m => m.id !== msg.id))}

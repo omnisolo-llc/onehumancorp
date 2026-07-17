@@ -197,7 +197,7 @@ async fn simulate_proposal_draft(
     };
 
     let payload = serde_json::json!({
-        "feature_type": "quote_draft",
+        "feature_type": "proposal_draft",
         "service": "2-Bedroom Apartment Painting",
         "customer_inquiry": "How much to paint a 2-bedroom apartment?",
         "suggested_price": 1200.0,

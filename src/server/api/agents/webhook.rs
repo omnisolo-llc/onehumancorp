@@ -199,7 +199,7 @@ async fn handle_webhook(
         .await;
 
         let action_payload = serde_json::json!({
-            "feature_type": "quote_draft",
+            "feature_type": "proposal_draft",
             "service_lead_id": service_lead_id,
             "customer_inquiry": inquiry,
             "suggested_price": suggested_price,

@@ -538,7 +538,7 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "quote_draft" && (
+                  {req.payload?.feature_type === "proposal_draft" && (
                     <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3 max-w-full break-words" data-testid="quote-draft-card">
                       <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                         <svg
@@ -673,9 +673,9 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")) {
+                        if (payload && (payload.original_message || payload.feature_type === "proposal_draft" || payload.feature_type === "ambassador_reply")) {
                           setSelectedReview(req);
-                          if (payload.feature_type === "quote_draft") {
+                          if (payload.feature_type === "proposal_draft") {
                             setEditedQuote({
                               suggested_price: String(payload.suggested_price || ''),
                               scope: payload.scope || ''
@@ -689,13 +689,13 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                     >
-                      {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")
+                      {payload && (payload.original_message || payload.feature_type === "proposal_draft" || payload.feature_type === "ambassador_reply")
                         ? "Edit"
                         : "Reject / Edit"}
                     </button>
                     <button
                       onClick={() => {
-                        if (req.payload?.feature_type === "quote_draft" && editedQuote) {
+                        if (req.payload?.feature_type === "proposal_draft" && editedQuote) {
                            onApprove(req.id, {
                              ...req.payload,
                              suggested_price: parseFloat(editedQuote.suggested_price) || 0,
@@ -711,7 +711,7 @@ export default function ApprovalInbox({
                         ? "Publish to Website"
                         : req.payload?.feature_type === "social_post_draft"
                         ? "Schedule Post"
-                        : req.payload?.feature_type === "quote_draft"
+                        : req.payload?.feature_type === "proposal_draft"
                         ? "Approve & Send"
                         : req.payload?.feature_type === "ambassador_reply"
                         ? "Send Draft"
@@ -747,7 +747,7 @@ export default function ApprovalInbox({
                 </div>
               </div>
 
-              {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? (
+              {extractPayload(selectedReview.description).payload?.feature_type === "proposal_draft" ? (
                 <div className="mb-6 space-y-4">
                   <div>
                     <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Suggested Price ($)</label>
@@ -819,7 +819,7 @@ export default function ApprovalInbox({
                 </button>
                 <button
                   onClick={() => {
-                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote) {
+                    if (extractPayload(selectedReview.description).payload?.feature_type === "proposal_draft" && editedQuote) {
                       onApprove(selectedReview.id, {
                          ...extractPayload(selectedReview.description).payload,
                          suggested_price: parseFloat(editedQuote.suggested_price) || 0,
@@ -842,7 +842,7 @@ export default function ApprovalInbox({
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                   data-testid="modal-approve-btn"
                 >
-                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
+                  {extractPayload(selectedReview.description).payload?.feature_type === "proposal_draft" ? "Approve & Send" : "Send Draft"}
                 </button>
               </div>
             </div>

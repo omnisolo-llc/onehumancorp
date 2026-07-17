@@ -134,7 +134,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.remaining_stock !== undefined ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ||
+            ?.feature_type === "proposal_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "create_product" ||
           (approval.proposed_action || approval.context_payload)
@@ -869,7 +869,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
-              ?.feature_type === "quote_draft" && (
+              ?.feature_type === "proposal_draft" && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="quote-draft-card"
@@ -1325,7 +1325,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
-                ?.feature_type === "quote_draft" ? (
+                ?.feature_type === "proposal_draft" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-500 dark:text-gray-400">
@@ -2301,7 +2301,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           )
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "proposal_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <div className="flex flex-col gap-1">
@@ -2375,7 +2375,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 }
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                 aria-label="Approve & Send"
-                data-testid="approve-quote-draft"
+                data-testid="approve-proposal-draft"
                 disabled={loadingAction !== null}
               >
                 {isActionLoading("approve") ? (
@@ -2637,7 +2637,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           </>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "quote_draft" ? (
+            ?.feature_type === "proposal_draft" ? (
           <>
             <button
               onClick={() =>
