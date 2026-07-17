@@ -29,7 +29,7 @@ export function FloatingActionButton() {
 
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm w-14 h-14 min-w-[44px] min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center text-3xl transition-transform hover:scale-105"
+        className="w-14 h-14 min-w-[44px] min-h-[44px] rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-xl flex items-center justify-center text-3xl transition-transform hover:scale-105 text-gray-900 dark:text-gray-100"
         style={{ transform: isOpen ? 'rotate(45deg)' : 'none' }}
       >
         +
