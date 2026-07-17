@@ -50,7 +50,8 @@ pub struct UnifiedMessage {
     pub tenant_id: String,
     pub thread_id: String,
     pub sender_type: String,
-    pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
     pub created_at: String,
 }
 
@@ -512,15 +513,29 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 let ids_clone = thread_ids.clone();
 
                 let (msg_res, action_res) = tokio::join!(
-                    sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ANY($1) ORDER BY created_at ASC").bind(&thread_ids).fetch_all(&pool),
-                    sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ANY($1)").bind(&ids_clone).fetch_all(&pool)
+                    async {
+                        let q = if mobile_optimized {
+                            "SELECT id, tenant_id, thread_id, sender_type, '' as content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ANY($1) ORDER BY created_at ASC"
+                        } else {
+                            "SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ANY($1) ORDER BY created_at ASC"
+                        };
+                        sqlx::query(q).bind(&thread_ids).fetch_all(&pool).await
+                    },
+                    async {
+                        let q = if mobile_optimized {
+                            "SELECT id, tenant_id, thread_id, action_type, NULL as action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ANY($1)"
+                        } else {
+                            "SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ANY($1)"
+                        };
+                        sqlx::query(q).bind(&ids_clone).fetch_all(&pool).await
+                    }
                 );
 
                 if let Ok(msg_rows) = msg_res {
                     for m_row in msg_rows {
                         use sqlx::Row;
                         let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: Some(m_row.get("content")), created_at: m_row.try_get("created_at").unwrap_or_default() });
                     }
                 }
                 if let Ok(action_rows) = action_res {
@@ -535,8 +550,16 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 let pool = sqlite_pool.clone();
 
                 let placeholders = thread_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                let msg_query = format!("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders);
-                let action_query = format!("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders);
+                let msg_query = if mobile_optimized {
+                    format!("SELECT id, tenant_id, thread_id, sender_type, '' as content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders)
+                } else {
+                    format!("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders)
+                };
+                let action_query = if mobile_optimized {
+                    format!("SELECT id, tenant_id, thread_id, action_type, NULL as action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders)
+                } else {
+                    format!("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders)
+                };
 
                 let (msg_res, action_res) = tokio::join!(
                     async {
@@ -559,7 +582,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                     for m_row in msg_rows {
                         use sqlx::Row;
                         let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: Some(m_row.get("content")), created_at: m_row.try_get("created_at").unwrap_or_default() });
                     }
                 }
                 if let Ok(action_rows) = action_res {
@@ -581,6 +604,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 thread.tenant_id = String::new();
                 for msg in &mut messages {
                     msg.tenant_id = String::new();
+                    msg.content = None;
                 }
                 for action in &mut triage_actions {
                     action.tenant_id = String::new();
