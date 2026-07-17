@@ -450,6 +450,8 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
+  OHC_AGENT_TOKEN="secret-token" \
+  OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
