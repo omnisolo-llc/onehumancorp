@@ -280,3 +280,99 @@ async fn test_create_payment_intent_authenticated_via_router() {
     let body_str = String::from_utf8(body.to_vec()).unwrap();
     assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe Terminal connection token request failed"));
 }
+
+#[tokio::test]
+async fn test_reserve_inventory_handler_unauthenticated() {
+    let hub = Arc::new(Hub::new());
+    let app = crate::api::terminal_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/reserve")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"tenant_id": "test_tenant", "product_id": "prod_1", "quantity": 1, "ttl_seconds": 15}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("unauthenticated"));
+}
+
+#[tokio::test]
+async fn test_reserve_inventory_handler_authenticated_fails_on_redlock() {
+    let hub = Arc::new(Hub::new());
+
+    let app_with_auth = axum::Router::new()
+        .route("/reserve", axum::routing::post(crate::api::terminal_api::reserve_inventory_handler))
+        .with_state(hub.clone())
+        .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://test".to_string(),
+            agent_id: "agent_1".to_string(),
+            org_id: "test_tenant".to_string(),
+        }));
+
+    let response = app_with_auth
+        .oneshot(
+            Request::builder()
+                .uri("/reserve")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"tenant_id": "test_tenant", "product_id": "prod_lock", "quantity": 1, "ttl_seconds": 15}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&body_str).unwrap();
+
+    assert!(json.get("success").is_some());
+    assert!(json.get("error_message").is_some());
+}
+
+#[tokio::test]
+async fn test_create_payment_intent_authenticated_reserve_inventory_failure() {
+    let hub = Arc::new(Hub::new());
+
+    let app_with_auth = axum::Router::new()
+        .route("/intent", axum::routing::post(crate::api::terminal_api::create_payment_intent_handler))
+        .with_state(hub)
+        .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://test".to_string(),
+            agent_id: "agent_1".to_string(),
+            org_id: "test_tenant".to_string(),
+        }));
+
+    let response = app_with_auth
+        .oneshot(
+            Request::builder()
+                .uri("/intent")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_1", "quantity": 1000, "order_id": "ord_1", "idempotency_key": "idem-key-1"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+
+    let json: serde_json::Value = serde_json::from_str(&body_str).unwrap();
+    if json.get("Err").is_some() || json.get("error_message").is_some() {
+        let err_msg = json["Err"].as_str().unwrap();
+        assert!(err_msg.contains("Item is currently being checked out") || err_msg.contains("Product not found") || err_msg.contains("Insufficient inventory"));
+    }
+}
