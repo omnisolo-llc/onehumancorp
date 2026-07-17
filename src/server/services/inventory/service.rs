@@ -1,11 +1,8 @@
 use std::sync::Arc;
 use uuid::Uuid;
 
-
 use dashmap::DashMap;
-use std::time::{Instant, Duration};
-
-
+use std::time::{Duration, Instant};
 
 #[async_trait::async_trait]
 pub trait InventoryLocker: Send + Sync {
@@ -40,9 +37,10 @@ impl StandaloneInventoryLocker {
 impl InventoryLocker for StandaloneInventoryLocker {
     async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
-                .execute(pool)
-                .await;
+            let _ =
+                sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                    .execute(pool)
+                    .await;
 
             let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+{} seconds'))", ttl)).bind(lock_key).bind("system").bind(lock_id)
                 .execute(pool)
@@ -52,9 +50,13 @@ impl InventoryLocker for StandaloneInventoryLocker {
         }
 
         let now = Instant::now();
-        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        self.memory_fallback
+            .retain(|_, (_, expires_at)| *expires_at > now);
         if !self.memory_fallback.contains_key(lock_key) {
-            self.memory_fallback.insert(lock_key.to_string(), (lock_id.to_string(), now + Duration::from_secs(ttl as u64)));
+            self.memory_fallback.insert(
+                lock_key.to_string(),
+                (lock_id.to_string(), now + Duration::from_secs(ttl as u64)),
+            );
             true
         } else {
             false
@@ -63,15 +65,21 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
     async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
         if let Some(pool) = &self.pool {
-            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2 AND tenant_id = $3").bind(lock_key).bind(expected_lock_id).bind("system")
-                .execute(pool)
-                .await;
+            let result = sqlx::query(
+                "DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2 AND tenant_id = $3",
+            )
+            .bind(lock_key)
+            .bind(expected_lock_id)
+            .bind("system")
+            .execute(pool)
+            .await;
 
             return result.map(|res| res.rows_affected() > 0).unwrap_or(false);
         }
 
         let now = Instant::now();
-        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        self.memory_fallback
+            .retain(|_, (_, expires_at)| *expires_at > now);
         if let Some(v) = self.memory_fallback.get(lock_key) {
             if v.0 == expected_lock_id {
                 self.memory_fallback.remove(lock_key);
@@ -83,9 +91,10 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
     async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
-                .execute(pool)
-                .await;
+            let _ =
+                sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                    .execute(pool)
+                    .await;
 
             let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2").bind(lock_key).bind("system")
                 .fetch_optional(pool)
@@ -96,13 +105,16 @@ impl InventoryLocker for StandaloneInventoryLocker {
         }
 
         let now = Instant::now();
-        self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
+        self.memory_fallback
+            .retain(|_, (_, expires_at)| *expires_at > now);
         self.memory_fallback.get(lock_key).map(|v| v.0.clone())
     }
 
     async fn clear(&self, lock_key: &str) {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND tenant_id = $2").bind(lock_key).bind("system")
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND tenant_id = $2")
+                .bind(lock_key)
+                .bind("system")
                 .execute(pool)
                 .await;
             return;
@@ -165,7 +177,12 @@ impl InventoryLocker for RedisLocker {
                 end
                 "#,
             );
-            script.key(lock_key).arg(expected_lock_id).invoke_async(&mut conn).await.unwrap_or(false)
+            script
+                .key(lock_key)
+                .arg(expected_lock_id)
+                .invoke_async(&mut conn)
+                .await
+                .unwrap_or(false)
         } else {
             false
         }
@@ -173,7 +190,11 @@ impl InventoryLocker for RedisLocker {
 
     async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            redis::cmd("GET").arg(lock_key).query_async(&mut conn).await.ok()
+            redis::cmd("GET")
+                .arg(lock_key)
+                .query_async(&mut conn)
+                .await
+                .ok()
         } else {
             None
         }
@@ -181,7 +202,11 @@ impl InventoryLocker for RedisLocker {
 
     async fn clear(&self, lock_key: &str) {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
-            let _: () = redis::cmd("DEL").arg(lock_key).query_async(&mut conn).await.unwrap_or(());
+            let _: () = redis::cmd("DEL")
+                .arg(lock_key)
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(());
         }
     }
 }
@@ -190,8 +215,6 @@ pub struct InventoryService {
     locker: Box<dyn InventoryLocker>,
     redis_client: Option<redis::Client>,
 }
-
-
 
 #[derive(Debug)]
 pub struct ReserveResult {
@@ -223,7 +246,10 @@ impl InventoryService {
                 Box::new(StandaloneInventoryLocker::new())
             }
         };
-        Self { locker, redis_client }
+        Self {
+            locker,
+            redis_client,
+        }
     }
 
     // Redis Redlock pattern for distributed lock
@@ -247,14 +273,15 @@ impl InventoryService {
 
         if !acquired {
             let pool = crate::db::get_pool();
-                let action_request_id = Uuid::new_v4().to_string();
-                let payload = serde_json::json!({
-                    "product_id": product_id,
-                    "suggested_action": "Restock Item",
-                    "reason": "Lock contention on limited item"
-                }).to_string();
+            let action_request_id = Uuid::new_v4().to_string();
+            let payload = serde_json::json!({
+                "product_id": product_id,
+                "suggested_action": "Restock Item",
+                "reason": "Lock contention on limited item"
+            })
+            .to_string();
 
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -262,14 +289,15 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
-                let cs_action_request_id = Uuid::new_v4().to_string();
-                let cs_payload = serde_json::json!({
-                    "product_id": product_id,
-                    "suggested_action": "Notify Customer of Out of Stock",
-                    "reason": "Lock contention on limited item during checkout"
-                }).to_string();
+            let cs_action_request_id = Uuid::new_v4().to_string();
+            let cs_payload = serde_json::json!({
+                "product_id": product_id,
+                "suggested_action": "Notify Customer of Out of Stock",
+                "reason": "Lock contention on limited item during checkout"
+            })
+            .to_string();
 
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'inventory_service', 'customer_success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'inventory_service', 'customer_success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&cs_action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -277,7 +305,8 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
-                let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
+            let product_title: String =
+                sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
                     .bind(product_id)
                     .bind(tenant_id)
                     .fetch_optional(&pool)
@@ -285,143 +314,156 @@ impl InventoryService {
                     .unwrap_or(Some(product_id.to_string()))
                     .unwrap_or_else(|| product_id.to_string());
 
-                // Operations Agent: trigger push notification for out-of-stock/lock failure
-                let job_id = Uuid::new_v4().to_string();
-                let message = format!("{} sold out. Would you like to draft a restock order?", product_title);
-                let job_payload = serde_json::json!({
-                    "product_id": product_id,
-                    "product_title": product_title,
-                    "remaining_stock": 0,
-                    "threshold": 5,
-                    "message": message
-                }).to_string();
+            // Operations Agent: trigger push notification for out-of-stock/lock failure
+            let job_id = Uuid::new_v4().to_string();
+            let message = format!(
+                "{} sold out. Would you like to draft a restock order?",
+                product_title
+            );
+            let job_payload = serde_json::json!({
+                "product_id": product_id,
+                "product_title": product_title,
+                "remaining_stock": 0,
+                "threshold": 5,
+                "message": message
+            })
+            .to_string();
 
-                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+            let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                     .bind(job_id)
                     .bind(tenant_id)
                     .bind(&job_payload)
                     .execute(&pool)
                     .await;
 
-                return Ok(ReserveResult {
-                    success: false,
-                    lock_id: "".to_string(),
-                    error_message: "Item is currently being checked out by another customer.".to_string(),
-                });
-            }
+            return Ok(ReserveResult {
+                success: false,
+                lock_id: "".to_string(),
+                error_message: "Item is currently being checked out by another customer."
+                    .to_string(),
+            });
+        }
 
-            let pool = crate::db::get_pool();
-            if let Ok(mut tx) = pool.begin().await {
-                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
+        let pool = crate::db::get_pool();
+        if let Ok(mut tx) = pool.begin().await {
+            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
+                let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
                         .bind(product_id)
                         .bind(tenant_id)
                         .fetch_optional(&mut *tx)
                         .await
                         .unwrap_or(None);
 
-                    if let Some(stock) = current_stock {
-                        if stock < quantity {
-                            let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: format!("Insufficient inventory. Available: {}", stock)
-                            });
-                        } else {
-                            let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
+                if let Some(stock) = current_stock {
+                    if stock < quantity {
+                        let _ = tx.rollback().await;
+                        self.locker.clear(&lock_key).await;
+                        return Ok(ReserveResult {
+                            success: false,
+                            lock_id: "".to_string(),
+                            error_message: format!("Insufficient inventory. Available: {}", stock),
+                        });
+                    } else {
+                        let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
                                 .bind(quantity)
                                 .bind(product_id)
                                 .bind(tenant_id)
                                 .execute(&mut *tx)
                                 .await;
-                            if let Ok(res) = update_res {
-                                if res.rows_affected() == 0 {
-                                    let _ = tx.rollback().await;
-                                    self.locker.clear(&lock_key).await;
-                                    return Ok(ReserveResult {
-                                        success: false,
-                                        lock_id: "".to_string(),
-                                        error_message: format!("Insufficient inventory.")
-                                    });
-                                }
+                        if let Ok(res) = update_res {
+                            if res.rows_affected() == 0 {
+                                let _ = tx.rollback().await;
+                                self.locker.clear(&lock_key).await;
+                                return Ok(ReserveResult {
+                                    success: false,
+                                    lock_id: "".to_string(),
+                                    error_message: format!("Insufficient inventory."),
+                                });
                             }
                         }
-                    } else {
-                        // Fallback to legacy products if not in centralized inventory yet
-                        let update_res = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND available_quantity >= $1")
+                    }
+                } else {
+                    // Fallback to legacy products if not in centralized inventory yet
+                    let update_res = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND available_quantity >= $1")
                             .bind(quantity)
                             .bind(product_id)
                             .bind(tenant_id)
                             .execute(&mut *tx)
                             .await;
 
-                        if let Ok(res) = update_res {
-                            if res.rows_affected() == 0 {
-                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+                    if let Ok(res) = update_res {
+                        if res.rows_affected() == 0 {
+                            let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .fetch_optional(&mut *tx)
                                     .await
                                     .unwrap_or(None);
 
-                                let _ = tx.rollback().await;
-                                self.locker.clear(&lock_key).await;
-                                if let Some(stock) = f_stock {
-                                    return Ok(ReserveResult {
-                                        success: false,
-                                        lock_id: "".to_string(),
-                                        error_message: format!("Insufficient inventory. Available: {}", stock)
-                                    });
-                                } else {
-                                    return Ok(ReserveResult {
-                                        success: false,
-                                        lock_id: "".to_string(),
-                                        error_message: "Product not found".to_string()
-                                    });
-                                }
-                            }
-                        } else {
                             let _ = tx.rollback().await;
                             self.locker.clear(&lock_key).await;
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: "Product not found".to_string()
-                            });
+                            if let Some(stock) = f_stock {
+                                return Ok(ReserveResult {
+                                    success: false,
+                                    lock_id: "".to_string(),
+                                    error_message: format!(
+                                        "Insufficient inventory. Available: {}",
+                                        stock
+                                    ),
+                                });
+                            } else {
+                                return Ok(ReserveResult {
+                                    success: false,
+                                    lock_id: "".to_string(),
+                                    error_message: "Product not found".to_string(),
+                                });
+                            }
                         }
+                    } else {
+                        let _ = tx.rollback().await;
+                        self.locker.clear(&lock_key).await;
+                        return Ok(ReserveResult {
+                            success: false,
+                            lock_id: "".to_string(),
+                            error_message: "Product not found".to_string(),
+                        });
                     }
-                    let _ = tx.commit().await;                    // Publish to Redis Pub/Sub for Real-Time Sync
-                    if let Some(client) = &self.redis_client {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                            let invalidation_topic = "cache_invalidation_events";
-                            let invalidation_payload = serde_json::json!({
-                                "event": "inventory.updated",
-                                "tags": [
-                                    format!("tenant-id:{}", tenant_id),
-                                    format!("entity:product:{}", product_id)
-                                ]
-                            }).to_string();
-                            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
-                        }
+                }
+                let _ = tx.commit().await; // Publish to Redis Pub/Sub for Real-Time Sync
+                if let Some(client) = &self.redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "inventory.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id),
+                                format!("entity:product:{}", product_id)
+                            ]
+                        })
+                        .to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                            .arg(invalidation_topic)
+                            .arg(invalidation_payload)
+                            .query_async(&mut conn)
+                            .await;
                     }
-                } else {
-            self.locker.clear(&lock_key).await;
-                    return Ok(ReserveResult {
-                        success: false,
-                        lock_id: "".to_string(),
-                        error_message: "Failed to set org context".to_string()
-                    });
                 }
             } else {
                 self.locker.clear(&lock_key).await;
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Database error".to_string()
+                    error_message: "Failed to set org context".to_string(),
                 });
             }
+        } else {
+            self.locker.clear(&lock_key).await;
+            return Ok(ReserveResult {
+                success: false,
+                lock_id: "".to_string(),
+                error_message: "Database error".to_string(),
+            });
+        }
 
         Ok(ReserveResult {
             success: true,
@@ -502,9 +544,7 @@ impl InventoryService {
             let mut get_lock_futures = Vec::new();
             for idx in &indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
-                get_lock_futures.push(async move {
-                    self.locker.get_lock_id(&lock_key).await
-                });
+                get_lock_futures.push(async move { self.locker.get_lock_id(&lock_key).await });
             }
 
             let current_lock_ids = futures::future::join_all(get_lock_futures).await;
@@ -568,12 +608,14 @@ impl InventoryService {
             .unwrap_or(None);
 
         if update_result.is_some() {
-            let inventory_level_res = sqlx::query("SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
-                .bind(product_id)
-                .bind(tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            let inventory_level_res = sqlx::query(
+                "SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2",
+            )
+            .bind(product_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
             if let Some(row) = inventory_level_res {
                 let level_id: String = sqlx::Row::get(&row, "id");
@@ -591,12 +633,14 @@ impl InventoryService {
 
         if update_result.is_none() {
             // Enforce row-level locking for final commit on legacy
-            let _ = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                .bind(product_id)
-                .bind(tenant_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            let _ = sqlx::query(
+                "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
+            )
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
             update_result = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
                 .bind(quantity)
@@ -626,7 +670,8 @@ impl InventoryService {
                 "product_id": product_id,
                 "quantity_deducted": quantity,
                 "remaining_stock": new_stock
-            }).to_string();
+            })
+            .to_string();
 
             let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
                 .bind(event_id)
@@ -640,7 +685,8 @@ impl InventoryService {
                 "quantity_deducted": quantity,
                 "remaining_stock": new_stock,
                 "lock_id": lock_id,
-            }).to_string();
+            })
+            .to_string();
 
             let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
                 .bind(Uuid::new_v4().to_string())
@@ -650,19 +696,23 @@ impl InventoryService {
                 .await;
 
             if new_stock <= 5 {
-                let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
-                    .bind(product_id)
-                    .bind(tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(Some(product_id.to_string()))
-                    .unwrap_or_else(|| product_id.to_string());
-
+                let product_title: String = sqlx::query_scalar(
+                    "SELECT title FROM products WHERE id = $1 AND tenant_id = $2",
+                )
+                .bind(product_id)
+                .bind(tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(Some(product_id.to_string()))
+                .unwrap_or_else(|| product_id.to_string());
 
                 let job_id = Uuid::new_v4().to_string();
 
                 let message = if new_stock == 0 {
-                    format!("{} sold out. Would you like to draft a restock order?", product_title)
+                    format!(
+                        "{} sold out. Would you like to draft a restock order?",
+                        product_title
+                    )
                 } else {
                     format!("Stock for {} has dropped to {}.", product_title, new_stock)
                 };
@@ -673,7 +723,8 @@ impl InventoryService {
                     "remaining_stock": new_stock,
                     "threshold": 5,
                     "message": message
-                }).to_string();
+                })
+                .to_string();
 
                 let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                     .bind(job_id)
@@ -690,7 +741,8 @@ impl InventoryService {
                     "product_id": product_id,
                     "remaining_stock": new_stock,
                     "suggested_action": "Restock Item"
-                }).to_string();
+                })
+                .to_string();
                 let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
@@ -719,12 +771,14 @@ impl InventoryService {
                 .await;
             }
         } else {
-            let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
-                .bind(product_id)
-                .bind(tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+            let current_stock: Option<i32> = sqlx::query_scalar(
+                "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(product_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
             let _ = tx.rollback().await;
 
@@ -741,7 +795,7 @@ impl InventoryService {
             }
         }
 
-        tx.commit().await.map_err(|e| e.to_string())?;        // Publish to Redis Pub/Sub for Real-Time Sync
+        tx.commit().await.map_err(|e| e.to_string())?; // Publish to Redis Pub/Sub for Real-Time Sync
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                 let invalidation_topic = "cache_invalidation_events";
@@ -751,8 +805,13 @@ impl InventoryService {
                         format!("tenant-id:{}", tenant_id),
                         format!("entity:product:{}", product_id)
                     ]
-                }).to_string();
-                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                })
+                .to_string();
+                let _: Result<(), _> = redis::cmd("PUBLISH")
+                    .arg(invalidation_topic)
+                    .arg(invalidation_payload)
+                    .query_async(&mut conn)
+                    .await;
             }
         }
 
@@ -784,10 +843,12 @@ mod tests {
         let tenant_id = "test_inventory_tenant";
         let product_id = "test_product_low_stock";
 
-        let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING")
-            .bind(tenant_id)
-            .execute(&pool)
-            .await;
+        let _ = sqlx::query(
+            "INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING",
+        )
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
 
         let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 6, 6) ON CONFLICT DO NOTHING")
             .bind(product_id)
@@ -804,7 +865,10 @@ mod tests {
         let redis_client_opt = None;
         let service = Arc::new(InventoryService::new(redis_client_opt));
 
-        let res = service.commit_inventory(tenant_id, product_id, 2, "").await.unwrap();
+        let res = service
+            .commit_inventory(tenant_id, product_id, 2, "")
+            .await
+            .unwrap();
         assert!(res.success);
 
         let feed_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND context_payload->>'product_id' = $2")
@@ -844,21 +908,20 @@ mod tests {
             .execute(&pool)
             .await;
 
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url =
+            std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
-        let service = Arc::new(InventoryService::new( redis_client_opt));
+        let service = Arc::new(InventoryService::new(redis_client_opt));
 
         let svc1 = service.clone();
         let svc2 = service.clone();
 
-        let handle1 = tokio::spawn(async move {
-            svc1.reserve_inventory(tenant_id, product_id, 1, 5).await
-        });
+        let handle1 =
+            tokio::spawn(async move { svc1.reserve_inventory(tenant_id, product_id, 1, 5).await });
 
-        let handle2 = tokio::spawn(async move {
-            svc2.reserve_inventory(tenant_id, product_id, 1, 5).await
-        });
+        let handle2 =
+            tokio::spawn(async move { svc2.reserve_inventory(tenant_id, product_id, 1, 5).await });
 
         let res1 = handle1.await.unwrap().unwrap();
         let res2 = handle2.await.unwrap().unwrap();
@@ -866,9 +929,15 @@ mod tests {
         let success_count = (if res1.success { 1 } else { 0 }) + (if res2.success { 1 } else { 0 });
 
         if std::env::var("OHC_REDIS_URL").is_ok() {
-            assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
+            assert_eq!(
+                success_count, 1,
+                "Only one concurrent request should acquire the lock"
+            );
             let failed_res = if res1.success { res2 } else { res1 };
-            assert_eq!(failed_res.error_message, "Item is currently being checked out by another customer.");
+            assert_eq!(
+                failed_res.error_message,
+                "Item is currently being checked out by another customer."
+            );
         }
     }
 }
