@@ -6,11 +6,12 @@ use uuid::Uuid;
 
 pub struct MessageTriageWorker {
     db: Arc<DB>,
+    lock: Arc<dyn crate::msgbus::DistributedLock>,
 }
 
 impl MessageTriageWorker {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+    pub fn new(db: Arc<DB>, lock: Arc<dyn crate::msgbus::DistributedLock>) -> Self {
+        Self { db, lock }
     }
 
     pub fn start(self: Arc<Self>) {
@@ -531,21 +532,15 @@ Output JSON format:
 
 
 
-                    // Implement proper Redis locking to prevent race conditions during thread/triage updates
-                    let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
-                    let mut _lock_conn = None;
-                    if let Some(client) = crate::get_redis_client() {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                            use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
-                            if let Ok(true) = lock_acquired {
-                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
-                                _lock_conn = Some(conn);
-                            } else {
-                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
-                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
-                            }
-                        }
+                    // Implement proper distributed locking to prevent race conditions during thread/triage updates
+                    let lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
+                    let mut lock_acquired = false;
+
+                    if let Ok(true) = self.lock.acquire_lock(&lock_key, "system", 60).await {
+                        lock_acquired = true;
+                    } else {
+                        let redacted_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(lock_key.clone()));
+                        tracing::warn!("Failed to acquire distributed lock for triage updates: {}", redacted_lock_key.as_str().unwrap_or("")); // pii-safe
                     }
 
                     // Insert into triage_items and triage_proposed_actions to satisfy Unified Work Triage Feed
@@ -577,9 +572,8 @@ Output JSON format:
                         tracing::error!("Failed to insert triage_proposed_actions: {}", e);
                     }
 
-                    if let Some(mut conn) = _lock_conn {
-                        use redis::AsyncCommands;
-                        let _: Result<(), _> = conn.del(&redis_lock_key).await;
+                    if lock_acquired {
+                        let _ = self.lock.release_lock(&lock_key, "system").await;
                     }
 
                     if let Err(e) = sqlx::query(
@@ -660,21 +654,15 @@ Output JSON format:
 
 
 
-                    // Implement proper Redis locking to prevent race conditions during thread/triage updates
-                    let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
-                    let mut _lock_conn = None;
-                    if let Some(client) = crate::get_redis_client() {
-                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                            use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
-                            if let Ok(true) = lock_acquired {
-                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
-                                _lock_conn = Some(conn);
-                            } else {
-                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
-                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
-                            }
-                        }
+                    // Implement proper distributed locking to prevent race conditions during thread/triage updates
+                    let lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
+                    let mut lock_acquired = false;
+
+                    if let Ok(true) = self.lock.acquire_lock(&lock_key, "system", 60).await {
+                        lock_acquired = true;
+                    } else {
+                        let redacted_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(lock_key.clone()));
+                        tracing::warn!("Failed to acquire distributed lock for triage updates: {}", redacted_lock_key.as_str().unwrap_or("")); // pii-safe
                     }
 
                     // Insert into triage_items and triage_proposed_actions for Sqlite
@@ -706,9 +694,8 @@ Output JSON format:
                         tracing::error!("Failed to insert triage_proposed_actions (Sqlite): {}", e);
                     }
 
-                    if let Some(mut conn) = _lock_conn {
-                        use redis::AsyncCommands;
-                        let _: Result<(), _> = conn.del(&redis_lock_key).await;
+                    if lock_acquired {
+                        let _ = self.lock.release_lock(&lock_key, "system").await;
                     }
 
                     if let Err(e) = sqlx::query(

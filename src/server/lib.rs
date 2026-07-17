@@ -59,6 +59,24 @@ static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<s
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 static REDIS_CLIENT: std::sync::OnceLock<Option<redis::Client>> = std::sync::OnceLock::new();
+static GLOBAL_LOCK: tokio::sync::OnceCell<std::sync::Arc<dyn crate::msgbus::DistributedLock>> = tokio::sync::OnceCell::const_new();
+
+pub async fn get_global_lock(db: std::sync::Arc<db::DB>) -> std::sync::Arc<dyn crate::msgbus::DistributedLock> {
+    GLOBAL_LOCK.get_or_init(|| async {
+        if crate::is_standalone_runtime() {
+            let url = match &db.store {
+                crate::db::DbStore::Sqlite(_) => "sqlite://ohc.db",
+                _ => "memory:",
+            };
+            let bus = crate::msgbus::IpcBus::new(url).await.unwrap_or_else(|_| panic!("Failed to initialize IpcBus"));
+            std::sync::Arc::new(bus) as std::sync::Arc<dyn crate::msgbus::DistributedLock>
+        } else {
+            let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+            let bus = crate::msgbus::RedisBus::new(&url).await.unwrap_or_else(|_| panic!("Failed to initialize RedisBus"));
+            std::sync::Arc::new(bus) as std::sync::Arc<dyn crate::msgbus::DistributedLock>
+        }
+    }).await.clone()
+}
 
 pub fn get_redis_client() -> Option<redis::Client> {
     if crate::is_standalone_runtime() {
@@ -2938,7 +2956,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     booking_reengagement_job.start();
 
     // Start Message Triage Worker
-    let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
+    let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone(), get_global_lock(db.clone()).await));
     message_triage_worker.start();
 
     // Start Deposit Follow-Up Worker
@@ -7688,7 +7706,7 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(protect_internal_ingress(
-            api::unified_inbox_webhook::router(db.clone()),
+            api::unified_inbox_webhook::router(db.clone(), crate::get_global_lock(db.clone()).await),
             http_auth_store.clone(),
         ))
         .merge(health_router)

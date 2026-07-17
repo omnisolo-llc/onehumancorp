@@ -14,6 +14,7 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<DB>,
+    pub lock: Arc<dyn crate::msgbus::DistributedLock>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -194,8 +195,8 @@ async fn generate_draft_reply(
     }
 }
 
-pub fn router(db: Arc<DB>) -> Router {
-    let state = AppState { db };
+pub fn router(db: Arc<DB>, lock: Arc<dyn crate::msgbus::DistributedLock>) -> Router {
+    let state = AppState { db, lock };
     Router::new()
         .route(
             "/api/v1/webhooks/unified_inbox",
@@ -219,29 +220,16 @@ pub async fn handle_unified_webhook(
     }
     let tenant_id = &payload.tenant_id;
 
-    if let Some(redis_client) = crate::get_redis_client() {
-        if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-            let lock_key = format!(
-                "ohc:lock:unified_inbox:{}:{}",
-                tenant_id, payload.identifier
-            );
-            let locked: redis::RedisResult<Option<String>> = redis::cmd("SET")
-                .arg(&lock_key)
-                .arg("1")
-                .arg("NX")
-                .arg("EX")
-                .arg(30)
-                .query_async(&mut conn)
-                .await;
-
-            if locked.is_err() || locked.unwrap().is_none() {
-                tracing::warn!(
-                    "Failed to acquire lock for tenant {} identifier {}",
-                    tenant_id,
-                    payload.identifier
-                );
-            }
-        }
+    let lock_key = format!(
+        "ohc:lock:unified_inbox:{}:{}",
+        tenant_id, payload.identifier
+    );
+    if let Ok(false) | Err(_) = state.lock.acquire_lock(&lock_key, "system", 30).await {
+        tracing::warn!(
+            "Failed to acquire lock for tenant {} identifier {}",
+            tenant_id,
+            payload.identifier
+        );
     }
 
     let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
