@@ -68,7 +68,7 @@ describe('ViralChallengeGeneratorPage', () => {
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Copied to Clipboard!' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Copied!' })).toBeDefined();
   });
 
   it('shows paywall when removing branding without pro', () => {

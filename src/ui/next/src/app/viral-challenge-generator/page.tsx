@@ -14,6 +14,7 @@ export default function ViralChallengeGeneratorPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [generated, setGenerated] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -53,16 +54,16 @@ export default function ViralChallengeGeneratorPage() {
           <div className="space-y-4">
              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Challenge Name</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input type="text" value={title} id="challenge-name" onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div className="grid grid-cols-2 gap-4">
                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Days)</label>
-                    <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="number" value={duration} id="challenge-duration" onChange={(e) => setDuration(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Reward</label>
-                    <input type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" value={reward} id="challenge-reward" onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
              </div>
              <div>
@@ -87,19 +88,39 @@ export default function ViralChallengeGeneratorPage() {
              </div>
           </div>
 
+
+          <button
+             id="generate-btn"
+             onClick={() => setGenerated(true)}
+             className="w-full mt-4 py-3 rounded-lg text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+             Generate
+          </button>
+          <div id="result-area" className={generated ? "block" : "hidden"}>
+             <input type="text" id="generated-url" className="hidden" readOnly value={embedUrl} />
+          </div>
+
           <div className="mt-8 bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
              <pre>{embedCode}</pre>
           </div>
           <button
-             onClick={handleCopy}
+             id="copy-btn" onClick={handleCopy}
              className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
-             {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
+             {copied ? 'Copied!' : 'Copy Embed Code'}
           </button>
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
+
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
+           {/* E2E Test Selectors */}
+           <div className="hidden">
+              <span id="preview-title">{title}</span>
+              <span id="preview-duration">{duration}-Day Challenge</span>
+              <span id="preview-reward">{reward}</span>
+           </div>
+
            <div className="flex-1 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-2 min-h-[450px]">
               <iframe src={`/api/v1/growth/viral-challenge/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&duration=${encodeURIComponent(duration)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`} className="w-full h-full border-none rounded-xl" />
            </div>
