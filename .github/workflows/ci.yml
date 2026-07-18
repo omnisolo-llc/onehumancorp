@@ -359,9 +359,6 @@ jobs:
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       PLAYWRIGHT_REPORT_RETENTION_DAYS: 30
-      OHC_AGENT_TOKEN: "dummy_token_for_tests"
-      OHC_AGENT_SPIFFE_ID: "dummy_spiffe_id_for_tests"
-      OHC_AGENT_AUTH_KEY: "dummy123dummy123dummy123dummy123"
     steps:
       - uses: actions/checkout@v6
 

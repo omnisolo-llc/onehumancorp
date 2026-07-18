@@ -96,9 +96,6 @@ test --test_env=HOME
 test --test_env=MCPANY_DEBUG
 test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
 test --test_env=PATH
-test --test_env=OHC_AGENT_TOKEN
-test --test_env=OHC_AGENT_SPIFFE_ID
-test --test_env=OHC_AGENT_AUTH_KEY
 
 # ── Action environment ────────────────────────────────────────────────────────
 build --action_env=GEMINI_API_KEY
