@@ -23,6 +23,7 @@ pub struct DraftAgentRequest {
 }
 
 // Production-ready adapter that wraps the real LLM provider logic
+#[allow(dead_code)]
 struct AdapterLlm {}
 
 #[cfg(test)]
