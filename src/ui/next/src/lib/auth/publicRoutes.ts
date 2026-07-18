@@ -10,6 +10,13 @@ export const PUBLIC_ROUTE_ENTRIES = [
     owner: "authentication",
   },
   {
+    method: "GET",
+    invocation: "page",
+    matcher: { kind: "exact", path: "/viral-trust-badge-builder" },
+    reason: "render the trust badge builder page",
+    owner: "authentication",
+  },
+  {
     method: "POST",
     invocation: "route-handler",
     matcher: { kind: "exact", path: "/api/auth/login" },

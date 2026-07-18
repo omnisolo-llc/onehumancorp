@@ -104,6 +104,83 @@ export function GrowBusinessCard() {
             >
               Event RSVP
             </Link>
+            <Link
+              id="viral-before-after-btn"
+              href="/viral-before-after-slider"
+              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Before/After Slider
+            </Link>
+            <Link
+              id="viral-challenge-btn"
+              href="/viral-challenge-generator"
+              className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Challenge Generator
+            </Link>
+            <Link
+              id="viral-countdown-btn"
+              href="/viral-countdown-widget"
+              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Countdown Widget
+            </Link>
+            <Link
+              id="viral-coupon-btn"
+              href="/viral-coupon-unlock"
+              className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Coupon Unlock
+            </Link>
+            <Link
+              id="viral-job-board-btn"
+              href="/viral-job-board-generator"
+              className="px-4 py-2 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Job Board Generator
+            </Link>
+            <Link
+              id="viral-leaderboard-btn"
+              href="/viral-leaderboard-generator"
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Leaderboard
+            </Link>
+            <Link
+              id="viral-product-btn"
+              href="/viral-product-widget"
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Product Widget
+            </Link>
+            <Link
+              id="viral-scratch-off-btn"
+              href="/viral-scratch-off-generator"
+              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Scratch-Off
+            </Link>
+            <Link
+              id="viral-tier-list-btn"
+              href="/viral-tier-list-generator"
+              className="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Tier List
+            </Link>
+            <Link
+              id="viral-waitlist-btn"
+              href="/viral-waitlist-generator"
+              className="px-4 py-2 bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Waitlist
+            </Link>
+            <Link
+              id="viral-trust-badge-btn"
+              href="/viral-trust-badge-builder"
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Trust Badge Builder
+            </Link>
           </div>
         </div>
       </div>
