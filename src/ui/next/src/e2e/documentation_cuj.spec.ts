@@ -39,6 +39,9 @@ test.describe("Documentation User Journey", () => {
     // Click on the article
     const myStoreLink = page.locator("h3", { hasText: "Adding Products" });
     await expect(myStoreLink).toBeVisible({ timeout: 10000 });
+    await myStoreLink.click();
+    await page.waitForURL("/help/add-products");
+    await expect(page.locator("h1", { hasText: "Managing Your Store" })).toBeVisible();
   });
 
   test("Maya opens the Help Chat and asks a question", async ({ page }) => {
