@@ -176,11 +176,3 @@ build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
 GOTOOLCHAIN=local
-
-build --action_env=OHC_AGENT_TOKEN=mock_token
-build --action_env=OHC_AGENT_SPIFFE_ID=spiffe://example.org/agent
-build --action_env=OHC_AGENT_AUTH_KEY=0123456789abcdef0123456789abcdef
-
-test --test_env=OHC_AGENT_TOKEN=mock_token
-test --test_env=OHC_AGENT_SPIFFE_ID=spiffe://example.org/agent
-test --test_env=OHC_AGENT_AUTH_KEY=0123456789abcdef0123456789abcdef
