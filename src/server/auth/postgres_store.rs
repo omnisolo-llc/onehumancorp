@@ -47,8 +47,7 @@ impl PgUserRepository {
 impl UserRepository for PgUserRepository {
             async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let is_multitenant = is_multitenant_mode();
+                let is_multitenant = is_multitenant_mode();
         let _should_bypass = !is_multitenant;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -58,7 +57,7 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#;
 
         sqlx::query(query)
@@ -66,7 +65,7 @@ impl UserRepository for PgUserRepository {
         .bind(&user.username)
         .bind(&user.email)
         .bind(&user.password_hash)
-        .bind(roles_json)
+        .bind(&user.roles)
         .bind(user.active)
         .bind(org_id)
         .bind(&user.oidc_subject)
@@ -97,8 +96,7 @@ impl UserRepository for PgUserRepository {
         };
 
         // Parse roles from JSON string
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -131,8 +129,7 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -165,8 +162,7 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -244,8 +240,7 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -298,10 +293,9 @@ impl UserRepository for PgUserRepository {
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
         let query = r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#;
@@ -314,7 +308,7 @@ impl UserRepository for PgUserRepository {
             .bind(&user.username)
             .bind(&user.email)
             .bind(&user.password_hash)
-            .bind(roles_json)
+            .bind(&user.roles)
             .bind(user.active)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
