@@ -90,6 +90,9 @@ test:remote-jobs --jobs=50
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
 test --test_env=MINIMAX_API_KEY
+test --test_env=OHC_AGENT_TOKEN
+test --test_env=OHC_AGENT_AUTH_KEY
+test --test_env=OHC_AGENT_AUTH_DISABLED
 test --test_env=MCP_BUNDLE_DIR
 test --test_env=CI
 test --test_env=HOME
