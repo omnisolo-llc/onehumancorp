@@ -371,6 +371,7 @@ async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) ->
             amount_usd,
             None,
             None,
+            None,
         )
         .await
     {
