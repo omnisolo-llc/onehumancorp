@@ -110,6 +110,65 @@ impl MessageTriageWorker {
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
+            let mut products_context = String::new();
+            let mut availability_context = String::new();
+
+            match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let rows = sqlx::query("SELECT id, name, price_cents FROM products WHERE tenant_id = $1 LIMIT 50")
+                        .bind(&tenant_id)
+                        .fetch_all(&self.db.pool).await.unwrap_or_default();
+
+                    for row in rows {
+                        let id: String = row.try_get("id").unwrap_or_default();
+                        let name: String = row.try_get("name").unwrap_or_default();
+                        let price_cents: i64 = row.try_get("price_cents").unwrap_or_default();
+                        products_context.push_str(&format!("- ID: {}, Name: {}, Price: {} cents\n", id, name, price_cents));
+                    }
+
+                    let blocks = sqlx::query("SELECT id, service_id, start_time, end_time, is_available FROM availability_blocks WHERE tenant_id = $1 AND is_available = true AND start_time >= NOW() LIMIT 20")
+                        .bind(&tenant_id)
+                        .fetch_all(&self.db.pool).await.unwrap_or_default();
+
+                    for row in blocks {
+                        let service_id: String = row.try_get("service_id").unwrap_or_default();
+                        let start_time: chrono::DateTime<chrono::Utc> = row.try_get("start_time").unwrap_or_else(|_| chrono::Utc::now());
+                        let end_time: chrono::DateTime<chrono::Utc> = row.try_get("end_time").unwrap_or_else(|_| chrono::Utc::now());
+                        availability_context.push_str(&format!("- Service: {}, Start: {}, End: {}\n", service_id, start_time, end_time));
+                    }
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    let rows = sqlx::query("SELECT id, name, price_cents FROM products WHERE tenant_id = ? LIMIT 50")
+                        .bind(&tenant_id)
+                        .fetch_all(pool).await.unwrap_or_default();
+
+                    for row in rows {
+                        let id: String = row.try_get("id").unwrap_or_default();
+                        let name: String = row.try_get("name").unwrap_or_default();
+                        let price_cents: i64 = row.try_get("price_cents").unwrap_or_default();
+                        products_context.push_str(&format!("- ID: {}, Name: {}, Price: {} cents\n", id, name, price_cents));
+                    }
+
+                    let blocks = sqlx::query("SELECT id, service_id, start_time, end_time, is_available FROM availability_blocks WHERE tenant_id = ? AND is_available = true AND start_time >= CURRENT_TIMESTAMP LIMIT 20")
+                        .bind(&tenant_id)
+                        .fetch_all(pool).await.unwrap_or_default();
+
+                    for row in blocks {
+                        let service_id: String = row.try_get("service_id").unwrap_or_default();
+                        let start_time: chrono::DateTime<chrono::Utc> = row.try_get("start_time").unwrap_or_else(|_| chrono::Utc::now());
+                        let end_time: chrono::DateTime<chrono::Utc> = row.try_get("end_time").unwrap_or_else(|_| chrono::Utc::now());
+                        availability_context.push_str(&format!("- Service: {}, Start: {}, End: {}\n", service_id, start_time, end_time));
+                    }
+                }
+            }
+
+            if products_context.is_empty() {
+                products_context.push_str("- No products found\n");
+            }
+            if availability_context.is_empty() {
+                availability_context.push_str("- No availability found\n");
+            }
+
             // Extract intent & context using LLM
             let prompt = format!(
                 "You are an AI order and task triage assistant for a business.
@@ -117,13 +176,26 @@ Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
 
+You have access to the following live product data:
+{}
+
+You have access to the following live calendar availability data:
+{}
+
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
-If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
-If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
+
+When returning an action_payload for a Draft Quote or Draft Reply that involves payment, you MUST include the text `{{{{payment_link}}}}` where appropriate so the UI can replace it with a magic payment link.
+Keep your drafted reply proposals concise and actionable for the owner to approve.
+
+If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}), AND a 'message' field for the reply text containing `{{{{payment_link}}}}`.
+If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339), AND a 'message' field.
+If you decide action_type is 'Draft Reply', the action_payload MUST be the reply text string containing `{{{{payment_link}}}}` if payment is mentioned.
+
 You have access to the following Staff Availability Data (Simulated):
 Shift ID 'shift_123' belongs to 'sam_890'.
 Available replacement: 'alex_456'.
 If the message is a call-out, action_type MUST be 'Reassign Shift' and action_payload MUST be a JSON string with 'original_staff_id' (e.g. 'sam_890'), 'new_staff_id' (e.g. 'alex_456'), 'shift_id' (e.g. 'shift_123'), 'start_time', 'end_time'.
+
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
@@ -132,7 +204,7 @@ Output JSON format:
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Reassign Shift\",
     \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
 }}",
-                sender_id, customer_message, source
+                sender_id, customer_message, source, products_context, availability_context
             );
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);

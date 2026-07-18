@@ -2329,19 +2329,27 @@
                   payload = item.action_payload;
               }
               const clientName = payload.client_name || 'Client';
-              const price = payload.suggested_price || 0;
+              const price = payload.suggested_price || payload.price || 0;
               const scope = payload.scope || '';
+              const draftMessage = payload.message || `Hi ${clientName}, here is your quote for ${scope}: $${price}. {{payment_link}}`;
+
               return `
-                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">Draft Quote</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F; word-wrap: break-word; overflow-wrap: break-word;">${clientName}</div>
                   <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
-                  <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
-                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                  <div style="font-size: 14px; margin-top: 4px; margin-bottom: 12px; color: #1D1D1F; word-wrap: break-word; overflow-wrap: break-word;">Scope of Work: ${scope}</div>
+
+                  <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB; position: relative;">
+                    <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">Draft Message</span>
+                    <textarea id="triage-textarea-${item.id}" style="width: 100%; min-height: 80px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2); background: rgba(255, 255, 255, 0.5); font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box;" onchange="window.updateTriagePayload('${item.id}', this.value)">${draftMessage}</textarea>
+                  </div>
+
+                  <div class="triage-controls" style="display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                    <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
                     <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" data-testid="review-quote-draft" onclick="window.location.href='quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Review Estimate</button>
                     <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
@@ -2513,19 +2521,19 @@
                   ${renderAgentBadge(item.source || "message")}
                   <div class="triage-priority ${priorityClass}">Action Needed</div>
                 </div>
-                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px; word-wrap: break-word; overflow-wrap: break-word;">
                   1 New Message from ${item.source || 'Unknown'}
                 </div>
-                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic; word-wrap: break-word; overflow-wrap: break-word;">
                   ${item.context || 'Customer message'}
                 </div>
-                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB;">
+                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB; position: relative;">
                   <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">AI Draft</span>
-                  ${draftMessage}
+                  <textarea id="triage-textarea-${item.id}" style="width: 100%; min-height: 80px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2); background: rgba(255, 255, 255, 0.5); font-family: inherit; font-size: 14px; resize: vertical; box-sizing: border-box;" onchange="window.updateTriagePayload('${item.id}', this.value)">${draftMessage}</textarea>
                 </div>
-                  <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
-                  <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
-                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                <div class="triage-controls" style="display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap;">
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -2783,8 +2791,21 @@
       window.updateTriagePayload = function(id, val) {
         let item = agentFeedItems.find(i => i.id === id);
         if (item) {
-          if (!item.proposed_action) item.proposed_action = {};
-          item.proposed_action.message = val;
+          if (item.action_payload && typeof item.action_payload === 'string') {
+              try {
+                  let parsed = JSON.parse(item.action_payload);
+                  parsed.message = val;
+                  item.action_payload = JSON.stringify(parsed);
+              } catch(e) {
+                  item.action_payload = val;
+              }
+          } else if (item.action_payload) {
+              item.action_payload.message = val;
+          } else {
+             if (!item.proposed_action) item.proposed_action = {};
+             item.proposed_action.message = val;
+             item.action_payload = val;
+          }
         }
       };
 
