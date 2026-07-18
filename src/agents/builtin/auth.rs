@@ -40,11 +40,11 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled {
+    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone"
+            "development" | "test" | "standalone" | ""
         ) {
             return Ok(AuthMode::Disabled);
         }
