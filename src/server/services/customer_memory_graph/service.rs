@@ -10,6 +10,7 @@ pub struct CustomerProfileSummary {
     pub segments: Vec<String>,
     pub preferences: Vec<String>,
     pub summary: String,
+    pub context_graph: Option<serde_json::Value>,
 }
 
 pub struct CustomerMemoryGraphService {
@@ -75,7 +76,15 @@ impl CustomerMemoryGraphService {
         .fetch_optional(&mut *tx)
         .await?;
 
-        let summary = if let Some(row) = record {
+        let memory_context_record = sqlx::query(
+            "SELECT context_graph FROM customer_memory_context WHERE customer_id = $1 AND tenant_id = $2"
+        )
+        .bind(customer_id)
+        .bind(tenant_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let mut summary = if let Some(row) = record {
             if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
                 val.0
             } else {
@@ -85,6 +94,7 @@ impl CustomerMemoryGraphService {
                     segments: vec![],
                     preferences: vec![],
                     summary: "No summary available.".to_string(),
+                    context_graph: None,
                 }
             }
         } else {
@@ -94,8 +104,15 @@ impl CustomerMemoryGraphService {
                 segments: vec![],
                 preferences: vec![],
                 summary: "Customer not found.".to_string(),
+                context_graph: None,
             }
         };
+
+        if let Some(mem_row) = memory_context_record {
+            if let Ok(context_graph) = mem_row.try_get::<serde_json::Value, _>("context_graph") {
+                summary.context_graph = Some(context_graph);
+            }
+        }
 
         tx.commit().await?;
         Ok(summary)
@@ -191,7 +208,19 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        for table in ["customers", "interaction_events", "interaction_event_jobs"] {
+        sqlx::query(
+            "CREATE TABLE customer_memory_context (
+                id UUID PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                customer_id TEXT NOT NULL,
+                context_graph JSONB NOT NULL DEFAULT '{}'
+             )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        for table in ["customers", "interaction_events", "interaction_event_jobs", "customer_memory_context"] {
             for statement in [
                 format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"),
                 format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"),
@@ -211,6 +240,7 @@ mod tests {
             segments: vec!["tenant-a".to_string()],
             preferences: vec![],
             summary: "summary-a".to_string(),
+            context_graph: None,
         };
         let summary_b = CustomerProfileSummary {
             total_interactions: 7,
@@ -218,6 +248,7 @@ mod tests {
             segments: vec!["tenant-b".to_string()],
             preferences: vec![],
             summary: "summary-b".to_string(),
+            context_graph: None,
         };
         for (tenant_id, customer_id, summary) in [
             ("tenant-a", "shared-customer", &summary_a),
