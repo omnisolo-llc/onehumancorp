@@ -27,4 +27,23 @@ test.describe('Documentation UI Components', () => {
         expect(data['rate-limit-close-tooltip']).toBe('Dismiss this warning.');
     });
 
+    test('Help Center Ask AI functionality', async ({ page }) => {
+        await page.goto('/api/v1/ui/help.html');
+
+        // Click Ask AI tab
+        const askAiTab = page.locator('button', { hasText: 'Ask AI' });
+        await askAiTab.click();
+
+        // Type 'getting started' and send
+        const chatInput = page.locator('#ohc-help-chat-input');
+        await chatInput.fill('getting started');
+        const sendBtn = page.locator('#ohc-help-chat-send');
+        await sendBtn.click();
+
+        // Wait for agent reply
+        const reply = page.locator('.ohc-chat-msg.agent').last();
+        await expect(reply).toBeVisible();
+        await expect(reply).toContainText('Welcome to One Human Corp');
+    });
+
 });
