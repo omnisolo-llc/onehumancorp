@@ -433,7 +433,13 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     openssl req -x509 -new -nodes -keyout "$TEST_TMPDIR/ca.key" -sha256 -days 365 -out "$TEST_TMPDIR/ca.crt" -subj "/CN=Test CA" >/dev/null 2>&1
     openssl genrsa -out "$TEST_TMPDIR/server.key" 2048 >/dev/null 2>&1
     openssl req -new -key "$TEST_TMPDIR/server.key" -out "$TEST_TMPDIR/server.csr" -subj "/CN=localhost" >/dev/null 2>&1
-    openssl x509 -req -in "$TEST_TMPDIR/server.csr" -CA "$TEST_TMPDIR/ca.crt" -CAkey "$TEST_TMPDIR/ca.key" -CAcreateserial -out "$TEST_TMPDIR/server.crt" -days 365 -sha256 >/dev/null 2>&1
+    cat << 'EXT' > "$TEST_TMPDIR/v3.ext"
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = DNS:localhost, IP:127.0.0.1
+EXT
+    openssl x509 -req -in "$TEST_TMPDIR/server.csr" -CA "$TEST_TMPDIR/ca.crt" -CAkey "$TEST_TMPDIR/ca.key" -CAcreateserial -out "$TEST_TMPDIR/server.crt" -days 365 -sha256 -extfile "$TEST_TMPDIR/v3.ext" >/dev/null 2>&1
     export OHC_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
     export OHC_GRPC_TLS_KEY_PATH="$TEST_TMPDIR/server.key"
     export OHC_GRPC_CLIENT_CA_PATH="$TEST_TMPDIR/ca.crt"
@@ -461,6 +467,10 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+  OHC_AGENT_TOKEN="e2e-token" \
+  OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
+  OHC_AGENT_AUTH_DISABLED="true" \
+  OHC_ENV="development" \
     "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
