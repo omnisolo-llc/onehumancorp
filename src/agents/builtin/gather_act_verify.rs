@@ -317,7 +317,7 @@ impl GatherActVerifyHarness {
                                 iteration: iteration as i32,
                             });
 
-                            if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
+                            if tr.error.contains("LLM-Recoverable Tool Error") || tr.error.contains("Recoverable error") {
                                 let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
                                 error_counts.insert(name.clone(), count);
                                 if count > cfg_max_retries {
@@ -422,7 +422,7 @@ impl GatherActVerifyHarness {
                                 iteration: iteration as i32,
                             });
 
-                            if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
+                            if tr.error.contains("LLM-Recoverable Tool Error") || tr.error.contains("Recoverable error") {
                                 let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
                                 error_counts.insert(tc.name.clone(), count);
                                 if count > cfg_max_retries {

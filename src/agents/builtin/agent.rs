@@ -5342,7 +5342,7 @@ mod tests {
                         "Failing for test",
                     );
                     let has_error = last_msg.tool_results.iter().any(|r| {
-                        r.content.contains("LLM-Recoverable Error")
+                        r.content.contains("LLM-Recoverable Tool Error")
                             || r.error.contains(&expected_error)
                     });
 
