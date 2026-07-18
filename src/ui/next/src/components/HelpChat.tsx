@@ -210,7 +210,7 @@ export function HelpChat() {
         {!isOpen && (
           <WalkthroughTarget id="ai-chat-trigger">
             <button
-              id="ai-chat-trigger-btn"
+              id="ohc-floating-help-btn"
               onClick={() => setIsOpen(true)}
               className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
               aria-label="Open help chat"
