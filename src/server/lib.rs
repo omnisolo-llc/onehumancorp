@@ -6526,6 +6526,11 @@ async fn create_ui_bom_item_handler(
     let db_for_sales = db.clone();
     let settings_store = crate::settings::Store::global();
     let is_standalone = crate::is_standalone_runtime();
+    // Start customer memory graph worker
+    let memory_graph_pool = db.pool.clone();
+    tokio::spawn(async move {
+        crate::workers::customer_memory_graph_worker::run_worker(memory_graph_pool.into()).await;
+    });
     let ohc_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
     } else {
