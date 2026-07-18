@@ -37,7 +37,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.goto('/setup.html');
 
     // Step 0: Welcome Screen
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -120,7 +120,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -137,7 +137,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 3: Verifies input disabled states
   test('Next button fails validation when input is empty', async ({ page }) => {
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -164,7 +164,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 4: Enter key submits the first step
   test('Enter key submits the input', async ({ page }) => {
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
@@ -185,7 +185,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 5: Verify text area presence and styling
   test('Verify manual configuration fallback styling', async ({ page }) => {
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
   });
 });
@@ -240,7 +240,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Test 1: Verifies Instant Build successful generation flow
   test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Instant Build is now the initial screen
@@ -287,7 +287,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 2: Verifies Instant Build handles network error gracefully
   test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
     await page.goto('/setup.html');
-    const setupScreen = page.locator('.container');
+    const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Instant Build is now the initial screen
@@ -346,7 +346,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await page.goto('/setup.html');
 
     // Wait for the container to load
-    const container = page.locator(".container");
+    const container = page.locator("#setup-screen");
     await expect(container).toBeVisible({ timeout: 15000 });
 
     // Check .container has no horizontal overflow
