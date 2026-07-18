@@ -31,10 +31,15 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     expect(hitRes.status()).toBe(200);
     expect(hitRes.headers()['x-cache']).toBe('HIT');
 
-    // 3. Perform an inventory invalidation trigger via webhook (simulating backend ops)
-    // The pos handler invokes cdn cache invalidation asynchronously.
-    const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
-      data: { tags: [`entity:product:${productId}`] }
+    // 3. Perform an inventory invalidation trigger via internal event API (simulating Operations Agent)
+    const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/orchestration/event', {
+      data: {
+        event_type: 'tenant.inventory.updated',
+        tenant_id: tenantId,
+        payload: {
+          product_id: productId
+        }
+      }
     });
     expect(invalidateRes.status()).toBe(200);
 
@@ -95,8 +100,12 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
   test('validates cache regeneration after offline POS sync deduction', async ({ request, page }) => {
     // Analogous to updating POS orders invalidation endpoint
-    const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
-      data: { tags: [`tenant-id:00000000-0000-0000-0000-000000000000`] }
+    const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/orchestration/event', {
+      data: {
+        event_type: 'tenant.inventory.updated',
+        tenant_id: '00000000-0000-0000-0000-000000000000',
+        payload: {}
+      }
     });
     expect(invalidateRes.status()).toBe(200);
   });
