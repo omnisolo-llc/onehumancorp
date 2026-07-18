@@ -80,7 +80,7 @@ test.describe("Help Center", () => {
     await chatButton.dispatchEvent("click");
 
     // Wait for the chat to open and be visible
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ohc-floating-help-header");
     await expect(chatHeader).toBeVisible();
 
     // Check if the chat input is present
@@ -99,7 +99,7 @@ test.describe("Help Center", () => {
     await expect(sentMessage).toBeVisible();
 
     // Close the chat
-    const closeButton = page.locator('button[aria-label="Close help chat"]');
+    const closeButton = page.locator('button[aria-label="Close"]');
     await closeButton.dispatchEvent("click");
     await expect(chatHeader).not.toBeVisible();
   });
@@ -121,7 +121,7 @@ test.describe("Help Center", () => {
     await chatButton.dispatchEvent("click");
 
     // Verify the blur style
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ohc-floating-help-header");
     await expect(chatHeader).toBeVisible();
   });
 
@@ -146,10 +146,10 @@ test.describe("Help Center", () => {
     await expect(chatButton).toBeVisible();
     await chatButton.dispatchEvent("click");
 
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ohc-floating-help-header");
     await expect(chatHeader).toBeVisible();
 
-    const closeButton = page.locator('button[aria-label="Close help chat"]');
+    const closeButton = page.locator('button[aria-label="Close"]');
     await closeButton.dispatchEvent("click");
     await expect(chatHeader).not.toBeVisible();
   });
