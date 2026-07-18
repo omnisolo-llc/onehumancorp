@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Wizard and Onboarding flows', () => {
 
@@ -23,64 +23,47 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/builder');
 
-    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
+    await expect(page.locator('text="What are you building today?"').first()).toBeVisible();
 
     // Check click routing inside builder
-    await page.locator('text="Step-by-Step Setup"').click();
+    await page.locator('text="Selling Products"').click();
 
-    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
-    await page.getByText("I'm a Baker").click();
-    await page.locator('#step-context .next-step-btn').click();
+    await expect(page.getByRole('heading', { name: "Let's build your store" })).toBeVisible();
 
-    await expect(page.locator('#business-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Home Baker');
-    await page.locator('#step-categories .next-step-btn').click();
-
-    await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
+    // Verify we reached the business name input
+    await expect(page.getByText('Business Name')).toBeVisible();
   });
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/onboarding');
 
-    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
-    await page.locator('text="Step-by-Step Setup"').click();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
+    await page.getByRole('button', { name: 'Start My Business' }).click();
 
-    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Check constraints are working inside inputs.
-    await page.getByText("I'm a Baker").click();
-    await page.locator('#step-context .next-step-btn').click();
-    await expect(page.locator('#business-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Home Baker');
-    await page.locator('#step-categories .next-step-btn').click();
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Cakes By Maya');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
-    await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('Cakes By Maya');
-    await page.locator('#step-name .next-step-btn').click();
-
-    await expect(page.getByRole('heading', { name: 'Set up your Assistant' })).toBeVisible();
+    await expect(page.getByText("What do you sell?")).toBeVisible();
   });
 
   test('Direct routing for business-setup compatibility page', async ({ page }) => {
     await page.goto('/business-setup');
 
     // Should immediately reroute to onboarding
-    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
   });
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/onboarding');
 
-    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
-    await page.locator('text="Step-by-Step Setup"').click();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
+    await page.getByRole('button', { name: 'Start My Business' }).click();
 
-    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
-    await page.getByText("I'm a Baker").click();
-    await page.locator('#step-context .next-step-btn').click();
-
-    await expect(page.locator('#business-categories')).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
   });
 
   test('Loading state padding check on mobile layout', async ({ page }) => {
@@ -97,7 +80,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.reload();
 
     // Check loading indicator container doesn't overflow
-    const container = page.locator('.animate-fade-in');
+    const container = page.locator('.animate-fade-in').first();
     await expect(container).toBeVisible();
 
     const containerWidth = await container.evaluate(el => el.clientWidth);
