@@ -7,7 +7,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test.beforeEach(async ({ page, request }) => {
     // Let's set up the database
     // Wait for the backend proxy? The setup endpoint in the mock test works.
-    await request.post("/api/e2e/setup", {
+    await request.post("/api/v1/e2e/setup", {
       data: {
         query: `
           DELETE FROM agent_approvals WHERE id IN ('e2e-feed-test-1', 'e2e-feed-test-2');

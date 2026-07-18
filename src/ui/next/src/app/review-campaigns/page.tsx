@@ -43,7 +43,7 @@ export default function ReviewCampaignsPage() {
         `Click here to leave a review: https://ohc.app/leave-review\n\n` +
         `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
         `Warmly,\n` +
-        `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team\n\n⚡ Powered by OHC`
+        `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'Store' : 'Store'} Team\n\n⚡ Powered by OHC`
       );
     }
     setIsGenerating(false);

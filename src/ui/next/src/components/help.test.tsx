@@ -357,4 +357,32 @@ describe('HelpWidget', () => {
     });
   });
 
+  it('does not render protocol-relative agent links', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/v1/chat')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            reply: 'Here is a link',
+            link: { url: '//untrusted.example/path', title: 'Untrusted' },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+
+    const user = userEvent.setup();
+    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.click(screen.getByText('Ask anything'));
+    await user.type(screen.getByPlaceholderText('Ask anything...'), 'Show me a link');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Here is a link')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Read the full article →')).not.toBeInTheDocument();
+  });
+
 });

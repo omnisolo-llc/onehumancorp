@@ -13,7 +13,7 @@ export function AIUsageLimitWidget() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+      const storedTenant = localStorage.getItem('business_display_name');
       const finalTenant = storedTenant || "default-team";
       setTenantId(finalTenant);
 

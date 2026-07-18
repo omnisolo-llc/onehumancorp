@@ -7,7 +7,7 @@ test.describe('Autonomous Service Portfolio Generator', () => {
 
     // Send an API request to mock the backend event
     await page.evaluate(async () => {
-      await fetch('/api/agents/workflows', {
+      await fetch('/api/v1/agents/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

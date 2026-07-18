@@ -69,6 +69,13 @@ EXPECTED_HYGIENE_LINES = (
     "python3 .github/scripts/check_postgres_security_ci_test.py",
     "python3 .github/scripts/check_postgres_security_ci.py",
 )
+EXPECTED_PYYAML_BOOTSTRAP_LINES = (
+    "sudo apt-get update && sudo apt-get install -y python3-yaml",
+)
+EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
+    "sudo apt-get update",
+    "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
+)
 
 ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
@@ -377,6 +384,7 @@ def check_workflow(path: Path) -> None:
     require_non_ignorable_job(security, "postgres-security")
     require_non_ignorable_job(required, "ci-required")
     require_non_ignorable_job(changes, "check-changes")
+    require_active(changes, "    runs-on: ubuntu-latest", "reliable check-changes runner")
 
     for exact, context in (
         ("      - check-changes", "change dependency"),
@@ -393,6 +401,15 @@ def check_workflow(path: Path) -> None:
         raise ContractError("postgres-security job env does not match the exact required allowlist")
     if not any("pg_isready" in line for line in active_config_lines(security)):
         raise ContractError("service health check: missing active pg_isready configuration")
+
+    toolchain_step = named_step(security, "Install PostgreSQL client")
+    require_exact_step_keys(toolchain_step, ("run",), "PostgreSQL test toolchain")
+    require_unconditional_step(toolchain_step, "PostgreSQL test toolchain")
+    toolchain_style, toolchain_run = toolchain_step.run()
+    if toolchain_style != "block":
+        raise ContractError("PostgreSQL test toolchain must be an active block run step")
+    if active_script(toolchain_run, "PostgreSQL test toolchain") != EXPECTED_POSTGRES_TOOLCHAIN_LINES:
+        raise ContractError("PostgreSQL test toolchain does not match the exact install commands")
 
     role_step = named_step(security, "Provision and verify non-superuser application role")
     require_exact_step_keys(role_step, ("run",), "application-role proof")
@@ -463,7 +480,20 @@ def check_workflow(path: Path) -> None:
     if not (markdown_if < else_index < enforcement_index < fi_index):
         raise ContractError("postgres-security enforcement is not in the active non-markdown branch")
 
+    pyyaml_step = named_step(changes, "Install PyYAML")
+    require_exact_step_keys(pyyaml_step, ("run",), "PyYAML bootstrap")
+    require_unconditional_step(pyyaml_step, "PyYAML bootstrap")
+    pyyaml_style, pyyaml_run = pyyaml_step.run()
+    if pyyaml_style != "block":
+        raise ContractError("PyYAML bootstrap must be an active block run step")
+    if active_script(pyyaml_run, "PyYAML bootstrap") != EXPECTED_PYYAML_BOOTSTRAP_LINES:
+        raise ContractError("PyYAML bootstrap does not match the exact install command")
+
     hygiene_step = named_step(changes, "Check tracked artifacts")
+    if changes.index("      - name: Install PyYAML") >= changes.index(
+        "      - name: Check tracked artifacts"
+    ):
+        raise ContractError("PyYAML bootstrap must run before tracked-artifact checks")
     require_exact_step_keys(hygiene_step, ("run",), "check-changes hygiene")
     require_unconditional_step(hygiene_step, "check-changes hygiene")
     hygiene_style, hygiene_run = hygiene_step.run()

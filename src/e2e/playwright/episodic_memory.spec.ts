@@ -34,7 +34,7 @@ test.describe('Episodic Memory / Unified Inbox E2E', () => {
     expect(res2.ok()).toBeTruthy();
 
     // Check UI for unified feed to see if triage action generated a draft
-    const uiRes = await request.get(`/api/ui/unified_inbox_feed?tenant_id=${tenant_id}`);
+    const uiRes = await request.get(`/api/v1/ui/unified_inbox_feed?tenant_id=${tenant_id}`);
     expect(uiRes.ok()).toBeTruthy();
 
     const feed = await uiRes.json();
@@ -42,7 +42,7 @@ test.describe('Episodic Memory / Unified Inbox E2E', () => {
     expect(threads.length).toBeGreaterThan(0);
 
     // We verify the system is stable and can serve the memory endpoint
-    const memRes = await request.get(`/api/assistant/memory/customer/${customer_id}`, {
+    const memRes = await request.get(`/api/v1/assistant/memory/customer/${customer_id}`, {
       headers: {
         'x-tenant-id': tenant_id
       }

@@ -6,7 +6,7 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Seed test product with specific inventory
-    await page.goto('/api/staff');
+    await page.goto('/api/v1/staff');
     await page.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
 

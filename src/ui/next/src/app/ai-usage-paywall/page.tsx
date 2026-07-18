@@ -33,7 +33,7 @@ export default function AiUsagePaywallPage() {
       try {
         const headers: Record<string, string> = {};
         if (typeof window !== 'undefined') {
-          const tenantId = localStorage.getItem('ohc_active_tenant_id');
+          const tenantId = localStorage.getItem('active_business_display_name');
           if (tenantId) headers['x-ohc-tenant-id'] = tenantId;
         }
 
@@ -41,11 +41,9 @@ export default function AiUsagePaywallPage() {
         if (costRes.ok) {
           const costData = await costRes.json();
           setData(costData);
-        } else {
-          console.error("Failed to fetch cost data:", costRes.status);
         }
-      } catch (err) {
-        console.error("Failed to fetch cost data:", err);
+      } catch {
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -53,7 +51,7 @@ export default function AiUsagePaywallPage() {
     fetchData();
 
     if (typeof window !== 'undefined') {
-      setRefLink(localStorage.getItem('ohc_active_tenant_id') || 'default');
+      setRefLink(localStorage.getItem('active_business_display_name') || 'default');
     }
   }, []);
 

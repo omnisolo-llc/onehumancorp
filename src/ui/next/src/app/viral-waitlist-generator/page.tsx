@@ -17,7 +17,7 @@ export default function ViralWaitlistGeneratorPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setTenant(localStorage.getItem('tenant_id') || 'DEFAULT');
+      setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);

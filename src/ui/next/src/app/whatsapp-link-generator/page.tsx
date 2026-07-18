@@ -16,7 +16,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
-      const storedTenant = localStorage.getItem("tenant");
+      const storedTenant = localStorage.getItem("business_display_name");
       if (storedTenant) setTenant(storedTenant);
     }
   }, []);

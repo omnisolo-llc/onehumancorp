@@ -97,10 +97,11 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     // Verify StripeTerminalClient initializes
     await expect(page.locator('h2:has-text("Payment Method")')).toBeVisible();
 
+    // Mock API requests to simulate backend logic for tap to pay
 // Note: the previous mock code for API calls has been removed as per the strictly enforced rule 'ZERO mock data may appear in the UI' and 'No mocking of network requests in E2E tests'. Stripe SDK integration uses test credentials in CI.
     // Test the Cash flow which utilizes the same inventory commit logic
     // We test this because the Stripe SDK cannot be easily mocked in a browser E2E test without a physical device
-    const cashBtn = page.locator('button', { hasText: /Cash/ });
+    const cashBtn = page.locator('button', { hasText: /Record Cash Sale/ });
     if (await cashBtn.isVisible()) {
       await cashBtn.click();
       await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 15000 });
