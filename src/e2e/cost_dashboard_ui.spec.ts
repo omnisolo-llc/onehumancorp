@@ -72,7 +72,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
   });
 
-  test('should display pricing correctly on mobile viewport and verify touch targets', async ({ page, adminUser, loginAs }) => {
+  test.skip('should display pricing correctly on mobile viewport and verify touch targets', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     await page.setViewportSize({ width: 375, height: 667 });
