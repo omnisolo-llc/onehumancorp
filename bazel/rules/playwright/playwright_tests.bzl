@@ -47,6 +47,8 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
         "PLAYWRIGHT_VIDEO": "off",
         "OHC_AGENT_AUTH_DISABLED": "true",
         "OHC_ENV": "development",
+        "OHC_AGENT_TOKEN": "playwright_token_123",
+        "OHC_AGENT_AUTH_KEY": "playwright_token_123_playwright_token_123_playwright_token",
     }
     env.update(extra_env)
     attrs = {
