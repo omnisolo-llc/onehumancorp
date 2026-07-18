@@ -278,7 +278,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
   test('POS terminal syncs offline queue and shows sync conflict resolution modal if item was sold out', async ({ page, memberPage, request, context }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',

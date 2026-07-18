@@ -18,7 +18,7 @@ export default function InteractiveInsightWidgetPage() {
     if (typeof window !== 'undefined') {
       setOrigin(window.location.origin);
       if (typeof localStorage !== 'undefined') {
-        const storedTenant = localStorage.getItem('tenant');
+        const storedTenant = localStorage.getItem('business_display_name');
         if (storedTenant) setTenant(storedTenant);
         setHasPro(localStorage.getItem('has_pro') === 'true');
       }
@@ -45,7 +45,7 @@ export default function InteractiveInsightWidgetPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter items-center justify-center py-10 px-4" style={{ background: 'linear-gradient(to bottom right, #eef2ff, #faf5ff, #fdf2f8)' }}>
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
-        <div className="flex-1 p-8">
+        <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Insight Widget Builder</h1>
           <div className="space-y-4">
              <div>
@@ -89,7 +89,7 @@ export default function InteractiveInsightWidgetPage() {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col p-8">
+        <div className="flex-1 min-w-0 flex flex-col p-8">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
               <div className={`w-full max-w-sm rounded-xl p-6 shadow-md border ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>

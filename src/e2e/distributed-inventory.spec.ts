@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Distributed Inventory Sync via UI', () => {
   test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ request, page, memberPage }) => {
     // 1. Visit the home page / login and get to the POS
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',
@@ -76,7 +76,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
 
   test('Persona: Online customer tries to checkout while item is held in POS', async ({ request, page, memberPage }) => {
      // 1. Visit the home page / login and get to the POS
-     await memberPage.goto('/api/staff');
+     await memberPage.goto('/api/v1/staff');
      await memberPage.evaluate(() => {
        localStorage.setItem('ohc_offline_staff', JSON.stringify([{
          id: 'staff_1',

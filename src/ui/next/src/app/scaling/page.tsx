@@ -26,7 +26,7 @@ export default function ScalingPage() {
     setLoading(true);
     setResults([]);
     try {
-      const res = await fetch('/api/scaling', {
+      const res = await fetch('/api/v1/scaling', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count: instances, message: taskPayload }),

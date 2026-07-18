@@ -53,10 +53,8 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           setTooltips(prev => ({ ...prev, ...safeTooltips }));
           window.OHC_TOOLTIPS = { ...(window.OHC_TOOLTIPS || {}), ...safeTooltips };
         }
-      } catch (e: any) {
-        if (e.name !== 'AbortError') {
-          console.error('Failed to load tooltips', e);
-        }
+      } catch {
+        // Built-in tooltip copy remains available while the optional service is offline.
       }
     };
     fetchTooltips();

@@ -45,6 +45,20 @@ describe("authentication runtime configuration", () => {
   });
 
   it.each([
+    "http://10.0.0.12:3000",
+    "http://172.16.4.8:3000",
+    "http://172.31.255.254:3000",
+    "http://192.168.1.40:3000",
+    "http://[fd00::40]:3000",
+    "http://[fe80::40]:3000",
+  ])("allows an explicit private LAN origin in local development: %s", (origin) => {
+    expect(parseAuthRuntimeConfig({
+      OHC_WEB_LOCAL_DEV: "true",
+      OHC_WEB_CANONICAL_ORIGIN: origin,
+    }).canonicalOrigin).toBe(origin);
+  });
+
+  it.each([
     [{ ...production, OHC_WEB_CANONICAL_ORIGIN: undefined }, "OHC_WEB_CANONICAL_ORIGIN is required"],
     [{ ...production, BACKEND_URL: undefined }, "BACKEND_URL is required"],
     [{ ...production, OHC_WEB_LOCAL_DEV: "yes" }, "OHC_WEB_LOCAL_DEV must be true or false"],
@@ -53,7 +67,8 @@ describe("authentication runtime configuration", () => {
     [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "https://user@app.example.com" }, "canonical origin must not contain"],
     [{ ...production, BACKEND_URL: "http://10.0.0.5:8080" }, "backend origin must use HTTPS or loopback HTTP"],
     [{ ...production, BACKEND_URL: "https://api.example.com/path" }, "backend origin must not contain"],
-    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://192.168.1.40:3000" }, "local development canonical origin must be loopback"],
+    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://8.8.8.8:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
+    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://devbox.local:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
   ] as const)("rejects invalid configuration %#", (env, message) => {
     expect(() => parseAuthRuntimeConfig(env)).toThrow(message);
   });

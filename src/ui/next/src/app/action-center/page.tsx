@@ -27,12 +27,7 @@ export default function ActionCenterPage() {
   const fetchApprovals = async () => {
     try {
       setLoading(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-      const response = await fetch('/api/v1/agents/approvals', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch('/api/v1/agents/approvals');
       if (response.ok) {
         const data = await response.json();
         // Filter for Business Advisory ("The Advisor") recommendations
@@ -92,13 +87,11 @@ export default function ActionCenterPage() {
     }
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ approved: true })
       });
@@ -130,13 +123,11 @@ export default function ActionCenterPage() {
     }
 
      try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ approved: false })
       });

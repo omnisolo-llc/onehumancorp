@@ -323,10 +323,6 @@
       let items = [];
       let selectedId = null;
 
-      function tenantId() {
-        return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      }
-
       function badgeTone(priority) {
         const normalized = (priority || "").toLowerCase();
         if (["urgent", "high"].includes(normalized)) return "bad";
@@ -338,7 +334,7 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch('/api/v1/ui/triage');
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
@@ -366,7 +362,7 @@
 
       async function handleDecision(id, approved) {
         try {
-          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+          const res = await fetch('/api/v1/ui/triage/action', {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ triage_item_id: id, approved })

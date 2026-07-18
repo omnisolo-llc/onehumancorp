@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('In-App Help & Documentation Features', () => {
   test('navigates to Help Center and searches for an article', async ({ page }) => {
-    await page.goto('/api/ui/help.html');
+    await page.goto('/api/v1/ui/help.html');
 
     // Help Center title is visible
     await expect(page.getByRole('heading', { name: /In-App Help Center/i })).toBeVisible();
@@ -51,12 +51,12 @@ test.describe('In-App Help & Documentation Features', () => {
   });
 
   test('api docs page', async ({ page }) => {
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api/v1/ui/api-docs.html');
     await expect(page.getByText('OHC Advanced API Reference')).toBeVisible();
   });
 
   test('changelog page', async ({ page }) => {
-    await page.goto('/api/ui/changelog.html');
+    await page.goto('/api/v1/ui/changelog.html');
     await expect(page.getByText('Release Notes & Changelog')).toBeVisible();
     await expect(page.getByText('New Features')).toBeVisible();
   });

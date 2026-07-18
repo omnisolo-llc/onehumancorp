@@ -1,4 +1,4 @@
-import { proxyBackendPut } from "@/app/api/ui/backendProxy";
+import { proxyBackendPut } from "@/app/api/v1/ui/backendProxy";
 
 const AGENT_FEED_ID = /^[A-Za-z0-9._-]{1,128}$/;
 

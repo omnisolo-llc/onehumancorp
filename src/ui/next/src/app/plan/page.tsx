@@ -24,10 +24,7 @@ export default function MyPlanPage() {
   useEffect(() => {
     const fetchPlanData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/v1/billing/my-plan', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+        const response = await fetch('/api/v1/billing/my-plan');
         if (response.ok) {
           const json = await response.json();
           setData(json);
@@ -52,12 +49,10 @@ export default function MyPlanPage() {
   const handleManageBilling = async () => {
     setIsManagingBilling(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Content-Type': 'application/json'
         },
       });
 

@@ -16,7 +16,7 @@ export default function BusinessAnalytics() {
     const fetchMetrics = async () => {
       try {
         setLoadingMetrics(true);
-        const res = await fetch('/api/ui/dashboard/metrics');
+        const res = await fetch('/api/v1/ui/dashboard/metrics');
         if (res.ok) {
           const data = await res.json();
           setMetrics(data);

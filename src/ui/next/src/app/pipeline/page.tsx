@@ -19,7 +19,7 @@ const STAGES = ["Qualified", "Proposal", "Negotiation", "Won", "Lost"];
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return localStorage.getItem("business_display_name") || "default";
 }
 
 function money(cents: number | undefined) {
@@ -43,7 +43,7 @@ export default function PipelinePage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/ui/opportunities?tenant_id=${encodeURIComponent(tenantId())}`);
+      const res = await fetch(`/api/v1/ui/opportunities?tenant_id=${encodeURIComponent(tenantId())}`);
       if (!res.ok) throw new Error("Failed to load pipeline opportunities");
       const data = await res.json();
       setOpportunities(Array.isArray(data) ? data : []);
@@ -56,7 +56,7 @@ export default function PipelinePage() {
 
   async function updateStage(opportunityId: string, newStage: string) {
     try {
-      const res = await fetch(`/api/ui/opportunities/stage`, {
+      const res = await fetch(`/api/v1/ui/opportunities/stage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ opportunity_id: opportunityId, stage: newStage }),
