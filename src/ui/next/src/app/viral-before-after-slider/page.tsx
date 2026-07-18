@@ -18,7 +18,7 @@ export default function ViralBeforeAfterSliderPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant') || 'my-business';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }

@@ -16,7 +16,7 @@ type Order = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return localStorage.getItem("business_display_name") || "default";
 }
 
 function money(value: number | undefined) {
@@ -41,7 +41,7 @@ export default function OrdersPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/orders?tenant_id=${encodeURIComponent(tenantId())}`);
+        const res = await fetch(`/api/v1/ui/orders?tenant_id=${encodeURIComponent(tenantId())}`);
         if (!res.ok) throw new Error("Failed to load orders from the database");
         const data = await res.json();
         setOrders(Array.isArray(data) ? data : []);

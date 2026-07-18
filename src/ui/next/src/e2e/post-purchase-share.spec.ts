@@ -3,7 +3,7 @@ import { e2eTestTenant } from './fixtures';
 
 test.describe('Post-Purchase Share Widget Generator', () => {
   test('Owner can configure widget, preview it, and unlock white-labeling', async ({ request, baseURL }) => {
-    // E2E infrastructure routes /api/* to the rust server.
+    // E2E infrastructure routes /api/v1/* to the rust server.
 
     // Test the backend route directly
     const apiUrl = 'http://127.0.0.1:30620/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=true';

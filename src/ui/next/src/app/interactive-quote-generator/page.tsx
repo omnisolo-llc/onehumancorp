@@ -15,7 +15,7 @@ export default function InteractiveQuoteGeneratorPage() {
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      const savedTenant = localStorage.getItem('tenant');
+      const savedTenant = localStorage.getItem('business_display_name');
       if (savedTenant) setTenant(savedTenant);
     }
   }, []);

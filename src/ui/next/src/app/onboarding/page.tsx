@@ -668,7 +668,23 @@ export default function OnboardingWizard() {
     }
   };
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading onboarding"
+        className="flex min-h-[50vh] items-center justify-center px-6"
+      >
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+          <span
+            aria-hidden="true"
+            className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-[#0f766e]"
+          />
+          <span className="text-sm font-medium">Preparing your setup…</span>
+        </div>
+      </div>
+    );
+  }
 
   const showIntroBack = step === 1 && chatStep === 1;
 

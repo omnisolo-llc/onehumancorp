@@ -12,7 +12,7 @@ export default function ViralPoweredByOHCWidgetPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('tenant') || 'my-business';
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
@@ -53,7 +53,7 @@ export default function ViralPoweredByOHCWidgetPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 p-8">
+        <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Footer Badge Generator</h1>
           <p className="text-gray-600 mb-8 text-sm">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
           <div className="space-y-4">
@@ -84,7 +84,7 @@ export default function ViralPoweredByOHCWidgetPage() {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col p-8">
+        <div className="flex-1 min-w-0 flex flex-col p-8">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
               {!hasPro ? (

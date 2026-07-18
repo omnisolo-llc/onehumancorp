@@ -73,7 +73,7 @@ function request(
 describe("middleware request description", () => {
   it.each([
     [request("/_next/static/chunks/app.js"), "asset"],
-    [request("/api/orders"), "route-handler"],
+    [request("/api/v1/orders"), "route-handler"],
     [request("/dashboard", { headers: { rsc: "1" } }), "rsc"],
     [request("/dashboard?_rsc=abc"), "rsc"],
     [request("/dashboard", { headers: { purpose: "prefetch" } }), "prefetch"],
@@ -90,7 +90,7 @@ describe("protected-by-default auth middleware", () => {
     await expect(evaluateAuthMiddleware(request("/login"), deps)).resolves.toMatchObject({ kind: "next" });
     await expect(
       evaluateAuthMiddleware(
-        request("/api/auth/login", { method: "POST", body: "{}" }),
+        request("/api/v1/auth/login", { method: "POST", body: "{}" }),
         deps,
       ),
     ).resolves.toMatchObject({ kind: "next" });
@@ -125,7 +125,7 @@ describe("protected-by-default auth middleware", () => {
   });
 
   it.each([
-    [request("/api/orders"), "route-handler"],
+    [request("/api/v1/orders"), "route-handler"],
     [
       request("/login", {
         method: "POST",
@@ -145,7 +145,7 @@ describe("protected-by-default auth middleware", () => {
 
   it("rejects ambiguous paths before public classification", async () => {
     const outcome = await evaluateAuthMiddleware(
-      request("/api/auth/login%2500", { method: "POST", body: "{}" }),
+      request("/api/v1/auth/login%2500", { method: "POST", body: "{}" }),
       await dependencies(),
     );
     expect(outcome).toMatchObject({ kind: "response", status: 400 });
@@ -187,7 +187,7 @@ describe("protected-by-default auth middleware", () => {
     const session = await cookie(deps);
     const rejected = await evaluateAuthMiddleware(
       request(
-        "/api/orders",
+        "/api/v1/orders",
         {
           method: "POST",
           headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site" },
@@ -201,7 +201,7 @@ describe("protected-by-default auth middleware", () => {
 
     const accepted = await evaluateAuthMiddleware(
       request(
-        "/api/orders",
+        "/api/v1/orders",
         {
           method: "POST",
           headers: { origin: config.canonicalOrigin, "sec-fetch-site": "same-origin" },

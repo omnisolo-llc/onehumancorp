@@ -14,25 +14,10 @@ export default function IncidentIntakePage() {
 
     setIsSubmitting(true);
     try {
-      let tenantId = localStorage.getItem("tenant_id");
-      let userId = localStorage.getItem("user_id");
-
-      const token = localStorage.getItem("token") || "";
-
-      if (!tenantId) {
-        tenantId = "default";
-      }
-
-      if (!userId) {
-        userId = "default";
-      }
       const res = await fetch("/api/v1/incidents", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenantId,
-          "x-user-id": userId,
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ description }),
       });
