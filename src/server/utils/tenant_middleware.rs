@@ -86,7 +86,7 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
                     if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
                         let decoded_k = ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
                         let decoded_v = ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
-                        if decoded_k == "tenant_id" || decoded_k == "tenant" {
+                        if decoded_k == "tenant_id" || decoded_k == "tenant" || decoded_k.starts_with("tenant_id[") || decoded_k.starts_with("tenant[") {
                             if !decoded_v.trim().is_empty() && decoded_v.trim() != tenant_id {
                                 return (
                                     StatusCode::FORBIDDEN,
@@ -281,6 +281,27 @@ mod tests {
 
             let response2 = app.clone().oneshot(req2).await.unwrap();
             assert_eq!(response2.status(), StatusCode::FORBIDDEN);
+
+            // Third variant with array bracket
+            let mut req3 = Request::builder()
+                .uri("/api/v1/protected_with_query?tenant_id[eq]=tenant_2")
+                .body(Body::empty())
+                .unwrap();
+
+            req3.extensions_mut().insert(::server_common::Claims {
+                sub: "user_1".to_string(),
+                organization_id: Some("tenant_1".to_string()),
+                exp: 10000000000,
+                iat: 0,
+                session_id: Some("1".to_string()),
+                roles: vec![],
+                username: "test@example.com".to_string(),
+                jti: "a".to_string(),
+                email: "test@example.com".to_string(),
+            });
+
+            let response3 = app.clone().oneshot(req3).await.unwrap();
+            assert_eq!(response3.status(), StatusCode::FORBIDDEN);
         }).await;
     }
 }

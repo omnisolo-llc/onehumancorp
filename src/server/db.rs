@@ -3536,7 +3536,18 @@ mod security_tests_final {
                         let parent_dir = db_path
                             .parent()
                             .expect("Database URL or operation failed in test");
-                        let _ = fs::create_dir_all(parent_dir);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::DirBuilderExt;
+                            let mut builder = std::fs::DirBuilder::new();
+                            builder.mode(0o700);
+                            builder.recursive(true);
+                            let _ = builder.create(parent_dir);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = fs::create_dir_all(parent_dir);
+                        }
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
                         #[cfg(unix)]
@@ -3561,7 +3572,18 @@ mod security_tests_final {
                         let parent_dir = db_path
                             .parent()
                             .expect("Database URL or operation failed in test");
-                        let _ = fs::create_dir_all(parent_dir);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::DirBuilderExt;
+                            let mut builder = std::fs::DirBuilder::new();
+                            builder.mode(0o700);
+                            builder.recursive(true);
+                            let _ = builder.create(parent_dir);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = fs::create_dir_all(parent_dir);
+                        }
 
                         // Securely create the database file with restricted permissions initially to avoid TOCTOU
                         #[cfg(unix)]
