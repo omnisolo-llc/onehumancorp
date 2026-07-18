@@ -458,6 +458,8 @@ EXT
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \
+  OHC_AGENT_TOKEN="dummy_token_at_least_32_chars_long" \
+  OHC_AGENT_AUTH_KEY="dummy_key_at_least_32_chars_long_12345" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_AGENT_AUTH_KEY="test_key_must_be_at_least_32_bytes_long_12" \
   OHC_AGENT_TOKEN="test_agent_token" \
