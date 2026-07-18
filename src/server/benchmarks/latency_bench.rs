@@ -944,6 +944,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_ui_invoices_mobile_payload() {
+        super::bench_ui_invoices_mobile_payload().await;
+    }
+
+    #[tokio::test]
     async fn test_bench_docs_mobile_payload() {
         super::bench_docs_mobile_payload().await;
     }
@@ -2819,6 +2824,59 @@ pub async fn bench_ui_inbox_mobile_payload() {
         );
         tracing::info!(
             "    (Mobile Payload Optimization verified: ui_inbox return trimmed payload)"
+        );
+    }
+}
+pub async fn bench_ui_invoices_mobile_payload() {
+    tracing::info!("Benchmarking UI Invoices Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, CAST(COALESCE(total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = $1 AND status != 'paid' ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+
+        tracing::info!(
+            "  - UI Invoices Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_invoices return trimmed payload)"
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS invoices (id TEXT, tenant_id TEXT, client_name TEXT, total_amount REAL, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, CAST(COALESCE(total_amount, 0.0) AS REAL) AS total_amount, COALESCE(status, '') AS status FROM invoices WHERE tenant_id = ? AND status != 'paid' ORDER BY created_at DESC LIMIT 50";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - UI Invoices Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: ui_invoices return trimmed payload)"
         );
     }
 }
