@@ -1,8 +1,7 @@
 {
-  "task": "Add terminal_id to POS offline synchronization",
-  "learnings": [
-    "Database changes should be encapsulated in incremental goose migrations.",
-    "Updating Rust APIs requires careful schema alignment via SQLX bindings.",
-    "The Flutter UI communicates `terminal_id` property, ensure backend models accept it correctly."
+  "key_learnings": [
+    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
+    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
+    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
   ]
 }
