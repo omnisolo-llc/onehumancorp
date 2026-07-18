@@ -28,7 +28,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
   const contextUsed = payloadSource.context_used;
 
   return (
-    <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
+    <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col gap-3" data-testid="ambassador-reply-card">
       <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
 
       {(pastOrders || contextUsed) && (
@@ -127,9 +127,9 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
                   onApprove();
                 }}
                 className="flex-[2] min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                aria-label="✨ Approve & Send Draft" data-testid="feed-approve-btn"
+                aria-label="Send Draft" data-testid="feed-approve-btn"
               >
-                ✨ Approve & Send Draft
+                Send Draft
               </button>
             )}
             {onEdit && (
