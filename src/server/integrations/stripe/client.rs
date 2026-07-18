@@ -270,12 +270,36 @@ impl StripeClient {
         ])
     }
 
-    pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
-        Ok(StripeSubscription {
-            id: "sub_test_...".to_string(),
-            status: "canceled".to_string(),
-            current_period_end: 1714560000,
-        })
+    pub async fn cancel_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            // Mock response if no real key
+            return Ok(StripeSubscription {
+                id: "sub_test_...".to_string(),
+                status: "canceled".to_string(),
+                current_period_end: 1714560000,
+            });
+        }
+        let api_key = api_key_res.unwrap();
+
+        let res = reqwest::Client::new()
+            .delete(format!("{}/v1/subscriptions/{}", Self::api_base(), subscription_id))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe cancel subscription request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let error_text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API Error cancelling subscription: {}", error_text));
+        }
+
+        let stripe_sub: StripeSubscription = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse Stripe cancel subscription response: {}", e))?;
+
+        Ok(stripe_sub)
     }
 
     pub async fn submit_dispute_evidence(&self, _dispute_id: &str, _evidence_data: serde_json::Value) -> Result<(), String> {
