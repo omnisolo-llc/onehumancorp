@@ -148,7 +148,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white/90', 'white/80')}`}></div>
+           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white/90', 'white/80 dark:border-white/10')}`}></div>
         )}
 
         <div className="flex justify-between items-start mb-3">
