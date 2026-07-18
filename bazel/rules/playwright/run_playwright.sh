@@ -9,8 +9,6 @@ ROOT="${SRCDIR}"
 # The server binary is at //src/server:server
 # When using Bazel runfiles, it's at TEST_SRCDIR/TEST_WORKSPACE/bazel-bin/src/server/server
 export SERVER_BIN="${SRCDIR}/${WORKSPACE}/src/server/server"
-export OHC_AGENT_TOKEN="e2e-token"
-export OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef"
 
 if [[ ! -e "${SERVER_BIN}" && ! -L "${SERVER_BIN}" ]]; then
     # Try alternate location
