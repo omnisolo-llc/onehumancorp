@@ -15,10 +15,17 @@ export default function ViralGiveGetWidgetPage() {
   const [showResult, setShowResult] = useState(false);
   const [boxesActive, setBoxesActive] = useState(false);
 
+  const [hasPro, setHasPro] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
   useEffect(() => {
+    setIsClient(true);
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'My Business';
       setTenantId(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -70,6 +77,17 @@ export default function ViralGiveGetWidgetPage() {
     }
   };
 
+  const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+        e.preventDefault();
+        setShowPaywall(true);
+        return;
+    }
+    setRemoveBranding(e.target.checked);
+  };
+
+  if (!isClient) return null;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
@@ -114,27 +132,48 @@ export default function ViralGiveGetWidgetPage() {
                 className="w-full px-4 py-3 border border-gray-300/50 rounded-xl bg-white/50 backdrop-blur-sm min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all text-gray-900"
               />
             </div>
+
+            <div className="pt-4 border-t border-gray-200">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={removeBranding}
+                        onChange={handleBrandingToggle}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    Remove "Powered by OHC" Badge
+                    {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ml-1">PRO</span>}
+                </label>
+            </div>
           </div>
 
-          <div className="flex items-center justify-around p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 mb-8">
+          <div className="flex items-center justify-around p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 mb-8 relative">
             <div id="give-box" className={`w-32 p-4 text-center rounded-2xl transition-all duration-500 transform ${boxesActive ? 'bg-[#0066FF] text-white scale-105 shadow-lg' : 'bg-white border-2 border-dashed border-[#0066FF] text-gray-900 opacity-70 scale-100'}`}>
               <h3 className="text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Give</h3>
               <p id="give-display" className="text-xl font-bold font-outfit">{giveReward}</p>
             </div>
 
-            <div className="text-3xl text-gray-400">➡️</div>
+            <div className="text-3xl text-gray-400 z-10">➡️</div>
 
             <div id="get-box" className={`w-32 p-4 text-center rounded-2xl transition-all duration-500 transform delay-200 ${boxesActive ? 'bg-[#0066FF] text-white scale-105 shadow-lg' : 'bg-white border-2 border-dashed border-[#0066FF] text-gray-900 opacity-70 scale-100'}`}>
               <h3 className="text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Get</h3>
               <p id="get-display" className="text-xl font-bold font-outfit">{getReward}</p>
             </div>
+
+            {!removeBranding && (
+                <div className="absolute -bottom-6 left-0 right-0 text-center">
+                   <a href={`/onboarding?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-wider">
+                       ⚡ Powered by OHC
+                   </a>
+                </div>
+            )}
           </div>
 
           <button
             id="generate-btn"
             onClick={handleGenerate}
             disabled={generating}
-            className="w-full py-4 bg-[#0066FF] hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] transition-all min-h-[44px] flex items-center justify-center text-lg"
+            className="w-full py-4 mt-6 bg-[#0066FF] hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] transition-all min-h-[44px] flex items-center justify-center text-lg"
           >
             {generating ? 'Generating...' : 'Generate Referral Link'}
           </button>
@@ -165,6 +204,43 @@ export default function ViralGiveGetWidgetPage() {
 
         </div>
       </main>
+
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+             <div className="flex justify-end mb-2">
+               <button
+                 aria-label="Close paywall"
+                 onClick={() => setShowPaywall(false)}
+                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+               >
+                 <span className="text-xl leading-none">&times;</span>
+               </button>
+             </div>
+             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+               PRO
+             </div>
+             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+               Make the Give-Get Generator 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+             </p>
+             <button
+               onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+               className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+             >
+               Upgrade to Pro
+             </button>
+             <button
+               onClick={() => setShowPaywall(false)}
+               className="mt-2 text-gray-500 hover:text-gray-700 font-medium text-sm w-full"
+             >
+               Cancel
+             </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
