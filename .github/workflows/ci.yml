@@ -683,19 +683,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: ohc_security
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d ohc_security"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
     env:
       OHC_REQUIRE_POSTGRES_TESTS: "1"
       OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
@@ -714,10 +701,13 @@ jobs:
             target
           key: ${{ runner.os }}-${{ runner.arch }}-postgres-security-${{ hashFiles('Cargo.lock', 'src/server/Cargo.lock') }}
 
-      - name: Install PostgreSQL client
+      - name: Install PostgreSQL server and client
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          sudo apt-get install -y --no-install-recommends postgresql postgresql-16-pgvector postgresql-client protobuf-compiler
+          sudo service postgresql start
+          sudo -u postgres psql -c "CREATE DATABASE ohc_security;"
+          sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 
       - name: Provision and verify non-superuser application role
         run: |

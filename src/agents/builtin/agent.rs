@@ -3713,6 +3713,10 @@ impl Agent {
                 crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
             }
 
+            // State Management: Lightweight previous_response_id chaining
+            // Chaining messages for tracking responses.
+            crate::types::Message::chain_previous_response_ids(&mut final_messages);
+
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
             // High-signal context at the very beginning and very end.
             crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
