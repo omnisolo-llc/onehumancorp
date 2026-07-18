@@ -45,13 +45,13 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
     await expect(quoteCard).toContainText('Scope of Work:');
 
     // Action buttons check
-    const approveBtn = page.getByTestId('feed-approve-btn').first();
+    const approveBtn = page.getByTestId('approve-send-proposal').first();
     await expect(approveBtn).toBeVisible();
 
     const editBtn = page.getByTestId('edit-proposal').first();
     await expect(editBtn).toBeVisible();
 
-    const rejectBtn = page.getByTestId('feed-dismiss-btn').first();
+    const rejectBtn = page.getByTestId('reject-proposal').first();
     await expect(rejectBtn).toBeVisible();
 
     // Click the "Approve & Send" button

@@ -137,7 +137,6 @@ async fn handle_client_intake(
     }
 
     let customer_id = uuid::Uuid::new_v4();
-    let quote_request_id = uuid::Uuid::new_v4();
     let _quote_request_id = uuid::Uuid::new_v4();
     let quote_id = uuid::Uuid::new_v4();
     let quote_line_item_id = uuid::Uuid::new_v4();
