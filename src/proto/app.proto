@@ -282,6 +282,7 @@ message SyncOfflineTransactionsResponse {
   bool success = 1;
   int32 synced_count = 2;
   repeated string failed_transaction_ids = 3;
+  string pending_reconciliation = 4;
 }
 
 message StartTerminalSessionRequest {

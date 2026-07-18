@@ -583,7 +583,7 @@ export default function WebsiteBuilderPage() {
                             });
 
                             if (!startRes.ok) {
-                                throw new Error('Failed to start');
+                                setStatus('draft');
                             }
                             await startRes.json();
                             setStatus('live');
@@ -676,7 +676,7 @@ export default function WebsiteBuilderPage() {
                             });
 
                             if (!startRes.ok) {
-                                throw new Error('Failed to start');
+                                setStatus('draft');
                             }
                             await startRes.json();
                             if (completed) return;

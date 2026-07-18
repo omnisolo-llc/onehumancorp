@@ -27,12 +27,12 @@ test.describe('Viral Affiliate Marketing', () => {
     });
 
     // We mock the API route to return a consistent mock for the E2E test, as we are testing the UI flow.
-    await page.route('/api/v1/growth/affiliate/generate-link', async route => {
+    await page.route('**/api/v1/growth/affiliate/generate-link', async route => {
       await route.fulfill({ json: { affiliate_link: 'http://example.com/ref/maya20', affiliate_code: 'maya20' } });
     });
 
-    await page.route('/api/v1/growth/affiliate/stats', async route => {
-        await route.fulfill({ json: { clicks: 10, conversions: 2 } });
+    await page.route('**/api/v1/growth/affiliate/stats', async route => {
+        await route.fulfill({ json: { total_affiliates: 10, total_commission_cents: 200 } });
     });
 
     // Navigate to the Dashboard
@@ -48,8 +48,8 @@ test.describe('Viral Affiliate Marketing', () => {
     await expect(page.getByRole('heading', { name: 'Affiliate Dashboard' }).first()).toBeVisible();
 
     // Verify stats loaded
-    await expect(page.locator('#clicks-stat')).toHaveText('10');
-    await expect(page.locator('#conversions-stat')).toHaveText('2');
+    await expect(page.locator('#affiliates-stat')).toHaveText('10');
+    await expect(page.locator('#commission-stat')).toHaveText('200');
 
     // Fill form
     await page.locator('#customerId').fill('maya');
