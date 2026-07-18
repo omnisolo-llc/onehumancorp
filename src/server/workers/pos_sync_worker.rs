@@ -269,8 +269,24 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 // Record order for offline sync
                 let order_id = uuid::Uuid::new_v4().to_string();
                 let total_amount = (amount_cents as f64) / 100.0;
-                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
-                    .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).execute(&mut *tx).await;
+                let mut translated_notes = None;
+
+                // Get customer message note if exists
+                if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
+                    let tenant_locale: String = sqlx::query_scalar("SELECT locale FROM tenant_settings WHERE tenant_id = $1")
+                        .bind(&job.tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .unwrap_or(None)
+                        .unwrap_or_else(|| "en".to_string());
+                    let target_language = if tenant_locale.starts_with("ar") { "Arabic" } else if tenant_locale.starts_with("es") { "Spanish" } else { "English" };
+                    if let Ok(t) = crate::api::agents::translation::translate_inbox_message_with_llm(&job.tenant_id, "kitchen", notes, target_language).await {
+                        translated_notes = Some(t.translated_content);
+                    }
+                }
+
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status, notes, translated_notes) VALUES ($1, $2, $3, $4, 'completed', $5, $6)")
+                    .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).bind(payload.get("notes").and_then(|v| v.as_str())).bind(translated_notes).execute(&mut *tx).await;
 
                 let item_id = uuid::Uuid::new_v4().to_string();
                 let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
@@ -439,8 +455,22 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     let total_amount = (amount_cents as f64) / 100.0;
                     let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
 
-                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed') ON CONFLICT DO NOTHING")
-                        .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).execute(&mut *tx).await;
+                    let mut translated_notes = None;
+                    if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
+                        let tenant_locale: String = sqlx::query_scalar("SELECT locale FROM tenant_settings WHERE tenant_id = $1")
+                            .bind(&job.tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .unwrap_or(None)
+                            .unwrap_or_else(|| "en".to_string());
+                        let target_language = if tenant_locale.starts_with("ar") { "Arabic" } else if tenant_locale.starts_with("es") { "Spanish" } else { "English" };
+                        if let Ok(t) = crate::api::agents::translation::translate_inbox_message_with_llm(&job.tenant_id, "kitchen", notes, target_language).await {
+                            translated_notes = Some(t.translated_content);
+                        }
+                    }
+
+                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status, notes, translated_notes) VALUES ($1, $2, $3, $4, 'completed', $5, $6) ON CONFLICT DO NOTHING")
+                        .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).bind(payload.get("notes").and_then(|v| v.as_str())).bind(translated_notes).execute(&mut *tx).await;
 
                     for item in items_array {
                         let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");

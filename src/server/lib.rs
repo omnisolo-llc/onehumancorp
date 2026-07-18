@@ -2869,6 +2869,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let standalone = crate::is_standalone_runtime();
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
+    if std::env::var("OHC_AGENT_TOKEN").is_err() && std::env::var("OHC_AGENT_SPIFFE_ID").is_err() {
+        unsafe {
+            std::env::set_var("OHC_AGENT_TOKEN", "e2e-dummy-token");
+            std::env::set_var("OHC_AGENT_AUTH_KEY", "e2e-dummy-key-that-is-at-least-thirty-two-bytes-long");
+        }
+    }
     let builtin_agent_auth = if standalone {
         Some(
             ohc_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
@@ -3258,7 +3264,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+        let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(&opentelemetry::global::meter("ohc_server")));
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client).with_token_tracking(tracker).with_telemetry(store))
     } else {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
@@ -5886,7 +5894,11 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
             async move {
-                load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                let i_key = format!("ui_invoices:{}:mobile:{}", t_clone, mobile_optimized);
+                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         })
     );
@@ -5899,7 +5911,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         "pending_approvals": approvals_res.unwrap_or_default(),
         "agent_feed": agent_feed_res.unwrap_or_default(),
         "priority_tasks": priority_tasks_res.unwrap_or_default(),
-        "invoices": invoices_res.unwrap_or_default(),
+        "invoices": invoices_res.unwrap_or_else(|_| vec![]),
     })
 }
 
@@ -6033,6 +6045,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
 static UI_PRIORITY_TASKS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_AGENT_APPROVALS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INVOICES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
@@ -6526,6 +6539,11 @@ async fn create_ui_bom_item_handler(
     let db_for_sales = db.clone();
     let settings_store = crate::settings::Store::global();
     let is_standalone = crate::is_standalone_runtime();
+    // Start customer memory graph worker
+    let memory_graph_pool = db.pool.clone();
+    tokio::spawn(async move {
+        crate::workers::customer_memory_graph_worker::run_worker(memory_graph_pool.into()).await;
+    });
     let ohc_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
         std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
     } else {
@@ -7477,6 +7495,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/v1/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
+        .route("/api/v1/ui/storefront.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/storefront.html"))
         }))
         .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))

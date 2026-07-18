@@ -129,6 +129,7 @@ pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
+    pub token_tracking: Option<std::sync::Arc<crate::token_tracking::TokenTracking>>,
     db_pool: Option<sqlx::PgPool>,
     tier_cache: DashMap<String, (PlanTier, Instant)>,
 }
@@ -139,6 +140,7 @@ impl RedisRateLimiter {
             client,
             connection: OnceCell::new(),
             telemetry_store: None,
+            token_tracking: None,
             db_pool: None,
             tier_cache: DashMap::new(),
         }
@@ -146,6 +148,11 @@ impl RedisRateLimiter {
 
     pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
         self.db_pool = Some(pool);
+        self
+    }
+
+    pub fn with_token_tracking(mut self, tracker: std::sync::Arc<crate::token_tracking::TokenTracking>) -> Self {
+        self.token_tracking = Some(tracker);
         self
     }
 
@@ -245,6 +252,10 @@ impl RedisRateLimiter {
 
         tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
 
+        if let Some(tracker) = &self.token_tracking {
+            tracker.record_tokens(tenant_id, model, tokens as u64);
+        }
+
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
 
@@ -312,7 +323,8 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            _ => "Current",
+                            PlanTier::Pro => "Pro",
+                            PlanTier::Business => "Business",
                         },
                         limit
                     )),
@@ -332,7 +344,8 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            _ => "Current",
+                            PlanTier::Pro => "Pro",
+                            PlanTier::Business => "Business",
                         },
                         limit
                     )),
@@ -372,7 +385,8 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            _ => "Current",
+                            PlanTier::Pro => "Pro",
+                            PlanTier::Business => "Business",
                         },
                         limit
                     )),
@@ -419,7 +433,8 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            _ => "Current",
+                            PlanTier::Pro => "Pro",
+                            PlanTier::Business => "Business",
                         },
                         limit
                     )),

@@ -299,9 +299,11 @@ impl ClaudeSubagentSpawner {
             // If condensation didn't reduce size (e.g. LLM ignored instructions or hit a limit),
             // prevent infinite loop by breaking and returning the current best effort.
             if next_text.len() >= current_text.len() {
-                tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
-                current_text = next_text;
-                break;
+                if next_text_parts.len() <= 1 {
+                    tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
+                    current_text = next_text;
+                    break;
+                }
             }
 
             current_text = next_text;
