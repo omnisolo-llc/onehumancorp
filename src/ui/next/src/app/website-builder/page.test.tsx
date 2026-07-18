@@ -217,6 +217,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('never reports a rejected publication as live', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.useRealTimers();
     useWebsiteBuilderStore.setState({
       wizardStep: 9,
@@ -242,6 +243,7 @@ describe('WebsiteBuilderPage', () => {
       expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
       expect(screen.queryByText('Success! Your business is live!')).not.toBeInTheDocument();
     });
+    consoleErrorSpy.mockRestore();
   });
 
   it('loads blocks from local storage and handles drag/drop/reorder', async () => {
