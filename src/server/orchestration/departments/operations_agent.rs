@@ -72,38 +72,34 @@ impl Department for OperationsAgent {
             }
             return Ok(());
         }
-        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
+                        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-            cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+
+            let mut tags = vec![format!("tenant-id:{}", event.tenant_id)];
             if !product_id.is_empty() {
-                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                tags.push(format!("entity:product:{}", product_id));
             }
 
-            // Pre-warm (regenerate) cache in background
-            if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
-                let pool = crate::db::get_pool();
-                let cache_clone = cache.clone();
-                let product_id_str = product_id.to_string();
-                tokio::spawn(async move {
-                    if !product_id_str.is_empty() {
-                        if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
-                            let product_cache_key = format!("storefront:product:{}:{}", tenant_uuid, product_uuid);
-                            let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_uuid, product_uuid, product_cache_key, cache_clone.clone()).await;
-                        }
-                    }
-                    if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_uuid).await {
-                        if let Some(site) = sites.first() {
-                            let site_id = site.id;
-                            let cache_key = format!("edge_site_{}_{}", tenant_uuid, site_id);
-                            let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_uuid, site_id, cache_key, cache_clone).await;
-                        }
-                    }
-                });
+            let invalidation_event = serde_json::json!({
+                "event": event.event_type,
+                "tags": tags
+            });
+
+            if let Some(redis_client) = crate::get_redis_client() {
+                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
+                }
+            } else {
+                // Fallback to local cache service invalidation if Redis isn't configured
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                if !product_id.is_empty() {
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                }
             }
         }
 
@@ -255,26 +251,33 @@ impl Department for OperationsAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
+                        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-            cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            if !product_id.is_empty() {
-                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
 
-                if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
-                    if let Ok(product_uuid) = uuid::Uuid::parse_str(product_id) {
-                        let pool = crate::db::get_pool();
-                        let cache_clone = cache.clone();
-                        tokio::spawn(async move {
-                            let product_cache_key = format!("storefront:product:{}:{}", tenant_uuid, product_uuid);
-                            let _ = crate::builder::edge::regenerate_product_cache(pool, tenant_uuid, product_uuid, product_cache_key, cache_clone).await;
-                        });
-                    }
+            let mut tags = vec![format!("tenant-id:{}", event.tenant_id)];
+            if !product_id.is_empty() {
+                tags.push(format!("entity:product:{}", product_id));
+            }
+
+            let invalidation_event = serde_json::json!({
+                "event": event.event_type,
+                "tags": tags
+            });
+
+            if let Some(redis_client) = crate::get_redis_client() {
+                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                    use redis::AsyncCommands;
+                    let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
+                }
+            } else {
+                // Fallback to local cache service invalidation if Redis isn't configured
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                if !product_id.is_empty() {
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 }
             }
         }
