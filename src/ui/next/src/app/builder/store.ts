@@ -52,6 +52,11 @@ export const useBuilderStore = create<BuilderState>()(
     }),
     {
       name: 'builder-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const legacy = (persistedState ?? {}) as Record<string, unknown>;
+        return legacy as unknown as BuilderState;
+      },
     }
   )
 );

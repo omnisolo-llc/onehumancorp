@@ -287,12 +287,18 @@ export default function BuilderPage() {
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
 
-          <div className="px-8 pt-12 pb-4">
+          <div className="px-8 pt-12 pb-4 relative">
              <div className="flex justify-between mb-8">
                {[1, 2, 3].map(step => (
                  <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0066FF]' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
                ))}
              </div>
+             {(businessName || businessCategory || vibe || bio) && (
+               <div className="absolute top-4 right-8 flex items-center gap-1 text-xs text-green-600 font-medium animate-fade-in bg-green-50 px-2 py-1 rounded-full border border-green-200 shadow-sm">
+                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                 Progress saved
+               </div>
+             )}
           </div>
 
           <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
@@ -320,7 +326,14 @@ export default function BuilderPage() {
                   Start with the basics. What's your business called, and what do you do?
                 </p>
 
-                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Business Name</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 flex items-center justify-between">
+                  <span>Business Name</span>
+                  {businessName.trim().length > 0 && (
+                    <span className={`text-xs ${businessName.trim().length >= 3 ? "text-green-500" : "text-orange-500"}`}>
+                      {businessName.trim().length >= 3 ? "✓ Looks good" : "Needs 3+ characters"}
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
                   className="w-full border border-white/50 dark:border-white/10 glassmorphism backdrop-blur-[30px] saturate-[210%] p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
@@ -330,10 +343,17 @@ export default function BuilderPage() {
                   placeholder="e.g. Acme Corp"
                 />
 
-                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Category</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 flex items-center justify-between">
+                  <span>Category</span>
+                  {businessCategory.trim().length > 0 && (
+                    <span className={`text-xs ${businessCategory.trim().length >= 5 ? "text-green-500" : "text-orange-500"}`}>
+                      {businessCategory.trim().length >= 5 ? "✓ Sounds great" : "Needs 5+ characters"}
+                    </span>
+                  )}
+                </label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 glassmorphism backdrop-blur-[30px] saturate-[210%] p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border border-white/50 dark:border-white/10 glassmorphism backdrop-blur-[30px] saturate-[210%] p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
@@ -341,7 +361,10 @@ export default function BuilderPage() {
                 />
 
                 {wizardStep1Error && (
-                   <p className="text-[#FF3B30] text-sm mb-4 text-left">{wizardStep1Error}</p>
+                   <div className="bg-[#FF3B30]/10 border border-[#FF3B30]/20 p-3 rounded-[8px] mb-6 flex items-center gap-2 text-left">
+                     <svg className="w-5 h-5 text-[#FF3B30]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                     <p className="text-[#FF3B30] text-sm font-semibold m-0">{wizardStep1Error}</p>
+                   </div>
                 )}
 
                 <button
@@ -366,16 +389,22 @@ export default function BuilderPage() {
                 </p>
 
                 <div className="grid gap-4 mb-8">
-                  {['Professional', 'Friendly', 'Energetic', 'Minimalist'].map((v) => (
+                  {[
+                    { id: 'Professional', label: 'Professional', icon: '👔' },
+                    { id: 'Friendly', label: 'Friendly', icon: '👋' },
+                    { id: 'Energetic', label: 'Energetic', icon: '⚡' },
+                    { id: 'Minimalist', label: 'Minimalist', icon: '🌿' }
+                  ].map((v) => (
                     <button
-                      key={v}
-                      onClick={() => setVibe(v)}
-                      className={`p-4 border text-left transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] font-semibold backdrop-blur-[30px] saturate-[210%] ${
-                        vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 glassmorphism"
+                      key={v.id}
+                      onClick={() => setVibe(v.id)}
+                      className={`p-4 border text-left flex items-center gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] font-semibold backdrop-blur-[30px] saturate-[210%] ${
+                        vibe === v.id ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 glassmorphism"
                       }`}
                       style={{ borderRadius: '8px' }}
                     >
-                      {v}
+                      <span className="text-2xl">{v.icon}</span>
+                      <span>{v.label}</span>
                     </button>
                   ))}
                 </div>
