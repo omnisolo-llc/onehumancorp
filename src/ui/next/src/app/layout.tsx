@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
+import { HelpChat } from '../components/HelpChat';
 
 import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
@@ -34,6 +35,7 @@ export default function RootLayout({
                     <WalkthroughProvider>
               <ProductShellGuard>{children}</ProductShellGuard>
               <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
+              <HelpChat />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
               <NotificationManager />
