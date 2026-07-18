@@ -44,12 +44,12 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test"
+            "development" | "test" | "standalone"
         ) {
             return Ok(AuthMode::Disabled);
         }
         return Err(
-            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development or test"
+            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
                 .to_string(),
         );
     }
