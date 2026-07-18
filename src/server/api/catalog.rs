@@ -102,7 +102,7 @@ async fn handle_get_products(
         }
     };
     if let Err(error) = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await {
-        tracing::error!("Failed to bind catalog tenant context: {error:?}");
+        tracing::error!("Failed to bind catalog tenant context: {error:?}"); // pii-safe
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(vec![] as Vec<Product>),
@@ -296,7 +296,7 @@ async fn handle_create_product(
         }
     };
     if let Err(error) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        tracing::error!("Failed to bind catalog tenant context: {error:?}");
+        tracing::error!("Failed to bind catalog tenant context: {error:?}"); // pii-safe
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -336,7 +336,7 @@ async fn handle_create_product(
                 ::server_telemetry::record_error_signal(
                     "[bug] Failed to count products for quota check",
                 );
-                tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e);
+                tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e); // pii-safe
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(ErrorResponse {
