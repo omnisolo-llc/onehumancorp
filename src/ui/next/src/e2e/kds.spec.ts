@@ -8,6 +8,14 @@ test.describe('KDS Offline & Multilingual', () => {
     await context.clearCookies();
     await page.goto('/pos/kds');
     await page.evaluate(() => localStorage.clear());
+    await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        const req = indexedDB.deleteDatabase('OHC_Offline_Queue');
+        req.onsuccess = resolve;
+        req.onerror = resolve;
+        req.onblocked = resolve;
+      });
+    });
 
     // Reset backend state before each test
     await request.delete('/api/v1/pos/orders');
@@ -59,7 +67,23 @@ test.describe('KDS Offline & Multilingual', () => {
     await expect(page.getByTestId('toggle-soldout-inv_1')).toHaveText('Sold Out');
 
     // Verify localStorage queued events
-    const events = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'));
+    const events = await page.evaluate(async () => {
+      return new Promise((resolve) => {
+        const request = indexedDB.open('OHC_Offline_Queue', 1);
+        request.onsuccess = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('actions')) {
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('actions', 'readonly');
+          const store = tx.objectStore('actions');
+          const getAll = store.getAll();
+          getAll.onsuccess = () => resolve(getAll.result);
+        };
+        request.onerror = () => resolve([]);
+      });
+    });
     expect(events.length).toBe(2);
     expect(events[0].type).toBe('UPDATE_ORDER_STATUS');
     expect(events[1].type).toBe('TOGGLE_SOLD_OUT');
@@ -73,7 +97,23 @@ test.describe('KDS Offline & Multilingual', () => {
 
     // Wait for background sync to trigger (interval is 5s) and clear events
     await expect(async () => {
-      const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_kds_events') || '[]'));
+      const remainingEvents = await page.evaluate(async () => {
+        return new Promise((resolve) => {
+          const request = indexedDB.open('OHC_Offline_Queue', 1);
+          request.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('actions')) {
+              resolve([]);
+              return;
+            }
+            const tx = db.transaction('actions', 'readonly');
+            const store = tx.objectStore('actions');
+            const getAll = store.getAll();
+            getAll.onsuccess = () => resolve(getAll.result);
+          };
+          request.onerror = () => resolve([]);
+        });
+      });
       expect(remainingEvents.length).toBe(0);
     }).toPass({ timeout: 10000 });
   });
