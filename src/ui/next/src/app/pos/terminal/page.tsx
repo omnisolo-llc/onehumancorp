@@ -649,7 +649,7 @@ export default function POSTerminal() {
            {/* Operations Agent Notification Card */}
            {checkoutComplete && cart.some(item => {
              const invItem = inventory.find(i => i.id === item.product.id);
-             return invItem && (invItem.available_quantity - item.quantity <= 0);
+             return invItem && (invItem.stock - item.quantity <= 0);
            }) && (
              <div className="mt-6 bg-white/80 backdrop-blur-[40px] saturate-[210%] border-l-4 border-l-[#FF9500] border border-white/50 rounded-2xl p-4 shadow-xl animate-in slide-in-from-bottom-4">
                <div className="flex items-start space-x-3">
@@ -661,12 +661,12 @@ export default function POSTerminal() {
                    <p className="text-sm text-gray-600 mt-1">
                      {cart.find(item => {
                        const invItem = inventory.find(i => i.id === item.product.id);
-                       return invItem && (invItem.available_quantity - item.quantity <= 0);
+                       return invItem && (invItem.stock - item.quantity <= 0);
                      })?.product.name} sold out. Would you like to draft a restock order?
                    </p>
                    <div className="mt-3 flex space-x-2">
-                     <button className="px-4 py-2 bg-[#FF9500] text-white text-sm font-bold rounded-xl active:scale-[0.98]">Draft Restock</button>
-                     <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl active:scale-[0.98]">Dismiss</button>
+                     <button className="px-4 py-2 bg-[#FF9500] text-white text-sm font-bold rounded-xl active:scale-[0.98] min-h-[44px] min-w-[44px]">Draft Restock</button>
+                     <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl active:scale-[0.98] min-h-[44px] min-w-[44px]">Dismiss</button>
                    </div>
                  </div>
                </div>
