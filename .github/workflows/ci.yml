@@ -420,7 +420,9 @@ jobs:
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --test_output=all \
-            --nocache_test_results
+            --nocache_test_results \
+            --test_env=OHC_AGENT_TOKEN="dummy_token_123456789012345678901234567890" \
+            --test_env=OHC_AGENT_AUTH_KEY="dummy_key_123456789012345678901234567890"
 
       - name: Collect Playwright UI E2E report
         if: always()
@@ -593,7 +595,9 @@ jobs:
           fi
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
-            --nocache_test_results
+            --nocache_test_results \
+            --test_env=OHC_AGENT_TOKEN="dummy_token_123456789012345678901234567890" \
+            --test_env=OHC_AGENT_AUTH_KEY="dummy_key_123456789012345678901234567890"
 
   docker-e2e:
     name: Docker E2E
@@ -677,7 +681,9 @@ jobs:
           command -v bazelisk
           bazelisk test //deploy:docker_compose_e2e_test \
             --config=linux \
-            --nocache_test_results
+            --nocache_test_results \
+            --test_env=OHC_AGENT_TOKEN="dummy_token_123456789012345678901234567890" \
+            --test_env=OHC_AGENT_AUTH_KEY="dummy_key_123456789012345678901234567890"
 
   postgres-security:
     name: PostgreSQL tenant isolation
