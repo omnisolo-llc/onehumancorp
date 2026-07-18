@@ -133,7 +133,7 @@ if [[ "$scan_runfiles" == true ]]; then
   if [[ -n "${SOURCE_REPO_ROOT:-}" && -d "${SOURCE_REPO_ROOT:-}" ]]; then
     source_unique="$(find_spec_relpaths "$SOURCE_REPO_ROOT")"
     runfile_unique="$(find_spec_relpaths "$runfiles_root")"
-    missing_specs="$(comm -23 <(printf '%s\n' "$source_unique") <(printf '%s\n' "$runfile_unique"))"
+    missing_specs="$(comm -23 <(printf '%s\n' "$source_unique" | sort) <(printf '%s\n' "$runfile_unique" | sort))"
     if [[ -n "$missing_specs" ]]; then
       echo "Playwright Bazel coverage check failed: source specs are missing from Bazel runfiles."
       printf '%s\n' "$missing_specs" | sed 's/^/missing from Bazel runfiles: /'
