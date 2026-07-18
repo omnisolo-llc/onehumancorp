@@ -162,6 +162,42 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_telemetry_error_callback_on_failure() {
+        let repo = setup_sqlite_repo().await;
+
+        // Force a failure by dropping the pool/closing connections, or just use a bogus connection string
+        // Actually, easiest way is to close the pool under the hood
+        if let crate::memory_store::VectorMemoryStore::Sqlite(pool) = repo.get_store() {
+            pool.close().await;
+        }
+
+        let callback_invoked = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let callback_invoked_clone = callback_invoked.clone();
+
+        let error_callback: Arc<dyn Fn(&str, &str) + Send + Sync> = Arc::new(move |msg, _err| {
+            if msg.contains("Consolidation Worker: Failed to prune stale context") {
+                callback_invoked_clone.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        });
+
+        let worker = ConsolidationWorker::new(
+            repo,
+            Duration::from_millis(10),
+            180,
+            20,
+            2,
+            vec!["TASK_SUMMARY".to_string()],
+            Some(error_callback),
+        );
+
+        let result = worker.run_once().await;
+        assert!(result.is_err(), "Expected run_once to fail due to closed connection");
+
+        let invoked = callback_invoked.load(std::sync::atomic::Ordering::SeqCst);
+        assert!(invoked, "Telemetry error callback should have been invoked");
+    }
+
+    #[tokio::test]
     async fn test_consolidation_worker_spawn() {
         let repo = setup_sqlite_repo().await;
         let worker = Arc::new(ConsolidationWorker::new(
