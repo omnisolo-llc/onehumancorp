@@ -497,16 +497,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-tours" class="ohc-help-content">
             <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
-                <h4>Set up your store</h4>
-                <p>Learn how to add products and customize your storefront.</p>
+                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
+                    <h4>Tour: Set up your store</h4>
+                    <p>Learn how to add products and customize your storefront.</p>
+                </button>
             </div>
             <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
-                <h4>Accept your first payment</h4>
-                <p>Connect your account to start receiving money.</p>
+                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
+                    <h4>Tour: Accept your first payment</h4>
+                    <p>Connect your account to start receiving money.</p>
+                </button>
             </div>
             <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
-                <h4>Activate your AI Support Agent</h4>
-                <p>Let AI handle customer queries for you.</p>
+                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
+                    <h4>Tour: Activate your AI Support Agent</h4>
+                    <p>Let AI handle customer queries for you.</p>
+                </button>
             </div>
         </div>
 
