@@ -3,34 +3,567 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Open secure onboarding</title>
+    <title>OHC Setup</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap');
+
       body {
-        align-items: center;
-        background: #f5f5f7;
-        color: #1d1d1f;
+        background-color: #F5F5F7;
+        color: #1D1D1F;
         display: flex;
-        font-family: system-ui, sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
         justify-content: center;
+        align-items: center;
         min-height: 100vh;
         margin: 0;
+        padding: 20px;
       }
-      main { max-width: 32rem; padding: 2rem; text-align: center; }
-      a { color: #06f; font-weight: 700; }
+
+      .container {
+        width: 100%;
+        max-width: 600px;
+        box-sizing: border-box;
+      }
+
+      .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        padding: 30px;
+      }
+
+      .glassmorphism-input {
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #000000;
+          color: #F5F5F7;
+        }
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glassmorphism-input {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+      }
+
+      h1, h2 {
+        font-family: 'Outfit', system-ui, sans-serif;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+
+      p {
+        margin-bottom: 20px;
+        line-height: 1.5;
+        font-size: 14px;
+        color: #86868B;
+      }
+
+      .step {
+        display: none;
+      }
+
+      .step.active {
+        display: block;
+        animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input[type="text"], input[type="email"], input[type="password"], input[type="url"], textarea, select {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 20px;
+        font-size: 16px;
+        font-family: inherit;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        border-radius: 8px; /* For all inputs as per standards */
+      }
+
+      input:focus, textarea:focus, select:focus {
+        border-color: #0066FF;
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      button {
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        min-height: 44px; /* Mobile touch target standard */
+        transition: background-color 0.2s, transform 0.1s;
+        box-sizing: border-box;
+      }
+
+      button:hover {
+        background-color: #005bb5;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      button.secondary {
+        background-color: transparent;
+        color: #0066FF;
+        border: 1px solid #0066FF;
+        margin-top: 10px;
+      }
+
+      button.secondary:hover {
+        background-color: rgba(0, 102, 255, 0.1);
+      }
+
+      .context-options, .team-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .context-card, .team-card {
+        border: 1px solid rgba(150, 150, 150, 0.3);
+        border-radius: 8px;
+        padding: 16px;
+        cursor: pointer;
+        transition: border-color 0.2s, background-color 0.2s;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+      }
+
+      .context-card:hover, .team-card:hover {
+        background-color: rgba(0, 102, 255, 0.05);
+        border-color: #0066FF;
+      }
+
+      .context-card.selected, .team-card.selected {
+        border-color: #0066FF;
+        background-color: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+      }
+
+      .error-msg {
+        color: #FF3B30;
+        font-size: 14px;
+        margin-bottom: 15px;
+        display: none;
+      }
+
+      #submit-error {
+        margin-top: 15px;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .footer-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+      }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Continue in secure onboarding</h1>
-      <p>Account credentials are managed by the signed-in web session.</p>
-      <p><a id="continue" href="http://127.0.0.1:3000/onboarding">Open onboarding</a></p>
-    </main>
+    <div class="container glassmorphism">
+      <div id="submit-error" class="error-msg"></div>
+
+      <!-- Initial Step -->
+      <div id="step-initial" class="step active">
+        <h1>Tell us about your business</h1>
+        <p>Start your setup instantly by telling us a bit about what you do.</p>
+        <textarea id="instant-bio" class="glassmorphism-input" placeholder="E.g. I am a mobile service mechanic in Austin..." enterkeyhint="next"></textarea>
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Step-by-Step Setup</button>
+        </div>
+      </div>
+
+      <!-- Step 1: Context -->
+      <div id="step-context" class="step">
+        <h1>How do you work?</h1>
+        <p>Choose the model that best fits your daily operations.</p>
+        <div class="context-options">
+          <label class="context-card" tabindex="0">
+            <input type="radio" name="context" value="Service" style="display:none;">
+            Service
+          </label>
+          <label class="context-card" tabindex="0">
+            <input type="radio" name="context" value="Storefront" style="display:none;">
+            Storefront
+          </label>
+        </div>
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-initial">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Categories -->
+      <div id="step-categories" class="step">
+        <h1>What's your category?</h1>
+        <p>This helps us tailor your OHC assistant.</p>
+        <label for="business-categories">Category</label>
+        <select id="business-categories" data-testid="business-categories" class="glassmorphism-input">
+          <option value="" disabled selected>Select a category...</option>
+          <option value="Home Baker">Home Baker</option>
+          <option value="Mechanic">Mechanic</option>
+          <option value="Consultant">Consultant</option>
+          <option value="Other">Other</option>
+        </select>
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-context">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Name & Tagline -->
+      <div id="step-name" class="step">
+        <h1>What's the name of your business?</h1>
+        <label for="business-name">Business Name</label>
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism-input" autocomplete="organization" enterkeyhint="next" autocapitalize="words" placeholder="e.g. Austin Mechanics">
+
+        <label for="business-tagline">Tagline</label>
+        <input type="text" id="business-tagline" class="glassmorphism-input" enterkeyhint="next" placeholder="e.g. Fixing your car on the go">
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-categories">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Assistant -->
+      <div id="step-assistant" class="step">
+        <h1>Configure Your Team</h1>
+        <p>Select what your assistant should handle.</p>
+        <div class="team-options">
+          <label class="team-card" data-testid="team-operations" tabindex="0">
+            <input type="checkbox" name="team" value="Operations" style="display:none;">
+            Operations
+          </label>
+          <label class="team-card" data-testid="team-support" tabindex="0">
+            <input type="checkbox" name="team" value="Support" style="display:none;">
+            Support
+          </label>
+        </div>
+
+        <label for="assistant-tone">Assistant Tone</label>
+        <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism-input">
+          <option value="Professional">Professional</option>
+          <option value="Friendly">Friendly</option>
+        </select>
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-name">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Admin -->
+      <div id="step-admin" class="step">
+        <h1>Create Admin Account</h1>
+        <p>Set up your primary login credentials.</p>
+        <label for="admin-name">Name</label>
+        <input type="text" id="admin-name" data-testid="admin-name" class="glassmorphism-input" placeholder="Your full name">
+
+        <label for="admin-email">Email</label>
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism-input" autocomplete="email" inputmode="email" enterkeyhint="next" placeholder="admin@example.com">
+
+        <label for="admin-password">Password</label>
+        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism-input" autocomplete="new-password" enterkeyhint="next" placeholder="Must be at least 8 characters">
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Offer -->
+      <div id="step-offer" class="step">
+        <h1>Your First Offer</h1>
+        <p>What's the main product or service you're selling?</p>
+        <label for="first-offer">Primary Offer</label>
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism-input" enterkeyhint="next" placeholder="e.g. Mobile Oil Change">
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-admin">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 7: Location -->
+      <div id="step-location" class="step">
+        <h1>Where do you operate?</h1>
+        <label for="location-input">Location</label>
+        <input type="text" id="location-input" data-testid="location-input" class="glassmorphism-input" placeholder="e.g. Austin, TX">
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-offer">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 8: Target Audience -->
+      <div id="step-target-audience" class="step">
+        <h1>Who are your customers?</h1>
+        <label for="target-audience">Target Audience</label>
+        <input type="text" id="target-audience" data-testid="target-audience" class="glassmorphism-input" placeholder="e.g. Car Owners">
+
+        <div class="footer-actions">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-location">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 9: Domain -->
+      <div id="step-domain" class="step">
+        <h1>Choose your domain</h1>
+        <p>This is where your business will live on the web.</p>
+        <label for="domain-name">Domain Name</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="text" id="domain-name" data-testid="domain-name" class="glassmorphism-input" style="margin-bottom:0;" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" placeholder="e.g. austin-mechanics">
+          <span style="color: #86868B; font-weight: 600;">.ohc.app</span>
+        </div>
+
+        <div class="footer-actions" style="margin-top: 20px;">
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Continue</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 10: Template & Finish -->
+      <div id="step-template" class="step">
+        <h1>Final Polish</h1>
+        <p>Select a starting template for your storefront.</p>
+        <label for="template-selection">Template</label>
+        <select id="template-selection" data-testid="template-selection" class="glassmorphism-input">
+          <option value="Modern">Modern</option>
+          <option value="Classic">Classic</option>
+          <option value="Bold">Bold</option>
+        </select>
+
+        <div class="footer-actions">
+          <button id="finish-btn" data-testid="finish-btn">Complete Setup</button>
+          <button id="save-draft-btn" data-testid="save-draft-btn" class="secondary">Save Draft</button>
+          <button class="secondary next-step-btn" data-testid="next-step-btn" data-next="step-domain">Back</button>
+        </div>
+      </div>
+
+    </div>
+
     <script>
-      const link = document.getElementById("continue");
-      const webOrigin = window.location.protocol.startsWith("http")
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : "http://127.0.0.1:3000";
-      link.href = `${webOrigin}/onboarding${window.location.search}${window.location.hash}`;
+      let state = {
+        step: 'step-initial'
+      };
+
+      // Debounce timer
+      let saveTimer = null;
+
+      function updateUI() {
+        document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+        const activeStep = document.getElementById(state.step);
+        if (activeStep) {
+          activeStep.classList.add('active');
+        } else {
+          document.getElementById('step-initial').classList.add('active');
+        }
+
+        // Populate fields
+        document.getElementById('instant-bio').value = state.bio || '';
+        if (state.context) {
+          document.querySelectorAll(`input[name="context"]`).forEach(el => {
+            if (el.value === state.context) el.checked = true;
+          });
+        }
+        document.getElementById('business-categories').value = state.categories || '';
+        document.getElementById('business-name').value = state.businessName || '';
+        document.getElementById('business-tagline').value = state.tagline || '';
+        if (state.teamOperations) document.querySelector('input[value="Operations"]').checked = true;
+        if (state.teamSupport) document.querySelector('input[value="Support"]').checked = true;
+        document.getElementById('assistant-tone').value = state.assistantTone || 'Professional';
+        document.getElementById('admin-name').value = state.adminName || '';
+        document.getElementById('admin-email').value = state.adminEmail || '';
+        document.getElementById('first-offer').value = state.firstOffer || '';
+        document.getElementById('location-input').value = state.location || '';
+        document.getElementById('target-audience').value = state.targetAudience || '';
+        document.getElementById('domain-name').value = state.domain || '';
+        document.getElementById('template-selection').value = state.templateSelection || 'Modern';
+
+        // Update cards selection state
+        updateCardSelection();
+      }
+
+      function updateCardSelection() {
+
+
+        document.querySelectorAll('.context-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+               const input = card.querySelector('input');
+               input.checked = true;
+               scheduleSave();
+               updateCardSelection();
+            }
+          });
+          card.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 card.click();
+             }
+          });
+        });
+
+        document.querySelectorAll('.team-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+             if (e.target.tagName !== 'INPUT') {
+                const input = card.querySelector('input');
+                input.checked = !input.checked;
+                scheduleSave();
+                updateCardSelection();
+             }
+          });
+          card.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 card.click();
+             }
+          });
+        });
+
+
+
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+          el.addEventListener('input', scheduleSave);
+          el.addEventListener('change', scheduleSave);
+        });
+
+
+
+        document.querySelectorAll('.context-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+               const input = card.querySelector('input');
+               input.checked = true;
+               scheduleSave();
+               updateCardSelection();
+            }
+          });
+          card.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 card.click();
+             }
+          });
+        });
+
+        document.querySelectorAll('.team-card').forEach(card => {
+          card.addEventListener('click', (e) => {
+             if (e.target.tagName !== 'INPUT') {
+                const input = card.querySelector('input');
+                input.checked = !input.checked;
+                scheduleSave();
+                updateCardSelection();
+             }
+          });
+          card.addEventListener('keydown', (e) => {
+             if (e.key === 'Enter' || e.key === ' ') {
+                 e.preventDefault();
+                 card.click();
+             }
+          });
+        });
+
+
+
+        const saveDraftBtn = document.getElementById('save-draft-btn');
+        if (saveDraftBtn) {
+            saveDraftBtn.addEventListener('click', async () => {
+                readStateFromUI();
+                localStorage.setItem('onboardingState', JSON.stringify(state));
+                try {
+                    await fetch('/api/v1/onboarding/draft', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(state)
+                    });
+                    saveDraftBtn.innerText = 'Draft Saved!';
+                    setTimeout(() => saveDraftBtn.innerText = 'Save Draft', 3000);
+                } catch(e) {
+                    console.error(e);
+                }
+            });
+        }
+
+
+        const finishBtn = document.getElementById('finish-btn');
+        const errorEl = document.getElementById('submit-error');
+        if (finishBtn) {
+          finishBtn.addEventListener('click', async () => {
+            readStateFromUI();
+
+            // Grab password only upon submission
+            state.adminPassword = document.getElementById('admin-password').value;
+
+            errorEl.style.display = 'none';
+
+            try {
+              const res = await fetch('/api/v1/onboarding/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state)
+              });
+
+              if (res.ok) {
+                window.location.href = 'dashboard.html';
+              } else {
+                const data = await res.json();
+                errorEl.innerText = data.error || 'Setup failed.';
+                errorEl.style.display = 'block';
+              }
+            } catch(e) {
+              errorEl.innerText = 'Network error.';
+              errorEl.style.display = 'block';
+            }
+          });
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', initialize);
     </script>
   </body>
 </html>
