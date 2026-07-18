@@ -47,4 +47,37 @@ describe('ApiDocsPage', () => {
     expect(screen.getByText('HasHelpPath')).toBeInTheDocument();
     expect(screen.getByText('HasTooltipsPath')).toBeInTheDocument();
   });
+
+  it('displays an error message when fetch fails', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({}),
+    }) as any;
+
+    render(
+      <TooltipProvider>
+        <ApiDocsPage />
+      </TooltipProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load API documentation')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load API Documentation.')).toBeInTheDocument();
+    });
+  });
+
+  it('displays an error message when fetch throws an exception', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error')) as any;
+
+    render(
+      <TooltipProvider>
+        <ApiDocsPage />
+      </TooltipProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load API documentation')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load API Documentation.')).toBeInTheDocument();
+    });
+  });
 });

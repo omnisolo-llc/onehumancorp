@@ -215,6 +215,12 @@ export function HelpWidget() {
     }
   };
 
+  const clearChat = () => {
+    setChatMessages([
+      { id: "initial", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+    ]);
+  };
+
   return (
     <>
       <div className="fixed bottom-6 right-6 z-[90] hidden sm:block" data-ui-overlay="true">
@@ -324,7 +330,18 @@ export function HelpWidget() {
 
             {tab === "chat" && (
               <div className="flex flex-col h-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-xl p-2">
-                <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
+                <div className="flex justify-end p-2 border-b border-white/30">
+                  {chatMessages.length > 1 && (
+                    <button
+                      onClick={clearChat}
+                      className="text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors bg-white/40 hover:bg-white/60 px-3 py-1.5 rounded-full"
+                      aria-label="Clear chat"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2 mt-2">
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
