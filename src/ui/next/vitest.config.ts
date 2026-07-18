@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     globals: true,
+    cache: false,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
