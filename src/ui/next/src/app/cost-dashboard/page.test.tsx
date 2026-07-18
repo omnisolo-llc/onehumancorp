@@ -426,7 +426,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: mockPortalUrl }) });
       }
       return Promise.reject(new Error('not found'));
@@ -456,7 +456,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
       }
       return Promise.reject(new Error('not found'));
@@ -492,7 +492,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/cancel-subscription' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/cancel-subscription') && options?.method === 'POST') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
       return Promise.reject(new Error('not found'));
@@ -525,7 +525,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/cancel-subscription' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/cancel-subscription') && options?.method === 'POST') {
         return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
       }
       return Promise.reject(new Error('not found'));
@@ -558,7 +558,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/cancel-subscription' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/cancel-subscription') && options?.method === 'POST') {
         return Promise.reject(new Error('Network err'));
       }
       return Promise.reject(new Error('not found'));
@@ -616,7 +616,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/download-invoice' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/download-invoice') && options?.method === 'POST') {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: mockInvoiceUrl }) });
       }
       return Promise.reject(new Error('not found'));
@@ -651,7 +651,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/download-invoice' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/download-invoice') && options?.method === 'POST') {
         return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
       }
       return Promise.reject(new Error('not found'));
@@ -683,7 +683,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
       if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
-      if (url === '/api/v1/billing/download-invoice' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/download-invoice') && options?.method === 'POST') {
         return Promise.reject(new Error('Network err'));
       }
       return Promise.reject(new Error('not found'));

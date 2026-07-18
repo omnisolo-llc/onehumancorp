@@ -145,7 +145,7 @@ describe('MyPlanPage', () => {
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return portalPromise.then(() => ({
           ok: true,
           json: async () => ({ url: mockPortalUrl }),

@@ -70,7 +70,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -114,7 +114,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         throw new Error('Network error');
       }
       return { ok: true, json: async () => ({}) };
@@ -175,7 +175,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ url: mockPortalUrl }),
@@ -232,7 +232,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         throw new Error('Network error');
       }
       return { ok: true, json: async () => ({}) };
@@ -296,7 +296,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -341,7 +341,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({ checkout_url: mockCheckoutUrl }),
@@ -406,7 +406,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Starter' }),
         };
       }
-      if (url === '/api/v1/billing/create-billing-portal-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-billing-portal-session') && options?.method === 'POST') {
         return {
           ok: false,
           json: async () => ({})
@@ -448,7 +448,7 @@ describe('PricingPage', () => {
           json: async () => ({ current_plan: 'Free' }),
         };
       }
-      if (url === '/api/v1/billing/create-checkout-session' && options?.method === 'POST') {
+      if (url.includes('/api/v1/billing/create-checkout-session') && options?.method === 'POST') {
         return {
           ok: false,
           json: async () => ({})

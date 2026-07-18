@@ -99,7 +99,7 @@ beforeEach(() => {
           json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
         });
       }
-      if (url === '/api/v1/billing/create-checkout-session') {
+      if (url.includes('/api/v1/billing/create-checkout-session')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit' }),
@@ -139,7 +139,7 @@ beforeEach(() => {
           json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
         });
       }
-      if (url === '/api/v1/billing/create-checkout-session') {
+      if (url.includes('/api/v1/billing/create-checkout-session')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit-sub' }),
