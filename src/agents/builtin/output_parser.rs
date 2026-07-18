@@ -29,17 +29,17 @@ pub trait PydanticSchemaValidator<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
 }
 
-pub struct AdvancedPydanticOutputParser<T> {
+pub struct AdvancedPydanticOutputParser<T: Send + Sync> {
     _marker: std::marker::PhantomData<T>,
 }
 
-impl<T> Default for AdvancedPydanticOutputParser<T> {
+impl<T: Send + Sync> Default for AdvancedPydanticOutputParser<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> AdvancedPydanticOutputParser<T> {
+impl<T: Send + Sync> AdvancedPydanticOutputParser<T> {
     pub fn new() -> Self {
         Self {
             _marker: std::marker::PhantomData,
@@ -47,7 +47,7 @@ impl<T> AdvancedPydanticOutputParser<T> {
     }
 }
 
-impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
+impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
@@ -66,17 +66,17 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
 }
 
 
-pub struct StructuredOutputParser<T> {
+pub struct StructuredOutputParser<T: Send + Sync> {
     _marker: std::marker::PhantomData<T>,
 }
 
-impl<T> Default for StructuredOutputParser<T> {
+impl<T: Send + Sync> Default for StructuredOutputParser<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> StructuredOutputParser<T> {
+impl<T: Send + Sync> StructuredOutputParser<T> {
     pub fn new() -> Self {
         Self {
             _marker: std::marker::PhantomData,
@@ -84,7 +84,7 @@ impl<T> StructuredOutputParser<T> {
     }
 }
 
-impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
+impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty()
@@ -1168,13 +1168,13 @@ fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::V
     }
 }
 
-impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
 }
 
-impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
