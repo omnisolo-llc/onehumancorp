@@ -9,11 +9,9 @@ services:
 
   postgres:
     image: pgvector/pgvector:pg15
-    pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
     image: valkey/valkey:7.2
-    pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
