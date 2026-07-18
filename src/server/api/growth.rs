@@ -330,6 +330,8 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat))
         .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
+        .route("/secret-menu/embed", get(handle_secret_menu_embed))
+        .route("/secret-menu/generate", post(handle_secret_menu_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -6362,4 +6364,129 @@ pub async fn handle_review_reward_submit(
         success: true,
         referral_link,
     }))
+}
+
+#[derive(serde::Deserialize)]
+pub struct SecretMenuParams {
+    pub tenant: String,
+    pub item_name: Option<String>,
+    pub item_desc: Option<String>,
+    pub access_code: Option<String>,
+    pub shares_req: Option<String>,
+}
+
+pub async fn handle_secret_menu_embed(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(params): axum::extract::Query<SecretMenuParams>,
+) -> impl axum::response::IntoResponse {
+    let tenant = params.tenant;
+    let item_name = params.item_name.unwrap_or_else(|| "Secret Item".to_string());
+    let item_desc = params.item_desc.unwrap_or_else(|| "".to_string());
+    let access_code = params.access_code.unwrap_or_else(|| "LOCKED".to_string());
+    let shares_req = params.shares_req.unwrap_or_else(|| "3".to_string());
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {{ margin: 0; font-family: -apple-system, sans-serif; background: transparent; }}
+        .widget {{ background: #111827; border-radius: 24px; padding: 40px; color: white; text-align: center; border: 1px solid #374151; }}
+        .icon {{ font-size: 36px; margin: 0 auto 24px; background: rgba(255, 153, 0, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }}
+        .title {{ font-size: 24px; font-weight: bold; margin-bottom: 8px; font-family: 'Outfit', sans-serif; color: #f9fafb; }}
+        .desc {{ color: #9ca3af; font-size: 14px; margin-bottom: 16px; font-weight: 500; }}
+        .shares {{ color: #FF9900; font-size: 13px; font-weight: 700; margin-bottom: 24px; }}
+
+        .progress-bar-container {{ margin: 24px 0; position: relative; }}
+        .progress-bar-bg {{ height: 16px; background: #374151; border-radius: 100px; overflow: hidden; border: 1px solid #4b5563; }}
+        .progress-bar-fill {{ height: 100%; width: 33%; background: linear-gradient(90deg, #FF9900 0%, #FF3366 100%); border-radius: 100px; }}
+        .progress-labels {{ display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-top: 8px; }}
+
+        .share-btn {{ width: 100%; padding: 16px; border-radius: 12px; font-weight: 700; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; font-size: 16px; transition: transform 0.1s, box-shadow 0.2s; }}
+        .share-btn:hover {{ transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }}
+        .btn-x {{ background: #000000; border: 1px solid #374151; }}
+        .btn-wa {{ background: #25D366; }}
+
+        .locked-coupon {{ position: relative; margin-top: 24px; border-radius: 12px; overflow: hidden; }}
+        .locked-bg {{ background: #111827; border: 2px dashed #4b5563; padding: 24px; border-radius: 12px; filter: blur(5px); font-size: 20px; font-weight: 800; color: #9ca3af; letter-spacing: 2px; }}
+        .locked-overlay {{ position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(17, 24, 39, 0.4); }}
+        .locked-badge {{ background: rgba(255,255,255,0.95); padding: 8px 20px; border-radius: 100px; font-size: 14px; font-weight: 700; color: #111827; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 6px; }}
+
+        .powered {{ margin-top: 24px; padding-top: 16px; border-top: 1px solid #374151; font-size: 10px; font-weight: 700; color: #4b5563; letter-spacing: 1px; }}
+        a {{ color: inherit; text-decoration: none; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="icon">🤫</div>
+        <div class="title">{item_name}</div>
+        <div class="desc">{item_desc}</div>
+        <div class="shares">Unlock this secret item by sharing with {shares_req} friends!</div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-labels">
+                <span>0 Shares</span>
+                <span style="color: #FF9900;">1 / {shares_req}</span>
+                <span>{shares_req} Shares</span>
+            </div>
+        </div>
+
+        <div style="margin: 32px 0 16px;">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_x" target="_blank" class="share-btn btn-x" style="text-decoration: none;">
+                <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                Share on X
+            </a>
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_wa" target="_blank" class="share-btn btn-wa" style="text-decoration: none;">
+                <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                Share on WhatsApp
+            </a>
+        </div>
+
+        <div class="locked-coupon">
+            <div class="locked-bg">{access_code}</div>
+            <div class="locked-overlay">
+                <span class="locked-badge">🔒 Locked</span>
+            </div>
+        </div>
+
+        <div class="powered">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed" target="_blank">⚡ POWERED BY OHC GROWTH</a>
+        </div>
+    </div>
+</body>
+</html>"#,
+    );
+
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html")],
+        html,
+    )
+}
+
+#[derive(serde::Deserialize)]
+pub struct SecretMenuGenerateRequest {
+    pub tenant_id: String,
+}
+
+pub async fn handle_secret_menu_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<SecretMenuGenerateRequest>,
+) -> impl axum::response::IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.secret_menu_generated",
+        "tenant_id": req.tenant_id,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }));
+
+    // publish returning result
+    state.hub.append_recent_event(msg);
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
 }
