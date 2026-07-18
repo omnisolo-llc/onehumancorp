@@ -172,83 +172,66 @@ impl PromptCache {
             return String::new();
         }
 
-        // Token Efficiency Optimization: Remove markdown image/link URLs as they cost tokens but rarely help context.
-        // E.g., [text](https://...) -> [text]
-        let mut optimized_context = std::borrow::Cow::Borrowed(context);
-        if context.contains("](") {
-            let mut result = String::with_capacity(context.len());
-            let mut chars = context.char_indices().peekable();
-            let mut in_url = false;
-
-            while let Some((i, c)) = chars.next() {
-                if !in_url && c == ']' {
-                    result.push(c);
-                    if let Some(&(_, '(')) = chars.peek() {
-                        let rest = &context[i + 2..];
-                        if rest.starts_with("http://") || rest.starts_with("https://") {
-                            in_url = true;
-                            chars.next(); // Skip '('
-                        }
-                    }
-                } else if in_url && c == ')' {
-                    in_url = false;
-                } else if !in_url {
-                    result.push(c);
-                }
-            }
-            if result.len() != context.len() {
-                optimized_context = std::borrow::Cow::Owned(result);
-            }
-        }
-        let context = &*optimized_context;
-
         let max_chars = max_tokens * 4; // Fast heuristic assuming 4 chars per token
-
+        let mut result = String::with_capacity(std::cmp::min(context.len(), max_chars));
         let mut char_count = 0;
-        let mut byte_index = context.len();
 
-        // Fast path for ASCII strings where bytes == chars
-        if context.is_ascii() {
-            if context.len() <= max_chars {
-                return context.to_string();
-            }
-            byte_index = max_chars;
-            char_count = max_chars;
-        } else {
-            // Optimization: If byte length <= max_chars, char length must also be <= max_chars
-            if context.len() <= max_chars {
-                return context.to_string();
+        let mut last_space_byte_index = None;
+        let mut last_space_char_count = 0;
+
+        let mut chars = context.char_indices().peekable();
+        let mut in_url = false;
+        let mut truncated = false;
+
+        while let Some((_, c)) = chars.next() {
+            if char_count >= max_chars {
+                truncated = true;
+                break;
             }
 
-            for (i, _) in context.char_indices() {
-                if char_count == max_chars {
-                    byte_index = i;
-                    break;
+            if !in_url && c == ']' {
+                result.push(c);
+                char_count += 1;
+
+                if let Some(&(_, '(')) = chars.peek() {
+                    let rest = &context[chars.clone().next().unwrap().0..];
+                    if rest.starts_with("(http://") || rest.starts_with("(https://") {
+                        in_url = true;
+                        chars.next(); // Skip '('
+                    }
+                }
+            } else if in_url && c == ')' {
+                in_url = false;
+            } else if !in_url {
+                result.push(c);
+                if c.is_whitespace() {
+                    last_space_byte_index = Some(result.len());
+                    last_space_char_count = char_count;
                 }
                 char_count += 1;
             }
         }
 
-        if char_count < max_chars && byte_index == context.len() {
-            return context.to_string();
+        if !truncated && result.len() == context.len() {
+            return context.to_string(); // No URL stripped and no truncation
         }
 
-        let mut slice = &context[..byte_index];
-
-        // Try to truncate at a word boundary to keep it "intelligent"
-        if let Some(last_space) = slice.rfind(char::is_whitespace) {
-            // Keep at least some content if the last space is too early.
-            // Using char_count / 2 to avoid slicing a UTF-8 character based on bytes.
-            let space_char_count = slice[..last_space].chars().count();
-            if space_char_count > max_chars / 2 {
-                slice = &slice[..last_space];
+        if truncated {
+            // Try to truncate at a word boundary to keep it "intelligent"
+            if let Some(space_idx) = last_space_byte_index {
+                if last_space_char_count > max_chars / 2 {
+                    result.truncate(space_idx);
+                }
             }
+
+            // Clean up trailing whitespace and punctuation before appending ellipsis
+            let trimmed_len = result.trim_end_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation()).len();
+            result.truncate(trimmed_len);
+
+            result.push_str("...");
         }
 
-        // Clean up trailing whitespace and punctuation before appending ellipsis
-        slice = slice.trim_end_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation());
-
-        format!("{}...", slice)
+        result
     }
 }
 
@@ -523,5 +506,19 @@ mod tests {
         let text2 = "Check out this [link](http";
         let res2 = PromptCache::truncate_context(text2, 10);
         assert!(res2.len() > 0);
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_context_single_pass_efficiency() {
+        let text = "Check out this [link](https://example.com/very/long/url) and then [another](http://example.com). More text here.";
+        let res = PromptCache::truncate_context(text, 15); // 60 chars
+        assert!(res.contains("[link]"));
+        assert!(!res.contains("https://"));
+        assert!(res.len() <= 65);
     }
 }

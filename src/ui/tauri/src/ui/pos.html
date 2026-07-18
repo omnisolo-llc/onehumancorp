@@ -209,6 +209,37 @@
             min-height: 600px;
         }
       }
+
+      @media (max-width: 400px) {
+        .numpad {
+          gap: 4px;
+        }
+        .num-btn {
+          font-size: 20px;
+          padding: 12px;
+          min-height: 44px;
+          min-width: 44px;
+        }
+        .charge-btn {
+          font-size: 18px;
+          padding: 12px;
+          min-height: 44px;
+          min-width: 44px;
+        }
+        .container {
+          padding: 16px;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .container {
+          width: 100vw !important;
+          max-width: 375px;
+          margin: 0;
+          border-radius: 0;
+          overflow-x: hidden;
+        }
+      }
       .header {
         display: flex;
         justify-content: flex-start;
@@ -429,12 +460,17 @@
         color: white;
         border: none;
         padding: 12px 24px;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         width: 100%;
         margin-bottom: 16px;
+      }
+
+      .back-btn {
+        min-height: 44px;
       }
 
       /* Receipt Screen */
@@ -1281,27 +1317,58 @@
 
           // Fallback logic for offline or when Stripe Terminal SDK fails
 
-
-          // Tap Success
-          tapOverlay.style.display = 'none';
-          posView.style.display = 'none';
-          receiptScreen.style.display = 'flex';
-
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
           if (!stripeTerminal && navigator.onLine) {
-              fetch('/api/v1/payments/terminal/commit', {
+              simulateTapBtn.innerText = "Reserving...";
+              fetch('/api/v1/payments/terminal/reserve', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                  body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents })
-              }).then(res => res.json()).then(data => {
-                  if (data.success && data.invoice_id) {
-                      document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
+                  body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, ttl_seconds: 15 })
+              }).then(res => res.json()).then(reserveData => {
+                  if (!reserveData.success) {
+                      // Rollback optimistic UI state and show friendly out of stock message
+                      simulateTapBtn.innerText = "Error: Oops! Item just sold out.";
+                      simulateTapBtn.style.background = "rgba(255, 59, 48, 0.1)"; simulateTapBtn.style.backdropFilter = "blur(30px) saturate(210%)"; simulateTapBtn.style.webkitBackdropFilter = "blur(30px) saturate(210%)";
+                      simulateTapBtn.style.color = "#FF3B30";
+                      simulateTapBtn.style.border = "1px solid rgba(255, 59, 48, 0.4)";
+
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'pos-error-overlay';
+                      errorDiv.style = "position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.8); backdrop-filter: blur(30px); z-index: 1000;";
+                      errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+                          <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+                          <p style="color: #666;">This item was purchased online just now.</p>
+                          <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+                      </div>`;
+                      document.body.appendChild(errorDiv);
+
+                      // Restore the views
+                      tapOverlay.style.display = 'flex';
+                      posView.style.display = 'none';
+                      receiptScreen.style.display = 'none';
                   } else {
-                      document.querySelector('.receipt-text').innerText = "Payment Successful";
+                      simulateTapBtn.innerText = "Confirming...";
+                      fetch('/api/v1/payments/terminal/commit', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                          body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, lock_id: reserveData.lock_id })
+                      }).then(res => res.json()).then(data => {
+                          tapOverlay.style.display = 'none';
+                          posView.style.display = 'none';
+                          receiptScreen.style.display = 'flex';
+                          if (data.success && data.invoice_id) {
+                              document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
+                          } else {
+                              document.querySelector('.receipt-text').innerText = "Payment Successful";
+                          }
+                      }).catch(console.error);
                   }
               }).catch(console.error);
           } else if (!navigator.onLine) {
+              tapOverlay.style.display = 'none';
+              posView.style.display = 'none';
+              receiptScreen.style.display = 'flex';
               document.querySelector('.receipt-text').innerText = "Offline Quick Charge Saved.";
               enqueueOfflineMutation({
                   type: 'tap_to_pay',
