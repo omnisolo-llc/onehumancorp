@@ -913,14 +913,13 @@ mod tests {
     #[tokio::test]
     async fn test_bench_get_daily_work_latency() {
         super::bench_get_daily_work_latency().await;
+    bench_get_daily_work_mobile_payload().await;
     }
 
     #[tokio::test]
     async fn test_bench_get_daily_work_mobile_payload() {
         super::bench_get_daily_work_mobile_payload().await;
     }
-
-
 
     #[tokio::test]
     async fn test_bench_ui_dashboard_unified_agent_feed_latency() {
@@ -1244,6 +1243,7 @@ pub async fn bench_hybrid_latency() {
     bench_advisory_insights_latency().await;
     tracing::info!("18. Daily Work Latency");
     bench_get_daily_work_latency().await;
+    bench_get_daily_work_mobile_payload().await;
     tracing::info!("19. Completed Tasks Latency");
     bench_get_completed_tasks_latency().await;
 
@@ -2603,7 +2603,6 @@ pub async fn bench_get_daily_work_latency() {
 }
 
 
-
 pub async fn bench_get_daily_work_mobile_payload() {
     tracing::info!("Benchmarking get_daily_work_handler (Mobile Payload Optimization)...");
 
@@ -2635,11 +2634,6 @@ pub async fn bench_get_daily_work_mobile_payload() {
         "    (Mobile Payload Optimization verified: payload_shaper correctly trims payload)"
     );
 }
-
-
-
-
-
 
 
 pub async fn bench_ui_triage_mobile_payload() {
