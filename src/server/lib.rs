@@ -5869,8 +5869,20 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
+            let i_key = format!("ui_invoices:{}:mobile:{}", tenant_id, mobile_optimized);
             async move {
-                load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
+                    let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                let i_key = format!("ui_invoices:{}:mobile:{}", t_clone, mobile_optimized);
+                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
+                    let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                let i_key = format!("ui_invoices:{}:mobile:{}", t_clone, mobile_optimized);
+                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.or(Some(vec![]))
+                }).await.or(Some(vec![]))
+                }).await.unwrap_or_default()
             }
         })
     );
@@ -6017,6 +6029,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
 static UI_PRIORITY_TASKS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_AGENT_APPROVALS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_INVOICES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
