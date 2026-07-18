@@ -378,4 +378,19 @@ describe('HelpChat remaining branches', () => {
 
     expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
   });
+
+  it('closes chat when Escape key is pressed', async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<HelpChat />);
+
+    // Open chat
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Press Escape
+    const input = screen.getByPlaceholderText('Ask anything...');
+    await user.type(input, '{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
