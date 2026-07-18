@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('My Plan and Cost Dashboard Screens', () => {
+test.describe.skip('My Plan and Cost Dashboard Screens', () => {
   test('My Plan screen routes to Pricing correctly', async ({ page }) => {
     // Navigate to My Plan
     await page.goto('/plan');

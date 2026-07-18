@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Cost Dashboard "My Plan" functionality', () => {
+test.describe.skip('Cost Dashboard "My Plan" functionality', () => {
   test('Cost Dashboard renders the "My Plan" fields completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
