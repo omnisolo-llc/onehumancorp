@@ -209,6 +209,37 @@
             min-height: 600px;
         }
       }
+
+      @media (max-width: 400px) {
+        .numpad {
+          gap: 4px;
+        }
+        .num-btn {
+          font-size: 20px;
+          padding: 12px;
+          min-height: 44px;
+          min-width: 44px;
+        }
+        .charge-btn {
+          font-size: 18px;
+          padding: 12px;
+          min-height: 44px;
+          min-width: 44px;
+        }
+        .container {
+          padding: 16px;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .container {
+          width: 100vw !important;
+          max-width: 375px;
+          margin: 0;
+          border-radius: 0;
+          overflow-x: hidden;
+        }
+      }
       .header {
         display: flex;
         justify-content: flex-start;
@@ -429,12 +460,17 @@
         color: white;
         border: none;
         padding: 12px 24px;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         width: 100%;
         margin-bottom: 16px;
+      }
+
+      .back-btn {
+        min-height: 44px;
       }
 
       /* Receipt Screen */
