@@ -131,6 +131,7 @@ pub struct RedisRateLimiter {
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     db_pool: Option<sqlx::PgPool>,
     tier_cache: DashMap<String, (PlanTier, Instant)>,
+    token_usage_cache: DashMap<String, (i64, Instant)>,
 }
 
 impl RedisRateLimiter {
@@ -141,6 +142,7 @@ impl RedisRateLimiter {
             telemetry_store: None,
             db_pool: None,
             tier_cache: DashMap::new(),
+            token_usage_cache: DashMap::new(),
         }
     }
 
@@ -251,6 +253,9 @@ impl RedisRateLimiter {
         let _ : () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens).await.unwrap_or(());
         let _ : () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens).await.unwrap_or(());
 
+        // Invalidate local cache
+        self.token_usage_cache.remove(tenant_id);
+
         let cost_cents = crate::calculator::calculate_cost_cents(model, tokens, 0, 0);
 
         if let Some(store) = &self.telemetry_store {
@@ -268,12 +273,18 @@ impl RedisRateLimiter {
     }
 
     pub async fn get_token_usage(&self, tenant_id: &str) -> Result<i64, String> {
+        if let Some(entry) = self.token_usage_cache.get(tenant_id)
+            && entry.1.elapsed() < Duration::from_secs(5) {
+                return Ok(entry.0);
+            }
+
         let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
 
         let count: i64 = redis::AsyncCommands::get(&mut conn, &tenant_key).await.unwrap_or(0);
+        self.token_usage_cache.insert(tenant_id.to_string(), (count, Instant::now()));
         Ok(count)
     }
 
@@ -352,9 +363,18 @@ impl RedisRateLimiter {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
 
-        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
+        // Fast-path: If the tier has unlimited products, skip Redis lookup
+        if tier.max_products().is_none() {
+            return Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            });
+        }
+
+        let mut conn = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
         let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
@@ -399,9 +419,18 @@ impl RedisRateLimiter {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
 
-        let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
+        // Fast-path: If the tier has unlimited agents, skip Redis lookup
+        if tier.max_agents().is_none() {
+            return Ok(RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            });
+        }
+
+        let mut conn = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
         let total_agents: Option<usize> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         let total_agents = total_agents.unwrap_or(0);
@@ -647,6 +676,75 @@ mod tests {
 
                 let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
                 assert!(status.is_allowed);
+            }
+    }
+
+    #[tokio::test]
+    async fn test_check_product_quota_unlimited_fast_path() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-product-unlimited";
+
+                // Set tier to Pro (unlimited products)
+                limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await.unwrap();
+
+                // This should bypass Redis lookup and return true instantly
+                let status = limiter.check_product_quota(tenant_id).await.unwrap();
+                assert!(status.is_allowed);
+                assert!(!status.soft_limit_reached);
+            }
+    }
+
+    #[tokio::test]
+    async fn test_check_agent_quota_unlimited_fast_path() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-agent-unlimited";
+
+                // Set tier to Pro (unlimited agents)
+                limiter.set_tenant_tier(tenant_id, PlanTier::Pro).await.unwrap();
+
+                // This should bypass Redis lookup and return true instantly
+                let status = limiter.check_agent_quota(tenant_id).await.unwrap();
+                assert!(status.is_allowed);
+                assert!(!status.soft_limit_reached);
+            }
+    }
+
+    #[tokio::test]
+    async fn test_token_usage_cache() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-token-cache";
+
+                let mut conn = limiter.get_connection().await.unwrap();
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
+
+                // clear the key
+                let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
+
+                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
+                assert_eq!(usage, 0);
+                assert!(limiter.token_usage_cache.contains_key(tenant_id));
+
+                // Manual redis modification to prove cache is working
+                let _ : () = redis::AsyncCommands::set(&mut conn, &tenant_key, 5000).await.unwrap_or(());
+
+                // Should return cached 0
+                let usage2 = limiter.get_token_usage(tenant_id).await.unwrap();
+                assert_eq!(usage2, 0);
+
+                // simulate a record usage hitting the API, should clear cache
+                limiter.record_token_usage(tenant_id, "gpt-4o", 100).await.unwrap();
+
+                // Should now fetch from redis (5100) and recache
+                let usage3 = limiter.get_token_usage(tenant_id).await.unwrap();
+                assert_eq!(usage3, 5100);
             }
     }
 

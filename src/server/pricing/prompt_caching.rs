@@ -175,27 +175,34 @@ impl PromptCache {
         // Token Efficiency Optimization: Remove markdown image/link URLs as they cost tokens but rarely help context.
         // E.g., [text](https://...) -> [text]
         let mut optimized_context = std::borrow::Cow::Borrowed(context);
-        if context.contains("](") {
+        if context.contains("](http") {
             let mut result = String::with_capacity(context.len());
-            let mut chars = context.char_indices().peekable();
-            let mut in_url = false;
+            let mut search_idx = 0;
 
-            while let Some((i, c)) = chars.next() {
-                if !in_url && c == ']' {
-                    result.push(c);
-                    if let Some(&(_, '(')) = chars.peek() {
-                        let rest = &context[i + 2..];
-                        if rest.starts_with("http://") || rest.starts_with("https://") {
-                            in_url = true;
-                            chars.next(); // Skip '('
-                        }
+            while let Some(start_idx) = context[search_idx..].find("](http") {
+                let actual_start = search_idx + start_idx;
+                let url_start = actual_start + 2; // skip `](`
+
+                let rest = &context[url_start..];
+                if rest.starts_with("http://") || rest.starts_with("https://") {
+                    if let Some(end_offset) = rest.find(')') {
+                        let url_end = url_start + end_offset + 1; // include `)`
+
+                        result.push_str(&context[search_idx..actual_start + 1]); // keep `]`
+                        search_idx = url_end;
+                        continue;
                     }
-                } else if in_url && c == ')' {
-                    in_url = false;
-                } else if !in_url {
-                    result.push(c);
                 }
+
+                // If it wasn't a closed URL or proper http/https, just push `](` and continue
+                result.push_str(&context[search_idx..actual_start + 2]);
+                search_idx = actual_start + 2;
             }
+
+            if search_idx < context.len() {
+                result.push_str(&context[search_idx..]);
+            }
+
             if result.len() != context.len() {
                 optimized_context = std::borrow::Cow::Owned(result);
             }
