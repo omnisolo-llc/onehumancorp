@@ -17,36 +17,10 @@ fn is_multitenant_mode() -> bool {
 }
 
 pub fn is_auth_bypass_path(path: &str) -> bool {
-    fn matches_prefix(path: &str, prefix: &str) -> bool {
-        path == prefix
-            || path
-                .strip_prefix(prefix)
-                .is_some_and(|suffix| suffix.starts_with('/'))
-    }
-
-    let fixed_prefix = [
-        "/api/public",
-        "/api/v1/public",
-        "/api/webhook",
-        "/api/v1/auth",
-        "/api/onboarding",
-        "/api/agents/webhook",
-        "/api/v1/webhook",
-        "/metrics",
-    ]
-    .into_iter()
-    .any(|prefix| matches_prefix(path, prefix));
-    let public_growth_embed = path.starts_with("/api/v1/growth/")
-        && (path.ends_with("/embed")
-            || path.ends_with("/embed.js")
-            || matches!(
-                path,
-                "/api/v1/growth/embed/widget" | "/api/v1/growth/embed.css"
-            ));
-
-    fixed_prefix
-        || public_growth_embed
-        || matches!(path, "/health" | "/healthz" | "/readyz")
+    matches!(
+        path,
+        "/api/v1/auth/login" | "/health" | "/healthz" | "/readyz" | "/metrics"
+    )
 }
 
 pub async fn tenant_middleware(req: Request, next: Next) -> Response {
@@ -137,16 +111,25 @@ mod tests {
     #[test]
     fn bypass_paths_require_exact_segment_boundaries() {
         assert!(is_auth_bypass_path("/api/v1/auth/login"));
-        assert!(is_auth_bypass_path("/api/v1/growth/storefront/embed"));
         assert!(is_auth_bypass_path("/healthz"));
+        assert!(is_auth_bypass_path("/metrics"));
         assert!(!is_auth_bypass_path("/api/v1/authentication-data"));
-        assert!(!is_auth_bypass_path("/api/dev/seed"));
+        assert!(!is_auth_bypass_path("/api/v1/auth/logout"));
+        assert!(!is_auth_bypass_path("/api/v1/auth/test"));
+        assert!(!is_auth_bypass_path("/api/v1/dev/seed"));
+        assert!(!is_auth_bypass_path("/api/v1/public/test"));
+        assert!(!is_auth_bypass_path("/api/v1/onboarding/intake"));
+        assert!(!is_auth_bypass_path("/api/v1/agents/webhook"));
+        assert!(!is_auth_bypass_path("/api/v1/webhook/test"));
+        assert!(!is_auth_bypass_path("/api/v1/webhooks/stripe"));
+        assert!(!is_auth_bypass_path("/api/v1/growth/storefront/embed"));
         assert!(!is_auth_bypass_path("/api/v1/growth/upgrade-paywall"));
     }
 
     fn setup_router(_multitenant: bool) -> Router {
         Router::new()
             .route("/api/v1/public/test", get(dummy_handler))
+            .route("/api/v1/auth/login", get(dummy_handler))
             .route("/api/v1/auth/test", get(dummy_handler))
             .route("/health", get(dummy_handler))
             .route("/api/v1/protected", get(dummy_handler))
@@ -155,7 +138,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_public_routes_bypass() {
+    async fn test_public_routes_require_authentication() {
         let app = setup_router(true);
 
         let req = Request::builder()
@@ -164,11 +147,24 @@ mod tests {
             .unwrap();
 
         let response = app.oneshot(req).await.unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn test_auth_bypass() {
+        let app = setup_router(true);
+
+        let req = Request::builder()
+            .uri("/api/v1/auth/login")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_unknown_auth_route_does_not_bypass_tenant_auth() {
         let app = setup_router(true);
 
         let req = Request::builder()
@@ -177,7 +173,7 @@ mod tests {
             .unwrap();
 
         let response = app.oneshot(req).await.unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]

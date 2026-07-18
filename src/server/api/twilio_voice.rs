@@ -46,7 +46,7 @@ pub async fn twilio_voice_incoming_handler(
             .fetch_optional(pool)
             .await {
                 Ok(Some(id)) => id,
-                _ => "test_tenant".to_string(),
+                _ => return StatusCode::NOT_FOUND.into_response(),
             }
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
@@ -57,7 +57,7 @@ pub async fn twilio_voice_incoming_handler(
             .fetch_optional(sqlite_pool)
             .await {
                 Ok(Some(id)) => id,
-                _ => "test_tenant".to_string(),
+                _ => return StatusCode::NOT_FOUND.into_response(),
             }
         }
     };
@@ -174,7 +174,7 @@ pub async fn twilio_voice_status_handler(
                     .fetch_optional(pool)
                     .await {
                         Ok(Some(id)) => id,
-                        _ => "test_tenant".to_string(),
+                        _ => return StatusCode::NOT_FOUND.into_response(),
                     }
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
@@ -185,7 +185,7 @@ pub async fn twilio_voice_status_handler(
                     .fetch_optional(sqlite_pool)
                     .await {
                         Ok(Some(id)) => id,
-                        _ => "test_tenant".to_string(),
+                        _ => return StatusCode::NOT_FOUND.into_response(),
                     }
                 }
             };

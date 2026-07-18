@@ -84,18 +84,7 @@ export default function UnifiedFeed() {
 
   const fetchFeed = async () => {
     try {
-      let headers: HeadersInit = {};
-      if (typeof window !== "undefined") {
-        const tenantId = localStorage.getItem("tenant_id") || "default";
-        const userId = localStorage.getItem("user_id") || "default";
-        headers = {
-          "x-tenant-id": tenantId,
-          "x-user-id": userId,
-        };
-      }
-      const res = await fetch("/api/v1/agent-feed", {
-        headers,
-      });
+      const res = await fetch("/api/v1/agent-feed");
       if (!res.ok) {
         throw new Error("Failed to fetch feed");
       }
@@ -181,20 +170,9 @@ export default function UnifiedFeed() {
         payload.edited_payload = editedPayload;
       }
 
-      let headers: HeadersInit = { "Content-Type": "application/json" };
-      if (typeof window !== "undefined") {
-        const tenantId = localStorage.getItem("tenant_id") || "default";
-        const userId = localStorage.getItem("user_id") || "default";
-        headers = {
-          ...headers,
-          "x-tenant-id": tenantId,
-          "x-user-id": userId,
-        };
-      }
-
       const res = await fetch(`/api/v1/agent-feed/${itemId}`, {
         method: "PUT",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) {

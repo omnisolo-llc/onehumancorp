@@ -266,7 +266,7 @@
       });
 
       try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        const tenantId = localStorage.getItem('business_display_name') || 'My Business';
         let refId = null;
 
         try {
@@ -274,8 +274,7 @@
           const res = await fetch('/api/v1/growth/referrals/generate', {
               method: 'POST',
               headers: {
-                  'Content-Type': 'application/json',
-                  'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                  'Content-Type': 'application/json'
               }
           });
 

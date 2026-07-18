@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test('Prevents simultaneous online and offline purchases via Redis Redlock and generates restock AI task', async ({ page, memberPage, request }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',
@@ -74,7 +74,7 @@ test('Prevents simultaneous online and offline purchases via Redis Redlock and g
 
 test('Persona: Online checkout fails due to offline POS conflict and triggers Customer Success Agent', async ({ request, page, memberPage, context }) => {
     // 1. Visit the home page / login and get to the POS
-    await memberPage.goto('/api/staff');
+    await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
       localStorage.setItem('ohc_offline_staff', JSON.stringify([{
         id: 'staff_1',
