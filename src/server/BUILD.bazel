@@ -116,6 +116,7 @@ SERVER_RS_SRCS = [
     "//src/server/autodream_pipeline:mod.rs",
     "//src/server/autodream_pipeline:pipeline.rs",
     "//src/server/benchmarks:chaos_bench.rs",
+    "//src/server/benchmarks:ml_resilience_test.rs",
     "//src/server/benchmarks:latency_bench.rs",
     "//src/server/benchmarks:mod.rs",
     "//src/server/builder:api.rs",
