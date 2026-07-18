@@ -112,7 +112,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   fi
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
-      export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+      export PLAYWRIGHT_BROWSERS_PATH="/home/jules/.cache/ms-playwright"
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
@@ -409,6 +409,10 @@ OHC_GRPC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 10)"
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
+export OHC_AGENT_TOKEN="fake_token"
+export OHC_AGENT_SPIFFE_ID="spiffe://fake"
+export OHC_AGENT_AUTH_KEY="12345678901234567890123456789012"
+
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
 export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
 export BACKEND_URL="$API_BASE_URL"

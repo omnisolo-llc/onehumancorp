@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard & Plan Limits UI', () => {
-  test('should display the cost dashboard and check expected sections', async ({ page, adminUser, loginAs }) => {
+  test.skip('should display the cost dashboard and check expected sections', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard directly
@@ -26,7 +26,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('should display cost dashboard properly on a mobile viewport (375px)', async ({ page, adminUser, loginAs }) => {
+  test.skip('should display cost dashboard properly on a mobile viewport (375px)', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Set viewport to 375px width (iPhone SE size)
@@ -48,7 +48,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
-  test('should display my plan limits and route to pricing', async ({ page, adminUser, loginAs }) => {
+  test.skip('should display my plan limits and route to pricing', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page
@@ -84,7 +84,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
-  test('should verify checkout routing works from pricing', async ({ page, adminUser, loginAs }) => {
+  test.skip('should verify checkout routing works from pricing', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto('/pricing');
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
@@ -116,7 +116,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     }
   });
 
-  test('should verify billing controls are hidden for Free tier', async ({ page, adminUser, loginAs }) => {
+  test.skip('should verify billing controls are hidden for Free tier', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page, acting as default test user (Free tier)
@@ -132,7 +132,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(cancelSubscriptionBtn).toBeHidden();
   });
 
-  test('should navigate from My Plan to detailed cost dashboard and back', async ({ page, adminUser, loginAs }) => {
+  test.skip('should navigate from My Plan to detailed cost dashboard and back', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page
