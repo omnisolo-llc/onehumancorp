@@ -19,7 +19,7 @@ test.describe('Viral WiFi QR Generator', () => {
 
     // Verify default payload
     let src = await qrImage.getAttribute('src');
-    expect(src).toContain('https://ohc.app/checkout?product=Guest%20WiFi');
+    expect(src).toContain(encodeURIComponent('https://ohc.app/checkout?product=Guest%20WiFi'));
 
     // Enter a new network name
     await networkNameInput.fill('CoffeeShop 5G');
@@ -27,16 +27,22 @@ test.describe('Viral WiFi QR Generator', () => {
     // Verify preview updates
     await expect(page.locator('#preview-network-name')).toHaveText('CoffeeShop 5G');
     src = await qrImage.getAttribute('src');
-    expect(src).toContain('https://ohc.app/checkout?product=CoffeeShop%205G');
+    expect(src).toContain(encodeURIComponent('https://ohc.app/checkout?product=CoffeeShop%205G'));
 
     // Verify "Powered by OHC" branding is present by default
     const branding = page.locator('#preview-branding');
     await expect(branding).toBeVisible();
     await expect(branding).toHaveText('⚡ Powered by OHC');
 
+    // Verify embed code is present and updates
+    const embedCode = page.locator('#embed-code');
+    await expect(embedCode).toBeVisible();
+    const embedText = await embedCode.innerText();
+    expect(embedText).toContain('https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fohc.app%2Fcheckout%3Fproduct%3DCoffeeShop%25205G');
+
     // Attempt to remove branding without Pro
     const removeBrandingCheckbox = page.locator('#remove-branding');
-    await removeBrandingCheckbox.check();
+    await page.locator('label[for="remove-branding"]').click();
 
     // Verify Paywall modal appears
     const paywallModal = page.locator('#paywall-modal');

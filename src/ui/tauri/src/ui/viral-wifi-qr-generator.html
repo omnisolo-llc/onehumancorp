@@ -244,6 +244,12 @@
     <h1>Viral WiFi QR Generator</h1>
     <p class="subtitle">Create a "Scan to Connect" WiFi display card. Visitors get instant access, and the "Powered by OHC" watermark helps you earn referral credits.</p>
 
+    <div class="ohc-growth-card" style="margin-bottom: 24px; text-align: center; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 24px;">
+      <h3 style="margin-top: 0;">Embed Widget</h3>
+      <p style="font-size: 14px; margin-bottom: 12px;">Copy this code to embed the QR code on your website:</p>
+      <code id="embed-code" style="display: block; padding: 12px; background: rgba(0,0,0,0.1); border-radius: 8px; user-select: all; font-size: 12px; word-break: break-all;"></code>
+    </div>
+
     <div class="split-layout">
       <div class="config-panel">
         <div class="form-group">
@@ -313,6 +319,7 @@
 
         const payload = `https://ohc.app/checkout?product=${encodeURIComponent(state.networkName)}`;
         qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payload)}`;
+        document.getElementById('embed-code').textContent = `<img src="${qrImage.src}" alt="WiFi QR" />`;
 
         previewBranding.style.display = state.removeBranding ? 'none' : 'block';
       };
