@@ -56,7 +56,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     await page.locator('#simulate-tap-btn').click();
 
     // We expect an optimistic lock failure indicating it is checked out by another customer
-    await expect(page.getByText(/Error: Item is currently being checked out.|Processing\/Reserving.../)).toBeVisible();
+    await expect(page.getByText(/Error: Oops! Item just sold out.|Processing\/Reserving.../)).toBeVisible();
 
     // 3. We commit the background api checkout
     const commitReq = await request.post('/api/v1/payments/terminal/commit', {

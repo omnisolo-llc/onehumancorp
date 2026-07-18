@@ -2869,6 +2869,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let standalone = crate::is_standalone_runtime();
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
+    if std::env::var("OHC_AGENT_TOKEN").is_err() && std::env::var("OHC_AGENT_SPIFFE_ID").is_err() {
+        unsafe {
+            std::env::set_var("OHC_AGENT_TOKEN", "e2e-dummy-token");
+            std::env::set_var("OHC_AGENT_AUTH_KEY", "e2e-dummy-key-that-is-at-least-thirty-two-bytes-long");
+        }
+    }
     let builtin_agent_auth = if standalone {
         Some(
             ohc_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
@@ -7482,6 +7488,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/v1/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
+        .route("/api/v1/ui/storefront.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/storefront.html"))
         }))
         .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))

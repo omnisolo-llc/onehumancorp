@@ -750,7 +750,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border  border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism "
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -791,7 +791,7 @@ export default function OnboardingWizard() {
         </div>
 
         {error && (
-          <div className="absolute top-4 left-4 right-4 z-[9999] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="absolute top-4 left-4 right-4 z-[9999] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake glass-control">
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"
@@ -905,7 +905,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div
                   id="chat-messages"
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
+                  className="glass-control translucent-glass-light dark:translucent-glass-dark flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
                 >
                   {chatMessages.length === 0 && (
                     <div className="mb-2">
@@ -1909,10 +1909,10 @@ export default function OnboardingWizard() {
                         <div
                           key={agent.id}
                           onClick={() => handleAgentToggle(agent.id)}
-                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
+                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
-                            className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-[rgba(255,255,255,0.2)] dark:bg-[rgba(255,255,255,0.05)]"}`}
+                            className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-black/10 dark:bg-white/10"}`}
                           >
                             {agent.icon}
                           </div>
@@ -2017,7 +2017,7 @@ export default function OnboardingWizard() {
           {step === 4 && (
             <div
               aria-live="polite"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glass-card  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -2030,7 +2030,7 @@ export default function OnboardingWizard() {
                 Building Your Business...
               </h2>
 
-              <div className="w-full max-w-xs h-2 bg-[rgba(255,255,255,0.2)] dark:bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-6">
+              <div className="w-full max-w-xs h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mb-6">
                 <div
                   className="h-full bg-[#0066FF] transition-all duration-300"
                   style={{ width: `${loadingProgress}%` }}
@@ -2148,7 +2148,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 glass-card  flex flex-col items-center mb-6">
+                <div className="p-3 glassmorphism  flex flex-col items-center mb-6">
                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
                     Your Shareable Link
                   </p>

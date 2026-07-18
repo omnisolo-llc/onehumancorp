@@ -32,69 +32,80 @@ impl SubagentExecutor {
         const TARGET_CHARS_MAX: usize = 8000;
         const CHUNK_SIZE_CHARS: usize = 20000;
 
-        let mut current_text = raw_output.to_string();
-
         let system_prompt = "You are an expert summarizer. Compress the following subagent execution result into a dense 1k-2k token summary. Preserve all key decisions, code changes, and unresolved issues. Do not include raw context loops.";
 
-        while current_text.len() > TARGET_CHARS_MAX {
-            let mut next_text_parts = Vec::new();
-
-            let chars: Vec<char> = current_text.chars().collect();
-            let mut i = 0;
-            while i < chars.len() {
-                let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
-                let chunk: String = chars[i..end].iter().collect();
-
+        // If the output is already small enough, optionally summarize if it's over 1000 chars, else return it.
+        if raw_output.len() <= TARGET_CHARS_MAX {
+            if raw_output.len() > 1000 {
                 let req = ohc_builtin_agent_core::types::ChatRequest {
-                    model: "gpt-4o-mini".to_string(), // Default fallback model
+                    model: "gpt-4o-mini".to_string(),
                     system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                    messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
+                    messages: vec![ohc_builtin_agent_core::types::Message::user(raw_output.to_string())],
                     tools: vec![],
                     max_tokens: 2000,
                     temperature: 0.0,
                 };
                 let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
-                next_text_parts.push(resp.message.content);
-
-                i += CHUNK_SIZE_CHARS;
+                return Ok(resp.message.content);
             }
-
-            let next_text = next_text_parts.join("
-
-");
-
-            if next_text.len() >= current_text.len() {
-                tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
-                current_text = next_text;
-                break;
-            }
-
-            current_text = next_text;
+            return Ok(raw_output.to_string());
         }
 
-        if raw_output.len() == current_text.len() && current_text.len() > 1000 {
+        // Map: Chunk the large output and summarize each chunk
+        let mut summarized_chunks = Vec::new();
+        let chars: Vec<char> = raw_output.chars().collect();
+        let mut i = 0;
+        while i < chars.len() {
+            let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
+            let chunk: String = chars[i..end].iter().collect();
+
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: "gpt-4o-mini".to_string(),
                 system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
+                messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
                 tools: vec![],
                 max_tokens: 2000,
                 temperature: 0.0,
             };
+
             let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
-            current_text = resp.message.content;
+            summarized_chunks.push(resp.message.content);
+
+            i += CHUNK_SIZE_CHARS;
         }
 
-        if current_text.len() > TARGET_CHARS_MAX {
-            current_text = format!(
-                "{}
+        // Reduce: Join the chunks
+        let joined_chunks = summarized_chunks.join("\n\n");
 
-[Output truncated. Subagent failed to condense summary.]",
-                current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
+        // If the combined summary is still too large, do one final pass
+        let mut final_text = joined_chunks.clone();
+        if joined_chunks.len() > TARGET_CHARS_MAX {
+            let req = ohc_builtin_agent_core::types::ChatRequest {
+                model: "gpt-4o-mini".to_string(),
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
+                messages: vec![ohc_builtin_agent_core::types::Message::user(joined_chunks)],
+                tools: vec![],
+                max_tokens: 2000,
+                temperature: 0.0,
+            };
+
+            if let Some(l) = &self.llm {
+                if let Ok(resp) = l.chat(req).await {
+                    final_text = resp.message.content;
+                }
+            }
+        }
+
+        // Fallback: If it's still over the limit, forcefully truncate
+        if final_text.len() > TARGET_CHARS_MAX {
+            tracing::warn!("Subagent condensation failed to reduce text below target size. Truncating.");
+            final_text = format!(
+                "{}\n\n[Output truncated. Subagent failed to condense summary.]",
+                final_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
             );
         }
 
-        Ok(current_text)
+        Ok(final_text)
     }
 }
 
