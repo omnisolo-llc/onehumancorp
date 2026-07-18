@@ -126,7 +126,6 @@ mod postgres_chaos_tests {
             .await
             .unwrap();
     }
-}
     #[tokio::test]
     async fn test_chaos_universal_ledger_rls_isolation() {
         let pg_db = setup_postgres_db().await;
