@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe.skip('Cost Dashboard & Plan Limits UI', () => {
+test.describe('Cost Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 

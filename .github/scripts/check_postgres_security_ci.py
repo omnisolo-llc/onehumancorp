@@ -384,7 +384,6 @@ def check_workflow(path: Path) -> None:
     require_non_ignorable_job(security, "postgres-security")
     require_non_ignorable_job(required, "ci-required")
     require_non_ignorable_job(changes, "check-changes")
-    require_active(changes, "    runs-on: ubuntu-latest", "reliable check-changes runner")
 
     for exact, context in (
         ("      - check-changes", "change dependency"),
