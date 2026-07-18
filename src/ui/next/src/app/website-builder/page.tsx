@@ -584,7 +584,6 @@ export default function WebsiteBuilderPage() {
 
                             if (!startRes.ok) {
                                 setStatus('draft');
-                                throw new Error('Failed to start');
                             }
                             await startRes.json();
                             setStatus('live');
@@ -678,7 +677,6 @@ export default function WebsiteBuilderPage() {
 
                             if (!startRes.ok) {
                                 setStatus('draft');
-                                throw new Error('Failed to start');
                             }
                             await startRes.json();
                             if (completed) return;
