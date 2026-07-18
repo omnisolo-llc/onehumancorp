@@ -5,6 +5,8 @@ backend:
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
   headless: false
   image: onehumancorp/server:latest
   multiTenant: true
@@ -77,6 +79,8 @@ ohcCore:
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
@@ -98,6 +102,8 @@ powersync:
     minReplicas: 1
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
   enabled: true
   image: journeyapps/powersync-service:latest
   networkPolicy:
