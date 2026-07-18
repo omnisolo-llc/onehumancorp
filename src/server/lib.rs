@@ -5931,7 +5931,7 @@ async fn ui_dashboard_unified_feed_handler(
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
-    let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
+    let cache_key = format!("ui_dashboard_unified:{}:mobile:{}:fields:{}", tenant_id, mobile_optimized, fields.unwrap_or(""));
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     let supply_future = tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } });
@@ -5956,9 +5956,13 @@ async fn ui_dashboard_unified_feed_handler(
 }
 
 
-async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
+async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool, fields: Option<&str>) -> serde_json::Value {
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
+
+    let needs_pending_approvals = fields.map_or(true, |f| f.contains("pending_approvals"));
+    let needs_ledger = fields.map_or(true, |f| f.contains("ledger") || f.contains("entries"));
+    let needs_agent_feed = fields.map_or(true, |f| f.contains("agent_feed"));
 
     let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
         tokio::spawn({
@@ -5966,8 +5970,9 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
             let t_clone = tenant_id.to_string();
             let a_key_clone = a_key.clone();
             async move {
+                if !needs_pending_approvals { return serde_json::Value::Array(vec![]); }
                 let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
+                let res = cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
                     let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()?;
                     for approval in &mut res {
                         if let Some(obj) = approval.as_object_mut() {
@@ -5979,7 +5984,8 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
                         }
                     }
                     Some(res)
-                }).await.unwrap_or_default()
+                }).await.unwrap_or_default();
+                serde_json::Value::Array(res)
             }
         }),
         tokio::spawn({
@@ -5987,10 +5993,12 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
             let t_clone = tenant_id.to_string();
             let l_key = format!("ui_ledger:{}:mobile:{}", tenant_id, mobile_optimized);
             async move {
+                if !needs_ledger { return serde_json::Value::Array(vec![]); }
                 let cache = UI_LEDGER_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&l_key, std::time::Duration::from_secs(10), move || async move {
+                let res = cache.get_or_fetch_with_swr(&l_key, std::time::Duration::from_secs(10), move || async move {
                     load_ui_ledger_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
-                }).await.unwrap_or_default()
+                }).await.unwrap_or_default();
+                serde_json::Value::Array(res)
             }
         }),
         tokio::spawn({
@@ -5998,10 +6006,12 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
             let t_clone = tenant_id.to_string();
             let f_key_clone = f_key.clone();
             async move {
+                if !needs_agent_feed { return serde_json::Value::Array(vec![]); }
                 let cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
+                let res = cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
                     load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
-                }).await.unwrap_or_default()
+                }).await.unwrap_or_default();
+                serde_json::Value::Array(res)
             }
         })
     );
@@ -6030,13 +6040,16 @@ async fn ui_dashboard_unified_agent_feed_handler(
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let fields = query.fields.as_deref();
 
-    let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
+    let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}:fields:{}", tenant_id, mobile_optimized, fields.unwrap_or(""));
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+
+    let fields_str = fields.map(|s| s.to_string());
     let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
         let db = db.clone();
         let t = tenant_id.clone();
+        let f_bg = fields_str.clone();
         move || async move {
-            Some(fetch_unified_agent_feed_data(&db, &t, mobile_optimized).await)
+            Some(fetch_unified_agent_feed_data(&db, &t, mobile_optimized, f_bg.as_deref()).await)
         }
     }).await;
 
