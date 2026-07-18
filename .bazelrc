@@ -2,8 +2,10 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
+build --config=remote-cache
 # Tests and builds execute on the local host. Remote storage is cache-only;
 # explicitly clear any executor inherited from a user or platform rc file.
+build --remote_executor=
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -18,6 +20,7 @@ build --enable_platform_specific_config
 # Download all outputs so that local test wrappers and generated scripts are
 # available.  Flutter test runners require the pub-cache and workspace trees
 # to be materialised on the local host since test execution uses processwrapper-sandbox.
+build --remote_download_toplevel
 
 # ── CGO / SQLite ──────────────────────────────────────────────────────────────
 build --action_env=CGO_ENABLED=1
@@ -55,6 +58,8 @@ build:windows_common --keep_going
 build:nightly --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
+# Automatically rewind and retry actions when their remote inputs are lost
+# (e.g. due to remote-cache eviction). Stabilised in Bazel 9.1.0.
 build --rewind_lost_inputs
 
 # ── Test defaults ─────────────────────────────────────────────────────────────
@@ -76,8 +81,11 @@ test --test_timeout=300,600,900,7200
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
 
+# ── High parallelism (use --config=remote-jobs) ──────────────────────────────
+# Useful with a remote executor/cache setup. Keep the default local test path
 # conservative so `bazel test //...` can include Docker-backed Playwright tests
 # without overwhelming the Bazel server or host.
+test:remote-jobs --jobs=50
 
 # ── Test environment pass-through ─────────────────────────────────────────────
 test --test_env=GEMINI_API_KEY
@@ -98,20 +106,39 @@ build --action_env=CI
 # ── BuildBuddy  ──────────────────────────────────────
 # Self-hosted BuildBuddy cache. The web hostname multiplexes authenticated gRPC;
 # the legacy -grpc hostname returns a plain HTTP 404 for REAPI capabilities.
+common:buildbuddy --remote_cache=grpcs://buildbuddy.phslc.com
+common:buildbuddy --remote_cache_compression
+common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
+common:buildbuddy-readonly --remote_upload_local_results=false
 
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
 common:nativelink --experimental_build_event_upload_strategy=local
+common:nativelink --remote_cache=grpcs://nativelink.phslc.com
+common:nativelink --remote_instance_name=main
+common:nativelink --remote_local_fallback
 # Nativelink doesn't support cache compression
+common:nativelink --remote_cache_compression=false
 # The default NativeLink cache is read/write so local work warms shared cache.
 # Use --config=nativelink-readonly only when an explicitly read-only workflow is required.
 common:nativelink-readonly --config=nativelink
+common:nativelink-readonly --remote_upload_local_results=false
 
+common:remote-cache --config=nativelink
+common:remote-cache --remote_executor=
+common:remote-cache --remote_download_minimal
+common:remote-cache --remote_local_fallback
+common:remote-cache --remote_timeout=10m
 
+# ── Local: disable remote cache/execution ─────────────────────────────────────
+build:local --remote_cache=
+build:local --remote_executor=
+build:local --experimental_remote_downloader=
 build:local --spawn_strategy=sandboxed,local
 
 # ── Local test: run tests locally and load .env ───────────────────────────────
+# For local development/testing: loads .env and runs tests without remote execution.
 # Usage: bazel test --config=local //path/to:target
 # Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
 test:local --test_output=streamed
