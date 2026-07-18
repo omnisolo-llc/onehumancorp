@@ -21,18 +21,29 @@ export default function KitchenView() {
         const ordersRes = await fetch("/api/v1/pos/orders");
         if (ordersRes.ok) {
           const data = await ordersRes.json();
-          // Filter to 'new' or 'pending' orders if applicable
-          setOrders(data.orders || data || []);
+          const ordersData = data.orders || data || [];
+          setOrders(ordersData);
+          localStorage.setItem('kds_orders_cache', JSON.stringify(ordersData));
         }
 
         // Fetch products/menu via inventory
         const menuRes = await fetch("/api/v1/pos/inventory");
         if (menuRes.ok) {
            const data = await menuRes.json();
-           setMenu(data.items || data || []);
+           const menuData = data.inventory || data.items || data || [];
+           setMenu(menuData);
+           localStorage.setItem('kds_menu_cache', JSON.stringify(menuData));
         }
       } catch (err) {
-        console.error("Failed to fetch kitchen data", err);
+        console.error("Failed to fetch kitchen data, loading from offline cache", err);
+        const cachedOrders = localStorage.getItem('kds_orders_cache');
+        if (cachedOrders) {
+           setOrders(JSON.parse(cachedOrders));
+        }
+        const cachedMenu = localStorage.getItem('kds_menu_cache');
+        if (cachedMenu) {
+           setMenu(JSON.parse(cachedMenu));
+        }
       }
     };
 
