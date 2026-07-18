@@ -149,8 +149,8 @@ export async function GET(request: Request) {
 <body>
     <div class="widget">
         <div class="header">
-            <div class="duration-badge">🗓️ ${escapedDuration} Days</div>
-            <div class="title">${escapedTitle}</div>
+            <div class="duration-badge" id="preview-duration">🗓️ ${escapedDuration}-Day Challenge</div>
+            <div class="title" id="preview-title">${escapedTitle}</div>
             <div class="subtitle">Join the challenge, build a streak, and earn rewards along the way!</div>
         </div>
 
