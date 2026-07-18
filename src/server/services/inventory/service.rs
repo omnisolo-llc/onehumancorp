@@ -9,10 +9,10 @@ use std::time::{Instant, Duration};
 
 #[async_trait::async_trait]
 pub trait InventoryLocker: Send + Sync {
-    async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool;
-    async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool;
-    async fn get_lock_id(&self, lock_key: &str) -> Option<String>;
-    async fn clear(&self, lock_key: &str);
+    async fn acquire(&self, tenant_id: &str, lock_key: &str, lock_id: &str, ttl: i32) -> bool;
+    async fn release(&self, tenant_id: &str, lock_key: &str, expected_lock_id: &str) -> bool;
+    async fn get_lock_id(&self, tenant_id: &str, lock_key: &str) -> Option<String>;
+    async fn clear(&self, tenant_id: &str, lock_key: &str);
 }
 
 pub struct StandaloneInventoryLocker {
@@ -38,13 +38,14 @@ impl StandaloneInventoryLocker {
 
 #[async_trait::async_trait]
 impl InventoryLocker for StandaloneInventoryLocker {
-    async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
+    async fn acquire(&self, tenant_id: &str, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
+                .bind(tenant_id)
                 .execute(pool)
                 .await;
 
-            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+{} seconds'))", ttl)).bind(lock_key).bind("system").bind(lock_id)
+            let result = sqlx::query(&format!("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+{} seconds'))", ttl)).bind(lock_key).bind(tenant_id).bind(lock_id)
                 .execute(pool)
                 .await;
 
@@ -53,17 +54,18 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
         let now = Instant::now();
         self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
-        if !self.memory_fallback.contains_key(lock_key) {
-            self.memory_fallback.insert(lock_key.to_string(), (lock_id.to_string(), now + Duration::from_secs(ttl as u64)));
+        let mem_key = format!("{}:{}", tenant_id, lock_key);
+        if !self.memory_fallback.contains_key(&mem_key) {
+            self.memory_fallback.insert(mem_key, (lock_id.to_string(), now + Duration::from_secs(ttl as u64)));
             true
         } else {
             false
         }
     }
 
-    async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
+    async fn release(&self, tenant_id: &str, lock_key: &str, expected_lock_id: &str) -> bool {
         if let Some(pool) = &self.pool {
-            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2 AND tenant_id = $3").bind(lock_key).bind(expected_lock_id).bind("system")
+            let result = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2 AND tenant_id = $3").bind(lock_key).bind(expected_lock_id).bind(tenant_id)
                 .execute(pool)
                 .await;
 
@@ -72,22 +74,24 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
         let now = Instant::now();
         self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
-        if let Some(v) = self.memory_fallback.get(lock_key) {
+        let mem_key = format!("{}:{}", tenant_id, lock_key);
+        if let Some(v) = self.memory_fallback.get(&mem_key) {
             if v.0 == expected_lock_id {
-                self.memory_fallback.remove(lock_key);
+                self.memory_fallback.remove(&mem_key);
                 return true;
             }
         }
         false
     }
 
-    async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
+    async fn get_lock_id(&self, tenant_id: &str, lock_key: &str) -> Option<String> {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
+                .bind(tenant_id)
                 .execute(pool)
                 .await;
 
-            let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2").bind(lock_key).bind("system")
+            let lock_val: Option<String> = sqlx::query_scalar("SELECT lock_val FROM distributed_locks WHERE id = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2").bind(lock_key).bind(tenant_id)
                 .fetch_optional(pool)
                 .await
                 .unwrap_or(None);
@@ -97,18 +101,20 @@ impl InventoryLocker for StandaloneInventoryLocker {
 
         let now = Instant::now();
         self.memory_fallback.retain(|_, (_, expires_at)| *expires_at > now);
-        self.memory_fallback.get(lock_key).map(|v| v.0.clone())
+        let mem_key = format!("{}:{}", tenant_id, lock_key);
+        self.memory_fallback.get(&mem_key).map(|v| v.0.clone())
     }
 
-    async fn clear(&self, lock_key: &str) {
+    async fn clear(&self, tenant_id: &str, lock_key: &str) {
         if let Some(pool) = &self.pool {
-            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND tenant_id = $2").bind(lock_key).bind("system")
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND tenant_id = $2").bind(lock_key).bind(tenant_id)
                 .execute(pool)
                 .await;
             return;
         }
 
-        self.memory_fallback.remove(lock_key);
+        let mem_key = format!("{}:{}", tenant_id, lock_key);
+        self.memory_fallback.remove(&mem_key);
     }
 }
 
@@ -124,7 +130,7 @@ impl RedisLocker {
 
 #[async_trait::async_trait]
 impl InventoryLocker for RedisLocker {
-    async fn acquire(&self, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
+    async fn acquire(&self, _tenant_id: &str, lock_key: &str, lock_id: &str, ttl: i32) -> bool {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
             redis::cmd("SET")
                 .arg(lock_key)
@@ -140,7 +146,7 @@ impl InventoryLocker for RedisLocker {
         }
     }
 
-    async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool {
+    async fn release(&self, _tenant_id: &str, lock_key: &str, expected_lock_id: &str) -> bool {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
             let script = redis::Script::new(
                 r#"
@@ -157,7 +163,7 @@ impl InventoryLocker for RedisLocker {
         }
     }
 
-    async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
+    async fn get_lock_id(&self, _tenant_id: &str, lock_key: &str) -> Option<String> {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
             redis::cmd("GET").arg(lock_key).query_async(&mut conn).await.ok()
         } else {
@@ -165,7 +171,7 @@ impl InventoryLocker for RedisLocker {
         }
     }
 
-    async fn clear(&self, lock_key: &str) {
+    async fn clear(&self, _tenant_id: &str, lock_key: &str) {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
             let _: () = redis::cmd("DEL").arg(lock_key).query_async(&mut conn).await.unwrap_or(());
         }
@@ -229,7 +235,7 @@ impl InventoryService {
 
         let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 }; // Distributed lock TTL
 
-        let acquired = self.locker.acquire(&lock_key, &lock_id, ttl).await;
+        let acquired = self.locker.acquire(tenant_id, &lock_key, &lock_id, ttl).await;
 
         if !acquired {
             let pool = crate::db::get_pool();
@@ -309,7 +315,7 @@ impl InventoryService {
                     if let Some(stock) = current_stock {
                         if stock < quantity {
                             let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
+                            self.locker.clear(tenant_id, &lock_key).await;
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -325,7 +331,7 @@ impl InventoryService {
                             if let Ok(res) = update_res {
                                 if res.rows_affected() == 0 {
                                     let _ = tx.rollback().await;
-                                    self.locker.clear(&lock_key).await;
+                                    self.locker.clear(tenant_id, &lock_key).await;
                                     return Ok(ReserveResult {
                                         success: false,
                                         lock_id: "".to_string(),
@@ -353,7 +359,7 @@ impl InventoryService {
                                     .unwrap_or(None);
 
                                 let _ = tx.rollback().await;
-                                self.locker.clear(&lock_key).await;
+                                self.locker.clear(tenant_id, &lock_key).await;
                                 if let Some(stock) = f_stock {
                                     return Ok(ReserveResult {
                                         success: false,
@@ -370,7 +376,7 @@ impl InventoryService {
                             }
                         } else {
                             let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
+                            self.locker.clear(tenant_id, &lock_key).await;
                             return Ok(ReserveResult {
                                 success: false,
                                 lock_id: "".to_string(),
@@ -393,7 +399,7 @@ impl InventoryService {
                         }
                     }
                 } else {
-            self.locker.clear(&lock_key).await;
+            self.locker.clear(tenant_id, &lock_key).await;
                     return Ok(ReserveResult {
                         success: false,
                         lock_id: "".to_string(),
@@ -401,7 +407,7 @@ impl InventoryService {
                     });
                 }
             } else {
-                self.locker.clear(&lock_key).await;
+                self.locker.clear(tenant_id, &lock_key).await;
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
@@ -425,7 +431,7 @@ impl InventoryService {
     ) -> Result<ReleaseResult, String> {
         let lock_key = Self::get_lock_key(tenant_id, product_id);
 
-        let current_lock_id: Option<String> = self.locker.get_lock_id(&lock_key).await;
+        let current_lock_id: Option<String> = self.locker.get_lock_id(tenant_id, &lock_key).await;
 
         if let Some(cid) = current_lock_id {
             if cid != lock_id && !lock_id.is_empty() {
@@ -461,7 +467,7 @@ impl InventoryService {
             }
         }
 
-        self.locker.clear(&lock_key).await;
+        self.locker.clear(tenant_id, &lock_key).await;
 
         Ok(ReleaseResult {
             success: true,
@@ -488,8 +494,9 @@ impl InventoryService {
             let mut get_lock_futures = Vec::new();
             for idx in &indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                let t_id = tenant_id.to_string();
                 get_lock_futures.push(async move {
-                    self.locker.get_lock_id(&lock_key).await
+                    self.locker.get_lock_id(&t_id, &lock_key).await
                 });
             }
 
@@ -513,21 +520,22 @@ impl InventoryService {
             let mut clear_lock_futures = Vec::new();
             for idx in &valid_indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                let t_id = tenant_id.to_string();
                 clear_lock_futures.push(async move {
-                    self.locker.clear(&lock_key).await;
+                    self.locker.clear(&t_id, &lock_key).await;
                 });
             }
             futures::future::join_all(clear_lock_futures).await;
         } else {
             let lock_key = Self::get_lock_key(tenant_id, product_id);
-            let current_lock_id = self.locker.get_lock_id(&lock_key).await;
+            let current_lock_id = self.locker.get_lock_id(tenant_id, &lock_key).await;
             if current_lock_id != Some(lock_id.to_string()) && !lock_id.is_empty() {
                 return Ok(CommitResult {
                     success: false,
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
-            self.locker.clear(&lock_key).await;
+            self.locker.clear(tenant_id, &lock_key).await;
         }
 
         let pool = crate::db::get_pool();
