@@ -68,7 +68,7 @@ export default function InvoiceGeneratorPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col gap-8">
-        <section className="glassmorphism p-8 md:p-10 border border-white/40 dark:border-white/10 relative" style={{ borderRadius: '16px' }}>
+        <section className="glassmorphism p-8 md:p-10 border border-white/40 dark:border-white/10 relative">
           <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Create Professional Invoice</h2>
           <p className="text-gray-600 mb-8 text-sm leading-relaxed">
             Generate an invoice with a viral loop built-in. Share the link with your client, and they'll see a professional invoice powered by OHC.
@@ -228,6 +228,7 @@ export default function InvoiceGeneratorPage() {
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
         }
         @media (prefers-color-scheme: dark) {
             .glassmorphism {
@@ -235,6 +236,7 @@ export default function InvoiceGeneratorPage() {
                 backdrop-filter: blur(30px) saturate(210%);
                 -webkit-backdrop-filter: blur(30px) saturate(210%);
                 border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
             }
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
