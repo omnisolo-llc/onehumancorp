@@ -424,6 +424,27 @@ pub async fn sync_events_handler(
                                 .bind(&tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            if status == "Ready" {
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "sync_event_id": event.id,
+                                    "entity_type": event.entity_type,
+                                    "entity_id": event.entity_id,
+                                    "action_type": event.action_type,
+                                    "message": "Order is ready. Trigger downstream workflows like SMS notification to customer."
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'order.status.ready', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&task_id)
+                                .bind(&tenant_id)
+                                .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
+                            }
                         }
                     } else if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
                         if let Some(is_sold_out) = event.payload.get("is_sold_out").and_then(|v| v.as_bool()) {

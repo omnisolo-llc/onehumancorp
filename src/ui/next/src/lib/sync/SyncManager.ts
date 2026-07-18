@@ -326,15 +326,15 @@ export class SyncManager {
 
       // Sync generic sync events via /sync/events
       const syncEvents = queue.filter(m => m.type === 'sync_event');
-      if (syncEvents.length > 0) {
-        const eventsPayload = syncEvents.map(m => m.payload);
+      const allEventsPayload = syncEvents.map(m => m.payload);
+      if (allEventsPayload.length > 0) {
         try {
           const resSync = await fetch('/api/v1/sync/events', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ events: eventsPayload })
+            body: JSON.stringify({ events: allEventsPayload })
           });
           this.checkRateLimit(resSync);
           if (!resSync.ok) {
