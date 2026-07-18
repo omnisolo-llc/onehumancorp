@@ -30,7 +30,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
     await expect(page.getByText('Can I get a custom vegan cake for this weekend?').first()).toBeVisible();
 
     // Check for the Approve & Send button
-    const approveBtn = page.getByTestId('feed-approve-btn').first();
+    const approveBtn = page.getByRole('button', { name: 'Send Draft' }).first();
     await expect(approveBtn).toBeVisible();
 
     await approveBtn.click();
