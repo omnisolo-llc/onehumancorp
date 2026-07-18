@@ -17,5 +17,19 @@ test.describe('The Promoter Agent CUJ', () => {
     // The button has ID generate-btn
     await expect(page.locator('#generate-btn')).toBeVisible();
 
+    // Fill in product details
+    await page.fill('#product-name', 'Vegan Chocolate Cake');
+    await page.fill('#product-desc', 'Delicious vegan chocolate cake with organic ingredients.');
+
+    // Click generate
+    await page.click('#generate-btn');
+
+    // Wait for the results section to be visible
+    await expect(page.locator('#results-section')).toBeVisible({ timeout: 15000 });
+
+    // Assert that at least one variant card was generated
+    const variantCards = page.locator('.variant-card');
+    await expect(variantCards.first()).toBeVisible();
+    expect(await variantCards.count()).toBeGreaterThan(0);
   });
 });

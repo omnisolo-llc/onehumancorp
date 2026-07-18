@@ -102,15 +102,22 @@
       border: none;
       padding: 14px;
       width: 100%;
-      border-radius: 12px;
+      border-radius: 8px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       margin-top: 8px;
-      transition: background 0.2s;
+      position: relative;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    button:hover:not(:disabled) {
+      background: #005ce6;
+    }
+    button:active:not(:disabled) {
+      transform: scale(0.98);
     }
     button:disabled {
-      background: #a0c4ff;
+      background: #8e8e93;
       cursor: not-allowed;
     }
     .variant-card {
