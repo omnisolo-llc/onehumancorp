@@ -57,8 +57,30 @@ async fn test_standalone_mode_allows_system_org_id() {
         );
         role_tx.rollback().await.unwrap();
 
+
         let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
         assert_eq!(res.unwrap_err(), "user not found");
+
+        // Regression Test for System Tenant Read
+        let test_user = User {
+            id: "system_test_user".to_string(),
+            username: "system_test_user".to_string(),
+            email: "system_test@example.com".to_string(),
+            password_hash: "hash".to_string(),
+            roles: vec![],
+            active: true,
+            organization_id: Some("system".to_string()),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            oidc_subject: None,
+        };
+        repo.create_user(test_user.clone(), "system").await.unwrap();
+
+        let fetched_user = repo.get_by_email("system_test@example.com", "system").await.unwrap();
+        assert_eq!(fetched_user.id, "system_test_user");
+
+        repo.delete_user("system_test_user", "system").await.unwrap();
+
     })
     .await;
 }
