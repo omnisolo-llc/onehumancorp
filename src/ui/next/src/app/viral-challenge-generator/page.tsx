@@ -18,7 +18,7 @@ export default function ViralChallengeGeneratorPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
@@ -46,7 +46,7 @@ export default function ViralChallengeGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-5xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
-        <div className="flex-1 min-w-0 p-8">
+        <div className="flex-1 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Challenge Generator 🎯</h1>
           <p className="text-sm text-gray-600 mb-6">Create a viral challenge for your customers to participate in and share. Great for building streaks, engagement, and virality.</p>
 
@@ -98,7 +98,7 @@ export default function ViralChallengeGeneratorPage() {
           </button>
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
+        <div className="flex-1 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-2 min-h-[450px]">
               <iframe src={`/api/v1/growth/viral-challenge/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&duration=${encodeURIComponent(duration)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`} className="w-full h-full border-none rounded-xl" />

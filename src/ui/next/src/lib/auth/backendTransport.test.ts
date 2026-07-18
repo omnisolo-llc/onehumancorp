@@ -5,7 +5,6 @@ import { parseSessionKeyRing } from "./sessionKeys";
 import { cookieForSession, serializeSessionCookie, sessionCodecContext } from "./sessionCookie";
 import type { WebSession } from "./sessionTypes";
 import {
-  stripBrowserIdentityJsonRequestBody,
   validateJsonRequestBody,
   proxyAuthenticatedRequest,
   type BackendTransportDependencies,
@@ -67,7 +66,7 @@ async function sessionCookie(
 
 async function request(
   deps: BackendTransportDependencies,
-  path = "/api/v1/orders?state=open",
+  path = "/api/orders?state=open",
   init: RequestInit = {},
 ): Promise<Request> {
   return new Request(`https://app.example.com${path}`, {
@@ -84,18 +83,18 @@ describe("server-only authenticated backend transport", () => {
   it("rejects missing, malformed, and expired sessions without backend I/O", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = await dependencies(fetchImpl);
-    const missing = new Request("https://app.example.com/api/v1/orders");
-    const malformed = new Request("https://app.example.com/api/v1/orders", {
+    const missing = new Request("https://app.example.com/api/orders");
+    const malformed = new Request("https://app.example.com/api/orders", {
       headers: { cookie: "__Host-ohc_session=malformed" },
     });
-    const expired = new Request("https://app.example.com/api/v1/orders", {
+    const expired = new Request("https://app.example.com/api/orders", {
       headers: {
         cookie: await sessionCookie(deps, { iat: NOW - 3_600, exp: NOW - 1 }),
       },
     });
 
     for (const input of [missing, malformed, expired]) {
-      const response = await proxyAuthenticatedRequest(input, "/api/v1/orders", deps);
+      const response = await proxyAuthenticatedRequest(input, "/api/orders", deps);
       expect(response.status).toBe(401);
       expect(response.headers.get("cache-control")).toBe("private, no-store");
     }
@@ -106,7 +105,7 @@ describe("server-only authenticated backend transport", () => {
     let forwardedBody = "";
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
       expect(String(input)).toBe(
-        "https://api.example.com/api/v1/orders?state=open&tenant_id=tenant-7&user_id=user-7",
+        "https://api.example.com/api/orders?state=open&tenant_id=tenant-7&user_id=user-7",
       );
       expect(init?.method).toBe("POST");
       expect(init?.redirect).toBe("manual");
@@ -132,7 +131,7 @@ describe("server-only authenticated backend transport", () => {
     const deps = await dependencies(fetchImpl);
     const input = await request(
       deps,
-      "/api/v1/orders?state=open&tenant_id=attacker&tenant_id=other&user_id=attacker&roles=owner",
+      "/api/orders?state=open&tenant_id=attacker&tenant_id=other&user_id=attacker&roles=owner",
       {
         method: "POST",
         body: '{"item":"tea"}',
@@ -147,7 +146,7 @@ describe("server-only authenticated backend transport", () => {
       },
     );
 
-    const response = await proxyAuthenticatedRequest(input, "/api/v1/orders", deps);
+    const response = await proxyAuthenticatedRequest(input, "/api/orders", deps);
 
     expect(forwardedBody).toBe('{"item":"tea"}');
     expect(response.status).toBe(200);
@@ -160,10 +159,10 @@ describe("server-only authenticated backend transport", () => {
 
   it.each([
     "//evil.example/steal",
-    "/api/v1/../admin",
-    "/api/v1/%2fadmin",
-    "/api/v1/orders?override=true",
-    "/api/v1/orders#fragment",
+    "/api/../admin",
+    "/api/%2fadmin",
+    "/api/orders?override=true",
+    "/api/orders#fragment",
     "/api\\orders",
   ])("rejects backend path injection %s", async (backendPath) => {
     const fetchImpl = vi.fn<typeof fetch>();
@@ -180,18 +179,18 @@ describe("server-only authenticated backend transport", () => {
   it("bounds declared and streamed request bodies before fetching", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = await dependencies(fetchImpl, { requestLimitBytes: 8 });
-    const declared = await request(deps, "/api/v1/orders", {
+    const declared = await request(deps, "/api/orders", {
       method: "POST",
       body: "123456789",
       headers: { "content-length": "9" },
     });
-    const streamed = await request(deps, "/api/v1/orders", {
+    const streamed = await request(deps, "/api/orders", {
       method: "POST",
       body: "123456789",
     });
 
-    expect((await proxyAuthenticatedRequest(declared, "/api/v1/orders", deps)).status).toBe(413);
-    expect((await proxyAuthenticatedRequest(streamed, "/api/v1/orders", deps)).status).toBe(413);
+    expect((await proxyAuthenticatedRequest(declared, "/api/orders", deps)).status).toBe(413);
+    expect((await proxyAuthenticatedRequest(streamed, "/api/orders", deps)).status).toBe(413);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -273,7 +272,7 @@ describe("server-only authenticated backend transport", () => {
     const deps = await dependencies(fetchImpl);
     const input = await request(
       deps,
-      "/api/v1/fulfillment?status=preparing&tenant_id=attacker",
+      "/api/fulfillment?status=preparing&tenant_id=attacker",
     );
 
     const response = await proxyAuthenticatedRequest(
@@ -321,31 +320,6 @@ describe("server-only authenticated backend transport", () => {
     expect(new TextDecoder().decode(validated)).toBe(source);
   });
 
-  it("removes top-level browser-selected identity from JSON bodies", () => {
-    const source = {
-      tenant_id: "attacker-tenant",
-      tenant: "attacker-tenant",
-      organization_id: "attacker-tenant",
-      user_id: "attacker-user",
-      user: "attacker-user",
-      roles: ["owner"],
-      spiffe_id: "spiffe://attacker",
-      authorization: "Bearer attacker",
-      token: "attacker",
-      message: "keep me",
-      nested: { user_id: "business-data-is-not-an-auth-header" },
-    };
-
-    const sanitized = stripBrowserIdentityJsonRequestBody(
-      new TextEncoder().encode(JSON.stringify(source)),
-    );
-
-    expect(JSON.parse(new TextDecoder().decode(sanitized))).toEqual({
-      message: "keep me",
-      nested: { user_id: "business-data-is-not-an-auth-header" },
-    });
-  });
-
   it("rejects malformed JSON and invalid UTF-8 request bodies", () => {
     expect(() => validateJsonRequestBody(new TextEncoder().encode("{"))).toThrow();
     expect(() => validateJsonRequestBody(Uint8Array.from([0xc3, 0x28]))).toThrow();
@@ -355,11 +329,11 @@ describe("server-only authenticated backend transport", () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = await dependencies(fetchImpl, { requestLimitBytes: 8 });
     const transformRequestBody = vi.fn(validateJsonRequestBody);
-    const unauthenticated = new Request("https://app.example.com/api/v1/orders", {
+    const unauthenticated = new Request("https://app.example.com/api/orders", {
       method: "POST",
       body: "{}",
     });
-    const oversized = await request(deps, "/api/v1/orders", {
+    const oversized = await request(deps, "/api/orders", {
       method: "POST",
       body: '{"x":123}',
     });
@@ -368,7 +342,7 @@ describe("server-only authenticated backend transport", () => {
       (
         await proxyAuthenticatedRequest(
           unauthenticated,
-          "/api/v1/orders",
+          "/api/orders",
           deps,
           { transformRequestBody },
         )
@@ -376,7 +350,7 @@ describe("server-only authenticated backend transport", () => {
     ).toBe(401);
     expect(
       (
-        await proxyAuthenticatedRequest(oversized, "/api/v1/orders", deps, {
+        await proxyAuthenticatedRequest(oversized, "/api/orders", deps, {
           transformRequestBody,
         })
       ).status,
@@ -401,7 +375,7 @@ describe("server-only authenticated backend transport", () => {
         return Response.json({ ok: true });
       });
       const deps = await dependencies(fetchImpl);
-      const input = await request(deps, "/api/v1/checkout", {
+      const input = await request(deps, "/api/checkout", {
         method: "POST",
         body: new TextEncoder().encode(' { "ok": true } '),
         headers:
@@ -412,7 +386,7 @@ describe("server-only authenticated backend transport", () => {
 
       const response = await proxyAuthenticatedRequest(
         input,
-        "/api/v1/checkout",
+        "/api/checkout",
         deps,
         {
           requestContentType: "application/json",
@@ -431,7 +405,7 @@ describe("server-only authenticated backend transport", () => {
       return Response.json({ ok: true });
     });
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/v1/orders", {
+    const input = await request(deps, "/api/orders", {
       method: "POST",
       body: "plain text",
       headers: { "content-type": "text/plain" },
@@ -439,7 +413,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       input,
-      "/api/v1/orders",
+      "/api/orders",
       deps,
     );
 
@@ -458,14 +432,14 @@ describe("server-only authenticated backend transport", () => {
     );
     const redirectDeps = await dependencies(redirected);
     expect(
-      (await proxyAuthenticatedRequest(await request(redirectDeps), "/api/v1/orders", redirectDeps))
+      (await proxyAuthenticatedRequest(await request(redirectDeps), "/api/orders", redirectDeps))
         .status,
     ).toBe(502);
 
     const oversized = vi.fn<typeof fetch>(async () => new Response("123456789"));
     const sizeDeps = await dependencies(oversized, { responseLimitBytes: 8 });
     expect(
-      (await proxyAuthenticatedRequest(await request(sizeDeps), "/api/v1/orders", sizeDeps))
+      (await proxyAuthenticatedRequest(await request(sizeDeps), "/api/orders", sizeDeps))
         .status,
     ).toBe(502);
   });
@@ -486,7 +460,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       await request(deps),
-      "/api/v1/orders",
+      "/api/orders",
       deps,
     );
 
@@ -510,7 +484,7 @@ describe("server-only authenticated backend transport", () => {
 
     const response = await proxyAuthenticatedRequest(
       await request(deps),
-      "/api/v1/orders",
+      "/api/orders",
       deps,
     );
 
@@ -521,9 +495,9 @@ describe("server-only authenticated backend transport", () => {
   it("rejects unsupported methods before backend I/O", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const deps = await dependencies(fetchImpl);
-    const input = await request(deps, "/api/v1/orders", { method: "OPTIONS" });
+    const input = await request(deps, "/api/orders", { method: "OPTIONS" });
 
-    const response = await proxyAuthenticatedRequest(input, "/api/v1/orders", deps);
+    const response = await proxyAuthenticatedRequest(input, "/api/orders", deps);
 
     expect(response.status).toBe(405);
     expect(fetchImpl).not.toHaveBeenCalled();

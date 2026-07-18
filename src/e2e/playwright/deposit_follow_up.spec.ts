@@ -8,7 +8,7 @@ test.describe('Quote Deposit Follow-up', () => {
     const tenantId = 'default';
 
     // Mock API for feed items to include a deposit follow up specifically
-    await page.route('**/api/v1/ui/dashboard/unified-agent-feed*', async route => {
+    await page.route('**/api/ui/dashboard/unified-agent-feed*', async route => {
         const json = {
             items: [
                 {

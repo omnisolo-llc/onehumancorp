@@ -31,7 +31,7 @@ describe('InvoiceGeneratorPage', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
-        localStorage.setItem('business_display_name', 'test-tenant');
+        localStorage.setItem('tenant', 'test-tenant');
     });
 
     it('renders the Invoice Generator form correctly', () => {

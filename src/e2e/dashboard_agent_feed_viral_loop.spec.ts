@@ -20,7 +20,7 @@ test.describe('Dashboard Agent Feed Viral Loop', () => {
 
     await page.route('**/*', async route => {
         const url = route.request().url();
-        if (url.includes('/api/v1/ui/dashboard/unified-agent-feed')) {
+        if (url.includes('/api/ui/dashboard/unified-agent-feed')) {
             await route.fulfill({
             status: 200,
             json: {
@@ -42,11 +42,11 @@ test.describe('Dashboard Agent Feed Viral Loop', () => {
                 agent_feed: []
             }
             });
-        } else if (url.includes('/api/v1/ui/triage/action')) {
+        } else if (url.includes('/api/ui/triage/action')) {
             await route.fulfill({ status: 200, json: { success: true } });
         } else if (url.includes('/api/v1/growth/trial-extension/claim')) {
             await route.fulfill({ status: 200, json: { success: true } });
-        } else if (url.includes('/api/v1/')) {
+        } else if (url.includes('/api/')) {
             await route.fulfill({ status: 200, json: {} }); // Mock other APIs to prevent failure
         } else {
             await route.continue();

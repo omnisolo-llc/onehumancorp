@@ -6,7 +6,7 @@ test.describe('More Cost Cents Tracking', () => {
     await loginAs(page, testUser as any);
 
     // Simulate an agent action that incurs cost
-    await page.request.post('/api/v1/billing/report-cost', {
+    await page.request.post('/api/billing/report-cost', {
         data: {
             metric_name: 'ohc_llm_cost_total_cents',
             value: 1250,

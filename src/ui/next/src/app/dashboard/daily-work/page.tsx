@@ -9,7 +9,7 @@ export default function DailyWorkFeed() {
 
   const fetchFeed = async () => {
     try {
-      const res = await fetch("/api/v1/ui/dashboard/daily-work");
+      const res = await fetch("/api/ui/dashboard/daily-work");
       if (res.ok) {
         const data = await res.json();
         setItems(data.items || []);
@@ -30,7 +30,7 @@ export default function DailyWorkFeed() {
       // Optimistic UI update
       setItems((prev) => prev.filter((item) => item.id !== id));
 
-      await fetch(`/api/v1/ui/dashboard/daily-work/action?id=${id}`, {
+      await fetch(`/api/ui/dashboard/daily-work/action?id=${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_status: actionStatus }),

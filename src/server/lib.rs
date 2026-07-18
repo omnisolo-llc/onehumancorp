@@ -85,206 +85,6 @@ async fn protected_bearer_auth_middleware(
     .await
 }
 
-fn protect_internal_ingress<S>(
-    router: axum::Router<S>,
-    store: std::sync::Arc<::server_auth::Store>,
-) -> axum::Router<S>
-where
-    S: Clone + Send + Sync + 'static,
-{
-    router
-        .route_layer(axum::middleware::from_fn(
-            ::server_utils::tenant_middleware::tenant_middleware,
-        ))
-        .route_layer(axum::middleware::from_fn_with_state(
-            store,
-            ::server_auth::strict_bearer_auth_middleware,
-        ))
-}
-
-const AGENT_RPC_REQUEST_LIMIT_BYTES: usize = 1_048_576;
-const AGENT_RPC_RESPONSE_LIMIT_BYTES: usize = 2_097_152;
-
-fn agent_rpc_available(multitenant: bool) -> bool {
-    !multitenant
-}
-
-fn extend_agent_rpc_body(body: &mut Vec<u8>, chunk: &[u8], maximum: usize) -> Result<(), ()> {
-    if chunk.len() > maximum.saturating_sub(body.len()) {
-        return Err(());
-    }
-    body.extend_from_slice(chunk);
-    Ok(())
-}
-
-async fn read_limited_agent_rpc_body(
-    response: reqwest::Response,
-    maximum: usize,
-) -> Result<Vec<u8>, ()> {
-    let mut body = Vec::with_capacity(
-        response
-            .content_length()
-            .unwrap_or(0)
-            .min(maximum as u64) as usize,
-    );
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = futures_util::StreamExt::next(&mut stream).await {
-        let chunk = chunk.map_err(|_| ())?;
-        extend_agent_rpc_body(&mut body, &chunk, maximum)?;
-    }
-    Ok(body)
-}
-
-fn allowed_agent_rpc_method(method: &str) -> bool {
-    matches!(
-        method,
-        "am_fetch_agent"
-            | "am_publish_agent"
-            | "am_search_agents"
-            | "ap_create_task"
-            | "ap_execute_step"
-            | "ap_list_checkpoints"
-            | "ap_list_steps"
-            | "ap_list_tasks"
-            | "ap_restore_checkpoint"
-            | "get_sona_patterns"
-            | "goose_mcp_execute"
-            | "goose_mcp_list"
-            | "record_sona_pattern"
-            | "run_actor_model"
-            | "run_agent"
-            | "run_deerflow_orchestration"
-            | "run_expert_team"
-            | "run_ralph_loop"
-            | "run_scalable_agents"
-            | "verify_output"
-    )
-}
-
-fn agent_rpc_url(raw: &str) -> Result<reqwest::Url, ()> {
-    let mut url = reqwest::Url::parse(raw).map_err(|_| ())?;
-    if !matches!(url.scheme(), "http" | "https")
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.host_str().is_none()
-        || url.query().is_some()
-        || url.fragment().is_some()
-    {
-        return Err(());
-    }
-    url.set_path("/rpc");
-    url.set_query(None);
-    url.set_fragment(None);
-    Ok(url)
-}
-
-async fn proxy_agent_rpc_handler(
-    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    axum::Json(payload): axum::Json<serde_json::Value>,
-) -> axum::response::Response {
-    use axum::response::IntoResponse;
-
-    if !agent_rpc_available(::server_config::get().multitenant) {
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::Json(serde_json::json!({
-                "error": "agent RPC requires a tenant-partitioned runtime"
-            })),
-        )
-            .into_response();
-    }
-    let Some(tenant_id) = claims
-        .organization_id
-        .as_deref()
-        .filter(|tenant| !tenant.trim().is_empty() && *tenant != "system")
-    else {
-        return (
-            axum::http::StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({ "error": "tenant context required" })),
-        )
-            .into_response();
-    };
-
-    let valid_envelope = payload.get("jsonrpc").and_then(|value| value.as_str()) == Some("2.0")
-        && payload
-            .get("method")
-            .and_then(|value| value.as_str())
-            .is_some_and(allowed_agent_rpc_method)
-        && payload.get("id").is_some()
-        && payload
-            .get("params")
-            .is_none_or(|value| value.is_object());
-    if !valid_envelope {
-        return (
-            axum::http::StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({ "error": "invalid RPC request" })),
-        )
-            .into_response();
-    }
-
-    let raw_origin = std::env::var("OHC_AGENT_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let Ok(url) = agent_rpc_url(&raw_origin) else {
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
-        )
-            .into_response();
-    };
-    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
-    let client = CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .connect_timeout(std::time::Duration::from_secs(5))
-            .timeout(std::time::Duration::from_secs(120))
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .expect("static reqwest client configuration is valid")
-    });
-    let mut request = client
-        .post(url)
-        .header("x-tenant-id", tenant_id)
-        .header("x-user-id", &claims.sub)
-        .json(&payload);
-    if let Ok(token) = std::env::var("OHC_AGENT_TOKEN") {
-        if !token.trim().is_empty() {
-            request = request.bearer_auth(token);
-        }
-    }
-    let Ok(upstream) = request.send().await else {
-        return (
-            axum::http::StatusCode::BAD_GATEWAY,
-            axum::Json(serde_json::json!({ "error": "agent service unavailable" })),
-        )
-            .into_response();
-    };
-    if upstream
-        .content_length()
-        .is_some_and(|length| length > AGENT_RPC_RESPONSE_LIMIT_BYTES as u64)
-    {
-        return (
-            axum::http::StatusCode::BAD_GATEWAY,
-            axum::Json(serde_json::json!({ "error": "agent response too large" })),
-        )
-            .into_response();
-    }
-    let status = axum::http::StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(axum::http::StatusCode::BAD_GATEWAY);
-    let Ok(body) = read_limited_agent_rpc_body(upstream, AGENT_RPC_RESPONSE_LIMIT_BYTES).await else {
-        return (
-            axum::http::StatusCode::BAD_GATEWAY,
-            axum::Json(serde_json::json!({ "error": "agent response unavailable or too large" })),
-        )
-            .into_response();
-    };
-    axum::response::Response::builder()
-        .status(status)
-        .header("content-type", "application/json; charset=utf-8")
-        .header("cache-control", "private, no-store")
-        .header("x-content-type-options", "nosniff")
-        .body(axum::body::Body::from(body))
-        .unwrap_or_else(|_| axum::http::StatusCode::BAD_GATEWAY.into_response())
-}
-
 fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
     claims
         .organization_id
@@ -3344,17 +3144,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/twilio_voice", axum::routing::post(api::twilio_voice::twilio_voice_incoming_handler))
         .route("/api/v1/webhooks/twilio_voice/gather", axum::routing::post(api::twilio_voice::twilio_voice_gather_handler))
         .route("/api/v1/webhooks/twilio_voice/status", axum::routing::post(api::twilio_voice::twilio_voice_status_handler))
-        .route_layer(axum::middleware::from_fn(
-            api::twilio_webhook::twilio_signature_middleware,
-        ))
         .with_state(twilio_voice_webhook_state);
 
     let twilio_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_webhook::twilio_voice_webhook_handler))
-        .route_layer(axum::middleware::from_fn(
-            api::twilio_webhook::twilio_signature_middleware,
-        ))
         .with_state(twilio_webhook_state);
 
     let health_router = axum::Router::new()
@@ -6838,33 +6632,33 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/v1/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .nest("/api/v1/integrations", crate::api::tool_integrations::router(db.clone()))
-                .route("/api/v1/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
-        .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
-        .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
-        .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
-        .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
-                .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
-        .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
-        .route("/api/v1/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
-        .route("/api/v1/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+                .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
+        .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+        .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
+        .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+                .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+        .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
+        .route("/api/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
+        .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
-        .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
+        .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
-        .route("/api/v1/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
-        .route("/api/v1/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
+        .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
+        .route("/api/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
+        .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
+        .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
+        .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
         .route("/api/v1/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
             let store = http_auth_store.clone();
             axum::middleware::from_fn(
@@ -6891,7 +6685,7 @@ async fn create_ui_bom_item_handler(
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
-            "/api/v1/dev/seed",
+            "/api/dev/seed",
             axum::routing::post({
                 let db = db.clone();
                 move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
@@ -7158,7 +6952,7 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
-            "/api/v1/dashboard",
+            "/api/dashboard",
             axum::routing::get(|| async {
                 axum::Json(serde_json::json!({
                     "organization": { "id": "e2e-org", "name": "OHC E2E" },
@@ -7168,44 +6962,44 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route(
-            "/api/v1/meetings",
+            "/api/meetings",
             axum::routing::get({ let hub = hub.clone(); move || async move {
                 let meetings = hub.get_meetings().await;
                 axum::Json(meetings.as_ref().clone())
             } }),
         )
         .route(
-            "/api/v1/costs",
+            "/api/costs",
             axum::routing::get(|| async {
                 axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
             }),
         )
         .route(
-            "/api/v1/approvals/request",
+            "/api/approvals/request",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "pending" }))
             }),
         )
         .route(
-            "/api/v1/approvals/decide",
+            "/api/approvals/decide",
             axum::routing::put(|| async {
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
             }),
         )
         .route(
-            "/api/v1/handoffs",
+            "/api/handoffs",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "handoff-e2e", "status": "created" }))
             }),
         )
         .route(
-            "/api/v1/skills/import",
+            "/api/skills/import",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "skill-e2e", "status": "imported" }))
             }),
         )
         .route(
-            "/api/v1/snapshots/create",
+            "/api/snapshots/create",
             axum::routing::post(|| async {
                 axum::Json(serde_json::json!({ "id": "snapshot-e2e", "status": "created" }))
             }),
@@ -7244,8 +7038,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/v1/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
-        .route("/api/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
-        .route("/api/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
+        .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
+        .route("/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
             "/api/v1/advisory/insights",
             axum::routing::get({
@@ -7363,11 +7157,6 @@ async fn create_ui_bom_item_handler(
 
         .route("/api/v1/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
-        .route(
-            "/api/v1/rpc",
-            axum::routing::post(proxy_agent_rpc_handler)
-                .layer(axum::extract::DefaultBodyLimit::max(AGENT_RPC_REQUEST_LIMIT_BYTES)),
-        )
         .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -7384,8 +7173,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
             .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler)
-            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
             .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
@@ -7401,29 +7189,27 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/videos", axum::routing::get(crate::api::docs::list_videos)
             .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog)
-            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
-            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/ui/help.html", axum::routing::get(|| async {
+        .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog))
+        .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
+        .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))
         .route("/help", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))
-        .route("/api/v1/ui/help_article.html", axum::routing::get(|| async {
+        .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
         }))
-        .route("/api/v1/ui/api-docs.html", axum::routing::get(|| async {
+        .route("/api/ui/api-docs.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
         .route("/api-docs", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
-        .route("/api/v1/ui/swagger-ui.css", axum::routing::get(|| async {
+        .route("/api/ui/swagger-ui.css", axum::routing::get(|| async {
             (axum::http::StatusCode::OK, [("content-type", "text/css")], include_str!("../ui/tauri/src/ui/swagger-ui.css"))
         }))
-        .route("/api/v1/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
+        .route("/api/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
             (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.txt"))
         }))
         .route("/kairos", axum::routing::get(|| async {
@@ -7435,10 +7221,10 @@ async fn create_ui_bom_item_handler(
         .route("/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
-        .route("/api/v1/ui/hybrid-landing.html", axum::routing::get(|| async {
+        .route("/api/ui/hybrid-landing.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/hybrid-landing.html"))
         }))
-        .route("/api/v1/ui/changelog.html", axum::routing::get(|| async {
+        .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
         }))
         .route("/", axum::routing::get(|| async {
@@ -7459,7 +7245,7 @@ async fn create_ui_bom_item_handler(
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
-        .route("/api/v1/ui/dashboard.html", axum::routing::get(|| async {
+        .route("/api/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
         .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
@@ -7471,26 +7257,26 @@ async fn create_ui_bom_item_handler(
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
         }))
-        .route("/api/v1/ui/pos.html", axum::routing::get(|| async {
+        .route("/api/ui/pos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
         }))
         .route("/pos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
         }))
 
-        .route("/api/v1/ui/help-widget.mjs", axum::routing::get(|| async {
+        .route("/api/ui/help-widget.mjs", axum::routing::get(|| async {
             axum::response::Response::builder()
                 .header("content-type", "application/javascript")
                 .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/help-widget.mjs")))
                 .unwrap()
         }))
-        .route("/api/v1/ui/voice-assistant.mjs", axum::routing::get(|| async {
+        .route("/api/ui/voice-assistant.mjs", axum::routing::get(|| async {
             axum::response::Response::builder()
                 .header("content-type", "application/javascript")
                 .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/voice-assistant.mjs")))
                 .unwrap()
         }))
-        .route("/api/v1/ui/assistant.html", axum::routing::get(|| async {
+        .route("/api/ui/assistant.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
         .route("/assistant.html", axum::routing::get(|| async {
@@ -7655,10 +7441,7 @@ async fn create_ui_bom_item_handler(
             ::server_auth::strict_bearer_auth_middleware,
         )))
         .merge(webhook_router)
-        .merge(protect_internal_ingress(
-            relay_webhook_router,
-            http_auth_store.clone(),
-        ))
+        .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")), vec![])),
             tools: vec![],
@@ -7669,14 +7452,8 @@ async fn create_ui_bom_item_handler(
             ::server_auth::strict_bearer_auth_middleware,
         )))
         .merge(meta_webhook_router)
-        .merge(protect_internal_ingress(
-            omnichannel_webhook_router,
-            http_auth_store.clone(),
-        ))
-        .nest(
-            "/api/v1/inbox",
-            protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
-        )
+        .merge(omnichannel_webhook_router)
+        .nest("/api/v1/inbox", inbox_webhook_router)
         .nest(
             "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
@@ -7687,10 +7464,7 @@ async fn create_ui_bom_item_handler(
         )
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
-        .merge(protect_internal_ingress(
-            api::unified_inbox_webhook::router(db.clone()),
-            http_auth_store.clone(),
-        ))
+        .merge(api::unified_inbox_webhook::router(db.clone()))
         .merge(health_router)
         .merge(http_auth_router)
         .fallback(api_not_found_handler);
@@ -7905,26 +7679,6 @@ mod tests {
     use super::*;
     use crate::settings::Store;
 
-    #[test]
-    fn agent_rpc_gateway_confines_methods_and_destination() {
-        assert!(allowed_agent_rpc_method("run_agent"));
-        assert!(allowed_agent_rpc_method("ap_list_tasks"));
-        assert!(!allowed_agent_rpc_method("admin_delete_everything"));
-        assert!(agent_rpc_available(false));
-        assert!(!agent_rpc_available(true));
-        assert_eq!(
-            agent_rpc_url("http://127.0.0.1:18789").unwrap().as_str(),
-            "http://127.0.0.1:18789/rpc",
-        );
-        assert!(agent_rpc_url("file:///etc/passwd").is_err());
-        assert!(agent_rpc_url("http://user:pass@127.0.0.1:18789").is_err());
-        assert!(agent_rpc_url("http://127.0.0.1:18789?target=evil").is_err());
-
-        let mut body = Vec::new();
-        assert!(extend_agent_rpc_body(&mut body, b"1234", 4).is_ok());
-        assert!(extend_agent_rpc_body(&mut body, b"5", 4).is_err());
-    }
-
     #[tokio::test]
     async fn protected_http_routes_require_signed_bearer_identity() {
         use axum::{body::Body, http::Request, routing::get, Router};
@@ -7953,7 +7707,7 @@ mod tests {
                 ::server_utils::tenant_middleware::tenant_middleware,
             ))
             .route_layer(axum::middleware::from_fn_with_state(
-                auth_store.clone(),
+                auth_store,
                 super::protected_bearer_auth_middleware,
             ));
 
@@ -7993,27 +7747,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(public.status(), axum::http::StatusCode::OK);
-
-        let docs = Router::new()
-            .route("/api/v1/help/{article_id}", get(crate::api::docs::get_article_handler))
-            .route("/api/v1/changelog", get(crate::api::docs::get_changelog))
-            .route("/api/v1/api-docs-spec", get(crate::api::docs::get_api_docs_spec))
-            .route_layer(axum::middleware::from_fn_with_state(
-                auth_store,
-                ::server_auth::strict_bearer_auth_middleware,
-            ));
-        for path in [
-            "/api/v1/help/getting-started",
-            "/api/v1/changelog",
-            "/api/v1/api-docs-spec",
-        ] {
-            let response = docs
-                .clone()
-                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
-                .await
-                .unwrap();
-            assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED, "{path}");
-        }
     }
 
     async fn isolated_omni_postgres_pool(

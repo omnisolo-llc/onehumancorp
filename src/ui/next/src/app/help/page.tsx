@@ -55,7 +55,8 @@ export default function HelpCenterPage() {
         return res.json();
       })
       .then(data => { setArticles(Array.isArray(data) ? data : []); setIsLoading(false); })
-      .catch(() => {
+      .catch((err) => {
+        console.error(err);
         setArticles([]); setIsError(true); setIsLoading(false);
       });
   }, [debouncedSearchQuery]);
@@ -64,12 +65,10 @@ export default function HelpCenterPage() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const fetchUrl = isMobile ? '/api/v1/videos?mobile_optimized=true' : '/api/v1/videos';
     fetch(fetchUrl)
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch videos");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))
-      .catch(() => {
+      .catch((err) => {
+        console.error(err);
         setVideos([]);
       });
   }, []);

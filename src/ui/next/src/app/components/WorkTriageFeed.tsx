@@ -16,7 +16,8 @@ type TriageItem = {
 function tenantId() {
   if (typeof window === "undefined") return "default";
   return (
-    localStorage.getItem("business_display_name") ||
+    localStorage.getItem("tenant_id") ||
+    localStorage.getItem("tenant") ||
     "default"
   );
 }

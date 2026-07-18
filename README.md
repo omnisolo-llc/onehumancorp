@@ -12,7 +12,7 @@ The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`o
 The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.rs`) allowing no-code agent assembly.
 
 - **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
-- **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/v1/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
+- **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
 
 ## Getting Started (Day 1 Onboarding)
 

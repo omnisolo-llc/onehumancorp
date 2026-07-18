@@ -17,7 +17,7 @@ export default function ViralGoalTrackerPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
+      const storedTenant = localStorage.getItem('tenant') || 'my-business';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
@@ -46,7 +46,7 @@ export default function ViralGoalTrackerPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 min-w-0 p-8">
+        <div className="flex-1 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Goal Tracker Builder</h1>
           <p className="text-sm text-gray-600 mb-6 leading-relaxed">
              Create a gamified progress bar to encourage referrals and engagement.
@@ -95,7 +95,7 @@ export default function ViralGoalTrackerPage() {
           </button>
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col p-8 bg-gray-50 border-l border-gray-100 rounded-r-[24px]">
+        <div className="flex-1 flex flex-col p-8 bg-gray-50 border-l border-gray-100 rounded-r-[24px]">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
 
            <div className={`p-6 rounded-2xl shadow-sm border ${theme === 'dark' ? 'bg-[#1c1c1e] text-white border-[#333]' : 'bg-white text-gray-900 border-gray-200'}`}>

@@ -11,7 +11,7 @@ const TEST_API_CONTRACT = {
 } as const;
 
 // @ts-expect-error route-handler entries require API contract metadata
-const routeHandlerWithoutApi = { method: "POST", invocation: "route-handler", matcher: { kind: "exact", path: "/api/v1/auth/login" }, reason: "invalid missing API contract", owner: "authentication" } as const satisfies PublicRouteEntry;
+const routeHandlerWithoutApi = { method: "POST", invocation: "route-handler", matcher: { kind: "exact", path: "/api/auth/login" }, reason: "invalid missing API contract", owner: "authentication" } as const satisfies PublicRouteEntry;
 
 // @ts-expect-error page entries cannot declare API contract metadata
 const pageWithApi = { method: "GET", invocation: "page", matcher: { kind: "exact", path: "/login" }, reason: "invalid page API contract", owner: "authentication", api: TEST_API_CONTRACT } as const satisfies PublicRouteEntry;
@@ -35,7 +35,7 @@ describe("bootstrap public contracts", () => {
       {
         method: "POST",
         invocation: "route-handler",
-        matcher: { kind: "exact", path: "/api/v1/auth/login" },
+        matcher: { kind: "exact", path: "/api/auth/login" },
         reason: "exchange bounded credentials for an encrypted web session",
         owner: "authentication",
         api: {
@@ -58,17 +58,17 @@ describe("bootstrap public contracts", () => {
 
   it.each([
     ["GET", "/login", "page", "public"],
-    ["POST", "/api/v1/auth/login", "route-handler", "public"],
-    ["post", "/api/v1/auth/login", "route-handler", "public"],
+    ["POST", "/api/auth/login", "route-handler", "public"],
+    ["post", "/api/auth/login", "route-handler", "public"],
     ["GET", "/_next/static/chunks/app.js", "asset", "public"],
     ["POST", "/login", "server-action", "protected"],
     ["GET", "/login", "rsc", "protected"],
     ["GET", "/login", "prefetch", "protected"],
     ["GET", "/login", "rewrite", "protected"],
-    ["GET", "/api/v1/auth/login", "route-handler", "protected"],
-    ["POST", "/api/v1/auth/login/", "route-handler", "protected"],
+    ["GET", "/api/auth/login", "route-handler", "protected"],
+    ["POST", "/api/auth/login/", "route-handler", "protected"],
     ["POST", "/API/auth/login", "route-handler", "protected"],
-    ["POST", "/base/en/api/v1/auth/login", "route-handler", "protected"],
+    ["POST", "/base/en/api/auth/login", "route-handler", "protected"],
     ["GET", "/(auth)/login", "page", "protected"],
     ["GET", "/onboarding", "page", "protected"],
     ["GET", "/help", "page", "protected"],
@@ -83,12 +83,12 @@ describe("bootstrap public contracts", () => {
   });
 
   it.each([
-    "//api/v1/auth/login",
+    "//api/auth/login",
     "/api%2fauth/login",
-    "/%252e%252e/api/v1/auth/login",
-    "/api/v1/auth/login%00",
-    "/api/v1/auth/login%0d%0aX-Test:value",
-    "/api/v1/auth/login%zz",
+    "/%252e%252e/api/auth/login",
+    "/api/auth/login%00",
+    "/api/auth/login%0d%0aX-Test:value",
+    "/api/auth/login%zz",
   ])("rejects ambiguous public near miss %s", (pathname) => {
     expect(classifyRequest({ method: "POST", pathname, invocation: "route-handler" })).toEqual({
       access: "reject",

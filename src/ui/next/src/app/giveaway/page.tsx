@@ -17,7 +17,7 @@ export default function GiveawayGeneratorPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
 

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
   test('should complete a tap-to-pay transaction offline with bundle pricing', async ({ page, context }) => {
     // Navigate to a safe api route first to set local storage before loading the main page
-    await page.goto('/api/v1/staff');
+    await page.goto('/api/staff');
 
     // Setup local storage for offline staff, rules, and inventory
     await page.evaluate(() => {

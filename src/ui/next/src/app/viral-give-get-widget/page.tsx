@@ -17,7 +17,7 @@ export default function ViralGiveGetWidgetPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'My Business';
+      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       setTenantId(storedTenant);
     }
   }, []);
@@ -31,9 +31,11 @@ export default function ViralGiveGetWidgetPage() {
       const res = await fetch('/api/v1/growth/referrals/generate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
         },
         body: JSON.stringify({
+          tenantId: tenantId,
           customMessage: 'Give Get Generator'
         })
       });

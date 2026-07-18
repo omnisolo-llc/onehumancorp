@@ -64,7 +64,7 @@ test.describe('OHC Expert Center Comprehensive E2E Flows', () => {
     await modelSelector.selectOption('Local Ollama');
 
     // Mock the backend API responses for hiring
-    await page.route('/api/v1/agents/hire', async route => {
+    await page.route('/api/agents/hire', async route => {
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
@@ -185,7 +185,7 @@ test.describe('OHC Expert Center Comprehensive E2E Flows', () => {
 
     // Test clicking Needs Approval action buttons
     // Since mock list initially has items, click Approve & Send
-    await page.route('/api/v1/agents/approvals/*', async route => {
+    await page.route('/api/agents/approvals/*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

@@ -12,7 +12,6 @@ function SubscriptionsPortalContent() {
 
   const token = searchParams.get('token');
   const action = searchParams.get('action');
-  const hasQuery = searchParams.toString() !== '';
 
   const handleManageSubscriptions = async () => {
     setLoading(true);
@@ -22,6 +21,9 @@ function SubscriptionsPortalContent() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(typeof localStorage !== "undefined" && localStorage.getItem("token")
+            ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            : {}),
         },
       });
 
@@ -47,7 +49,7 @@ function SubscriptionsPortalContent() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/v1/subscription/magic-link", {
+      const response = await fetch("/api/subscription/magic-link", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,8 +129,27 @@ function SubscriptionsPortalContent() {
     );
   }
 
+  // Missing Params Flow (but somehow navigated here directly)
+  if (!token && window.location.search.includes('action=')) {
+     return (
+        <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
+        <Head>
+          <title>Manage Subscription | OHC</title>
+        </Head>
+        <div className="max-w-2xl w-full">
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
+              <h1 className="text-3xl font-extrabold mb-2 text-center text-gray-900">Invalid Link</h1>
+              <p className="text-center text-gray-500 mb-8 max-w-md mx-auto">
+                This subscription management link is missing required information.
+              </p>
+            </div>
+        </div>
+        </div>
+     );
+  }
+
   // Missing Params Flow
-  if ((!token || !action) && hasQuery) {
+  if (!token && !action && window.location.search !== '') {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
         <Head>

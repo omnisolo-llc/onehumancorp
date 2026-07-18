@@ -27,7 +27,7 @@ export default function FulfillmentHub() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/fulfillment');
+      const res = await fetch('/api/fulfillment');
       if (res.ok) {
         const data = await res.json();
         setToPack(data.to_pack || []);

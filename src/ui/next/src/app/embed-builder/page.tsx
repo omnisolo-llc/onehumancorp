@@ -14,7 +14,7 @@ export default function EmbedBuilderPage() {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const activeTenant = localStorage.getItem('active_business_display_name') || localStorage.getItem('business_display_name') || 'my-store';
+            const activeTenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant') || 'my-store';
             setTenantId(activeTenant);
         }
     }, []);

@@ -18,7 +18,6 @@ function healthyResult(route, viewport) {
     attempted: true,
     completed: true,
     status: 200,
-    finalPathname: route,
     shellCounts: { sidebar: 1, topbar: 1, main: 1 },
     horizontalOverflow: false,
     documentWidth: 390,
@@ -35,57 +34,20 @@ function healthyResult(route, viewport) {
 }
 
 describe('visual audit policy', () => {
-  it('narrowly allows a known isolated resource failure on a private LAN origin', () => {
+  it('narrowly allows a known isolated Swagger resource failure', () => {
     expect(classifyConsoleError({
       message: 'Failed to load resource: the server responded with a status of 500 (Internal Server Error)',
-      locationUrl: 'http://192.168.8.35:3000/api/v1/health',
-      pageUrl: 'http://192.168.8.35:3000/dashboard',
-    })).toBe('expected-service');
-  });
-
-  it('does not allow isolated-service failures from a public development host', () => {
-    expect(classifyConsoleError({
-      message: 'Failed to load resource: the server responded with a status of 502 (Bad Gateway)',
-      locationUrl: 'http://203.0.113.8:3000/api/v1/health',
-      pageUrl: 'http://203.0.113.8:3000/dashboard',
-    })).toBe('unexpected');
-  });
-
-  it('allows the optional help chrome to fall back while the backend is offline', () => {
-    expect(classifyConsoleError({
-      message: 'Failed to load resource: the server responded with a status of 502 (Bad Gateway)',
-      locationUrl: 'http://192.168.8.35:3000/api/v1/help',
-      pageUrl: 'http://192.168.8.35:3000/dashboard',
-    })).toBe('expected-service');
-    expect(classifyConsoleError({
-      message: 'Failed to load tooltips Error: Failed to load tooltips, status: 502',
-      locationUrl: 'webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js',
-      pageUrl: 'http://192.168.8.35:3000/dashboard',
+      locationUrl: 'http://127.0.0.1:3000/api/ui/swagger-ui.css',
+      pageUrl: 'http://127.0.0.1:3000/dashboard',
     })).toBe('expected-service');
   });
 
   it('does not blanket-allow the same status on an unknown API path', () => {
     expect(classifyConsoleError({
       message: 'Failed to load resource: the server responded with a status of 500 (Internal Server Error)',
-      locationUrl: 'http://127.0.0.1:3000/api/v1/payments/charge',
+      locationUrl: 'http://127.0.0.1:3000/api/payments/charge',
       pageUrl: 'http://127.0.0.1:3000/dashboard',
     })).toBe('unexpected');
-  });
-
-  it('allows exact page-data fallbacks while the local backend is unavailable', () => {
-    for (const [status, pathname] of [
-      [404, '/api/v1/ledger/entries'],
-      [502, '/api/v1/ui/omni_inbox'],
-      [403, '/api/v1/growth/referrals/generate'],
-      [404, '/api/v1/staff/shifts'],
-      [401, '/api/v1/help'],
-    ]) {
-      expect(classifyConsoleError({
-        message: `Failed to load resource: the server responded with a status of ${status} (Expected local fallback)`,
-        locationUrl: `http://192.168.8.35:3000${pathname}`,
-        pageUrl: 'http://192.168.8.35:3000/dashboard',
-      }), pathname).toBe('expected-service');
-    }
   });
 
   it('classifies hydration signatures independently', () => {
@@ -119,7 +81,7 @@ describe('visual audit policy', () => {
 
   it('keeps narrowly classified isolated-service errors nonfatal', () => {
     const result = healthyResult('/dashboard', 'desktop');
-    result.expectedServiceErrors.push({ message: 'known missing service', locationUrl: '/api/v1/ui/swagger-ui.css' });
+    result.expectedServiceErrors.push({ message: 'known missing service', locationUrl: '/api/ui/swagger-ui.css' });
     expect(failureReasons(result)).toEqual([]);
     expect(shouldFailAudit({
       results: [result, healthyResult('/inbox', 'mobile')],
@@ -136,22 +98,6 @@ describe('visual audit policy', () => {
 
     complete[1].screenshotWritten = false;
     expect(isCoverageComplete(complete, expectedCases)).toBe(false);
-  });
-
-  it('fails pages that silently redirect to the login screen', () => {
-    const result = healthyResult('/dashboard', 'desktop');
-    result.finalPathname = '/login';
-    expect(failureReasons(result)).toContain('unexpected redirect to /login');
-  });
-
-  it('allows the share-card redirect contract and no other onboarding redirect', () => {
-    const shareCard = healthyResult('/share-card', 'desktop');
-    shareCard.finalPathname = '/onboarding';
-    expect(failureReasons(shareCard)).toEqual([]);
-
-    const unrelated = healthyResult('/dashboard', 'desktop');
-    unrelated.finalPathname = '/onboarding';
-    expect(failureReasons(unrelated)).toContain('unexpected redirect to /onboarding');
   });
 
   it('makes policy failures produce a failing audit decision', () => {

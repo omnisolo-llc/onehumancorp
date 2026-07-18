@@ -193,14 +193,14 @@ Durable changes flow from the transactional outbox to authenticated subscribers.
 
 The encrypted HttpOnly Next.js session never exposes the backend bearer token to browser JavaScript. Instead:
 
-- `POST /api/v1/auth/realtime-ticket` is protected by the Next session, forwards the recovered bearer server-to-server, and asks Rust for a 60-second, audience-bound, single-use WebSocket ticket.
+- `POST /api/auth/realtime-ticket` is protected by the Next session, forwards the recovered bearer server-to-server, and asks Rust for a 60-second, audience-bound, single-use WebSocket ticket.
 - The ticket contains `jti`, user, tenant, allowed inbox scopes, session identifier/version, issued-at, expiry, and `aud=ohc-realtime`; it cannot authorize ordinary HTTP APIs.
 - The browser supplies the ticket through the WebSocket subprotocol header, not a query string. Rust atomically consumes `jti` during upgrade, rechecks the session/tenant/inbox scope, and rejects reuse.
 - Tickets use a dedicated persistent 256-bit signing key with key IDs and bounded previous-key rotation. Missing/ephemeral production keys fail readiness.
 
 PowerSync credentials follow a separate contract:
 
-- `POST /api/v1/auth/powersync-token` is protected by the Next session and backend JWT.
+- `POST /api/auth/powersync-token` is protected by the Next session and backend JWT.
 - Rust issues a short-lived, audience-bound token containing tenant, user, allowed inbox/team scopes, session version, `jti`, and expiry.
 - A persistent dedicated signing key with key IDs/rotation is required; the current ephemeral-key fallback is removed and production readiness fails closed.
 - PowerSync sync rules filter every table by the verified tenant plus inbox/team membership claims. Client parameters cannot broaden them.

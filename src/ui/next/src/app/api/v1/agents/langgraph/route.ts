@@ -1,26 +1,49 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
-import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
+import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  const response = await proxyBackendRequest(request, "/api/v1/rpc", {
-    requestContentType: "application/json",
-    transformRequestBody: jsonRpcRequestTransform("run_agent", (input) => {
-      if (typeof input.message !== "string" || input.message.trim().length === 0) {
-        throw new Error("message is required");
-      }
-      return {
-        agent_id: "default",
-        message: input.message,
-        config: { enable_langgraph_mechanic: true },
-      };
-    }),
-  });
-  if (!response.ok) return response;
+export async function POST(req: Request) {
   try {
-    const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json({ result: payload?.result });
-  } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
+    const { message } = await req.json();
+
+    if (!message) {
+      return NextResponse.json({ error: 'message is required' }, { status: 400 });
+    }
+
+    const rpcRequest = {
+      jsonrpc: "2.0",
+      id: "langgraph-1",
+      method: "run_agent",
+      params: {
+        agent_id: "default",
+        message,
+        config: {
+          enable_langgraph_mechanic: true
+        }
+      }
+    };
+
+    let resultData = null;
+
+    try {
+      const backendRes = await fetch(process.env.AGENT_SERVICE_URL || 'http://127.0.0.1:8080', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rpcRequest),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      const backendData = await backendRes.json();
+
+      if (backendData.error) {
+         return NextResponse.json({ error: backendData.error.message }, { status: 500 });
+      }
+
+      resultData = backendData.result;
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message || "Backend service unavailable" }, { status: 503 });
+    }
+
+    return NextResponse.json({ result: resultData });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

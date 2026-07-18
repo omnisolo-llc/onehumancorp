@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 
 export default function CrewAIPage() {
@@ -40,7 +41,9 @@ export default function CrewAIPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-12 px-4 font-sans text-gray-900">
-      <title>CrewAI - Role-Based Agent Flow</title>
+      <Head>
+        <title>CrewAI - Role-Based Agent Flow</title>
+      </Head>
 
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="mb-8">

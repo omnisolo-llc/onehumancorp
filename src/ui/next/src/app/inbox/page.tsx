@@ -188,7 +188,7 @@ function InboxWorkspace({
     if (!manualReply.trim()) return;
     try {
       setActionStatus("Sending reply...");
-      const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
+      const res = await fetch(`/api/ui/omni_inbox/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -479,7 +479,7 @@ function ApiInboxFallback() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/v1/ui/omni_inbox`);
+        const res = await fetch(`/api/ui/omni_inbox`);
         if (!res.ok) throw new Error("Failed to load inbox messages");
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);

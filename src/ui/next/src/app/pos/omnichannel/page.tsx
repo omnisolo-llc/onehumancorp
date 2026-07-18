@@ -14,7 +14,7 @@ export default function OmnichannelCartPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedTenant = localStorage.getItem("business_display_name");
+      const storedTenant = localStorage.getItem("tenant");
       if (storedTenant) setTenant(storedTenant);
     }
   }, []);

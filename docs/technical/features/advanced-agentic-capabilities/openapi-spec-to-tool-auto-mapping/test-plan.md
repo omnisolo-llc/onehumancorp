@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
 - **Action:** Provide a mock OpenAPI 3.0 spec with two endpoints (GET and POST). Run the ingestion worker and verify the MCP Gateway registry is updated with two newly available, fully schema-compliant tools.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

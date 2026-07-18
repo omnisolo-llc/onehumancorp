@@ -22,7 +22,7 @@ export default function EmailSignatureGeneratorPage() {
   const [tenant, setTenant] = useState('demo');
 
   React.useEffect(() => {
-    const tid = localStorage.getItem('business_display_name');
+    const tid = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
     if (tid) setTenant(tid);
   }, []);
 

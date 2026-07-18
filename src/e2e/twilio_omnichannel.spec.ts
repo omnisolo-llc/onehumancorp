@@ -12,7 +12,7 @@ test.describe('Twilio WhatsApp Omnichannel', () => {
             message: 'Do you make vegan cakes for this Saturday? (via WhatsApp)'
         };
 
-        const response = await page.request.post('/api/v1/dev/mock-omni-inbox?tenant_id=e2e-tenant', {
+        const response = await page.request.post('/api/dev/mock-omni-inbox?tenant_id=e2e-tenant', {
             data: mockPayload
         });
 

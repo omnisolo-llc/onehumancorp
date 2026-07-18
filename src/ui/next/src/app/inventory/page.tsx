@@ -13,7 +13,7 @@ type Product = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("business_display_name") || "default";
+  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
 }
 
 export default function InventoryDashboard() {
@@ -25,7 +25,7 @@ export default function InventoryDashboard() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/v1/ui/inventory?tenant_id=${encodeURIComponent(tenantId())}`);
+      const res = await fetch(`/api/ui/inventory?tenant_id=${encodeURIComponent(tenantId())}`);
       if (!res.ok) throw new Error("Failed to load inventory from the database");
       const data = await res.json();
       setProducts(Array.isArray(data?.inventory) ? data.inventory : []);
@@ -49,10 +49,11 @@ export default function InventoryDashboard() {
         return p;
       }));
 
-      const res = await fetch('/api/v1/ui/inventory', {
+      const res = await fetch('/api/ui/inventory', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId()
         },
         body: JSON.stringify([
           {

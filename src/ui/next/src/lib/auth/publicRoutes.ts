@@ -12,7 +12,7 @@ export const PUBLIC_ROUTE_ENTRIES = [
   {
     method: "POST",
     invocation: "route-handler",
-    matcher: { kind: "exact", path: "/api/v1/auth/login" },
+    matcher: { kind: "exact", path: "/api/auth/login" },
     reason: "exchange bounded credentials for an encrypted web session",
     owner: "authentication",
     api: {

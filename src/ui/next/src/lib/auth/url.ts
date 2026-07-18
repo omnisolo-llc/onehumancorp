@@ -31,6 +31,6 @@ export function safeReturnPath(value: string | null | undefined): string {
   } catch {
     return "/dashboard";
   }
-  if (path === "/login" || path === "/api/v1/auth/login") return "/dashboard";
+  if (path === "/login" || path === "/api/auth/login") return "/dashboard";
   return value;
 }

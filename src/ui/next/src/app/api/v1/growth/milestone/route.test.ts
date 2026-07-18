@@ -1,26 +1,31 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi } from 'vitest';
+import { GET } from './route';
 
-const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+describe('GET /api/v1/growth/milestone', () => {
+  it('returns 400 if tenant_id is missing', async () => {
+    const req = new Request('http://localhost/api/v1/growth/milestone');
+    const res = await GET(req);
+    expect(res.status).toBe(400);
+  });
 
-import { GET } from "./route";
-
-describe("GET /api/v1/growth/milestone", () => {
-  beforeEach(() => proxyBackendRequest.mockReset());
-
-  it("delegates identity and backend I/O to the authenticated transport", async () => {
-    const upstream = new Response("{}", { status: 200 });
-    proxyBackendRequest.mockResolvedValue(upstream);
-    const request = new Request(`https://app.example.test/api/v1/growth/milestone?tenant_id=forged`, {
-      method: "GET",
-      headers: { "x-tenant-id": "forged" },
+  it('returns backend data if tenant_id is provided', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        title: "100th Order Delivered! 🎉",
+        subtitle: "You're growing fast. Share your success to unlock $50 in OHC credits.",
+        shareText: "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+        reward: "$50 Credit"
+      }),
     });
 
-    const response = await GET(request);
-
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/milestone", {
-      suppressRequestBody: true,
-    });
-    expect(response).toBe(upstream);
+    const req = new Request('http://localhost/api/v1/growth/milestone?tenant_id=my-store');
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.title).toBeDefined();
+    expect(data.subtitle).toBeDefined();
+    expect(data.shareText).toBeDefined();
+    expect(data.reward).toBeDefined();
   });
 });

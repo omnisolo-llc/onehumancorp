@@ -83,9 +83,9 @@ function KairosContent() {
       setError("");
       try {
         const [tasksRes, meshRes, memoryRes] = await Promise.allSettled([
-          fetch("/api/v1/kairos/tasks"),
-          fetch("/api/v1/kairos/mesh"),
-          fetch("/api/v1/kairos/memory"),
+          fetch("/api/kairos/tasks"),
+          fetch("/api/kairos/mesh"),
+          fetch("/api/kairos/memory"),
         ]);
 
         if (tasksRes.status === "fulfilled" && tasksRes.value.ok) {

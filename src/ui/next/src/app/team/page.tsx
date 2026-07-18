@@ -33,7 +33,12 @@ export default function TeamPage() {
 
   const fetchApprovals = async () => {
     try {
-      const response = await fetch('/api/v1/agents/approvals');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+      const response = await fetch('/api/v1/agents/approvals', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setApprovals(data.pending_approvals || []);
@@ -51,6 +56,7 @@ export default function TeamPage() {
 
   const handleApprove = async (id: string, editedPayload?: any) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
 
       const payload: any = { approved: true };
@@ -61,7 +67,8 @@ export default function TeamPage() {
       const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(payload)
       });
@@ -74,11 +81,13 @@ export default function TeamPage() {
 
   const handleReject = async (id: string) => {
      try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/v1/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ approved: false })
       });
@@ -106,11 +115,11 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-center bg-gray-50 font-inter lg:py-4">
-      <div className="w-full max-w-[375px] lg:max-w-6xl min-h-[812px] lg:min-h-0 mx-auto bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 lg:rounded-2xl lg:border">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
+      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="py-6 px-6 lg:px-8 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Your Team</h1>
             <p className="text-gray-500 text-sm mt-1">Invisible specialized AI teams</p>
@@ -125,7 +134,7 @@ export default function TeamPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 lg:px-8 lg:pb-8 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
 
           <div className="mb-6">
             <GrowthReferralWidget />
@@ -138,19 +147,17 @@ export default function TeamPage() {
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
              </div>
           ) : (
-            <div className="grid grid-cols-1 gap-x-4 lg:grid-cols-2">
-              {DEPARTMENTS.map(dept => {
-                const pendingCount = approvals.filter(a => a.department === dept.id).length;
-                return (
-                  <DepartmentCard
-                    key={dept.id}
-                    name={dept.name}
-                    pendingCount={pendingCount}
-                    onClick={() => setSelectedDepartment(dept.id)}
-                  />
-                );
-              })}
-            </div>
+            DEPARTMENTS.map(dept => {
+              const pendingCount = approvals.filter(a => a.department === dept.id).length;
+              return (
+                <DepartmentCard
+                  key={dept.id}
+                  name={dept.name}
+                  pendingCount={pendingCount}
+                  onClick={() => setSelectedDepartment(dept.id)}
+                />
+              );
+            })
           )}
         </div>
       </div>

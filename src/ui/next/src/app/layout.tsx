@@ -4,6 +4,7 @@ import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
+import { HelpChat } from "../components/HelpChat";
 import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { NotificationManager } from "../components/NotificationManager";
@@ -28,12 +29,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="/api/ui/swagger-ui.css" />
+        <script src="/api/ui/swagger-ui-bundle.js"></script>
+      </head>
       <body>
         <RateLimitWarningProvider>
           <TooltipProvider>
                     <WalkthroughProvider>
               <ProductShellGuard>{children}</ProductShellGuard>
               <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
+              <HelpChat />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
               <NotificationManager />

@@ -7,7 +7,7 @@ test.describe('Automated Lead Recovery Agent', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     // 2. We trigger the server-side action for lead recovery because waiting 2 hours in an E2E test is impossible
-    const triggerRes = await request.post('/api/v1/agents/approvals/simulate-lead-recovery', {
+    const triggerRes = await request.post('/api/agents/approvals/simulate-lead-recovery', {
         data: {}
     });
 

@@ -385,7 +385,7 @@
       const generateBtn = document.getElementById('generate-btn');
 
       // Update tenant ID in link if available
-      const tenantId = localStorage.getItem('business_display_name') || 'default-team';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
       brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
 
       function updatePreview() {

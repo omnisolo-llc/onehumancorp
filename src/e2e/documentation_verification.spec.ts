@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Documentation UI Verification', () => {
   test('Help portal videos render', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/api/v1/ui/help.html');
+    await page.goto('/api/ui/help.html');
 
     // Make sure the title renders properly
     await expect(page.locator('h1')).toContainText('In-App Help Center');
@@ -28,7 +28,7 @@ test.describe('Documentation UI Verification', () => {
 
   test('Dashboard Walkthrough triggers', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/api/v1/ui/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Click the Walkthrough button
     const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');

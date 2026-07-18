@@ -23,7 +23,7 @@
 
         L->>L: User requests heavy inference
         L->>L: Package local RAG context
-        L->>G: POST /api/v1/mcp/llm/offload
+        L->>G: POST /api/mcp/llm/offload
 
         alt Cloud is saturated
             G-->>L: 503 Service Unavailable

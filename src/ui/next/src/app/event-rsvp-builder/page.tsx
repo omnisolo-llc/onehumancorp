@@ -24,7 +24,7 @@ export default function EventRSVPBuilderPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'demo-business';
+      const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'demo-business';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }

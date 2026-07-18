@@ -21,7 +21,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
         const htmlContent = require('fs').readFileSync(require('path').join(workspaceRoot, 'src/ui/tauri/src/ui/dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
-    await page.route('**/api/v1/ui/unified_inbox_feed*', async route => {
+    await page.route('**/api/ui/unified_inbox_feed*', async route => {
         await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [] }) });
     });
     await page.addInitScript(() => {

@@ -22,7 +22,7 @@ test.describe('Gather-Act-Verify UI', () => {
 
     // We are expecting an error since we don't have a backend mock, just verifying the UI handles it
     // Wait for the request and respond with a 500 error
-    await page.route('/api/v1/gather_act_verify', async (route) => {
+    await page.route('/api/gather_act_verify', async (route) => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',

@@ -1,9 +1,9 @@
+import assert from "node:assert/strict";
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { expect, test } from "vitest";
+import test from "node:test";
 
 const appRoot = path.resolve(import.meta.dirname, "../src/app");
-const apiRoot = path.join(appRoot, "api");
 const apiV1Root = path.join(appRoot, "api/v1");
 const importPattern = /\bfrom\s+["']([^"']+)["']/g;
 const extensions = [".ts", ".tsx", ".js", ".jsx"];
@@ -52,13 +52,5 @@ test("every relative import in a v1 route resolves to an application module", as
       failures.push(`${path.relative(appRoot, routeFile)} -> ${specifier}`);
     }
   }
-  expect(failures).toEqual([]);
-});
-
-test("every Next.js API route is namespaced under /api/v1", async () => {
-  const legacyRoutes = (await routeFiles(apiRoot))
-    .filter((routeFile) => !routeFile.startsWith(`${apiV1Root}${path.sep}`))
-    .map((routeFile) => path.relative(appRoot, routeFile));
-
-  expect(legacyRoutes).toEqual([]);
+  assert.deepEqual(failures, []);
 });

@@ -25,7 +25,7 @@ function LeaveReviewContent() {
       const response = await fetch('/api/v1/growth/referrals/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customMessage: 'I just left a 5-star review!' }),
+        body: JSON.stringify({ tenantId: typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || 'e2e-tenant') : 'e2e-tenant', customMessage: 'I just left a 5-star review!' }),
       });
 
       let link = 'https://ohc.app/invite?ref=demo';

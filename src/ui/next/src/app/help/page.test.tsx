@@ -44,7 +44,6 @@ describe('HelpCenterPage', () => {
       }
       if (url === '/api/v1/videos') {
         return Promise.resolve({
-          ok: true,
           json: () => Promise.resolve([
             { id: 1, title: "How to set up your first store easily", duration: "1:20" },
             { id: 2, title: "Linking your own website name", duration: "0:45" }
@@ -52,7 +51,6 @@ describe('HelpCenterPage', () => {
         });
       }
       return Promise.resolve({
-        ok: true,
         json: () => Promise.resolve([])
       });
     });

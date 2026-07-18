@@ -205,7 +205,7 @@ Services:
 ### 2 — Seed demo data
 
 ```bash
-curl -s -X POST http://localhost:8080/api/v1/dev/seed \
+curl -s -X POST http://localhost:8080/api/dev/seed \
   -H 'Content-Type: application/json' \
   -d '{"scenario":"launch-readiness"}' | jq .
 ```
@@ -253,11 +253,6 @@ The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src
 ---
 
 ## Adding a New API Endpoint
-
-OHC HTTP APIs are versioned from their first release. Mount every application
-endpoint under `/api/v1/...`; do not add routes in the unversioned API
-namespace. Health and infrastructure probes are the only explicit exceptions
-and should be documented alongside their router registration.
 
 1. Add the handler function in `src/server/api/` or the relevant handler file in `src/server/`
 2. Register the route in `src/server/lib.rs` or in the relevant router under `src/server/api/`

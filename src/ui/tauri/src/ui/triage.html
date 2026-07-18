@@ -555,7 +555,7 @@
         const listEl = document.getElementById("triage-list");
         const detailEl = document.getElementById("triage-detail");
         try {
-          const res = await fetch(`/api/v1/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
@@ -600,7 +600,7 @@
              payload.edited_payload = editValue;
           }
 
-          const res = await fetch(`/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)

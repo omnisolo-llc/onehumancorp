@@ -1,25 +1,48 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
 describe("POST /api/v1/integrations/manychat/draft", () => {
-  beforeEach(() => proxyBackendRequest.mockReset());
+  beforeEach(() => {
+    vi.stubEnv("BACKEND_URL", "http://backend.internal");
+    global.fetch = vi.fn();
+  });
 
-  it("delegates identity and backend I/O to the authenticated transport", async () => {
-    const upstream = new Response("{}", { status: 200 });
-    proxyBackendRequest.mockResolvedValue(upstream);
-    const request = new Request(`https://app.example.test/api/v1/integrations/manychat/draft?tenant_id=forged`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-tenant-id": "forged" },
-      body: "{}",
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("forwards ManyChat draft generation to the Rust backend", async () => {
+    const backendResponse = { draft: "Real ManyChat draft from backend." };
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => backendResponse,
     });
 
-    const response = await POST(request);
+    const body = { messages: [{ text: "Do you have vegan cakes?" }] };
+    const req = new Request("http://localhost/api/v1/integrations/manychat/draft", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer token",
+        "x-tenant-id": "tenant-1",
+        "x-user-id": "user-1",
+      },
+      body: JSON.stringify(body),
+    });
 
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/integrations/manychat/draft");
-    expect(response).toBe(upstream);
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual(backendResponse);
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/integrations/manychat/draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: "Bearer token",
+        "x-tenant-id": "tenant-1",
+        "x-user-id": "user-1",
+      },
+      body: JSON.stringify(body),
+    });
   });
 });

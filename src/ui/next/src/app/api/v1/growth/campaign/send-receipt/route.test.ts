@@ -1,25 +1,76 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
-
 import { POST } from "./route";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("POST /api/v1/growth/campaign/send-receipt", () => {
-  beforeEach(() => proxyBackendRequest.mockReset());
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+    vi.stubEnv("BACKEND_URL", "http://backend.internal");
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
 
-  it("delegates identity and backend I/O to the authenticated transport", async () => {
-    const upstream = new Response("{}", { status: 200 });
-    proxyBackendRequest.mockResolvedValue(upstream);
-    const request = new Request(`https://app.example.test/api/v1/growth/campaign/send-receipt?tenant_id=forged`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-tenant-id": "forged" },
-      body: "{}",
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should proxy the request to the backend and return the response", async () => {
+    const mockResponseData = { success: true };
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponseData,
     });
 
-    const response = await POST(request);
+    const body = { receiptId: "123" };
+    const req = new Request("http://localhost/api/v1/growth/campaign/send-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/campaign/send-receipt");
-    expect(response).toBe(upstream);
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/v1/growth/campaign/send-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(200);
+    expect(data).toEqual(mockResponseData);
+  });
+
+  it("should handle backend failure by returning 502", async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+
+    const req = new Request("http://localhost/api/v1/growth/campaign/send-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receiptId: "123" }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data).toEqual({ error: "Backend error" });
+  });
+
+  it("should handle network failure by returning 502", async () => {
+    (global.fetch as any).mockRejectedValue(new Error("Network Error"));
+
+    const req = new Request("http://localhost/api/v1/growth/campaign/send-receipt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receiptId: "123" }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(502);
+    expect(data).toEqual({ error: "Network error" });
   });
 });

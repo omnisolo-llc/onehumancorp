@@ -59,7 +59,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeStarterButton).toBeVisible();
 
     await Promise.all([
-      page.waitForResponse(res => res.url().includes('/api/v1/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
+      page.waitForResponse(res => res.url().includes('/api/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
       upgradeStarterButton.click()
     ]);
 
@@ -88,7 +88,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeProButton).toBeVisible();
 
     await Promise.all([
-      page.waitForResponse(res => res.url().includes('/api/v1/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
+      page.waitForResponse(res => res.url().includes('/api/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
       upgradeProButton.click()
     ]);
 
@@ -116,7 +116,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(upgradeBusinessButton).toBeVisible();
 
     await Promise.all([
-      page.waitForResponse(res => res.url().includes('/api/v1/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
+      page.waitForResponse(res => res.url().includes('/api/billing/create-checkout-session'), { timeout: 10000 }).catch(() => {}),
       upgradeBusinessButton.click()
     ]);
 
@@ -146,7 +146,7 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Let's create realistic data for cost threshold alert via actual API interactions
     // by calling the endpoint that generates the cost payload. This mimics normal usage.
-    await page.request.post('/api/v1/billing/report-cost', {
+    await page.request.post('/api/billing/report-cost', {
         data: {
             metric_name: 'ohc_llm_cost_total_cents',
             value: 200000,

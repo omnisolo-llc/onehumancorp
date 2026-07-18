@@ -9,12 +9,19 @@ export function SuccessMilestoneWidget() {
 
   useEffect(() => {
     let currentTenant = "default";
+    let token = "";
     if (typeof window !== "undefined") {
-      currentTenant = localStorage.getItem("business_display_name") || "default";
+      currentTenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      token = localStorage.getItem("token") || "";
       setTenantId(currentTenant);
     }
 
-    fetch(`/api/v1/growth/milestone?tenant_id=${encodeURIComponent(currentTenant)}`)
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    fetch(`/api/v1/growth/milestone?tenant_id=${encodeURIComponent(currentTenant)}`, { headers })
       .then(res => res.json())
       .then(data => {
         if (data && !data.error && data.title) {

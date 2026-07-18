@@ -35,7 +35,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     });
 
     // Route all API calls to the real backend
-    await page.route('http://mock/api/v1/**/*', async route => {
+    await page.route('http://mock/api/**/*', async route => {
         const url = new URL(route.request().url());
         if (url.pathname === '/api/v1/onboarding/chat') {
             await route.fulfill({

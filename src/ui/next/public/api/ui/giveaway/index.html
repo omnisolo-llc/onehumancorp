@@ -131,11 +131,12 @@
       }
 
       const baseUrl = window.location.origin;
-      const tenantId = localStorage.getItem('business_display_name') || 'My Business';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       fetch('/api/v1/growth/referrals/generate', {
           method: 'POST',
           headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
           }
       }).then(res => res.json()).then(data => {
           const params = new URLSearchParams({

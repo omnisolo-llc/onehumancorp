@@ -57,8 +57,13 @@ export function VoiceAssistantFAB() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'command.webm');
+      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default'); // Would normally get from context
+
       const response = await fetch('/api/v1/voice/command', {
         method: 'POST',
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
+        },
         body: formData,
       });
 
@@ -91,15 +96,9 @@ export function VoiceAssistantFAB() {
   };
 
   return (
-    <section
-      aria-label="Voice commands"
-      className="mb-6 flex w-full items-center justify-between gap-4 rounded-[12px] border border-white/40 bg-white/65 p-4 shadow-sm backdrop-blur-[30px] backdrop-saturate-[2.1] dark:border-white/10 dark:bg-[#16161a]/70"
-    >
-      <div className="min-w-0 flex-1">
-        <h2 className="font-outfit text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Voice commands</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Hold the microphone to prepare an assistant action.</p>
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 w-full max-w-[375px] px-4 pointer-events-none">
       {status !== "idle" && (
-        <div className="mt-3 rounded-xl border border-white/40 bg-white/65 p-3 shadow-sm backdrop-blur-[30px] backdrop-saturate-[2.1] dark:border-white/10 dark:bg-zinc-900/70">
+        <div className="w-full p-4 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto bg-white/65 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%]">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -111,7 +110,6 @@ export function VoiceAssistantFAB() {
           )}
         </div>
       )}
-      </div>
 
       <WithTooltip id="voice-assistant-tooltip" defaultText="Hold to speak a command to your AI Assistant.">
         <button
@@ -121,7 +119,7 @@ export function VoiceAssistantFAB() {
           onTouchStart={(e) => { e.preventDefault(); startListening(); }}
           onTouchEnd={(e) => { e.preventDefault(); stopListening(); }}
           disabled={isProcessing}
-          className={`relative w-14 h-14 min-w-[56px] min-h-[56px] rounded-full shadow-lg flex items-center justify-center transition-all duration-300 border border-white/40 touch-none ${
+          className={`w-16 h-16 min-w-[64px] min-h-[64px] rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 border border-white/40 pointer-events-auto touch-none ${
             isListening
               ? 'bg-red-500 scale-110 ring-8 ring-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.6)]'
               : 'bg-white/65 dark:bg-zinc-900/70 hover:scale-105 active:scale-95 backdrop-blur-[30px] saturate-[210%]'
@@ -168,6 +166,6 @@ export function VoiceAssistantFAB() {
             animation: waveform 0.5s ease-in-out infinite;
         }
       `}</style>
-    </section>
+    </div>
   );
 }

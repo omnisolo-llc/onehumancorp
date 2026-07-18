@@ -23,7 +23,7 @@ test.describe('Unified Agent Feed Offline Mode', () => {
       message: 'I need to book a plumbing repair for tomorrow.',
       source: 'instagram'
     };
-    const response = await page.request.post(`${apiBase}/api/v1/agents/webhook`, {
+    const response = await page.request.post(`${apiBase}/api/agents/webhook`, {
       data: webhookPayload,
     });
     expect(response.ok()).toBeTruthy();

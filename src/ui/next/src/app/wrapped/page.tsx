@@ -12,10 +12,13 @@ export default function Wrapped() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
+        const token = localStorage.getItem('token') || 'test-token';
+        const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+
         const res = await fetch('/api/v1/dashboard/metrics', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ tenant_id: tenant })
         });
 
         if (res.ok) {
@@ -37,7 +40,7 @@ export default function Wrapped() {
     fetchMetrics();
   }, []);
 
-  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${localStorage.getItem('business_display_name') || 'my-store'}` : '/onboarding?ref=my-store';
+  const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${localStorage.getItem('tenant') || 'my-store'}` : '/onboarding?ref=my-store';
 
   if (loading) return <div className="h-screen w-full bg-black flex items-center justify-center text-white">Loading...</div>;
 
@@ -143,7 +146,7 @@ export default function Wrapped() {
   const shareText = `I just hit ${formattedRevenue} in revenue this year using One Human Corp! Launch your own amazing storefront today: ${shareLink}`;
 
   return (
-    <div className="relative h-[calc(100vh-7rem)] min-h-[40rem] w-full bg-[#1D1D1F] flex flex-col font-inter overflow-hidden">
+    <div className="fixed inset-0 w-full h-screen bg-[#1D1D1F] z-[100] flex flex-col font-inter overflow-hidden">
       <div className="absolute left-6 bottom-6 z-50 rounded-2xl bg-white/15 px-4 py-3 text-white backdrop-blur-[30px] saturate-[210%] border border-white/20 shadow-xl">
         <h2 className="text-sm font-bold uppercase tracking-widest">Top Seller</h2>
         <p className="text-base font-semibold">{metrics.topProduct}</p>
@@ -175,7 +178,7 @@ export default function Wrapped() {
 
       {/* Story Container */}
       <div
-        className="flex-1 min-h-0 relative w-full flex transition-transform duration-500 ease-in-out"
+        className="flex-1 relative w-full h-full flex transition-transform duration-500 ease-in-out"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
         {slides.map((slide, i) => (

@@ -4,7 +4,7 @@ test.describe('Extended Documentation & Help Features', () => {
 
   test('Owner/Operator Persona: Can search Help Center and see an empty state', async ({ page }) => {
     // Navigate directly to the help portal
-    await page.goto('/api/v1/ui/help.html');
+    await page.goto('/api/ui/help.html');
     await page.waitForLoadState('networkidle');
 
     // Enter a search query that yields no results
@@ -17,7 +17,7 @@ test.describe('Extended Documentation & Help Features', () => {
 
   test('Owner/Operator Persona: Can launch interactive walkthrough from Help widget', async ({ page }) => {
     // Navigate to a page where the widget is loaded, e.g., the dashboard
-    await page.goto('/api/v1/ui/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Find and click the walkthrough button present on the dashboard
@@ -36,7 +36,7 @@ test.describe('Extended Documentation & Help Features', () => {
   });
 
   test('Advanced Persona: Can load Swagger UI in API Documentation page', async ({ page }) => {
-    await page.goto('/api/v1/ui/api-docs.html');
+    await page.goto('/api/ui/api-docs.html');
     await page.waitForLoadState('networkidle');
 
     // Check for advanced badge

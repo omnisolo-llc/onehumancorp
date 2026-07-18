@@ -1,49 +1,118 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { POST } from './route';
 
-const { proxyBackendRequest } = vi.hoisted(() => ({
-  proxyBackendRequest: vi.fn(),
-}));
-vi.mock("@/lib/auth/backendTransport", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/auth/backendTransport")>()),
-  proxyBackendRequest,
-}));
+describe('POST /api/v1/growth/campaign/generate-cart', () => {
+    let mockBackendUrl = 'http://mock-backend';
 
-import { POST } from "./route";
-
-describe("POST /api/v1/growth/campaign/generate-cart", () => {
-  beforeEach(() => proxyBackendRequest.mockReset());
-
-  it("uses the authenticated backend transport", async () => {
-    const upstream = Response.json({ draft: "Recovery message" });
-    proxyBackendRequest.mockResolvedValue(upstream);
-    const request = new Request(
-      "https://app.example.test/api/v1/growth/campaign/generate-cart",
-      { method: "POST", body: JSON.stringify({ customer_name: "Ada" }) },
-    );
-
-    expect(await POST(request)).toBe(upstream);
-    expect(proxyBackendRequest).toHaveBeenCalledWith(
-      request,
-      "/api/v1/growth/campaign/generate-cart",
-      expect.objectContaining({ requestContentType: "application/json" }),
-    );
-  });
-
-  it("keeps business text intact while removing identity fields", async () => {
-    proxyBackendRequest.mockResolvedValue(Response.json({ draft: "ok" }));
-    const request = new Request(
-      "https://app.example.test/api/v1/growth/campaign/generate-cart",
-      { method: "POST", body: "{}" },
-    );
-    await POST(request);
-    const transform = proxyBackendRequest.mock.calls[0][2].transformRequestBody;
-    const transformed = transform(new TextEncoder().encode(JSON.stringify({
-      store_name: "Store <strong>One</strong>",
-      tenant_id: "forged",
-      user_id: "forged",
-    })));
-    expect(JSON.parse(new TextDecoder().decode(transformed))).toEqual({
-      store_name: "Store <strong>One</strong>",
+    beforeEach(() => {
+        vi.stubEnv('OHC_CORE_URL', mockBackendUrl);
+        // Reset fetch mock before each test
+        global.fetch = vi.fn();
     });
-  });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.resetAllMocks();
+    });
+
+    it('generates cart recovery draft successfully via backend API', async () => {
+        // Mock successful backend response
+        const mockResponse = {
+            draft: 'Mock draft response from backend'
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockResponse
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/campaign/generate-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name: 'there', cart_value: '', tenantId: 'my-store', storeName: 'My Store', discountOffer: '15', isPro: false })
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(data).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/campaign/generate-cart`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_name: 'there', cart_value: '', tenant_id: 'my-store', store_name: 'My Store', discount_offer: '15', is_pro: false })
+        });
+    });
+
+    it('escapes user input to prevent XSS', async () => {
+        // Mock successful backend response
+        const mockResponse = { draft: 'Mock' };
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockResponse
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/campaign/generate-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name: 'there',
+                cart_value: '',
+                tenantId: '<script>alert(1)</script>',
+                storeName: 'Store <script>alert(1)</script>',
+                discountOffer: '20'
+            })
+        });
+
+        await POST(req);
+
+        // Verify the payload sent to backend is escaped
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    customer_name: 'there',
+                    cart_value: '',
+                    tenant_id: '&lt;script&gt;alert(1)&lt;/script&gt;',
+                    store_name: 'Store &lt;script&gt;alert(1)&lt;/script&gt;',
+                    discount_offer: '20',
+                    is_pro: undefined
+                })
+            })
+        );
+    });
+
+    it('falls back gracefully if backend API fails', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error'
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/campaign/generate-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'my-store', storeName: 'My Store' })
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(502);
+    });
+
+    it('falls back gracefully if fetch throws an exception (network error)', async () => {
+        (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+        const req = new Request('http://localhost/api/v1/growth/campaign/generate-cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenantId: 'my-store' })
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(502);
+    });
 });

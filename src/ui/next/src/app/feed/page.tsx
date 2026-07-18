@@ -214,8 +214,8 @@ export default function FeedPage() {
 
     const simulateShiftCoverageDraft = async () => {
     try {
-      const tenantId = localStorage.getItem('business_display_name') || 'default_tenant';
-      const response = await fetch('/api/v1/feed', {
+      const tenantId = localStorage.getItem('tenant_id') || 'default_tenant';
+      const response = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -226,7 +226,7 @@ export default function FeedPage() {
           proposed_action: {
             action_type: 'Reassign Shift',
             description: 'Reassign tomorrow\'s shift from Sam (sick) to Alex.',
-            endpoint: '/api/v1/shifts/reassign',
+            endpoint: '/api/shifts/reassign',
             payload: { shift_id: 'shift_123', new_staff_id: 'staff_alex' }
           },
           context_payload: {

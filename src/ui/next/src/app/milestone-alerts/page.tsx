@@ -20,7 +20,7 @@ export default function MilestoneAlertsPage() {
   const [tenantId, setTenantId] = useState('DEFAULT');
 
   useEffect(() => {
-    const tid = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
+    const tid = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'DEFAULT' : 'DEFAULT';
     setTenantId(tid);
 
     const fetchMilestones = async () => {

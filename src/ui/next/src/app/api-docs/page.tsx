@@ -28,7 +28,8 @@ export default function ApiDocsPage() {
         setSpec(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load api-docs spec", err);
         setError("Failed to load API Documentation.");
         setLoading(false);
       });

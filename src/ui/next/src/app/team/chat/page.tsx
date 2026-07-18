@@ -46,10 +46,12 @@ export default function TeamChatPage() {
     const msg = messages.find(m => m.id === msgId);
     if (msg && msg.card && !msg.card.id.endsWith('-card')) {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
         await fetch(`/api/v1/agents/approvals/${msg.card.id}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ approved: true })
         });
@@ -79,10 +81,12 @@ export default function TeamChatPage() {
     }]);
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const response = await fetch('/api/v1/agents/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });

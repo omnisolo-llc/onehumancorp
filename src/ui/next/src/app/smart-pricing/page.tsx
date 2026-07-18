@@ -47,6 +47,7 @@ export default function SmartPricingPage() {
         fetch("/api/v1/agents/approvals/simulate-smart-pricing", {
           method: "POST",
           headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
             "Content-Type": "application/json",
           },
         }).catch(() => {

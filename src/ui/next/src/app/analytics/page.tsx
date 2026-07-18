@@ -14,7 +14,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
-      const savedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const savedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
       setTenant(savedTenant);
     }
   }, []);

@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 const responses: Record<string, unknown> = {
-  "/api/v1/ui/dashboard/unified-feed": {
+  "/api/ui/dashboard/unified-feed": {
     metrics: {
       active_customers: 42,
       pending_orders: 2,
@@ -57,7 +57,7 @@ function jsonResponse(data: unknown) {
 
 describe("CampaignOrchestrationPage", () => {
   it("loads tenant-scoped dashboard data and exposes campaign orchestration paths", async () => {
-    localStorage.setItem("business_display_name", "tenant-123");
+    localStorage.setItem("tenant_id", "tenant-123");
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/api/v1/growth/campaign/generate-review")) {
@@ -81,7 +81,7 @@ describe("CampaignOrchestrationPage", () => {
       expect(screen.queryByText("Campaign Orchestration")).not.toBeNull();
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/v1/ui/dashboard/unified-feed?tenant_id=tenant-123");
+    expect(fetchMock).toHaveBeenCalledWith("/api/ui/dashboard/unified-feed?tenant_id=tenant-123");
     // expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open review workflow/i }).getAttribute("href")).toBe("/review-campaigns");
     expect(screen.getByRole("link", { name: /Open receipt workflow/i }).getAttribute("href")).toMatch(/\/orders(\/order-1001)?/);

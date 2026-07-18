@@ -35,7 +35,7 @@ export default function LoyaltyProgramPage() {
           give_amount: giveAmount,
           get_amount: getAmount,
           reward_type: rewardType,
-          store_name: typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'Store' : 'Store'
+          store_name: typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'
         })
       });
 

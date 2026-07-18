@@ -41,7 +41,7 @@ After the first 50, the next 300 open issues were scanned for code-resolvable fe
 - #22181: Added an AutoDream sync-duration metric recorder and a dashboard-backed test for `ohc_autodream_sync_duration_seconds`.
 - #22180: Fixed - Added test to prevent `hybrid-telemetry.json` drift and synced dashboards.
 - #23937: The dashboard metrics endpoint now reads campaign-sent counts from `agent_actions` instead of hard-coding placeholder values.
-- #23520: Dashboard, order, inbox, and supply UI requests now have Next.js backend proxy routes for the Rust database-backed `/api/v1/ui/*` endpoints.
+- #23520: Dashboard, order, inbox, and supply UI requests now have Next.js backend proxy routes for the Rust database-backed `/api/ui/*` endpoints.
 - #23651: Billing tier usage now reports department-level usage from persisted usage keys rather than static placeholder values.
 - #22350: Campaign repository queries now support database-backed campaign listing and retrieval for dashboard campaign views.
 - #21334: The dashboard campaigns experience now has a backend-backed Next.js page and route coverage instead of an empty placeholder surface.
@@ -84,10 +84,10 @@ The user explicitly requested avoiding mocked APIs and data. This branch therefo
 - `/api/v1/shipping/rates`
 - `/api/v1/shipping/label`
 - `/api/checkout/mercadopago`
-- `/api/v1/ui/dashboard/metrics`
-- `/api/v1/ui/orders`
-- `/api/v1/ui/inbox/messages`
-- `/api/v1/ui/supply`
+- `/api/ui/dashboard/metrics`
+- `/api/ui/orders`
+- `/api/ui/inbox/messages`
+- `/api/ui/supply`
 - `/api/terminal/connection_token`
 - `/api/terminal/create_payment_intent`
 

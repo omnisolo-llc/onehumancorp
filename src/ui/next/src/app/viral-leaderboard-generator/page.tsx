@@ -17,7 +17,7 @@ export default function ViralLeaderboardGeneratorPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
@@ -45,7 +45,7 @@ export default function ViralLeaderboardGeneratorPage() {
   return (
     <div className="ohc-growth-card flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-5xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
-        <div className="flex-1 min-w-0 p-8">
+        <div className="flex-1 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Leaderboard Generator 🏆</h1>
           <p className="text-sm text-gray-600 mb-6">Embed a gamified leaderboard on your storefront to encourage competition and drive more referrals or sales.</p>
 
@@ -94,7 +94,7 @@ export default function ViralLeaderboardGeneratorPage() {
           </button>
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
+        <div className="flex-1 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-2 min-h-[450px]">
               <iframe src={`/api/v1/growth/viral-leaderboard/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}`} className="w-full h-full border-none rounded-xl" />

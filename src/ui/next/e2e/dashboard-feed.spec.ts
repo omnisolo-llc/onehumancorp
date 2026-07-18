@@ -14,7 +14,7 @@ test.describe('Dashboard Actionable Feed', () => {
     const tenantId = 'e2e-tenant-' + Date.now();
 
     // Create an item via the simulate endpoint
-    const simulateResponse = await request.post(`/api/v1/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const simulateResponse = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
     expect(simulateResponse.ok()).toBeTruthy();
 
     await page.goto(`/dashboard?tenant_id=${tenantId}`);

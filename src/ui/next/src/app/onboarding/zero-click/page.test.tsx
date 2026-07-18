@@ -96,9 +96,9 @@ describe('ZeroClickBuilderPage', () => {
     expect(startBody.admin_password).toBeUndefined();
 
     fireEvent.click(launch);
-    expect(localStorage.getItem('business_display_name')).toBeNull();
-    expect(localStorage.getItem('business_display_name')).toBeNull();
-    expect(localStorage.getItem('user_display_name')).toBeNull();
+    expect(localStorage.getItem('tenant_id')).toBeNull();
+    expect(localStorage.getItem('tenant')).toBeNull();
+    expect(localStorage.getItem('user_id')).toBeNull();
   });
 
   it('renders Powered by OHC branding', () => {

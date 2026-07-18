@@ -96,7 +96,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     // Attempt clicking the upgrade path
     try {
       await Promise.all([
-        page.waitForResponse(res => res.url().includes('/api/v1/billing/create-checkout-session'), { timeout: 10000 }),
+        page.waitForResponse(res => res.url().includes('/api/billing/create-checkout-session'), { timeout: 10000 }),
         starterButton.click(),
       ]);
     } catch(e) {

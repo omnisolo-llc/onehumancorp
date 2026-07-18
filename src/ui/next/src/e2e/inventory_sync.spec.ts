@@ -8,7 +8,7 @@ test.describe('Dynamic Centralized Inventory & POS Sync', () => {
     const timestamp = Date.now();
     productId = `prod-test-${timestamp}`;
 
-    await request.post('http://127.0.0.1:18789/api/v1/dev/seed', {
+    await request.post('http://127.0.0.1:18789/api/dev/seed', {
       data: { scenario: 'launch-readiness' }
     });
   });

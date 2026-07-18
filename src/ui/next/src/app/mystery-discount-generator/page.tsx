@@ -21,7 +21,7 @@ export default function MysteryDiscountGeneratorPage() {
   useEffect(() => {
     setIsClient(true);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }

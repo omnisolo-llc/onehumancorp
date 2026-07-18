@@ -12,17 +12,15 @@ export default function ShareToUnlockGeneratorPage() {
   const [shareMessage, setShareMessage] = useState('I just unlocked a secret 20% discount!');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState('');
 
   useEffect(() => {
-    setOrigin(window.location.origin);
     if (typeof localStorage !== 'undefined') {
-      const savedTenant = localStorage.getItem('business_display_name');
+      const savedTenant = localStorage.getItem('tenant');
       if (savedTenant) setTenant(savedTenant);
     }
   }, []);
 
-  const generatedLink = `${origin}/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}&theme=${theme}`;
+  const generatedLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}&theme=${theme}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedLink);

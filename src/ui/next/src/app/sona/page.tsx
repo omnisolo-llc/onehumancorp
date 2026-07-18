@@ -9,7 +9,7 @@ export default function SonaPatternsPage() {
   const [newTool, setNewTool] = useState('');
 
   useEffect(() => {
-    fetch('/api/v1/sona')
+    fetch('/api/sona')
       .then(r => r.json())
       .then(d => {
         if (d.error) {
@@ -77,7 +77,7 @@ export default function SonaPatternsPage() {
           />
           <button
             onClick={() => {
-              fetch('/api/v1/sona', {
+              fetch('/api/sona', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -86,7 +86,7 @@ export default function SonaPatternsPage() {
                   successful_tools: [newTool],
                   outcome_score: 1.0
                 })
-              }).then(() => { fetch('/api/v1/sona').then(r => r.json()).then(d => { if (d.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
+              }).then(() => { fetch('/api/sona').then(r => r.json()).then(d => { if (d.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
             }}
             className="bg-[#0071E3] text-white p-2 rounded w-fit"
             disabled={!newTaskContext || !newTool}

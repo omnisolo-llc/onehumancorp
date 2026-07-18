@@ -73,15 +73,12 @@ beforeEach(() => {
     fireEvent.click(payButton);
 
     await waitFor(() => {
-      const checkoutCall = vi.mocked(global.fetch).mock.calls.find(
-        ([url]) => url === '/api/v1/billing/create-checkout-session'
-      );
-      expect(checkoutCall).toBeDefined();
-      expect(checkoutCall?.[1]).toEqual(expect.objectContaining({
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: expect.objectContaining({
+            'Authorization': 'Bearer fake-token'
+        })
       }));
-      expect(checkoutCall?.[1]?.headers).not.toHaveProperty('Authorization');
       expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test');
     });
   });

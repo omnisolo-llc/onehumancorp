@@ -182,7 +182,7 @@
         const queueEl = document.getElementById('inbox-queue');
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/v1/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
+          const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
           if (!res.ok) throw new Error("Failed to load inbox");
 
           const messages = await res.json();
@@ -273,7 +273,7 @@
         btnElement.disabled = true;
 
         try {
-          const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
             method: 'POST'
           });
 

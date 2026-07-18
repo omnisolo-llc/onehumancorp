@@ -67,7 +67,7 @@ export default function BuilderPage() {
       })
       .catch((err) => console.error("Walkthrough fetch failed:", err));
 
-    const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
+    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
     setIsLoaded(true);
   }, []);

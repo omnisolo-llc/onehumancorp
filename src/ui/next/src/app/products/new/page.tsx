@@ -54,7 +54,7 @@ function AutoCatalogContent() {
         const ext = optimizedBlob.type === 'image/webp' ? '.webp' : e.target.files[0].name.substring(e.target.files[0].name.lastIndexOf('.'));
         formData.append('image', optimizedBlob, e.target.files[0].name.replace(/\.[^\.]+$/, ext));
 
-        const response = await fetch('/api/v1/auto-catalog', {
+        const response = await fetch('/api/auto-catalog', {
           method: 'POST',
           body: formData,
         });

@@ -9,17 +9,17 @@ export default function StoreWrapPage() {
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('my-store');
   const [metrics, setMetrics] = useState({ sales: 0, customers: 0 });
-  const [origin, setOrigin] = useState('');
 
   useEffect(() => {
-    setOrigin(window.location.origin);
     if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
+
+      const token = localStorage.getItem('token') || 'test-token';
 
       fetch('/api/v1/dashboard/metrics', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ tenant_id: storedTenant })
       })
       .then(res => res.json())
@@ -33,7 +33,7 @@ export default function StoreWrapPage() {
     }
   }, []);
 
-  const referralLink = `${origin}/onboarding?ref=${tenant}`;
+  const referralLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/onboarding?ref=${tenant}`;
   const shareText = `My business just generated $${metrics.sales.toLocaleString()} in revenue this year! 🚀 Built and scaled on OHC. Start your own business today and get a $50 credit: ${referralLink}`;
 
   const slides = [
@@ -80,7 +80,7 @@ export default function StoreWrapPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-[40rem] flex-col font-inter bg-[#1D1D1F] text-white overflow-hidden relative">
+    <div className="flex flex-col min-h-screen font-inter bg-[#1D1D1F] text-white overflow-hidden relative">
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between z-50 absolute w-full top-0">
         <h1 className="text-xl font-bold font-outfit tracking-tight text-white/90">Store Wrap-Up 🎁</h1>
@@ -104,7 +104,7 @@ export default function StoreWrapPage() {
         ))}
       </div>
 
-      <main className="flex-1 min-h-0 w-full relative flex items-center justify-center">
+      <main className="flex-1 w-full h-screen relative flex items-center justify-center">
         {slides.map((slide, i) => (
           <div
             key={i}

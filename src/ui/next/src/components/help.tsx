@@ -25,11 +25,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isSafeLink(url: unknown): url is string {
-  return typeof url === "string" && (
-    (url.startsWith("/") && !url.startsWith("//")) ||
-    url.startsWith("https://") ||
-    url.startsWith("http://")
-  );
+  return typeof url === "string" && (url.startsWith("/") || url.startsWith("https://") || url.startsWith("http://"));
 }
 
 function normalizeArticles(data: unknown): HelpArticle[] {

@@ -68,7 +68,7 @@ export default function OrderDetailsPage() {
   const sendReceipt = async () => {
     setSendingReceipt(true);
     try {
-      const tenantId = typeof window !== 'undefined' && localStorage.getItem('business_display_name') ? localStorage.getItem('business_display_name') : 'my-store';
+      const tenantId = typeof window !== 'undefined' && localStorage.getItem('tenant') ? localStorage.getItem('tenant') : 'my-store';
       const response = await fetch('/api/v1/growth/campaign/send-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

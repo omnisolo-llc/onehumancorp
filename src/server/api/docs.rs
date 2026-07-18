@@ -1244,7 +1244,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/v1/orgs/register": {
+            "/api/orgs/register": {
                 "post": {
                     "summary": "Register an Organization",
                     "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
@@ -1283,7 +1283,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/v1/agents/task": {
+            "/api/agents/task": {
                 "post": {
                     "summary": "Dispatch a task",
                     "description": "Dispatches a new task to the AI Swarm Orchestrator.",
@@ -1348,7 +1348,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/v1/agents/status": {
+            "/api/agents/status": {
                 "get": {
                     "summary": "Get workforce status",
                     "description": "Retrieves the current status of the agent swarm workforce.",

@@ -1,24 +1,39 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
-import { jsonRpcRequestTransform } from "@/lib/auth/jsonRpc";
+import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  const response = await proxyBackendRequest(request, "/api/v1/rpc", {
-    requestContentType: "application/json",
-    transformRequestBody: jsonRpcRequestTransform("run_actor_model", (input) => {
-      if (typeof input.message !== "string" || input.message.trim().length === 0) {
-        throw new Error("message is required");
-      }
-      return { message: input.message };
-    }),
-  });
-  if (!response.ok) return response;
+export async function POST(req: Request) {
+  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+
   try {
-    const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json({
-      result: payload?.result?.output ?? "Executed successfully with empty output.",
+    const { message } = await req.json();
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    const rpcRequest = {
+      jsonrpc: "2.0",
+      id: "actor-model-1",
+      method: "run_actor_model",
+      params: { message }
+    };
+
+    const backendRes = await fetch(`${agentUrl}/rpc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rpcRequest),
+      signal: AbortSignal.timeout(60000)
     });
-  } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
+
+    const backendData = await backendRes.json();
+
+    if (backendData.error) {
+       return NextResponse.json({ error: backendData.error.message }, { status: 500 });
+    }
+
+    const resultText = backendData.result?.output || "Executed successfully with empty output.";
+
+    return NextResponse.json({ result: resultText });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

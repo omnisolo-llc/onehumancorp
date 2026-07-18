@@ -24,7 +24,7 @@ test.describe('Mobile Payload Optimization', () => {
 
   test('UI Triage request succeeds with mobile_optimized=true and does not include context or action_payload', async ({ request }) => {
      // Verify the actual endpoint returns 200 OK and valid JSON
-     const response = await request.get(`/api/v1/ui/triage?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/triage?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -39,14 +39,14 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Triage request succeeds with mobile_optimized=false', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/triage?mobile_optimized=false`, { headers });
+     const response = await request.get(`/api/ui/triage?mobile_optimized=false`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
   });
 
   test('UI Inbox request succeeds with mobile_optimized=true and does not include original_message', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/inbox/messages?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/inbox/messages?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -57,14 +57,14 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Inbox request succeeds with mobile_optimized=false', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/inbox/messages?mobile_optimized=false`, { headers });
+     const response = await request.get(`/api/ui/inbox/messages?mobile_optimized=false`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
   });
 
   test('UI Unified Feed request succeeds with mobile_optimized=true', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/dashboard/unified-feed?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/dashboard/unified-feed?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(json.triage).toBeDefined();
@@ -73,7 +73,7 @@ test.describe('Mobile Payload Optimization', () => {
 
 
   test('UI Orders request succeeds with mobile_optimized=true', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/orders?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/orders?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -83,7 +83,7 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Bookings request succeeds with mobile_optimized=true', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/bookings?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/bookings?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();
@@ -94,7 +94,7 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Supply request succeeds with mobile_optimized=true', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/supply?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/supply?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(json.vendors).toBeDefined();
@@ -103,7 +103,7 @@ test.describe('Mobile Payload Optimization', () => {
   });
 
   test('UI Omni Inbox request succeeds with mobile_optimized=true', async ({ request }) => {
-     const response = await request.get(`/api/v1/ui/omni_inbox?mobile_optimized=true`, { headers });
+     const response = await request.get(`/api/ui/omni_inbox?mobile_optimized=true`, { headers });
      expect(response.status()).toBe(200);
      const json = await response.json();
      expect(Array.isArray(json)).toBeTruthy();

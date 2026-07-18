@@ -699,9 +699,9 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
-        const tenant = localStorage.getItem('business_display_name') || 'default-team';
+        const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
-          const res = await fetch('/api/v1/growth/milestones/check');
+          const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
           if (res.ok) {
             const data = await res.json();
             const milestoneContainer = document.getElementById('dynamic-milestones-container');
@@ -772,7 +772,7 @@
 
         if (softPaywallShareBtn) {
           softPaywallShareBtn.addEventListener('click', async () => {
-            const tenantId = localStorage.getItem('business_display_name') || 'DEFAULT';
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
             const message = `I just discovered Advanced AI Automations on OneHumanCorp! This is going to revolutionize how I work. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
@@ -873,7 +873,9 @@
       // Milestone logic
       async function checkMilestones() {
         try {
-          let url = '/api/v1/growth/milestones/check';
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          // Using exact backend URL from playwright config for API requests
+          let url = `/api/v1/growth/milestones/check?tenant=${encodeURIComponent(tenantId)}`;
 
           const res = await fetch(url);
           if (res.ok) {
@@ -961,10 +963,11 @@
           });
         } else {
           try {
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
             const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invitee_id: "pending" })
+                body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
             });
             const data = await res.json();
             referralLink.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
@@ -1027,12 +1030,13 @@
         triageSection.style.display = 'block';
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
-          let url = '/api/v1/ui/dashboard/unified-feed';
+          let url = '/api/ui/dashboard/unified-feed';
           if (false) {
-            url = '/api/v1/ui/dashboard/unified-feed';
+            url = '/api/ui/dashboard/unified-feed';
           }
 
-          const res = await fetch(`${url}?mobile_optimized=true`);
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`);
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
@@ -1084,12 +1088,13 @@
         if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
-          let url = '/api/v1/ui/triage/action';
+          let url = '/api/ui/triage/action';
           if (false) {
-            url = '/api/v1/ui/triage/action';
+            url = '/api/ui/triage/action';
           }
 
-          const res = await fetch(url, {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ triage_item_id: id, approved })

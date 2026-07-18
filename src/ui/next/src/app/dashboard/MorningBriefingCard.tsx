@@ -29,8 +29,8 @@ export function MorningBriefingCard({ tenant }: { tenant: string }) {
     async function loadBriefing() {
 try {
         const [resBriefing, resTriage] = await Promise.all([
-          fetch(`/api/v1/ui/dashboard/analytics/briefing?tenant_id=${encodeURIComponent(tenant)}`),
-          fetch(`/api/v1/ui/triage?tenant_id=${encodeURIComponent(tenant)}`)
+          fetch(`/api/ui/dashboard/analytics/briefing?tenant_id=${encodeURIComponent(tenant)}`),
+          fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenant)}`)
         ]);
 
         if (resBriefing.ok) {
@@ -61,7 +61,7 @@ try {
 
   const handleTriageDecision = async (id: string, approved: boolean) => {
     try {
-      const res = await fetch(`/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(tenant)}`, {
+      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenant)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ triage_item_id: id, approved })
@@ -84,7 +84,7 @@ try {
     setIsChatting(true);
 
     try {
-      const res = await fetch(`/api/v1/ui/dashboard/analytics/chat?tenant_id=${encodeURIComponent(tenant)}`, {
+      const res = await fetch(`/api/ui/dashboard/analytics/chat?tenant_id=${encodeURIComponent(tenant)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMsg }),

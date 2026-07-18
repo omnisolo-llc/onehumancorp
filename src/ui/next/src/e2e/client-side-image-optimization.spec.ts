@@ -25,8 +25,8 @@ test.describe('Client-side Image Optimization', () => {
   });
 
   test('should intercept large images, compress to webp, and upload', async ({ page }) => {
-    // Intercept network requests to /api/v1/auto-catalog
-    await page.route('**/api/v1/auto-catalog', async route => {
+    // Intercept network requests to /api/auto-catalog
+    await page.route('**/api/auto-catalog', async route => {
       const request = route.request();
       const postData = request.postData();
 

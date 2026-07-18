@@ -21,7 +21,7 @@ describe("LogoutButton", () => {
     render(<LogoutButton />);
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
-    expect(fetch).toHaveBeenCalledWith("/api/v1/auth/logout", { method: "POST" });
+    expect(fetch).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
     expect(refresh).toHaveBeenCalled();
   });
 

@@ -9,7 +9,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
     // Simulate DB insertion for a dormant customer
     const insertRes = await page.evaluate(async () => {
       try {
-        const res = await fetch('/api/v1/e2e/db', {
+        const res = await fetch('/api/e2e/db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -40,7 +40,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
     if (!insertRes) {
         await page.evaluate(async () => {
             try {
-              await fetch('/api/v1/e2e/db', {
+              await fetch('/api/e2e/db', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -5,12 +5,12 @@ import Link from 'next/link';
 
 export default function QRCodeGeneratorPage() {
   const [tenantId, setTenantId] = useState('my-store');
-  const [url, setUrl] = useState('https://ohc.app/my-store');
+  const [url, setUrl] = useState('');
   const [qrColor, setQrColor] = useState('#111827');
   const [qrSize, setQrSize] = useState(256);
 
   useEffect(() => {
-    const tenant = localStorage.getItem('business_display_name') || 'my-store';
+    const tenant = localStorage.getItem('tenant') || 'my-store';
     setTenantId(tenant);
     setUrl(`https://ohc.app/${tenant}`);
   }, []);

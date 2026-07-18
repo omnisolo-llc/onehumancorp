@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
+import { marked } from "marked";
 import { WalkthroughTarget } from "./Walkthrough";
 
 type Message = {
@@ -65,7 +66,7 @@ function createMarkup(msgText: string) {
 function isSafeLink(url: unknown): url is string {
   return (
     typeof url === "string" &&
-    ((url.startsWith("/") && !url.startsWith("//")) ||
+    (url.startsWith("/") ||
       url.startsWith("https://") ||
       url.startsWith("http://"))
   );
@@ -202,6 +203,12 @@ export function HelpChat() {
       },
     ]);
   };
+
+  useEffect(() => {
+    const handleOpenHelpChat = () => setIsOpen(true);
+    window.addEventListener("open-help-chat", handleOpenHelpChat);
+    return () => window.removeEventListener("open-help-chat", handleOpenHelpChat);
+  }, []);
 
   return (
     <div className="help-chat-wrapper pointer-events-none">

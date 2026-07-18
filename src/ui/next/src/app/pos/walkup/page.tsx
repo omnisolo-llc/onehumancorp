@@ -10,17 +10,21 @@ export default function WalkupOrderPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [structuredOrder, setStructuredOrder] = useState("");
 
+  const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenant_id") || "default" : "default";
+
   const handleListenOrSubmit = async () => {
     if (!inputText.trim()) return;
 
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/v1/ui/walkup", {
+      const response = await fetch("/api/ui/walkup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
         },
         body: JSON.stringify({
+          tenant_id: tenantId,
           message: inputText
         }),
       });

@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Json, State},
+    extract::{State, Json},
     response::IntoResponse,
     http::StatusCode,
     routing::post,
@@ -68,16 +68,8 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
 
 async fn handle_webhook(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
-    if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(WebhookResponse { success: false, request_id: None }),
-        )
-            .into_response();
-    }
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
         // Trigger SMS notification for new orders

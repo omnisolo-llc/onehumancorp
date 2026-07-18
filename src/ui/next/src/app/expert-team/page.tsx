@@ -13,7 +13,7 @@ export default function ExpertTeamPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/v1/expert-team', {
+      const response = await fetch('/api/expert-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task }),

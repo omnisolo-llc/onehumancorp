@@ -25,7 +25,7 @@ export default function ProjectShowcasePage() {
       const isPro = localStorage.getItem('has_pro') === 'true';
       setHasPro(isPro);
       if (isPro) setRemoveBranding(true);
-      setTenant(localStorage.getItem('business_display_name') || 'demo');
+      setTenant(localStorage.getItem('tenant') || 'demo');
     }
   }, []);
 

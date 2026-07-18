@@ -28,7 +28,7 @@ describe("login page", () => {
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/orders?tab=open"));
-    expect(fetch).toHaveBeenCalledWith("/api/v1/auth/login?next=%2Forders%3Ftab%3Dopen", {
+    expect(fetch).toHaveBeenCalledWith("/api/auth/login?next=%2Forders%3Ftab%3Dopen", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ username: "Alice", password: "correct horse", organization_id: "tenant-7" }),

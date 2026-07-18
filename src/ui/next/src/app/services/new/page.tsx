@@ -20,9 +20,11 @@ export default function NewServicePage() {
     }
     setSaved(true);
     try {
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'anon' : 'anon';
       await fetch('/api/v1/onboarding/state', {
          method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
+         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenant, 'X-User-ID': userId },
          body: JSON.stringify({ services: [{ title, description, price }] })
       });
     } catch (e) { console.error(e); }

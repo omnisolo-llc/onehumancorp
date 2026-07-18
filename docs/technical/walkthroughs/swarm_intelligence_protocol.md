@@ -20,7 +20,7 @@ sequenceDiagram
 ## API Endpoint Example
 
 ```http
-POST /api/v1/mesh/v2/broadcast
+POST /api/mesh/v2/broadcast
 Content-Type: application/json
 
 {

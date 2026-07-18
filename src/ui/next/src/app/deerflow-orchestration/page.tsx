@@ -14,7 +14,7 @@ export default function DeerFlowOrchestration() {
     setError(null);
 
     try {
-      const res = await fetch('/api/v1/deerflow/run', {
+      const res = await fetch('/api/deerflow/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

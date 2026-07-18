@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { proxyBackendRequest } from '@/lib/auth/backendTransport';
 
 function escapeHtml(unsafe: string) {
     if (!unsafe) return unsafe;
@@ -13,11 +12,14 @@ function escapeHtml(unsafe: string) {
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
+    const tenant = searchParams.get('tenant') || 'demo';
     const title = searchParams.get('title') || 'Top Referrers';
+    const metric = searchParams.get('metric') || 'referrers';
     const theme = searchParams.get('theme') || 'light';
     const rawBranding = searchParams.get('branding') !== 'false';
 
     const escapedTitle = escapeHtml(title);
+    const encodedTenant = encodeURIComponent(tenant);
     const isDark = theme === 'dark';
 
     const bg = isDark ? '#1D1D1F' : '#ffffff';
@@ -26,18 +28,15 @@ export async function GET(request: Request) {
     const border = isDark ? '#333333' : '#e5e7eb';
     const rowBg = isDark ? '#27272a' : '#f9fafb';
 
+    const backendUrl = process.env.OHC_CORE_URL || 'http://127.0.0.1:18789';
     let leaderboardData: any[] = [];
     try {
-        const res = await proxyBackendRequest(request, '/api/v1/growth/referrals/leaderboard', {
-            forwardQuery: false,
-            suppressRequestBody: true,
-        });
+        const res = await fetch(`${backendUrl}/api/v1/growth/viral-leaderboard/data?tenant=${encodedTenant}&metric=${encodeURIComponent(metric)}`);
         if (!res.ok) {
             return new NextResponse("Backend service unavailable", { status: 502 });
         }
-        const payload = await res.json();
-        leaderboardData = Array.isArray(payload) ? payload : payload?.leaderboard ?? [];
-    } catch {
+        leaderboardData = await res.json();
+    } catch (e) {
         return new NextResponse("Backend service unavailable", { status: 502 });
     }
 
@@ -154,7 +153,7 @@ export async function GET(request: Request) {
         </div>
         ${rawBranding ? `
         <div class="footer">
-            <a href="/api/v1/growth/referrals/click?target=/onboarding" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
         ` : ''}
     </div>
@@ -165,7 +164,7 @@ export async function GET(request: Request) {
     return new NextResponse(html, {
         headers: {
             'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'private, no-store'
+            'Cache-Control': 'public, max-age=300, s-maxage=300'
         },
     });
 }

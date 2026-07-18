@@ -7,7 +7,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await loginAs(page, E2E_ADMIN_USER);
 
     // Seed a triage item to ensure it's in the list
-    await request.post('/api/v1/dev/simulate-triage-item', {
+    await request.post('/api/dev/simulate-triage-item', {
         data: {
           tenant_id: 'phslc',
           priority: 'High',

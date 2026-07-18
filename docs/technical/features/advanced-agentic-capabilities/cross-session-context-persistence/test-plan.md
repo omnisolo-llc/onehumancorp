@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
 - **Action:** Complete a conversation in Session A. Start Session B and ask a question referencing a fact from Session A. Verify the agent successfully retrieves and utilizes the persisted context.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

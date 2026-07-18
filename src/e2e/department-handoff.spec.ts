@@ -40,7 +40,7 @@ test.describe('Department Handoff Protocol', () => {
         await approveButton.click();
 
         // 5. Assert: The item is removed and marked completed
-        await page.waitForResponse(response => response.url().includes('/api/v1/ui/triage/action') && response.status() === 200);
+        await page.waitForResponse(response => response.url().includes('/api/ui/triage/action') && response.status() === 200);
         await expect(page.locator('text=New Custom Cake Inquiry')).not.toBeVisible();
 
         // Clean up the DB

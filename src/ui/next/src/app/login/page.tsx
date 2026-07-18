@@ -23,7 +23,7 @@ function LoginForm() {
     setError(null);
     const next = safeReturnPath(searchParams.get("next"));
     try {
-      const response = await fetch(`/api/v1/auth/login?next=${encodeURIComponent(next)}`, {
+      const response = await fetch(`/api/auth/login?next=${encodeURIComponent(next)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

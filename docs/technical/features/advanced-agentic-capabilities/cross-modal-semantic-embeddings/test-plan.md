@@ -7,7 +7,7 @@ Validate the end-to-end functionality, security boundaries, and performance cons
 
 ## 2. Test Cases
 ### 2.1 E2E Integration Test: Standard Execution Flow
-- **Setup:** A mock environment with a deterministic database state via `/api/v1/dev/seed`.
+- **Setup:** A mock environment with a deterministic database state via `/api/dev/seed`.
 - **Action:** Submit an image of a red button and a text query 'alert button'. Verify the cross-modal engine returns a similarity score > 0.85.
 - **Assertion:** Verify the operation completes successfully and the correct events are written to `events.jsonl`.
 

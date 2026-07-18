@@ -13,8 +13,8 @@ export default function GrowthReferralWidget() {
     setLoading(true);
     setError('');
     try {
-      const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
-      const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_display_name') || 'local-user') : 'local-user';
+      const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
+      const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
       const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
         method: 'POST',
@@ -148,7 +148,7 @@ export default function GrowthReferralWidget() {
             <div className="w-full md:w-auto">
               <button
                 onClick={() => {
-                  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
+                  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
                   navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
                   alert('Embed code copied to clipboard!');
                 }}

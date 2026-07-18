@@ -23,7 +23,7 @@ describe("authenticated subscription routes", () => {
 
   test("preserves fixed legacy list and detail paths without inbound queries", async () => {
     const listRequest = new Request(
-      "http://localhost/api/v1/subscriptions?tenant_id=attacker",
+      "http://localhost/api/subscriptions?tenant_id=attacker",
     );
     const detailRequest = new Request(
       "http://localhost/api/v1/subscriptions/sub-7?expand=attacker",

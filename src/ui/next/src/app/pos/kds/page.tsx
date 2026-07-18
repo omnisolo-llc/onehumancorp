@@ -33,14 +33,13 @@ export default function KDSPage() {
     const loadData = async () => {
       try {
         const ordersRes = await fetch('/api/v1/pos/orders');
-        if (!ordersRes.ok) throw new Error('Failed to load orders');
         const ordersData = await ordersRes.json();
-        const normalizedOrders = Array.isArray(ordersData) ? ordersData : [];
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        setOrders(ordersData);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(normalizedOrders));
+          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(ordersData));
         }
-      } catch {
+      } catch (err) {
+        console.error('Failed to fetch orders, trying cache', err);
         if (typeof window !== 'undefined') {
           const cached = localStorage.getItem('ohc_pos_kds_orders');
           if (cached) setOrders(JSON.parse(cached));
@@ -49,14 +48,13 @@ export default function KDSPage() {
 
       try {
         const invRes = await fetch('/api/v1/pos/inventory');
-        if (!invRes.ok) throw new Error('Failed to load inventory');
         const invData = await invRes.json();
-        const normalizedInventory = Array.isArray(invData) ? invData : [];
-        setInventory(Array.isArray(invData) ? invData : []);
+        setInventory(invData);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(normalizedInventory));
+          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(invData));
         }
-      } catch {
+      } catch (err) {
+        console.error('Failed to fetch inventory, trying cache', err);
         if (typeof window !== 'undefined') {
           const cached = localStorage.getItem('ohc_pos_kds_inventory');
           if (cached) setInventory(JSON.parse(cached));

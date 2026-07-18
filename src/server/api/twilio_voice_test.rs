@@ -17,10 +17,6 @@ async fn test_twilio_voice_incoming_handler() {
     let pool = crate::db::get_pool();
     let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(pool.clone()) });
 
-    let _ = sqlx::query("INSERT OR IGNORE INTO settings (tenant_id, voice_receptionist_number) VALUES ('test_tenant', '+0987654321')")
-        .execute(&pool)
-        .await;
-
     let transport = crate::mesh::local::LocalMeshTransport::new();
     let node = Arc::new(crate::mesh::CentrifugeNode::new(transport));
     let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), node));

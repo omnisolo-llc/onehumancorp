@@ -23,7 +23,12 @@ function QuotingContent() {
 
     const fetchQuote = async () => {
       try {
-        const res = await fetch(`/api/v1/quotes?id=${quoteId}`);
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+        const res = await fetch(`/api/v1/quotes?id=${quoteId}`, {
+          headers: {
+            'x-tenant-id': tenantId
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           setQuoteData(data);
@@ -74,15 +79,17 @@ function QuotingContent() {
 
     try {
       if (navigator.onLine) {
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
         const updateRes = await fetch(`/api/v1/quotes?id=${quoteId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
           body: JSON.stringify(updatePayload)
         });
         if (!updateRes.ok) throw new Error('Update failed');
 
         const approveRes = await fetch(`/api/v1/quotes/${quoteId}/approve`, {
-          method: 'PATCH'
+          method: 'PATCH',
+          headers: { 'x-tenant-id': tenantId }
         });
         if (!approveRes.ok) throw new Error('Approve failed');
       } else {

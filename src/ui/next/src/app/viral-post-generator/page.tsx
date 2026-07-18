@@ -18,7 +18,7 @@ export default function ViralPostGeneratorPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setHasPro(localStorage.getItem('has_pro') === 'true');
-      const tenant = localStorage.getItem('business_display_name') || 'my-store';
+      const tenant = localStorage.getItem('tenant') || 'my-store';
       setTenantId(tenant);
       const hasShared = localStorage.getItem('ohc_post_gen_shared') === 'true';
       setHasSharedToUnlock(hasShared);

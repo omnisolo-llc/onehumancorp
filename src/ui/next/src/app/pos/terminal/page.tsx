@@ -131,7 +131,7 @@ export default function POSTerminal() {
             try {
               const sessionRes = await fetch('/api/v1/payments/terminal/session/start', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-tenant-id': data.staff.tenant_id },
                 body: JSON.stringify({ device_id: deviceId })
               });
               const sessionData = await sessionRes.json();
@@ -173,7 +173,7 @@ export default function POSTerminal() {
        return;
     }
     try {
-      const res = await fetch('/api/v1/pos/inventory');
+      const res = await fetch('/api/v1/pos/inventory', { headers: { 'x-tenant-id': activeStaff?.tenant_id || 'default' } });
       const data = await res.json();
       setInventory(data.inventory || []);
     } catch (e) {

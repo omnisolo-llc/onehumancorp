@@ -53,8 +53,13 @@ export function VoiceAssistant() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'command.webm');
+      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default');
+
       const response = await fetch("/api/v1/voice/command", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
+        },
         body: formData,
       });
 
@@ -236,12 +241,12 @@ export function VoiceAssistant() {
 
   return (
     <div
-      className="relative z-[100] flex w-auto flex-none flex-col items-end gap-2 pointer-events-none sm:fixed sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-[375px] sm:-translate-x-1/2 sm:items-center sm:gap-4 sm:px-4"
+      className="relative z-[100] flex w-full min-w-0 flex-col items-end gap-2 pointer-events-none sm:fixed sm:bottom-6 sm:left-1/2 sm:w-full sm:max-w-[375px] sm:-translate-x-1/2 sm:items-center sm:gap-4 sm:px-4"
       data-voice-assistant-root
     >
       {status !== "idle" && (
         <div
-          className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] min-w-0 p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto sm:static sm:mt-0 sm:w-full"
+          className="w-full min-w-0 p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto"
           data-voice-assistant-state={status}
           data-voice-assistant-surface="status"
           role="status"
@@ -262,7 +267,7 @@ export function VoiceAssistant() {
 
       <WithTooltip id="voice-assistant-tooltip" defaultText="Hold to speak a command to your AI Assistant.">
         <button
-          className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
             isRecording
               ? "bg-red-500 ring-8 ring-red-500/20 sm:scale-110"
               : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"
@@ -298,9 +303,9 @@ export function VoiceAssistant() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-full h-full rounded-full border-4 border-white/30 animate-ping" />
               <div className="flex gap-1 items-center justify-center">
-                  {[14, 20, 26, 20, 14].map((height, i) => (
+                  {[1,2,3,4,5].map(i => (
                       <div key={i} className="w-1 bg-white rounded-full animate-waveform" style={{
-                          height: `${height}px`,
+                          height: `${Math.random() * 20 + 10}px`,
                           animationDelay: `${i * 0.1}s`
                       }} />
                   ))}

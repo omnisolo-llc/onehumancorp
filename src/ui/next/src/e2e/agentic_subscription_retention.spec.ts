@@ -8,7 +8,7 @@ test.describe('Agentic Subscription Retention CUJ', () => {
     tenantId = await setupAuthAndDatabase(request);
 
     // Mock a subscription with low health score (no recent activity)
-    const seedRes = await request.post('/api/v1/test-db/seed-query', {
+    const seedRes = await request.post('/api/test-db/seed-query', {
       headers: {
         'x-tenant-id': tenantId,
       },

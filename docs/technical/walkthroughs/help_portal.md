@@ -16,7 +16,7 @@ sequenceDiagram
 
     CEO->>Hub: 1. Initialize Hybrid Architecture (Cloud/Standalone)
     Hub-->>CEO: Environment Ready
-    CEO->>Hub: 2. Hire Agents via /api/v1/agents/hire
+    CEO->>Hub: 2. Hire Agents via /api/agents/hire
     Hub->>Agents: Onboard via SPIFFE Identity
     Agents-->>Hub: Ready
     CEO->>Hub: 3. Create Virtual Meeting Room

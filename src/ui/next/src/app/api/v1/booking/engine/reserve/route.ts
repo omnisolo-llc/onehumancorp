@@ -1,30 +1,44 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import { NextResponse } from 'next/server';
 
-const decoder = new TextDecoder("utf-8", { fatal: true });
-const encoder = new TextEncoder();
+export async function POST(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const tenantId = req.headers.get('x-tenant-id') || 'default';
+  const userId = req.headers.get('x-user-id') || 'default';
+  const authHeader = req.headers.get('authorization');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-tenant-id': tenantId,
+    'x-user-id': userId,
+  };
+  if (authHeader) {
+    headers.authorization = authHeader;
+  }
 
-export async function POST(request: Request) {
-  const response = await proxyBackendRequest(request, "/api/v1/booking/reserve", {
-    requestContentType: "application/json",
-    transformRequestBody(body) {
-      const payload = JSON.parse(decoder.decode(body));
-      return encoder.encode(JSON.stringify({
-        customer_id: payload.customer_id,
-        service_id: payload.product_id,
-        start_time: payload.start_time,
-        end_time: payload.end_time,
-      }));
-    },
-  });
-  if (!response.ok) return response;
   try {
-    const payload = await response.json();
-    return Response.json({
-      success: payload.success,
-      booking_id: payload.booking_id,
-      deposit_stripe_link: payload.checkout_url,
+    const body = await req.json();
+    const payload = {
+        customer_id: body.customer_id,
+        service_id: body.product_id,
+        start_time: body.start_time,
+        end_time: body.end_time
+    };
+    const res = await fetch(`${backendUrl}/api/v1/booking/reserve`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
     });
+
+    if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json({
+            success: data.success,
+            booking_id: data.booking_id,
+            deposit_stripe_link: data.checkout_url
+        });
+    }
+
+    return NextResponse.json({ error: 'Failed to reserve time slot' }, { status: res.status });
   } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
+    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }

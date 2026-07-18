@@ -100,7 +100,7 @@ Roles and organization metadata in this local session are display and routing hi
 
 ### Login
 
-`POST /api/v1/auth/login` accepts username, password, and optional organization ID, validates an exact JSON content type, enforces a platform-level body limit before parsing, validates bounded field lengths, and forwards the request server-to-server to `POST /api/v1/auth/login` on the Rust backend. The backend request has a short explicit timeout, cancellation propagation, a bounded response body, and redirect following disabled. It must not reveal whether a username, tenant, or password was the failing element.
+`POST /api/auth/login` accepts username, password, and optional organization ID, validates an exact JSON content type, enforces a platform-level body limit before parsing, validates bounded field lengths, and forwards the request server-to-server to `POST /api/v1/auth/login` on the Rust backend. The backend request has a short explicit timeout, cancellation propagation, a bounded response body, and redirect following disabled. It must not reveal whether a username, tenant, or password was the failing element.
 
 Cloud/multitenant login must receive the organization from an explicit field or a trusted hostname-to-tenant lookup. The backend's current `e2e-tenant` fallback is permitted only in explicit test/local mode and must fail closed in production. A single-tenant production deployment may use an explicitly configured `OHC_DEFAULT_TENANT_ID`; it may not silently inherit a test identifier.
 
@@ -114,7 +114,7 @@ The login page becomes a controlled form with username and password state, nativ
 
 ### Logout
 
-`POST /api/v1/auth/logout` decrypts the current session, calls the backend logout/revocation endpoint with the bearer token when available, and always expires the local cookie. The Rust server does not currently expose HTTP logout, so the implementation adds a protected HTTP endpoint that validates the bearer token and records its JTI in the existing tenant-scoped revocation store. Both layers are idempotent. A backend outage may be reported through safe telemetry, but cannot prevent local logout.
+`POST /api/auth/logout` decrypts the current session, calls the backend logout/revocation endpoint with the bearer token when available, and always expires the local cookie. The Rust server does not currently expose HTTP logout, so the implementation adds a protected HTTP endpoint that validates the bearer token and records its JTI in the existing tenant-scoped revocation store. Both layers are idempotent. A backend outage may be reported through safe telemetry, but cannot prevent local logout.
 
 State-changing session endpoints accept only requests matching a configured canonical origin in addition to `SameSite` cookie protection. The validator does not infer trust from attacker-controlled `Host`, `X-Forwarded-Host`, `Forwarded`, or same-site sibling subdomains unless a specific trusted-proxy/canonical-origin configuration authorizes them. It combines strict `Origin` validation with Fetch Metadata where supported and defines fail-closed behavior for missing/malformed headers.
 

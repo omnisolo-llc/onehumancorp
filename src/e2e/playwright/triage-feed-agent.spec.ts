@@ -6,7 +6,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await loginAs(page, adminUser);
 
     // 2. Simulate an incoming message by hitting the new test endpoint
-    const response = await page.request.post(`/api/v1/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     expect(response.status()).toBe(200);
     const json = await response.json();
     expect(json.success).toBe(true);
@@ -38,7 +38,7 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    const response = await page.request.post(`/api/v1/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
     const triageItemId = json.id;
 
@@ -72,7 +72,7 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Triage feed item shows correct metadata', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    const response = await page.request.post(`/api/v1/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
     const triageItemId = json.id;
 
@@ -91,7 +91,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await loginAs(page, adminUser);
     await page.setViewportSize({ width: 375, height: 812 }); // Mobile
 
-    const response = await page.request.post(`/api/v1/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
     const triageItemId = json.id;
 

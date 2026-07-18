@@ -14,7 +14,7 @@ export default function ReferralFabBuilder() {
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
-      const storedTenant = localStorage.getItem("business_display_name") || "my-business";
+      const storedTenant = localStorage.getItem("tenant") || "my-business";
       setTenantId(storedTenant);
       setHasPro(localStorage.getItem("has_pro") === "true");
     }

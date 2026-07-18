@@ -21,7 +21,10 @@ export default function PricingPage() {
   useEffect(() => {
     const fetchPlanData = async () => {
       try {
-        const response = await fetch('/api/v1/billing/my-plan');
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/billing/my-plan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         if (response.ok) {
           const json = await response.json();
           setCurrentPlan(json.current_plan);
@@ -39,10 +42,12 @@ export default function PricingPage() {
 
   const handleManageBilling = async () => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
       });
 
@@ -62,10 +67,12 @@ export default function PricingPage() {
 
   const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/billing/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ tier, is_subscription: true, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
       });

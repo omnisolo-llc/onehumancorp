@@ -15,7 +15,7 @@ export default function DiagnosticsPage() {
       try {
         const [healthRes, metricsRes] = await Promise.all([
           fetch('/api/v1/health'),
-          fetch('/api/v1/ui/dashboard/metrics')
+          fetch('/api/ui/dashboard/metrics')
         ]);
 
         if (healthRes.ok) {

@@ -22,7 +22,11 @@ export default function PromoterPage() {
   useEffect(() => {
     async function loadProposals() {
       try {
-        const response = await fetch('/api/v1/campaign/proposals');
+        const response = await fetch('/api/v1/campaign/proposals', {
+          headers: {
+            'x-tenant-id': localStorage.getItem('tenantId') || 'default',
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           setProposals(data.proposals || []);

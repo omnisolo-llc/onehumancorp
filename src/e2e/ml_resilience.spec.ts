@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test('AI Agent Paused state appears when LLM API fails', async ({ page, request }) => {
-    await request.post("/api/v1/e2e/setup", {
+    await request.post("/api/e2e/setup", {
       data: {
         query: `
           INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)

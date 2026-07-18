@@ -24,7 +24,7 @@ X-OHC-Dev-Token: <OHC_DEV_TOKEN>  # (Optional, local development only)
 
 ### 3.1 KAIROS Sub-Agent Queue Orchestration
 
-**Endpoint:** `POST /api/v1/queue/subagent`
+**Endpoint:** `POST /api/queue/subagent`
 Enqueues a sub-agent task into the distributed queue.
 
 **Payload:**
@@ -48,7 +48,7 @@ Enqueues a sub-agent task into the distributed queue.
 
 ### 3.2 Teammate Mesh v2 (Centrifuge)
 
-**Endpoint:** `POST /api/v1/mesh/v2/broadcast`
+**Endpoint:** `POST /api/mesh/v2/broadcast`
 Broadcasts a validated state machine event over structured Centrifuge channels.
 
 **Payload:**
@@ -66,7 +66,7 @@ Broadcasts a validated state machine event over structured Centrifuge channels.
 
 ### 3.3 Agents List
 
-**Endpoint:** `GET /api/v1/agents`
+**Endpoint:** `GET /api/agents`
 Returns a list of all configured agents within the OHC swarm.
 
 ## 4. Standalone vs. Cloud Routing
@@ -89,11 +89,11 @@ The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
 **Testing with cURL (Local Development):**
 ```bash
 # Get list of agents
-curl -X GET "http://localhost:8080/api/v1/agents" \
+curl -X GET "http://localhost:8080/api/agents" \
   -H "X-OHC-Dev-Token: <your_dev_token>"
 
 # Broadcast an event
-curl -X POST "http://localhost:8080/api/v1/mesh/v2/broadcast" \
+curl -X POST "http://localhost:8080/api/mesh/v2/broadcast" \
   -H "Content-Type: application/json" \
   -H "X-OHC-Dev-Token: <your_dev_token>" \
   -d '{
@@ -103,7 +103,7 @@ curl -X POST "http://localhost:8080/api/v1/mesh/v2/broadcast" \
   }'
 
 # Enqueue a new task
-curl -X POST "http://localhost:8080/api/v1/queue/subagent" \
+curl -X POST "http://localhost:8080/api/queue/subagent" \
   -H "Content-Type: application/json" \
   -H "X-OHC-Dev-Token: <your_dev_token>" \
   -d '{
@@ -131,7 +131,7 @@ curl -X POST "http://localhost:8080/api/v1/tasks/123e4567-e89b-12d3-a456-4266141
 ```
 
 **Interactive Swagger Docs:**
-For real-time testing, navigate to `/api-docs` in your local setup, which exposes the Swagger/OpenAPI portal and integrates with WebSockets. The API specification it loads is versioned at `/api/v1/api-docs-spec`.
+For real-time testing, navigate to `/api/docs` in your local setup, which exposes the Swagger/OpenAPI portal and integrates with WebSockets.
 
 
 
@@ -162,7 +162,7 @@ graph TD
 
 *   **Broadcast Message**
     *   **Method**: `POST`
-    *   **Path**: `/api/v1/mesh/v2/broadcast`
+    *   **Path**: `/api/mesh/v2/broadcast`
     *   **Description**: Broadcasts a message to a specific mesh channel.
     *   **Payload Example**:
         ```json
@@ -195,7 +195,7 @@ graph TD
 The Shared Task List handles state-machine validation and task-dependency resolution for asynchronous agent swarms.
 
 ### 7.1 Enqueue Task
-**Endpoint:** `POST /api/v1/queue/subagent`
+**Endpoint:** `POST /api/queue/subagent`
 Queues a new task for sub-agents to claim.
 
 **Payload:**
@@ -257,7 +257,7 @@ sequenceDiagram
     participant DB as Shared Task DB
     participant Agent as Worker Agent
 
-    Orchestrator->>Hub: POST /api/v1/queue/subagent (Enqueue)
+    Orchestrator->>Hub: POST /api/queue/subagent (Enqueue)
     Hub->>DB: INSERT PENDING Task
     DB-->>Hub: Task Enqueued
 

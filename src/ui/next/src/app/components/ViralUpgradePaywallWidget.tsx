@@ -10,7 +10,7 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
   useEffect(() => {
     let currentTenant = tenantId;
     if (typeof window !== "undefined") {
-      const storedTenant = localStorage.getItem("business_display_name");
+      const storedTenant = localStorage.getItem("tenant_id") || localStorage.getItem("tenant");
       if (storedTenant) {
         currentTenant = storedTenant;
       }

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Walkthrough and Tooltips features', () => {
   test('Dashboard walkthrough and help center elements are visible and work', async ({ page }) => {
     // Navigate using the admin credentials implicitly logged in by global setup, or just go directly
-    await page.goto('/api/v1/ui/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#dashboard-walkthrough-btn');
@@ -96,7 +96,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Tooltips are injected into the page', async ({ page }) => {
-    await page.goto('/api/v1/ui/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check tooltips registry is available
     const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
@@ -105,7 +105,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Help Center elements are visible', async ({ page }) => {
-    await page.goto('/api/v1/ui/help.html');
+    await page.goto('/api/ui/help.html');
 
     // Verify title
     await expect(page.locator('h1')).toHaveText('In-App Help Center');

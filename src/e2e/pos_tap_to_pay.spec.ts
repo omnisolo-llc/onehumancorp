@@ -6,7 +6,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
   test('Completes a Tap-to-Pay transaction and triggers low stock alert on dashboard', async ({ page }) => {
 
     // Mock network request to return the dashboard data including AI alert
-    await page.route('**/api/v1/dashboard', async (route) => {
+    await page.route('**/api/dashboard', async (route) => {
       const response = await route.fetch();
       let body: any = {};
       try {
@@ -32,7 +32,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     });
 
     // 1. Mock login as Priya and land on dashboard
-    await page.goto('/api/v1/staff');
+    await page.goto('/api/staff');
     await page.evaluate(() => {
         localStorage.setItem('token', 'test_token');
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Priya', role: 'Owner', pin_hash: '1234' }]));

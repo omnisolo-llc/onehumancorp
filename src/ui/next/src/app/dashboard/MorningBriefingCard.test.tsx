@@ -20,13 +20,13 @@ describe('MorningBriefingCard', () => {
 
   it('renders loading state initially and then fetches data successfully', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ briefing: 'Test briefing' })
         });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
@@ -55,10 +55,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles fetch failure for briefing gracefully', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: false });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -73,10 +73,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles empty briefing gracefully', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -91,10 +91,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles fetch exception for briefing gracefully', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.reject(new Error('network error'));
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -114,13 +114,13 @@ describe('MorningBriefingCard', () => {
     ];
 
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage/action')) {
+      if (url.includes('/api/ui/triage/action')) {
         return Promise.resolve({ ok: true });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTriageItems) });
       }
       return Promise.reject(new Error('not found'));
@@ -139,7 +139,7 @@ describe('MorningBriefingCard', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/ui/triage/action'),
+        expect.stringContaining('/api/ui/triage/action'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ triage_item_id: '1', approved: true })
@@ -153,7 +153,7 @@ describe('MorningBriefingCard', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/ui/triage/action'),
+        expect.stringContaining('/api/ui/triage/action'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ triage_item_id: '2', approved: false })
@@ -169,13 +169,13 @@ describe('MorningBriefingCard', () => {
     ];
 
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage/action')) {
+      if (url.includes('/api/ui/triage/action')) {
         return Promise.resolve({ ok: false }); // Failure
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTriageItems) });
       }
       return Promise.reject(new Error('not found'));
@@ -204,13 +204,13 @@ describe('MorningBriefingCard', () => {
 
   it('handles insight chat correctly', async () => {
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
+      if (url.includes('/api/ui/dashboard/analytics/chat')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ reply: 'Test chat reply' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -235,7 +235,7 @@ describe('MorningBriefingCard', () => {
       expect(screen.getByText('Hello agent')).toBeInTheDocument();
       expect(screen.getByText('Test chat reply')).toBeInTheDocument();
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/ui/dashboard/analytics/chat'),
+        expect.stringContaining('/api/ui/dashboard/analytics/chat'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ message: 'Hello agent' })
@@ -246,13 +246,13 @@ describe('MorningBriefingCard', () => {
 
   it('handles insight chat failures gracefully', async () => {
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
+      if (url.includes('/api/ui/dashboard/analytics/chat')) {
         return Promise.resolve({ ok: false }); // Non-ok response
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -279,13 +279,13 @@ describe('MorningBriefingCard', () => {
 
   it('handles insight chat exception gracefully', async () => {
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
+      if (url.includes('/api/ui/dashboard/analytics/chat')) {
         return Promise.reject(new Error('Network error'));
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -312,10 +312,10 @@ describe('MorningBriefingCard', () => {
 
   it('does not send empty chat message', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -338,7 +338,7 @@ describe('MorningBriefingCard', () => {
 
     // Check it wasn't called (the input only has spaces which gets trimmed)
     expect(global.fetch).not.toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/ui/dashboard/analytics/chat'),
+        expect.stringContaining('/api/ui/dashboard/analytics/chat'),
         expect.anything()
     );
   });
@@ -346,10 +346,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles resTriage ok branch', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: [{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: 'Test Action' }] }) });
       }
       return Promise.reject(new Error('not found'));
@@ -364,10 +364,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles empty action_type branch', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: '1', source: 'Decision Assistant', context: 'Test triage item', action_type: '' }]) });
       }
       return Promise.reject(new Error('not found'));
@@ -382,13 +382,13 @@ describe('MorningBriefingCard', () => {
 
   it('handles chat fallback reply correctly', async () => {
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
+      if (url.includes('/api/ui/dashboard/analytics/chat')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -416,13 +416,13 @@ describe('MorningBriefingCard', () => {
     let resolveChatPromise: any;
     const chatPromise = new Promise((resolve) => { resolveChatPromise = resolve; });
     (global.fetch as any).mockImplementation((url: string, options: any) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/dashboard/analytics/chat')) {
+      if (url.includes('/api/ui/dashboard/analytics/chat')) {
         return chatPromise;
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       }
       return Promise.reject(new Error('not found'));
@@ -461,10 +461,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles resTriage root items object fallback branch', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ items: undefined }) }); // Fallback
       }
       return Promise.reject(new Error('not found'));
@@ -479,10 +479,10 @@ describe('MorningBriefingCard', () => {
 
   it('handles resTriage failure branch', async () => {
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('/api/v1/ui/dashboard/analytics/briefing')) {
+      if (url.includes('/api/ui/dashboard/analytics/briefing')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ briefing: 'Briefing' }) });
       }
-      if (url.includes('/api/v1/ui/triage')) {
+      if (url.includes('/api/ui/triage')) {
         return Promise.resolve({ ok: false });
       }
       return Promise.reject(new Error('not found'));

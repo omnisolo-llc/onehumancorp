@@ -112,7 +112,7 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load telemetry settings", e)),
 
-      fetch("/api/v1/local_seo/discovery_report")
+      fetch("/api/local_seo/discovery_report")
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {

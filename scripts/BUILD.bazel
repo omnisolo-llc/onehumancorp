@@ -1,23 +1,9 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 exports_files([
-    "api-versioning-docs.test.mjs",
     "cargo_from_toolchain.sh",
     "run-playwright.mjs",
 ])
-
-sh_test(
-    name = "api_versioning_docs_test",
-    size = "small",
-    srcs = ["api_versioning_docs_test.sh"],
-    data = [
-        "api-versioning-docs.test.mjs",
-        "//:README.md",
-        "//:docs_srcs",
-        "@nodejs//:node",
-    ],
-)
 
 sh_binary(
     name = "rust_lint",

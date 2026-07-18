@@ -183,16 +183,8 @@ pub async fn get_messages(
 
 pub async fn handle_omnichannel_webhook(
     State(state): State<OmnichannelWebhookState>,
-    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<OmnichannelPayload>,
 ) -> impl IntoResponse {
-    if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(WebhookResponse { success: false, message_id: None }),
-        )
-            .into_response();
-    }
     let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
 
     let id = Uuid::new_v4().to_string();

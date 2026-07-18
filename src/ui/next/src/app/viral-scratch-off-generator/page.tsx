@@ -16,7 +16,7 @@ export default function ViralScratchOffGeneratorPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
+      setTenant(localStorage.getItem('tenant_id') || 'DEFAULT');
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);

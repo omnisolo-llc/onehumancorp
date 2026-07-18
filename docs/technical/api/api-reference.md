@@ -26,7 +26,7 @@ All endpoints are secured via SPIFFE/SPIRE zero-trust principles or an OIDC JWT.
 
 **Example Request:**
 ```bash
-curl -X GET https://api.ohc.local/api/v1/agents/status \
+curl -X GET https://api.ohc.local/v1/agents/status \
   -H "Authorization: Bearer <JWT_OR_SVID>" \
   -H "X-OHC-Tenant-ID: org_acme_123"
 ```
@@ -37,7 +37,7 @@ curl -X GET https://api.ohc.local/api/v1/agents/status \
 
 ### 3.1 Organization Provisioning
 
-**Endpoint:** `POST /api/v1/orgs/register`
+**Endpoint:** `POST /api/orgs/register`
 Provisions a new organization in multi-tenant mode.
 
 **Payload:**
@@ -55,10 +55,10 @@ Provisions a new organization in multi-tenant mode.
 
 ### 3.2 Agent Management & Hiring
 
-**Endpoint:** `GET /api/v1/agents`
+**Endpoint:** `GET /api/agents`
 Retrieves a list of active agents within the current tenant scope.
 
-**Endpoint:** `POST /api/v1/agents/hire`
+**Endpoint:** `POST /api/agents/hire`
 Requests a new agent capability. This triggers dynamic tool registration via MCP.
 </div>
 
@@ -94,10 +94,10 @@ Delegate a subtask to an autonomous agent. The Hub handles provisioning and VRAM
 
 ### 3.4 Swarm Orchestration (Legacy/Internal)
 
-**Endpoint:** `GET /api/v1/orchestration/tasks`
+**Endpoint:** `GET /api/orchestration/tasks`
 Retrieves a list of all active orchestration tasks in the queue. Supports pagination.
 
-**Endpoint:** `POST /api/v1/orchestration/tasks`
+**Endpoint:** `POST /api/orchestration/tasks`
 Submit a new task to the swarm.
 
 **Payload:**
@@ -113,7 +113,7 @@ Submit a new task to the swarm.
 
 ### 3.5 Teammate Mesh Communications (v1)
 
-**Endpoint:** `POST /api/v1/mesh/broadcast`
+**Endpoint:** `POST /api/mesh/broadcast`
 Broadcasts an event or message to a specific topic within the real-time Teammate Mesh.
 
 **Payload:**
@@ -128,7 +128,7 @@ Broadcasts an event or message to a specific topic within the real-time Teammate
 }
 ```
 
-**Endpoint:** `GET /api/v1/mesh/subscribe`
+**Endpoint:** `GET /api/mesh/subscribe`
 Subscribe to Teammate Mesh events.
 
 **Query Parameters:**
@@ -157,7 +157,7 @@ Adjust the number of concurrent agents for a specific role in real-time.
 
 ### 3.8 Hybrid RAG Sync
 
-**Endpoint:** `POST /api/v1/missions/sync`
+**Endpoint:** `POST /api/missions/sync`
 Synchronize local SQLite context to the cloud Postgres orchestration engine.
 
 **Headers:**
@@ -196,7 +196,7 @@ Channels:
 ### AutoDream Data Pipelines (pgvector)
 The API supports AutoDream pipelines where the backend background workers process `agent_session_data` and any `*.yml` files found under `OHC_MEMORY_DIR`.
 
-**Endpoint:** `POST /api/v1/mesh/broadcast`
+**Endpoint:** `POST /api/mesh/broadcast`
 Allows agents to publish messages to the mesh.
 
 **Payload:**
@@ -276,7 +276,7 @@ Trigger the AutoDream vector pipeline to process shared memory and generate new 
 
 ### 4.4 KAIROS Sub-Agent Queue API
 
-**Endpoint:** `POST /api/v1/queue/subagent`
+**Endpoint:** `POST /api/queue/subagent`
 Enqueues a sub-agent task into the highly available distributed queue (backed by Redis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
 
 **Payload:**
@@ -310,7 +310,7 @@ sequenceDiagram
     participant Queue as Sub-Agent Queue
     participant Worker as Sub-Agent
 
-    API->>Queue: POST /api/v1/queue/subagent
+    API->>Queue: POST /api/queue/subagent
     Queue->>DB: Record Task (PENDING)
     Worker->>Queue: Poll/Subscribe
     Worker->>DB: FOR UPDATE SKIP LOCKED
@@ -385,7 +385,7 @@ stateDiagram-v2
 
 ### 4.6 Teammate Mesh v2 (Centrifuge)
 
-**Endpoint:** `POST /api/v1/mesh/v2/broadcast`
+**Endpoint:** `POST /api/mesh/v2/broadcast`
 Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
 
 **Payload:**
@@ -422,13 +422,13 @@ graph TD
 #### Sub-Agent Queuing Workflow
 ```mermaid
 graph TD
-    Manager[Task Manager] -->|Enqueues| API[POST /api/v1/queue/subagent]
+    Manager[Task Manager] -->|Enqueues| API[POST /api/queue/subagent]
     API --> QueueInterface{SubAgent Queue Interface}
     QueueInterface -->|Cloud-Native| Redis[(Redis ZSETs)]
     QueueInterface -->|Standalone| SQLite[(SQLite Mutexed Table)]
     Redis -->|Dequeues| Worker[Sub-Agent Worker]
     SQLite -->|Dequeues| Worker
-    Worker -->|State Transition| V2Mesh[POST /api/v1/mesh/v2/broadcast]
+    Worker -->|State Transition| V2Mesh[POST /api/mesh/v2/broadcast]
     V2Mesh --> Centrifuge[Centrifuge Node Pub/Sub]
     Centrifuge --> Swarm[Teammate Swarm]
 
@@ -493,7 +493,7 @@ graph TD
 
 ### 4.8 Health & Diagnostics
 
-**Endpoint:** `GET /api/v1/health`
+**Endpoint:** `GET /api/health`
 Verifies the backend health programmatically. Checks connectivity to Postgres, Redis, and the internal agent runtime.
 
 **Response (200 OK):**

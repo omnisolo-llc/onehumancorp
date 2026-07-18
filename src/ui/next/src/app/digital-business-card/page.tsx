@@ -25,7 +25,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      const tenant = localStorage.getItem('business_display_name') || 'my-store';
+      const tenant = localStorage.getItem('tenant') || 'my-store';
       setTenantId(tenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
 

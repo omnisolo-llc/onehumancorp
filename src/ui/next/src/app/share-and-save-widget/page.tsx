@@ -11,7 +11,7 @@ export default function ShareAndSaveWidgetPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const tid = localStorage.getItem('business_display_name') || 'DEFAULT';
+      const tid = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
       setTenantId(tid);
     }
   }, []);

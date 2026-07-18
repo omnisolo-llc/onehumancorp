@@ -89,7 +89,7 @@ Thin clients connect via standard REST/gRPC.
 
 | Endpoint | Method | Role | Response |
 | :--- | :--- | :--- | :--- |
-| `/api/v1/auth/handshake` | `POST` | Exchanges credentials/OAuth for JWT. | `{ "token": "...", "tenant_id": "...", "mode": "cloud" }` |
+| `/api/auth/handshake` | `POST` | Exchanges credentials/OAuth for JWT. | `{ "token": "...", "tenant_id": "...", "mode": "cloud" }` |
 | `/api/sync/state` | `GET` | Fetches delta updates for offline support. | `{ "meetings": [...], "agents": [...] }` |
 | `/api/agents/command` | `POST` | Dispatches instructions to the swarm. | `{ "task_id": "123", "status": "processing" }` |
 

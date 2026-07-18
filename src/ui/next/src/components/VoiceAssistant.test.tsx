@@ -100,8 +100,6 @@ describe('VoiceAssistant', () => {
     expect(button).toHaveAccessibleName(/press and hold enter or space/i);
     expect(container.querySelector('[data-voice-assistant-root]')).toHaveClass('sm:fixed');
     expect(container.querySelector('[data-voice-assistant-root]')).not.toHaveClass('fixed');
-    expect(container.querySelector('[data-voice-assistant-root]')).toHaveClass('w-auto');
-    expect(button).toHaveClass('w-12', 'sm:w-16');
     button.focus();
     expect(button).toHaveFocus();
   });

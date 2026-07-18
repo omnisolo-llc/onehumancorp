@@ -683,7 +683,7 @@
       async function fetchQueue() {
         try {
             const tenantId = localStorage.getItem('tenant_id') || 'default';
-            const res = await fetch(`/api/v1/ui/orders?tenant_id=${tenantId}&mobile_optimized=true`, {
+            const res = await fetch(`/api/ui/orders?tenant_id=${tenantId}&mobile_optimized=true`, {
                 headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
             });
             if (res.ok) {

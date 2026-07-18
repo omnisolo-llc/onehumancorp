@@ -15,10 +15,36 @@ export class SyncManager {
   }
 
   private connectWebSocket() {
-    // Next.js route handlers cannot safely proxy a WebSocket upgrade while keeping
-    // the server-issued session credential private. The native desktop client owns
-    // authenticated real-time streams; the web client uses the authenticated HTTP
-    // sync routes below and must never construct a tenant-bearing socket URL.
+    if (typeof window === 'undefined') return;
+    const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/v1/sync/ws?tenant_id=${tenantId}&topics=inventory,orders,tenant_events`;
+
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      if (typeof window !== 'undefined') {
+        try {
+          const payload = JSON.parse(event.data);
+          // sync_gateway wraps messages in { channel: "...", payload: "..." }
+          if (payload && payload.channel && payload.channel.startsWith('tenant_events:')) {
+            window.dispatchEvent(new CustomEvent('ohc_event_received', { detail: payload.payload }));
+          }
+        } catch (e) {
+          // Fallback if the payload is not JSON or wrapped
+          if (typeof event.data === 'string' && event.data.includes('tenant_events')) {
+             window.dispatchEvent(new CustomEvent('ohc_event_received', { detail: event.data }));
+          }
+        }
+        window.dispatchEvent(new Event('ohc_queue_updated'));
+      }
+    };
+    ws.onclose = () => {
+      setTimeout(() => this.connectWebSocket(), 5000);
+    };
+    ws.onerror = (err) => {
+      console.error('Sync WebSocket error', err);
+      ws.close();
+    };
   }
 
   public static getInstance(): SyncManager {
@@ -167,13 +193,16 @@ export class SyncManager {
         });
 
       let allOkFinal = true;
+      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       if (posSyncEvents.length > 0) {
         try {
           const resSyncEvents = await fetch('/api/v1/sync/events', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
             },
             body: JSON.stringify({ events: posSyncEvents })
           });
@@ -205,7 +234,8 @@ export class SyncManager {
           const resCrdt = await fetch('/api/v1/sync/mcp-deltas', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
             },
             body: JSON.stringify({ deltas: crdtDeltas })
           });
@@ -226,7 +256,7 @@ export class SyncManager {
         try {
           const res = await fetch(`/api/v1/quotes?id=${update.quoteId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
             body: JSON.stringify(update.payload)
           });
           this.checkRateLimit(res);
@@ -245,7 +275,7 @@ export class SyncManager {
         try {
           const res = await fetch(`/api/v1/quotes/${approval.quoteId}/approve`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
           });
           this.checkRateLimit(res);
           if (!res.ok) {
@@ -265,7 +295,8 @@ export class SyncManager {
           const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
             },
             body: JSON.stringify({
               session_id: sessionId || undefined,
@@ -309,7 +340,9 @@ export class SyncManager {
           const resIntents = await fetch('/api/v1/sync/operation-intents', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId,
+              'x-tenant-id': tenantId
             },
             body: JSON.stringify({ intents: mappedIntents })
           });
@@ -332,7 +365,8 @@ export class SyncManager {
           const resSync = await fetch('/api/v1/sync/events', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
             },
             body: JSON.stringify({ events: eventsPayload })
           });
@@ -354,7 +388,8 @@ export class SyncManager {
           const resGen = await fetch('/api/v1/sync/offline', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
             },
             body: JSON.stringify({ mutations: generalGenMutations })
           });
@@ -384,10 +419,11 @@ export class SyncManager {
       const triageActions = generalMutations.filter(m => m.type === 'triage_action');
       for (const action of triageActions) {
         try {
-          const res = await fetch('/api/v1/ui/triage/action', {
+          const res = await fetch(`/api/ui/triage/action?tenant_id=${tenantId}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
               'Idempotency-Key': action.id
             },
             body: JSON.stringify(action.payload)
@@ -411,6 +447,7 @@ export class SyncManager {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
               'Idempotency-Key': action.id
             },
             body: JSON.stringify({ approved: action.payload.approved })
@@ -435,6 +472,7 @@ export class SyncManager {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
               'Idempotency-Key': action.id
             },
             body: JSON.stringify(action.payload)
@@ -458,6 +496,7 @@ export class SyncManager {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
               'Idempotency-Key': action.id
             },
             body: JSON.stringify(action.payload)
@@ -480,6 +519,7 @@ export class SyncManager {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
               'Idempotency-Key': action.id
             },
             body: JSON.stringify({ action: action.payload.action })

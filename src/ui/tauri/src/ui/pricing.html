@@ -388,7 +388,7 @@
         }
 
         try {
-            const planRes = await fetch('/api/v1/billing/my-plan', { headers });
+            const planRes = await fetch('/api/billing/my-plan', { headers });
             if (planRes.ok) {
                 const planData = await planRes.json();
                 const currentPlan = planData.current_plan || 'Free'; // e.g. "Free", "Starter", "Pro", "Business"
@@ -440,7 +440,7 @@
           const headers = { 'Content-Type': 'application/json' };
           if (tenant) { headers['x-tenant-id'] = tenant; }
           if (token) { headers['Authorization'] = `Bearer ${token}`; }
-          const response = await fetch('/api/v1/billing/create-billing-portal-session', {
+          const response = await fetch('/api/billing/create-billing-portal-session', {
             method: 'POST',
             headers: headers
           });
@@ -481,7 +481,7 @@
           const toggle = document.getElementById('billing-toggle');
           const isAnnual = toggle ? toggle.checked : false;
 
-          const response = await fetch('/api/v1/billing/create-checkout-session', {
+          const response = await fetch('/api/billing/create-checkout-session', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({

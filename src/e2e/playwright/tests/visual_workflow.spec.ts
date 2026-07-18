@@ -26,7 +26,7 @@ test.describe('Visual Workflow Orchestrator', () => {
     await expect(page.getByText('node-1 → node-2')).toBeVisible();
 
     // Run the workflow
-    // It should hit the actual API at /api/v1/workflow/run, and return the input string because we connected Input directly to Output.
+    // It should hit the actual API at /api/workflow/run, and return the input string because we connected Input directly to Output.
     // This tests the real backend architecture block-based visual workflow (nodes, edges parsing, without needing a real LLM provider API key).
     await page.getByRole('button', { name: 'Run Workflow' }).click();
 

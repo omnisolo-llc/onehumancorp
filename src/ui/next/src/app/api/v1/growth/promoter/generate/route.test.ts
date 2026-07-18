@@ -1,25 +1,72 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { POST } from './route';
 
-const { proxyBackendRequest } = vi.hoisted(() => ({ proxyBackendRequest: vi.fn() }));
-vi.mock("@/lib/auth/backendTransport", () => ({ proxyBackendRequest }));
+describe('POST /api/v1/growth/promoter/generate', () => {
+  let mockBackendUrl = 'http://mock-backend';
 
-import { POST } from "./route";
+  beforeEach(() => {
+    vi.stubEnv('BACKEND_URL', mockBackendUrl);
+    global.fetch = vi.fn();
+  });
 
-describe("POST /api/v1/growth/promoter/generate", () => {
-  beforeEach(() => proxyBackendRequest.mockReset());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetAllMocks();
+  });
 
-  it("delegates identity and backend I/O to the authenticated transport", async () => {
-    const upstream = new Response("{}", { status: 200 });
-    proxyBackendRequest.mockResolvedValue(upstream);
-    const request = new Request(`https://app.example.test/api/v1/growth/promoter/generate?tenant_id=forged`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-tenant-id": "forged" },
-      body: "{}",
+  it('returns generated posts via backend API', async () => {
+    const mockResponse = {
+      instagram: 'Backend IG',
+      twitter: 'Backend TW',
+      email: 'Backend EM'
+    };
+
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse
     });
 
-    const response = await POST(request);
+    const req = new Request('http://localhost/api/v1/growth/promoter/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        product_name: 'Summer Dress',
+        description: 'Perfect for the beach.',
+        theme: 'summer',
+        tenant: 'my-boutique'
+      }),
+    });
 
-    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/promoter/generate");
-    expect(response).toBe(upstream);
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual(mockResponse);
+  });
+
+  it('returns generated posts with viral branding when backend fails', async () => {
+    (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const req = new Request('http://localhost/api/v1/growth/promoter/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        product_name: 'Summer Dress',
+        description: 'Perfect for the beach.',
+        theme: 'summer',
+        tenant: 'my-boutique'
+      }),
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(502);
+
+
   });
 });

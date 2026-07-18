@@ -15,7 +15,10 @@ export default function CustomerSubscriptionPortal() {
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
-        const res = await fetch(`/api/v1/subscriptions/${subscriptionId}`);
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        const res = await fetch(`/api/v1/subscriptions/${subscriptionId}`, {
+          headers: { "x-tenant-id": tenantId }
+        });
         if (res.ok) {
           const data = await res.json();
           setSubscription(data);
@@ -34,10 +37,12 @@ export default function CustomerSubscriptionPortal() {
     setActionStatus(null);
 
     try {
+      const tenantId = localStorage.getItem("tenant_id") || "default";
       const res = await fetch(`/api/v1/subscriptions/${subscriptionId}/action`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-tenant-id": tenantId,
         },
         body: JSON.stringify({ action }),
       });
@@ -65,7 +70,9 @@ export default function CustomerSubscriptionPortal() {
 
         // Re-fetch to get correct nextDeliveryDate if skipped
         if (action === 'skip') {
-           const refresh = await fetch(`/api/v1/subscriptions/${subscriptionId}`);
+           const refresh = await fetch(`/api/v1/subscriptions/${subscriptionId}`, {
+              headers: { "x-tenant-id": tenantId }
+           });
            if (refresh.ok) {
               setSubscription(await refresh.json());
            }

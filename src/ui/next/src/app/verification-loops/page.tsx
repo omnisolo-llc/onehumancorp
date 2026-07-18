@@ -15,7 +15,7 @@ export default function VerificationLoopsPage() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/v1/verification-loops', {
+      const response = await fetch('/api/verification-loops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

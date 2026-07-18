@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Tooltip Registry', () => {
   test('Persona: Admin updates dynamic tooltips', async ({ page }) => {
-    // We append /api/v1/ui/ since this is served via backend in testing
+    // We append /api/ui/ since this is served via backend in testing
     await page.goto('/tooltip-registry.html');
     await expect(page.locator('h1')).toHaveText('Tooltip Registry');
 

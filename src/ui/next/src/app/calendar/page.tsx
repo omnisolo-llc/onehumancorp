@@ -10,7 +10,8 @@ export default function CalendarPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/v1/ui/bookings')
+    const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+    fetch(`/api/ui/bookings?tenant_id=${tenantId}`)
       .then(res => {
         if (!res.ok) {
            throw new Error('Failed to load bookings');

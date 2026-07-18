@@ -911,7 +911,7 @@
         <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
         <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
         <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#operations-map', title: 'Operations Map', text: 'Operations Map'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
-        <div style="margin-top: 15px;"><a href="/api/v1/ui/changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
+        <div style="margin-top: 15px;"><a href="/api/ui/changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
       </div>
 
 
@@ -1838,7 +1838,7 @@
       if (chatEmbedBtn) {
         chatEmbedBtn.addEventListener('click', () => {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-          const embedCode = `<iframe src="https://ohc.app/api/v1/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
+          const embedCode = `<iframe src="https://ohc.app/api/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
           navigator.clipboard.writeText(embedCode).then(() => {
             const originalText = chatEmbedBtn.textContent;
             chatEmbedBtn.textContent = 'Copied!';
@@ -1963,7 +1963,7 @@
         triageQueue.innerHTML = `<div class="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">Loading Agent Proposals...</div>`;
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/v1/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
@@ -2813,7 +2813,7 @@
               }
               bodyPayload = { state: finalState };
             } else {
-              url = '/api/v1/ui/triage/action?tenant_id=' + encodeURIComponent(tenantId);
+              url = '/api/ui/triage/action?tenant_id=' + encodeURIComponent(tenantId);
               method = 'POST';
               if (typeof state === 'boolean') {
                   bodyPayload = { triage_item_id: id, approved: state };
@@ -2881,7 +2881,7 @@ window.handleTriageAction = async function(id, state) {
              }
              bodyPayload = { state: finalState, edited_payload: editedPayload };
           } else {
-             url = `/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
+             url = `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
              method = 'POST';
              if (typeof state === 'boolean') {
                  bodyPayload = { triage_item_id: id, approved: state, edited_payload: editedPayload };

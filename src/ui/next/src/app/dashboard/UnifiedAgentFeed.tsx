@@ -100,7 +100,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
     return (
-      localStorage.getItem("business_display_name") ||
+      localStorage.getItem("tenant_id") ||
+      localStorage.getItem("tenant") ||
       "default"
     );
   };
@@ -189,10 +190,20 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       try {
         setLoading(true);
         setActivityLoading(true);
+        const tenant = tenantId();
+
         let unifiedData = initialData;
 
         if (!unifiedData) {
-          const unifiedRes = await fetch("/api/v1/agent-feed");
+          const unifiedRes = await fetch(
+            `/api/v1/agent-feed?tenant_id=${tenant}`,
+            {
+              headers: {
+                "x-tenant-id": tenant,
+                "x-user-id": "default",
+              },
+            },
+          );
           if (!unifiedRes.ok) {
             throw new Error("Failed to load agent feed");
           }
@@ -318,7 +329,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 ...combinedItems,
                 ...unifiedData.pendingReviews.map((pr: any) => ({
                   id: pr.response?.id || crypto.randomUUID(),
-                  tenant_id: tenantId(),
+                  tenant_id: tenant,
                   event_source: "review",
                   context_payload: {
                     description: pr.review?.content || "Pending Review",
@@ -586,7 +597,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     event_source?: string,
   ) => {
     if (event_source === "review") {
-        const res = await fetch('/api/v1/reviews/action', {
+        const res = await fetch('/api/reviews/action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: approved ? 'approve' : 'dismiss', responseId: id, content: modified_content })
@@ -602,8 +613,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       event_source === "task" ||
       event_source === "order"
     ) {
+      const tenant = tenantId();
       const res = await fetch(
-        "/api/v1/triage/action",
+        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenant)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -616,10 +628,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       return;
     }
 
+    const tenant = tenantId();
     const res = await fetch(`/api/v1/agent-feed/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "x-tenant-id": tenant,
+        "x-user-id": "default",
       },
       body: JSON.stringify({
         state: approved ? "APPROVED" : "DISMISSED",
