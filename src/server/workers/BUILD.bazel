@@ -18,6 +18,7 @@ exports_files(
         "invoice_followup_worker.rs",
         "invoice_followup_worker_test.rs",
         "mod.rs",
+        "draft_quote_worker.rs",
         "calendar_sync.rs",
         "booking_reengagement.rs",
         "booking_reengagement_job.rs",

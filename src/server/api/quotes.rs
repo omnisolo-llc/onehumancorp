@@ -12,7 +12,6 @@ use uuid::Uuid;
 use crate::domain::repository::models::{Quote, QuoteLineItem};
 use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
 use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
-use std::sync::Arc;
 
 const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
 const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
@@ -378,72 +377,65 @@ async fn draft_quote_agent(
         Ok(authority) => authority,
         Err(status) => return status.into_response(),
     };
-    let llm = Arc::new(AdapterLlm {});
 
-    // Fetch the services catalog for this tenant
-    #[derive(sqlx::FromRow, serde::Serialize)]
-    struct Service {
-        id: uuid::Uuid,
-        name: String,
-        base_price_cents: i64,
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to begin transaction: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, authority.tenant_id()).await {
+        tracing::error!("Failed to set org context: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    let services = sqlx::query_as::<_, Service>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1")
-        .bind(authority.tenant_id())
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default();
-
-    let catalog_json = serde_json::to_string(&services).unwrap_or_else(|_| "[]".to_string());
-
-    let system_prompt = format!(
-        "You are the Ambassador Agent, an expert quoting AI. You have the following service catalog:\n{}\n\nGiven a customer inquiry, generate a JSON array of line items representing an estimate for the requested work by matching it with the catalog. Each object must have: 'description' (string, matching a service title if possible), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean), and 'service_item_id' (string UUID of the matched service from catalog, or null). Return ONLY the raw JSON array.",
-        catalog_json
+    let quote_id = Uuid::new_v4();
+    let insert_quote = format!(
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'DRAFTING', 0, 0)"
     );
 
-    let req = ChatRequest {
-        model: "default-model".to_string(),
-        system: system_prompt.clone(),
-        messages: vec![Message::user(payload.inquiry)],
-        temperature: 0.1,
-        max_tokens: 1024,
-        tools: vec![],
-    };
+    let cust_id: Option<String> = if payload.customer_id.is_empty() { None } else { Some(payload.customer_id.clone()) };
 
-    let res = match llm.chat(req).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("LLM Failed: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
+    if let Err(e) = sqlx::query(&insert_quote)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .bind(&cust_id)
+        .execute(&mut *tx)
+        .await
+    {
+        tracing::error!("Failed to insert drafting quote: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    let json_str = res.message.content.trim();
-    let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
-    let json_str = json_str.strip_suffix("```").unwrap_or(json_str).trim();
+    let job_id = Uuid::new_v4().to_string();
+    let job_payload = serde_json::json!({
+        "quote_id": quote_id.to_string(),
+        "customer_id": payload.customer_id,
+        "inquiry": payload.inquiry,
+    });
 
-    let line_items: Vec<QuoteLineItemRequest> = match serde_json::from_str(json_str) {
-        Ok(items) => items,
-        Err(e) => {
-            tracing::error!("Failed to parse LLM JSON output: {}. Output was: {}", e, json_str);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
+    if let Err(e) = sqlx::query(
+        "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)
+         VALUES ($1, '', 'draft_quote_agent', $2, 'PENDING', CURRENT_TIMESTAMP, $3)"
+    )
+    .bind(job_id)
+    .bind(&job_payload)
+    .bind(authority.tenant_id())
+    .execute(&mut *tx)
+    .await
+    {
+        tracing::error!("Failed to enqueue draft quote job: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-    let required_deposit_cents = total_amount_cents / 3;
+    if let Err(e) = tx.commit().await {
+        tracing::error!("Failed to commit transaction: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    let create_req = CreateQuoteRequest {
-        customer_id: payload.customer_id,
-        total_amount_cents: Some(total_amount_cents),
-        required_deposit_cents: Some(required_deposit_cents),
-        stripe_payment_link: None,
-        proposed_slot_id: None,
-        service_id: None,
-        line_items,
-    };
-
-    create_quote(State(pool), Extension(claims), Json(create_req)).await.into_response()
+    Json(serde_json::json!({ "id": quote_id.to_string() })).into_response()
 }
 
 async fn update_quote(
