@@ -358,6 +358,8 @@ jobs:
             artifact: playwright-ui-e2e-shard-1-of-1
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      OHC_AGENT_TOKEN: "dummy_token_123456789012345678901234567890"
+      OHC_AGENT_AUTH_KEY: "dummy_key_123456789012345678901234567890"
       PLAYWRIGHT_REPORT_RETENTION_DAYS: 30
     steps:
       - uses: actions/checkout@v6
@@ -478,6 +480,8 @@ jobs:
       HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      OHC_AGENT_TOKEN: "dummy_token_123456789012345678901234567890"
+      OHC_AGENT_AUTH_KEY: "dummy_key_123456789012345678901234567890"
     steps:
       - uses: actions/checkout@v6
 
@@ -608,6 +612,8 @@ jobs:
     timeout-minutes: 30
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      OHC_AGENT_TOKEN: "dummy_token_123456789012345678901234567890"
+      OHC_AGENT_AUTH_KEY: "dummy_key_123456789012345678901234567890"
     steps:
       - uses: actions/checkout@v6
 
