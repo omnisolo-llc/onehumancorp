@@ -146,7 +146,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism" style="display: flex; align-items: center; border-radius: 8px;">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" style="border:none; outline:none; background:transparent; flex-grow: 1;" />
+          <span style="padding-right: 12px; color: #1d1d1f; opacity: 0.5;">.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error" style="display: none; padding-top: 8px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -266,13 +270,55 @@
         saveState();
       }
 
+      window.validateStep = function(stepId) {
+        if (stepId === 'step-domain') {
+            const domainInput = document.getElementById('domain-name');
+            const domainName = domainInput ? domainInput.value : '';
+            const errorDiv = document.getElementById('domain-error');
+
+            if (domainName.length < 3) {
+                errorDiv.innerText = 'Domain error';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+
+            if (!/^[a-z0-9-]+$/.test(domainName)) {
+                errorDiv.innerText = 'contain only lowercase letters';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+
+            if (/^-|-$/.test(domainName)) {
+                errorDiv.innerText = 'cannot start or end with a hyphen';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+
+            errorDiv.style.display = 'none';
+            return true;
+        }
+        return true;
+      };
+
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          const currentStep = e.target.closest('.step');
+          if (window.validateStep && currentStep && !window.validateStep(currentStep.id)) {
+            return;
+          }
           if(e.target.dataset.next) {
             goToStep(e.target.dataset.next);
           }
         });
       });
+
+      const domainInput = document.getElementById('domain-name');
+      if (domainInput) {
+          domainInput.addEventListener('input', () => {
+              const errorDiv = document.getElementById('domain-error');
+              if (errorDiv) errorDiv.style.display = 'none';
+          });
+      }
 
       let saveTimeout;
       const debouncedSave = () => {
