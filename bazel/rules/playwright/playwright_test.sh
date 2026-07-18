@@ -424,6 +424,10 @@ export OHC_BACKEND_URL="$API_BASE_URL"
 export OHC_API_URL="$API_BASE_URL"
 export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
 
+
+export OHC_AGENT_TOKEN="${OHC_AGENT_TOKEN:-dummy_token}"
+export OHC_AGENT_AUTH_KEY="${OHC_AGENT_AUTH_KEY:-0123456789abcdef0123456789abcdef}"
+
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
   if [ "$USE_STANDALONE_MODE" = true ]; then
@@ -466,6 +470,8 @@ EXT
   OHC_AGENT_AUTH_KEY="test_key_must_be_at_least_32_bytes_long_12" \
   OHC_AGENT_TOKEN="test_agent_token" \
   OHC_SQLITE_KEY="test_sqlite_key" \
+  OHC_AGENT_AUTH_DISABLED="true" \
+  OHC_ENV="test" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
   OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
   OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \

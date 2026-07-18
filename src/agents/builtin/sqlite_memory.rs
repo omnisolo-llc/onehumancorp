@@ -50,8 +50,19 @@ impl SqliteMemoryStore {
         .execute(&pool)
         .await?;
 
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS lightweight_index (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entry TEXT NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await?;
+
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS topics (
+
                 topic_name TEXT PRIMARY KEY,
                 content TEXT,
                 updated_at INTEGER
@@ -193,7 +204,19 @@ impl LongTermMemory for SqliteMemoryStore {
         }
     }
 
+
+    async fn get_lightweight_index(&self) -> Result<String, String> {
+        let rows = sqlx::query_as::<_, (String,)>("SELECT entry FROM lightweight_index ORDER BY id ASC")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let entries: Vec<String> = rows.into_iter().map(|(entry,)| entry).collect();
+        Ok(entries.join("\n"))
+    }
+
     fn get_customer_session_summaries<'a>(
+
         &'a self,
         tenant_id: &'a str,
         customer_id: &'a str,
@@ -230,6 +253,7 @@ impl LongTermMemory for SqliteMemoryStore {
         })
     }
 
+
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
@@ -238,6 +262,23 @@ impl LongTermMemory for SqliteMemoryStore {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        let char_count = content.chars().count();
+        let truncated_content = if char_count > 150 {
+            let truncated: String = content.chars().take(147).collect();
+            format!("{}...", truncated)
+        } else {
+            content.to_string()
+        };
+        let tags_str = if tags.is_empty() { String::new() } else { format!(" [{}]", tags.join(", ")) };
+        let entry = format!("- {}{}", truncated_content.replace('\n', " "), tags_str);
+
+        sqlx::query("INSERT INTO lightweight_index (entry) VALUES (?)")
+            .bind(entry)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
@@ -362,6 +403,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
         .await
     }
 
+
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         sqlx::query("INSERT INTO topics (topic_name, content, updated_at) VALUES (?, ?, ?) ON CONFLICT(topic_name) DO UPDATE SET content=excluded.content, updated_at=excluded.updated_at")
@@ -371,9 +413,26 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        let char_count = content.chars().count();
+        let truncated_content = if char_count > 150 {
+            let truncated: String = content.chars().take(147).collect();
+            format!("{}...", truncated)
+        } else {
+            content.to_string()
+        };
+        let entry = format!("- [{}] {}", topic_name, truncated_content.replace('\n', " "));
+
+        sqlx::query("INSERT INTO lightweight_index (entry) VALUES (?)")
+            .bind(entry)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {
