@@ -20,7 +20,7 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const res = await fetch(`/api/v1/inbox/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
         if (res.ok) {
           const data = await res.json();
           setProfile(data);

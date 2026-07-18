@@ -17,7 +17,7 @@ function CustomerMemoryGraphContent() {
   useEffect(() => {
     const fetchMemoryGraph = async () => {
       try {
-        const res = await fetch(`/api/v1/inbox/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -78,14 +78,14 @@ function CustomerMemoryGraphContent() {
                {customerName.charAt(0)}
              </div>
              <div>
-               <h1 className="text-2xl font-bold">Customer Context</h1>
+               <h1 className="text-2xl font-bold">Assistant's Memory</h1>
                <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">High Intent</span>
                {data?.segments && data.segments.map((s: string) => <span key={s} className="ml-1 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">{s}</span>)}
              </div>
           </div>
-          <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="mt-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] pt-4">
             <h3 className="text-sm font-semibold mb-2">Agent Summary</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
               {summary}
             </p>
             <p className="text-xs text-gray-500 mt-2">{data?.total_interactions || interactions.length} total interactions recorded.</p>

@@ -1,3 +1,4 @@
+pub mod customer_memory_context_worker;
 pub mod memory;
 pub mod competitor_audit;
 pub mod department_workers;

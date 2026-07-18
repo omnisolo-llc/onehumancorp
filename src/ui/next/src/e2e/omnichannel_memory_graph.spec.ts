@@ -22,8 +22,8 @@ test('Verify Customer Context Card appears in Inbox when a known customer is sel
     const hasKnownCustomerBadge = await page.locator('span.app-badge.good', { hasText: 'Known Customer' }).count() > 0;
 
     if (hasKnownCustomerBadge) {
-      // If it's a known customer, the Unified Customer Memory component should be visible
-      const memoryHeading = page.locator('h3', { hasText: 'Unified Customer Memory' });
+      // If it's a known customer, the Assistant's Memory component should be visible
+      const memoryHeading = page.locator('h3', { hasText: 'Assistant\'s Memory' });
 
       // Wait briefly just in case fetch takes time
       await page.waitForTimeout(1500);

@@ -1,8 +1,6 @@
 {
-  "task": "Add terminal_id to POS offline synchronization",
-  "learnings": [
-    "Database changes should be encapsulated in incremental goose migrations.",
-    "Updating Rust APIs requires careful schema alignment via SQLX bindings.",
-    "The Flutter UI communicates `terminal_id` property, ensure backend models accept it correctly."
-  ]
+  "task": "Issue #34654: Agentic Omnichannel Customer Context Memory Architecture",
+  "implementation_details": "Implemented `customer_memory_context` postgres table with RLS tenant isolation. Implemented a job queue background worker in Rust to automatically dequeue from `interaction_event_jobs` via `SKIP LOCKED` and extract features/facts to append to `context_graph` and `profile_summary`. Updated Next.js frontend pages (Customer Detail View and ContextCard) to retrieve from the proxy `/api/v1/memory/summary/{id}` API route and styled using OHC Premium Translucent Glass tokens.",
+  "issues_found": "A poison pill was created by attempting to query a strictly RLS-enabled table without setting `app.current_tenant` in the SQL transaction context first.",
+  "lessons_learned": "When implementing custom background workers that modify multitenant data in OHC, `::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?` must be invoked inside the database transaction before performing any queries to avoid RLS violations."
 }

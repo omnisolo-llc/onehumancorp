@@ -2946,6 +2946,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
+    // Start Customer Memory Context Worker
+    let customer_memory_context_worker = Arc::new(crate::workers::customer_memory_context_worker::CustomerMemoryContextWorker::new(db.clone()));
+    let cmc_worker_clone = customer_memory_context_worker.clone();
+    tokio::spawn(async move { cmc_worker_clone.run().await; });
 
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));

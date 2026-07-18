@@ -60,7 +60,7 @@ describe('CustomerMemoryGraph Component', () => {
 
     await waitFor(() => {
       // Check for main headers
-      expect(screen.getByText('Customer Context')).toBeInTheDocument();
+      expect(screen.getByText('Assistant\'s Memory')).toBeInTheDocument();
       expect(screen.getByText('Timeline')).toBeInTheDocument();
 
       // Check for AI insights segments
