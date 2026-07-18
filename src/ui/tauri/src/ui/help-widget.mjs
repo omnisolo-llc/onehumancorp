@@ -103,7 +103,7 @@
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
+            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
             bubble.classList.add('glassmorphism');
             document.body.appendChild(bubble);
 
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 56px;
             height: 56px;
             border-radius: 28px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             color: #0f172a;
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             border-radius: 20px;
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.5);
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-bottom-right-radius: 4px;
         }
         .ohc-chat-msg.agent {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-radius: 20px;
             font-size: 14px;
             outline: none;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
         }
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
             margin-bottom: 12px;
             cursor: pointer;
             transition: background 0.2s;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%);
             -webkit-backdrop-filter: blur(40px) saturate(220%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -473,14 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
             </div>
             <h4>Popular Articles</h4>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
-            </ul>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list"><li>Loading articles...</li></ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <div style="margin-bottom: 8px;">
                   <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
@@ -495,28 +491,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-        <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Set up your store</h4>
-                    <p>Learn how to add products and customize your storefront.</p>
-                </button>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Accept your first payment</h4>
-                    <p>Connect your account to start receiving money.</p>
-                </button>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Activate your AI Support Agent</h4>
-                    <p>Let AI handle customer queries for you.</p>
-                </button>
-            </div>
-        </div>
+        <div id="tab-tours" class="ohc-help-content"><div id="tour-list" style="display: flex; flex-direction: column; gap: 12px;">Loading tours...</div></div>
 
-                <div id="tab-videos" class="ohc-help-content">
+        <div id="tab-videos" class="ohc-help-content">
             <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
         </div>
 
@@ -559,12 +536,48 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             document.getElementById(tab.getAttribute("data-target")).classList.add("active");
 
+
+            if (tab.getAttribute("data-target") === "tab-articles") {
+                fetch("/api/v1/help").then(r => r.json()).then(data => {
+                    const al = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+                    al.innerHTML = "";
+                    data.forEach(a => {
+                        al.innerHTML += `<li><a href="${a.link}" style="color: #2563eb; text-decoration: none; font-size: 14px;">${a.title}</a></li>`;
+                    });
+                }).catch(e => {
+                    const errAl = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+                    if (errAl) errAl.innerHTML = "<li>Error loading articles.</li>";
+                });
+            }
+
+            if (tab.getAttribute("data-target") === "tab-tours") {
+                // Determine page from window location or default to dashboard
+                let page = window.location.pathname.split('/').pop().replace('.html', '') || 'dashboard';
+                fetch(`/api/v1/walkthrough/${page}`).then(r => r.json()).then(data => {
+                    const tl = widget.querySelector("#tour-list") || document.getElementById("tour-list");
+                    tl.innerHTML = "";
+                    if (!data || data.length === 0) {
+                        tl.innerHTML = "No tours available for this page.";
+                        return;
+                    }
+                    tl.innerHTML = `<div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough(${JSON.stringify(data).replace(/"/g, '&quot;')})">
+                        <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
+                            <h4>Start Page Tour</h4>
+                            <p>Click here to learn about this page.</p>
+                        </button>
+                    </div>`;
+                }).catch(e => {
+                    const errTl = widget.querySelector("#tour-list") || document.getElementById("tour-list");
+                    if (errTl) errTl.innerHTML = "Error loading tours.";
+                });
+            }
+
             if (tab.getAttribute("data-target") === "tab-videos") {
                 fetch("/api/v1/videos").then(r => r.json()).then(data => {
                     const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
-                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
+                        vl.innerHTML += `<div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, \"\\'\")}', '${v.duration}'); } else { this.innerHTML = '<h4 style=\'margin: 0 0 8px 0; font-size: 14px;\'>${v.title.replace(/'/g, \"\\'\")}</h4><video controls style=\'width: 100%; border-radius: 4px;\'><source src=\'${v.video_url}\' type=\'video/mp4\'>Your browser does not support the video tag.</video>'; }">` +
                             `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
                             `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
                             `</div>`;
@@ -577,6 +590,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+
+    // Initial fetch for active tab (articles)
+    fetch("/api/v1/help").then(r => r.json()).then(data => {
+        const al = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+        if(al) {
+            al.innerHTML = "";
+            data.forEach(a => {
+                al.innerHTML += `<li><a href="${a.link}" style="color: #2563eb; text-decoration: none; font-size: 14px;">${a.title}</a></li>`;
+            });
+        }
+    }).catch(e => {
+        const errAl = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+        if (errAl) errAl.innerHTML = "<li>Error loading articles.</li>";
+    });
+
     // Chat Logic
     const chatInput = document.getElementById('ohc-help-chat-input');
     const chatSend = document.getElementById('ohc-help-chat-send');
@@ -587,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.className = `ohc-chat-msg ${sender}`;
         msg.innerHTML = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
+            msg.innerHTML += `<div style="margin-top: 8px;"><a href="${link.url}" style="display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); color: #0066FF; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid rgba(0, 102, 255, 0.2);">Read the full article: ${link.title} &rarr;</a></div>`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;

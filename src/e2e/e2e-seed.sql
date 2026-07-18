@@ -830,3 +830,4 @@ INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, tex
 ('e2e-tenant', 'dashboard', 1, 'dashboard-title', 'Welcome', 'Welcome to your dashboard! This is your control center.'),
 ('e2e-tenant', 'dashboard', 2, 'wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.')
 ON CONFLICT DO NOTHING;
+INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, text) VALUES ('e2e-tenant', 'dashboard', 3, 'recent-orders-tooltip', 'Recent Orders', 'Here are your recent orders.') ON CONFLICT DO NOTHING;
