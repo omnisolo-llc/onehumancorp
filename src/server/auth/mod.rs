@@ -316,11 +316,12 @@ impl Store {
     }
 
     pub fn new() -> Self {
-        let secret = std::env::var("JWT_SECRET")
-            .map(|s| s.into_bytes())
-            .unwrap_or_else(|_| {
+        let configured_secret =
+            ::server_common::secret_source::load_optional_secret("JWT_SECRET", "JWT_SECRET_FILE")
+                .unwrap_or_else(|_| panic!("invalid authentication secret configuration"));
+        let secret = configured_secret.unwrap_or_else(|| {
                 if ::server_config::get().multitenant {
-                    panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+                    panic!("invalid authentication secret configuration");
                 }
 
                 let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
@@ -1166,11 +1167,53 @@ fn random_bytes(n: usize) -> Vec<u8> {
 #[derive(Clone)]
 pub struct AuthServiceServerImpl {
     pub store: Arc<Store>,
+    transport_mode: AuthTransportMode,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AuthTransportMode {
+    Cloud,
+    Standalone,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AuthRpc {
+    Login,
+    Register,
+    Logout,
+    GetMe,
+    ListUsers,
+    CreateUser,
+    GetUser,
+    UpdateUser,
+    DeleteUser,
+    ListRoles,
+    CreateRole,
+}
+
+impl AuthRpc {
+    fn is_public(self) -> bool {
+        matches!(self, Self::Login | Self::Register)
+    }
 }
 
 impl AuthServiceServerImpl {
-    pub fn new(store: Arc<Store>) -> Self {
-        Self { store }
+    pub fn new(store: Arc<Store>, transport_mode: AuthTransportMode) -> Self {
+        Self {
+            store,
+            transport_mode,
+        }
+    }
+
+    fn authenticate_rpc<T>(&self, rpc: AuthRpc, request: &mut Request<T>) -> Result<(), Status> {
+        if rpc.is_public() {
+            return Ok(());
+        }
+
+        peer_identity::authenticate_spiffe_request(
+            request,
+            self.transport_mode == AuthTransportMode::Standalone,
+        )
     }
 }
 
@@ -1209,7 +1252,11 @@ pub struct AuthInfo {
 
 #[tonic::async_trait]
 impl AuthService for AuthServiceServerImpl {
-    async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
+    async fn login(
+        &self,
+        mut request: Request<LoginRequest>,
+    ) -> Result<Response<LoginResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::Login, &mut request)?;
         let req = request.into_inner();
 
         match self
@@ -1239,7 +1286,11 @@ impl AuthService for AuthServiceServerImpl {
         }
     }
 
-    async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
+    async fn register(
+        &self,
+        mut request: Request<CreateUserRequest>,
+    ) -> Result<Response<LoginResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::Register, &mut request)?;
         let req = request.into_inner();
 
         let (final_org_id, final_role) = if ::server_config::get().multitenant {
@@ -1276,8 +1327,9 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn logout(
         &self,
-        request: Request<EmptyRequest>,
+        mut request: Request<EmptyRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::Logout, &mut request)?;
         request
             .extensions()
             .get::<AuthInfo>()
@@ -1305,7 +1357,11 @@ impl AuthService for AuthServiceServerImpl {
         Ok(Response::new(EmptyResponse {}))
     }
 
-    async fn get_me(&self, request: Request<EmptyRequest>) -> Result<Response<UserProto>, Status> {
+    async fn get_me(
+        &self,
+        mut request: Request<EmptyRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        self.authenticate_rpc(AuthRpc::GetMe, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
@@ -1325,7 +1381,11 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
+    async fn list_users(
+        &self,
+        mut request: Request<ListUsersRequest>,
+    ) -> Result<Response<ListUsersResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::ListUsers, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
@@ -1344,7 +1404,11 @@ impl AuthService for AuthServiceServerImpl {
         Ok(Response::new(ListUsersResponse { users: proto_users }))
     }
 
-    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
+    async fn create_user(
+        &self,
+        mut request: Request<CreateUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        self.authenticate_rpc(AuthRpc::CreateUser, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
@@ -1378,7 +1442,11 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
+    async fn get_user(
+        &self,
+        mut request: Request<GetUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        self.authenticate_rpc(AuthRpc::GetUser, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
@@ -1398,7 +1466,11 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
+    async fn update_user(
+        &self,
+        mut request: Request<UpdateUserRequest>,
+    ) -> Result<Response<UserProto>, Status> {
+        self.authenticate_rpc(AuthRpc::UpdateUser, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
@@ -1435,7 +1507,11 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
+    async fn delete_user(
+        &self,
+        mut request: Request<DeleteUserRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::DeleteUser, &mut request)?;
         let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
@@ -1454,7 +1530,11 @@ impl AuthService for AuthServiceServerImpl {
         Ok(Response::new(EmptyResponse {}))
     }
 
-    async fn list_roles(&self, _request: Request<EmptyRequest>) -> Result<Response<ListRolesResponse>, Status> {
+    async fn list_roles(
+        &self,
+        mut request: Request<EmptyRequest>,
+    ) -> Result<Response<ListRolesResponse>, Status> {
+        self.authenticate_rpc(AuthRpc::ListRoles, &mut request)?;
         Ok(Response::new(ListRolesResponse {
             roles: vec![
                 RoleProto {
@@ -1479,7 +1559,11 @@ impl AuthService for AuthServiceServerImpl {
         }))
     }
 
-    async fn create_role(&self, _request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
+    async fn create_role(
+        &self,
+        mut request: Request<CreateRoleRequest>,
+    ) -> Result<Response<RoleProto>, Status> {
+        self.authenticate_rpc(AuthRpc::CreateRole, &mut request)?;
         Ok(Response::new(RoleProto::default()))
     }
 }
@@ -1487,6 +1571,95 @@ impl AuthService for AuthServiceServerImpl {
 #[cfg(test)]
 mod store_tests {
     use super::*;
+
+    #[test]
+    fn auth_rpc_policy_exposes_only_login_and_register_without_peer_identity() {
+        let service =
+            AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Cloud);
+        let public = [AuthRpc::Login, AuthRpc::Register];
+        let protected = [
+            AuthRpc::Logout,
+            AuthRpc::GetMe,
+            AuthRpc::ListUsers,
+            AuthRpc::CreateUser,
+            AuthRpc::GetUser,
+            AuthRpc::UpdateUser,
+            AuthRpc::DeleteUser,
+            AuthRpc::ListRoles,
+            AuthRpc::CreateRole,
+        ];
+
+        for rpc in public {
+            let mut request = Request::new(());
+            assert!(service.authenticate_rpc(rpc, &mut request).is_ok());
+        }
+
+        for rpc in protected {
+            let mut request = Request::new(());
+            request
+                .metadata_mut()
+                .insert(
+                    "x-spiffe-id",
+                    "spiffe://onehumancorp.io/org/acme/agent/forged"
+                        .parse()
+                        .unwrap(),
+                );
+            request.extensions_mut().insert(AuthInfo {
+                spiffe_id: "spiffe://onehumancorp.io/org/acme/agent/forged".to_string(),
+                org_id: "acme".to_string(),
+                agent_id: "forged".to_string(),
+            });
+
+            let status = service.authenticate_rpc(rpc, &mut request).unwrap_err();
+            assert_eq!(status.code(), tonic::Code::Unauthenticated, "{rpc:?}");
+            assert!(request.extensions().get::<AuthInfo>().is_none(), "{rpc:?}");
+        }
+    }
+
+    #[test]
+    fn standalone_auth_rpc_accepts_only_a_strict_spiffe_identity() {
+        let service =
+            AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Standalone);
+        let mut valid = Request::new(());
+        valid.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://onehumancorp.io/org/acme/agent/worker-1"
+                .parse()
+                .unwrap(),
+        );
+        service
+            .authenticate_rpc(AuthRpc::ListRoles, &mut valid)
+            .unwrap();
+        let identity = valid.extensions().get::<AuthInfo>().unwrap();
+        assert_eq!(identity.org_id, "acme");
+        assert_eq!(identity.agent_id, "worker-1");
+        let orchestration_identity = valid
+            .extensions()
+            .get::<crate::orchestration::AuthInfo>()
+            .unwrap();
+        assert_eq!(orchestration_identity.org_id, "acme");
+        assert_eq!(orchestration_identity.agent_id, "worker-1");
+
+        for claimed in [
+            None,
+            Some("spiffe://evil.example/org/acme/agent/worker-1"),
+            Some("not-a-spiffe-id"),
+        ] {
+            let mut invalid = Request::new(());
+            if let Some(claimed) = claimed {
+                invalid
+                    .metadata_mut()
+                    .insert("x-spiffe-id", claimed.parse().unwrap());
+            }
+            assert_eq!(
+                service
+                    .authenticate_rpc(AuthRpc::ListRoles, &mut invalid)
+                    .unwrap_err()
+                    .code(),
+                tonic::Code::Unauthenticated,
+            );
+        }
+    }
 
     struct FailingRepository;
 
@@ -1818,11 +1991,12 @@ mod store_tests {
 
     fn logout_request(token: &str) -> Request<EmptyRequest> {
         let mut request = Request::new(EmptyRequest {});
-        request.extensions_mut().insert(AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/org/local/agent/user-id".to_string(),
-            org_id: String::new(),
-            agent_id: "user-id".to_string(),
-        });
+        request.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://onehumancorp.io/org/local/agent/user-id"
+                .parse()
+                .unwrap(),
+        );
         request
             .metadata_mut()
             .insert("authorization", format!("Bearer {token}").parse().unwrap());
@@ -1835,7 +2009,7 @@ mod store_tests {
         let token = store
             .issue_token(&credential_test_user(true, None))
             .unwrap();
-        let service = AuthServiceServerImpl::new(store);
+        let service = AuthServiceServerImpl::new(store, AuthTransportMode::Standalone);
 
         assert!(
             AuthService::logout(&service, logout_request(&token))
@@ -1906,6 +2080,73 @@ mod store_tests {
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
         assert!(!store.secret.is_empty());
+    }
+
+    #[test]
+    fn jwt_secret_supports_direct_and_secure_file_sources_and_rejects_both() {
+        let direct = "direct-jwt-secret";
+        temp_env::with_vars(
+            [("JWT_SECRET", Some(direct)), ("JWT_SECRET_FILE", None)],
+            || assert_eq!(Store::new().secret, direct.as_bytes()),
+        );
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("jwt-secret");
+        std::fs::write(&path, b"file-jwt-secret\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        temp_env::with_vars(
+            [
+                ("JWT_SECRET", None),
+                ("JWT_SECRET_FILE", Some(path.to_str().unwrap())),
+            ],
+            || assert_eq!(Store::new().secret, b"file-jwt-secret"),
+        );
+
+        temp_env::with_vars(
+            [
+                ("JWT_SECRET", Some(direct)),
+                ("JWT_SECRET_FILE", Some(path.to_str().unwrap())),
+            ],
+            || {
+                let panic = match std::panic::catch_unwind(Store::new) {
+                    Ok(_) => panic!("ambiguous JWT secret sources must fail closed"),
+                    Err(panic) => panic,
+                };
+                let message = panic
+                    .downcast_ref::<&str>()
+                    .copied()
+                    .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+                    .unwrap();
+                assert_eq!(message, "invalid authentication secret configuration");
+                assert!(!message.contains(direct));
+                assert!(!message.contains(path.to_str().unwrap()));
+            },
+        );
+
+        let missing_path = directory.path().join("missing-jwt-secret");
+        temp_env::with_vars(
+            [
+                ("JWT_SECRET", None),
+                ("JWT_SECRET_FILE", Some(missing_path.to_str().unwrap())),
+            ],
+            || {
+                let panic = match std::panic::catch_unwind(Store::new) {
+                    Ok(_) => panic!("an invalid JWT secret file must fail closed"),
+                    Err(panic) => panic,
+                };
+                let message = panic
+                    .downcast_ref::<&str>()
+                    .copied()
+                    .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+                    .unwrap();
+                assert_eq!(message, "invalid authentication secret configuration");
+                assert!(!message.contains(missing_path.to_str().unwrap()));
+            },
+        );
     }
 
     #[test]

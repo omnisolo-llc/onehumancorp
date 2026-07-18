@@ -5,11 +5,23 @@ import { vi } from "vitest";
 
 describe("ExitIntentBuilder", () => {
   beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn(),
       },
     });
+  });
+
+  it('encodes hostile editor text as inert JavaScript strings without innerHTML', () => {
+    render(<ExitIntentBuilder />);
+    fireEvent.change(screen.getByPlaceholderText('Wait! Before you go...'), { target: { value: '</script><img src=x onerror=alert(1)>` ${evil}' } });
+
+    const code = screen.getByText((_, element) => element?.tagName === 'CODE').textContent ?? '';
+    expect(code).not.toContain('</script><img');
+    expect(code).not.toContain('innerHTML');
+    expect(code).toContain('\\u003c/script\\u003e');
+    expect(code).toContain('textContent');
   });
 
   it("renders the builder and preview properly", () => {
@@ -27,7 +39,7 @@ describe("ExitIntentBuilder", () => {
     expect(texts.length).toBeGreaterThan(0);
   });
 
-  it("shows the paywall when trying to remove branding", async () => {
+  it("routes to pricing without granting branding removal locally", async () => {
     render(<ExitIntentBuilder />);
 
     const toggleButton = screen.getByRole("switch");
@@ -36,11 +48,10 @@ describe("ExitIntentBuilder", () => {
     expect(screen.getAllByText("Remove OHC Branding").length).toBeGreaterThan(0);
     expect(screen.getByText("Upgrade to Pro")).toBeInTheDocument();
 
-    // Simulate upgrade
     await userEvent.click(screen.getByText("Upgrade to Pro"));
 
-    // Paywall closes, toggle is checked
     expect(screen.queryByText("Upgrade to Pro")).not.toBeInTheDocument();
-    expect(toggleButton).toHaveAttribute("aria-checked", "true");
+    expect(toggleButton).toHaveAttribute("aria-checked", "false");
+    expect(localStorage.getItem('has_pro')).toBeNull();
   });
 });

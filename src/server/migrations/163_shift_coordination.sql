@@ -41,10 +41,3 @@ CREATE POLICY tenant_isolation_staff_availability
 ON staff_availability
 USING (tenant_id = current_setting('app.current_tenant', true))
 WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
-
--- +goose Down
-DROP POLICY IF EXISTS tenant_isolation_staff_availability ON staff_availability;
-DROP TABLE IF EXISTS staff_availability CASCADE;
-
-DROP POLICY IF EXISTS tenant_isolation_shifts ON shifts;
-DROP TABLE IF EXISTS shifts CASCADE;

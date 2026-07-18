@@ -1,15 +1,6 @@
-import { NextResponse } from 'next/server';
-import { listCommands, runCommand } from '../store';
-
-export async function GET() {
-  return NextResponse.json(listCommands());
+function unavailable(): Response {
+  return Response.json({ error: "assistant commands are not implemented" }, { status: 501 });
 }
 
-export async function POST(request: Request) {
-  const payload = await request.json().catch(() => null);
-  try {
-    return NextResponse.json(runCommand(payload || {}), { status: 202 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'command could not be run' }, { status: 400 });
-  }
-}
+export function GET(): Response { return unavailable(); }
+export function POST(): Response { return unavailable(); }

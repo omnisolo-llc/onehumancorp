@@ -23,7 +23,7 @@ elif [[ -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]]; then
             "$RUNFILES_MANIFEST_FILE" | cut -d ' ' -f 2-)"
 else
   echo >&2 "ERROR: cannot find @bazel_tools//tools/bash/runfiles:runfiles.bash"
-  ex""" + """it 1
+  exit 1
 fi
 # --- end runfiles setup ---
 
@@ -98,5 +98,13 @@ load_image "default_agent_load"
 
 cd "$PROJECT_ROOT"
 echo "--- Starting services from $PROJECT_ROOT ---"
+COMPOSE_ENV_FILE="${OHC_COMPOSE_STATE_DIR:-$PROJECT_ROOT/.ohc-compose}/compose.env"
+if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
+  echo "--- Generating private local Compose credentials ---"
+  bash "$PROJECT_ROOT/deploy/scripts/prepare-compose-env.sh"
+fi
 # Run docker-compose without --build because we just loaded the images.
-$DOCKER_COMPOSE_CMD -f deploy/docker-compose.yml up "$@"
+$DOCKER_COMPOSE_CMD --env-file "$COMPOSE_ENV_FILE" \
+  -f deploy/docker-compose.yml \
+  -f deploy/docker-compose.override.yml \
+  up "$@"

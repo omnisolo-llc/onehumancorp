@@ -88,6 +88,28 @@ impl SubscriptionService {
         Self { db }
     }
 
+    async fn begin_tenant_transaction<'a>(
+        &'a self,
+        tenant_id: &str,
+    ) -> Result<sqlx::Transaction<'a, sqlx::Postgres>, String> {
+        let mut transaction = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(transaction)
+    }
+
+    async fn begin_system_transaction(
+        &self,
+    ) -> Result<sqlx::Transaction<'_, sqlx::Postgres>, String> {
+        let mut transaction = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls")
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(transaction)
+    }
+
     pub async fn create_plan(&self, tenant_id: &str, name: &str, description: &str, amount: i64, currency: &str, interval: &str) -> Result<SubscriptionPlan, String> {
         let plan = SubscriptionPlan {
             id: Uuid::new_v4().to_string(),
@@ -105,6 +127,7 @@ impl SubscriptionService {
 
         match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
                 sqlx::query(
                     "INSERT INTO subscription_plans
                         (id, tenant_id, name, description, price_cents, currency, frequency, created_at, updated_at)
@@ -117,9 +140,10 @@ impl SubscriptionService {
                 .bind(plan.amount)
                 .bind(&plan.currency)
                 .bind(&plan.interval)
-                .execute(&self.db.pool)
+                .execute(&mut *transaction)
                 .await
                 .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query(
@@ -170,6 +194,7 @@ impl SubscriptionService {
 
         match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
                 sqlx::query(
                     "INSERT INTO subscribers
                         (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date)
@@ -182,9 +207,10 @@ impl SubscriptionService {
                 .bind(&subscriber.stripe_subscription_id)
                 .bind(status_str)
                 .bind(subscriber.predicted_restock_date)
-                .execute(&self.db.pool)
+                .execute(&mut *transaction)
                 .await
                 .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query(
@@ -224,11 +250,13 @@ impl SubscriptionService {
     ) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_system_transaction().await?;
                 sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1")
                     .bind(subscriber_id)
-                    .execute(&self.db.pool)
+                    .execute(&mut *transaction)
                     .await
                     .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ?")
@@ -249,11 +277,13 @@ impl SubscriptionService {
             "invoice.payment_succeeded" => {
                 match &self.db.store {
                     crate::db::DbStore::Postgres => {
+                        let mut transaction = self.begin_system_transaction().await?;
                         sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
                             .bind(subscription_id)
-                            .execute(&self.db.pool)
+                            .execute(&mut *transaction)
                             .await
                             .map_err(|e| e.to_string())?;
+                        transaction.commit().await.map_err(|e| e.to_string())?;
                     }
                     crate::db::DbStore::Sqlite(pool) => {
                         sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
@@ -267,11 +297,13 @@ impl SubscriptionService {
             "invoice.payment_failed" => {
                 let subscriber_id: Option<String> = match &self.db.store {
                     crate::db::DbStore::Postgres => {
+                        let mut transaction = self.begin_system_transaction().await?;
                         let row = sqlx::query("SELECT id FROM subscribers WHERE stripe_subscription_id = $1")
                             .bind(subscription_id)
-                            .fetch_optional(&self.db.pool)
+                            .fetch_optional(&mut *transaction)
                             .await
                             .map_err(|e| e.to_string())?;
+                        transaction.commit().await.map_err(|e| e.to_string())?;
                         row.map(|r| r.try_get("id").unwrap_or_default())
                     }
                     crate::db::DbStore::Sqlite(pool) => {
@@ -291,11 +323,13 @@ impl SubscriptionService {
             "customer.subscription.deleted" => {
                 match &self.db.store {
                     crate::db::DbStore::Postgres => {
+                        let mut transaction = self.begin_system_transaction().await?;
                         sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
                             .bind(subscription_id)
-                            .execute(&self.db.pool)
+                            .execute(&mut *transaction)
                             .await
                             .map_err(|e| e.to_string())?;
+                        transaction.commit().await.map_err(|e| e.to_string())?;
                     }
                     crate::db::DbStore::Sqlite(pool) => {
                         sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
@@ -314,11 +348,13 @@ impl SubscriptionService {
     pub async fn cancel_subscription(&self, subscriber_id: &str) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_system_transaction().await?;
                 sqlx::query("UPDATE subscribers SET status = 'CANCELED' WHERE id = $1")
                     .bind(subscriber_id)
-                    .execute(&self.db.pool)
+                    .execute(&mut *transaction)
                     .await
                     .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE subscribers SET status = 'CANCELED' WHERE id = ?")
@@ -352,6 +388,7 @@ impl SubscriptionService {
 
         let subscriber_count: i64 = match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
                 let row = sqlx::query(
                     "SELECT COUNT(*) AS subscriber_count
                      FROM subscribers
@@ -361,10 +398,12 @@ impl SubscriptionService {
                 )
                 .bind(tenant_id)
                 .bind(plan_id)
-                .fetch_one(&self.db.pool)
+                .fetch_one(&mut *transaction)
                 .await
                 .map_err(|e| e.to_string())?;
-                row.try_get("subscriber_count").unwrap_or(0)
+                let subscriber_count = row.try_get("subscriber_count").unwrap_or(0);
+                transaction.commit().await.map_err(|e| e.to_string())?;
+                subscriber_count
             }
             DbStore::Sqlite(pool) => {
                 let row = sqlx::query(
@@ -396,6 +435,7 @@ impl SubscriptionService {
 
         match &self.db.store {
             DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
                 sqlx::query(
                     "INSERT INTO fulfillment_schedules
                         (id, tenant_id, subscription_plan_id, fulfillment_date, subscriber_count, status, created_at, updated_at)
@@ -406,9 +446,10 @@ impl SubscriptionService {
                 .bind(&batch.plan_id)
                 .bind(&batch.fulfillment_date)
                 .bind(batch.subscriber_count)
-                .execute(&self.db.pool)
+                .execute(&mut *transaction)
                 .await
                 .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query(

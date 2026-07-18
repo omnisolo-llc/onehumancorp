@@ -1,3 +1,8 @@
+{{- $grpc := default dict .Values.backend.grpc -}}
+{{- $grpcPort := default 8081 $grpc.port -}}
+{{- $allowedGrpcClients := default list $grpc.allowedClients -}}
+{{- $backendEnv := default dict .Values.backend.env -}}
+{{- $standaloneMode := eq (toString (default "false" (get $backendEnv "OHC_STANDALONE_MODE"))) "true" -}}
 {{- if .Values.backend.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -20,6 +25,27 @@ spec:
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-ohc-core
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.service.port }}
+        {{- if not $standaloneMode }}
+        - protocol: TCP
+          port: {{ $grpcPort }}
+        {{- end }}
+    {{- if not $standaloneMode }}
+    {{- range $client := $allowedGrpcClients }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml (required "backend.grpc.allowedClients[].namespaceLabels is required" $client.namespaceLabels) | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- toYaml (required "backend.grpc.allowedClients[].podLabels is required" $client.podLabels) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ $grpcPort }}
+    {{- end }}
+    {{- end }}
     - from:
         - namespaceSelector:
             matchLabels:
@@ -30,6 +56,10 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
+        {{- if not $standaloneMode }}
+        - protocol: TCP
+          port: {{ $grpcPort }}
+        {{- end }}
     - from:
         - namespaceSelector:
             matchLabels:

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
@@ -14,7 +15,7 @@ export default function InteractivePollGeneratorPage() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
@@ -22,7 +23,6 @@ export default function InteractivePollGeneratorPage() {
       const tid = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'my-store') : 'my-store';
       setTenant(tid);
       if (typeof window !== 'undefined') {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
       }
     };
 

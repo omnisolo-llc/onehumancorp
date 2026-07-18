@@ -3,6 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+function escapeHtmlText(value: string): string {
+  return value.replace(/[&<>]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+  })[character] as string);
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return escapeHtmlText(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 export default function InteractiveDemoPage() {
   const router = useRouter();
   const [demoTitle, setDemoTitle] = useState('My Interactive Demo');
@@ -11,11 +23,15 @@ export default function InteractiveDemoPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
+  const [trialError, setTrialError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
       setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
+      fetch('/api/v1/billing/my-plan')
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((data) => setHasPro(['pro', 'business'].includes(String(data.current_plan || '').toLowerCase())))
+        .catch(() => setHasPro(false));
     }
   }, []);
 
@@ -35,8 +51,8 @@ export default function InteractiveDemoPage() {
     const message = `I just launched an Interactive Demo on OneHumanCorp! It's an amazing way to show off my products. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenant}`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
-    // Simulate opening the share URL
     window.open(shareUrl, '_blank');
+    setTrialError(null);
 
     try {
       const response = await fetch('/api/v1/growth/trial-extension/claim', {
@@ -46,42 +62,24 @@ export default function InteractiveDemoPage() {
         }
       });
 
-      if (response.ok) {
-        setHasPro(true);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('has_pro', 'true');
-        }
-        setShowSoftPaywall(false);
-        setRemoveBranding(true);
-      } else {
-        // Fallback for tests
-        setHasPro(true);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('has_pro', 'true');
-        }
-        setShowSoftPaywall(false);
-        setRemoveBranding(true);
-      }
-    } catch (e) {
-      // Fallback
+      if (!response.ok) throw new Error('Pro activation is unavailable.');
       setHasPro(true);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
-      }
       setShowSoftPaywall(false);
       setRemoveBranding(true);
+    } catch {
+      setTrialError('Pro activation is unavailable.');
     }
   };
 
   const embedCode = `<!-- Interactive Demo Widget -->
 <div style="font-family: sans-serif; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; max-width: 500px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-  <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: #111827;">${demoTitle}</h3>
-  <p style="margin-top: 0; margin-bottom: 16px; font-size: 14px; color: #4b5563;">${demoDescription}</p>
+  <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: #111827;">${escapeHtmlText(demoTitle)}</h3>
+  <p style="margin-top: 0; margin-bottom: 16px; font-size: 14px; color: #4b5563;">${escapeHtmlText(demoDescription)}</p>
   <div style="background: #f3f4f6; border-radius: 8px; padding: 32px; text-align: center; border: 1px dashed #d1d5db;">
     <button style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
   </div>
 ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OHC</a>
+    <a href="${escapeHtmlAttribute(`https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OHC</a>
   </div>`}
 </div>`;
 
@@ -105,9 +103,10 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Demo Title</label>
+                  <label htmlFor="demo-title" className="block text-sm font-medium text-gray-700 mb-1">Demo Title</label>
                   <input
                     type="text"
+                    id="demo-title"
                     value={demoTitle}
                     onChange={(e) => setDemoTitle(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
@@ -115,8 +114,9 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="demo-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
+                    id="demo-description"
                     value={demoDescription}
                     onChange={(e) => setDemoDescription(e.target.value)}
                     rows={3}
@@ -149,11 +149,12 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
               <p className="text-sm text-gray-600 mb-3">Copy and paste this HTML into your website's code.</p>
               <div className="relative">
                 <textarea
+                  aria-label="Embed code"
                   readOnly
                   value={embedCode}
                   className="w-full h-40 p-4 bg-gray-900 text-gray-100 text-sm font-mono rounded-lg resize-none focus:outline-none"
                 />
-                <button
+             <button
                   onClick={() => navigator.clipboard.writeText(embedCode)}
                   className="absolute top-2 right-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium transition-colors backdrop-blur-sm"
                 >
@@ -231,8 +232,9 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
-            </button>
+               Share on X to activate Pro
+             </button>
+             {trialError && <p className="mt-3 text-sm text-red-600" role="status">{trialError}</p>}
           </div>
         </div>
       )}

@@ -28,12 +28,8 @@ describe('LeaveReviewPage', () => {
     expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
   });
 
-  it('shows viral widget after a 5-star review', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ referral_link: 'http://test.link/vip' })
-    } as any);
-
+  it('does not fabricate review or referral success after a 5-star review', async () => {
+    global.fetch = vi.fn();
     render(<LeaveReviewPage />);
 
     // Find all stars
@@ -47,21 +43,16 @@ describe('LeaveReviewPage', () => {
     const submitBtn = screen.getByText('Submit Review');
     fireEvent.click(submitBtn);
 
-    // Verify success screen shows the viral widget
     await waitFor(() => {
-      expect(screen.getByText('Thank you for your review!')).toBeDefined();
-      expect(screen.getByText('Get 15% Off Your Next Order')).toBeDefined();
-      expect(screen.getByDisplayValue('http://test.link/vip')).toBeDefined();
-      expect(screen.getByText(/Powered by OHC/)).toBeDefined();
+      expect(screen.getByRole('alert')).toHaveTextContent(/Review submission is unavailable/);
+      expect(screen.queryByText('Thank you for your review!')).toBeNull();
+      expect(screen.queryByText('Get 15% Off Your Next Order')).toBeNull();
     });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('does not show viral widget after a 3-star review', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ referral_link: 'http://test.link/vip' })
-    } as any);
-
+  it('does not report a 3-star review as submitted without a review API', async () => {
+    global.fetch = vi.fn();
     render(<LeaveReviewPage />);
 
     // Click 3rd star
@@ -72,10 +63,11 @@ describe('LeaveReviewPage', () => {
     const submitBtn = screen.getByText('Submit Review');
     fireEvent.click(submitBtn);
 
-    // Verify success screen does NOT show the viral widget
     await waitFor(() => {
-      expect(screen.getByText('Thank you for your review!')).toBeDefined();
+      expect(screen.getByRole('alert')).toHaveTextContent(/Review submission is unavailable/);
+      expect(screen.queryByText('Thank you for your review!')).toBeNull();
       expect(screen.queryByText('Get 15% Off Your Next Order')).toBeNull();
     });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

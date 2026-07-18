@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ShareAndSaveWidget } from './ShareAndSaveWidget';
 import React from 'react';
@@ -17,13 +17,13 @@ describe('ShareAndSaveWidget', () => {
   it('renders correctly with discount percentage', () => {
     render(<ShareAndSaveWidget tenantId="test-tenant" discountPercentage={15} onShareComplete={mockOnShareComplete} />);
 
-    expect(screen.getByText('Share & Save 15%')).toBeDefined();
+    expect(screen.getByText('Share This Store')).toBeDefined();
     expect(screen.getByText(/Share our store with your friends/)).toBeDefined();
     expect(screen.getByTestId('share-x-btn')).toBeDefined();
     expect(screen.getByTestId('share-wa-btn')).toBeDefined();
   });
 
-  it('handles X (Twitter) share and applies discount optimistically', () => {
+  it('opens X without applying an unverified discount', () => {
     render(<ShareAndSaveWidget tenantId="test-tenant" discountPercentage={10} onShareComplete={mockOnShareComplete} />);
 
     const xButton = screen.getByTestId('share-x-btn');
@@ -33,12 +33,11 @@ describe('ShareAndSaveWidget', () => {
       expect.stringContaining('twitter.com/intent/tweet'),
       '_blank'
     );
-    expect(mockOnShareComplete).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('share-and-save-success')).toBeDefined();
-    expect(screen.getByText('Discount Applied!')).toBeDefined();
+    expect(mockOnShareComplete).not.toHaveBeenCalled();
+    expect(screen.getByText(/No 10% discount has been applied/)).toBeDefined();
   });
 
-  it('handles WhatsApp share and applies discount optimistically', () => {
+  it('opens WhatsApp without applying an unverified discount', () => {
     render(<ShareAndSaveWidget tenantId="test-tenant" discountPercentage={20} onShareComplete={mockOnShareComplete} />);
 
     const waButton = screen.getByTestId('share-wa-btn');
@@ -48,8 +47,7 @@ describe('ShareAndSaveWidget', () => {
       expect.stringContaining('wa.me/'),
       '_blank'
     );
-    expect(mockOnShareComplete).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('share-and-save-success')).toBeDefined();
-    expect(screen.getByText(/20% discount/)).toBeDefined();
+    expect(mockOnShareComplete).not.toHaveBeenCalled();
+    expect(screen.getByText(/No 20% discount has been applied/)).toBeDefined();
   });
 });

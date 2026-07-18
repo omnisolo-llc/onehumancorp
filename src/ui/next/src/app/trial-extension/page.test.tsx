@@ -22,15 +22,15 @@ describe('TrialExtensionPage', () => {
 
   it('renders the initial state correctly', () => {
     render(<TrialExtensionPage />);
-    expect(screen.getByText('Interactive Trial Extension')).toBeDefined();
-    expect(screen.getByText('Want 7 Extra Days of Pro?')).toBeDefined();
-    expect(screen.getByRole('button', { name: /Share on X to Unlock 7 Days/i })).toBeDefined();
+    expect(screen.getByText('Interactive Pro Activation')).toBeDefined();
+    expect(screen.getByText('Activate Pro Access?')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Share on X to Activate Pro/i })).toBeDefined();
   });
 
   it('handles the claim process', async () => {
     render(<TrialExtensionPage />);
 
-    const claimButton = screen.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
+    const claimButton = screen.getByRole('button', { name: /Share on X to Activate Pro/i });
     fireEvent.click(claimButton);
 
     // Verify window.open was called
@@ -44,7 +44,7 @@ describe('TrialExtensionPage', () => {
 
     // Verify success state
     await waitFor(() => {
-      expect(screen.getByText('Trial Extended!')).toBeDefined();
+      expect(screen.getByText('Pro Access Activated')).toBeDefined();
     });
   });
 });
