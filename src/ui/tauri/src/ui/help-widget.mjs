@@ -88,6 +88,60 @@
         hideTooltip();
     });
 
+    if (!window.openVideo) {
+        window.openVideo = function(url, title, duration) {
+            let modal = document.getElementById('ohc-video-modal');
+            let player;
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'ohc-video-modal';
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100000; display: flex; align-items: center; justify-content: center; flex-direction: column;';
+
+                const content = document.createElement('div');
+                content.style.cssText = 'background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 800px; display: flex; flex-direction: column; gap: 10px;';
+
+                const header = document.createElement('div');
+                header.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+
+                const titleEl = document.createElement('h3');
+                titleEl.id = 'ohc-video-title';
+                titleEl.style.margin = '0';
+                titleEl.style.fontSize = '18px';
+
+                const closeBtn = document.createElement('button');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.setAttribute('aria-label', 'Close video');
+                closeBtn.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; min-width: 44px; min-height: 44px;';
+
+                player = document.createElement('video');
+                player.id = 'ohc-video-player';
+                player.controls = true;
+                player.style.width = '100%';
+                player.style.borderRadius = '8px';
+
+                closeBtn.onclick = () => {
+                    player.pause();
+                    player.src = "";
+                    modal.style.display = 'none';
+                };
+
+                header.appendChild(titleEl);
+                header.appendChild(closeBtn);
+                content.appendChild(header);
+                content.appendChild(player);
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+            } else {
+                player = document.getElementById('ohc-video-player');
+            }
+
+            document.getElementById('ohc-video-title').textContent = title;
+            player.src = url;
+            modal.style.display = 'flex';
+            player.play().catch(e => console.warn("Auto-play prevented", e));
+        };
+    }
+
     // Walkthroughs
     if (!window.startWalkthrough) {
         window.startWalkthrough = function(steps) {
