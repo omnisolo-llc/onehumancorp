@@ -157,14 +157,14 @@ test.describe("Tooltips", () => {
     await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
 
     // Locate the element with the tooltip text
-    const tooltipTarget = page.locator("#help-btn-tooltip");
+    const tooltipTarget = page.locator("#ohc-floating-help-btn");
 
     // Wait for it to be attached to the DOM
     await tooltipTarget.waitFor({ state: "attached" });
 
     // Fallback to touchstart
     await page.evaluate(() => {
-      const node = document.getElementById("help-btn-tooltip");
+      const node = document.getElementById("ohc-floating-help-btn");
       if (node) {
         const target = node.querySelector('button') || node;
         target.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
