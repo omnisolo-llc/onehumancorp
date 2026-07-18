@@ -11,6 +11,10 @@ test.describe('API Documentation', () => {
     // Ensure the title block exists and is attached
     await expect(page.getByTestId('api-docs-title')).toBeAttached({ timeout: 15000 });
 
+    // Check for the tooltip presence
+    await page.locator('#api-docs-tooltip').hover();
+    await expect(page.getByRole('tooltip')).toContainText('Direct API access is only for custom integrations.');
+
     // Check for the Swagger UI container and some basic swagger elements
     // We expect the swagger-ui container to eventually be attached when data finishes fetching
     await expect(page.locator('.swagger-ui')).toBeAttached({ timeout: 15000 });
