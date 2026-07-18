@@ -7484,6 +7484,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
+        .route("/api/v1/ui/storefront.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/storefront.html"))
+        }))
         .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
