@@ -21,5 +21,6 @@ export default defineConfig({
       '**/.git/**',
       '**/.cache/**',
     ],
+    cache: false,
   },
 })
