@@ -176,7 +176,6 @@ export default function CostDashboardPage() {
 
   return (
     <AppShell
-      className="bg-gradient-to-br from-indigo-50 via-white to-purple-50"
       title="Cost Transparency Dashboard"
       subtitle="Cost and tier usage signals based on connected billing, storage, and agents."
       actions={[{ label: "Back to My Plan", href: "/plan" }]}
