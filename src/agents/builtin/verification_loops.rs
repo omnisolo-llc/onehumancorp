@@ -643,7 +643,7 @@ mod tests {
 
         match init_res {
             Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-                println!("Skipping test: cargo binary not found in PATH");
+                tracing::info!("Skipping test: cargo binary not found in PATH");
                 return;
             }
             res => { res.unwrap(); }
@@ -656,7 +656,7 @@ mod tests {
         // Valid project should pass
         let res_pass = guide.verify("", "").await;
         if res_pass.is_err() {
-            println!("res_pass failed: {:?}", res_pass.clone().err().unwrap());
+            tracing::info!("res_pass failed: {:?}", res_pass.clone().err().unwrap());
         }
         assert!(res_pass.is_ok());
 
