@@ -769,16 +769,17 @@
                 </div>
              `;
           } else if (featureType !== 'create_product' && featureType !== 'product_creation' && reviewingId === item.id) {
+             // OHC Premium Token library's translucent materials for Agent Draft section
              buttonsHtml = `
-                 <div class="proposed-action glassmorphism" style="padding: 16px; margin-top: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                 <div class="proposed-action glassmorphism" style="padding: 16px; margin-top: 12px; background: rgba(0, 102, 255, 0.05); backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 12px;">
                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-                       <div style="font-weight: 600; font-size: 16px; color: #1D1D1F;">${item.action_type || 'Draft'} Ready</div>
+                       <div style="font-weight: 600; font-size: 16px; color: #004085;">🤖 AI ${item.action_type || 'Draft'} Ready</div>
                        <span class="app-badge warn">Action Required</span>
                    </div>
-                   <div style="font-size: 14px; margin-bottom: 16px; color: #1D1D1F; opacity: 0.8;">
+                   <div style="font-size: 14px; margin-bottom: 16px; color: #004085; opacity: 0.9; font-style: italic; white-space: pre-wrap;">
                       "${draftReply || ''}"
                    </div>
-                   <div class="triage-buttons" style="margin-top: 0; display: flex; gap: 8px; width: 100%;">
+                   <div class="triage-buttons" style="margin-top: 0; display: flex; gap: 8px; width: 100%; background: transparent; border-top: none; padding: 0;">
                        <button class="triage-btn primary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)" style="flex: 2; min-height: 44px;">Approve & Send</button>
                        <button class="triage-btn secondary" data-testid="triage-edit-btn-${item.id}" onclick="startEdit('${item.id}')" style="flex: 1; min-height: 44px;">Edit</button>
                    </div>
