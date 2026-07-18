@@ -716,7 +716,7 @@ async fn get_quote(
 mod tests {
     #[allow(unused_imports)]
     use super::*;
-    use crate::domain::repository::models::{Quote, QuoteLineItem, MilestonePayment};
+    use crate::domain::repository::models::{Quote, QuoteLineItem};
     use axum::{body::Body, extract::Extension, http::Request};
     use tower::ServiceExt;
 
