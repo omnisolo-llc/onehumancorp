@@ -5869,19 +5869,11 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
-            let i_key = format!("ui_invoices:{}:mobile:{}", tenant_id, mobile_optimized);
             async move {
                 let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
-                    let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                let i_key = format!("ui_invoices:{}:mobile:{}", t_clone, mobile_optimized);
-                cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
-                    let cache = UI_INVOICES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
                 let i_key = format!("ui_invoices:{}:mobile:{}", t_clone, mobile_optimized);
                 cache.get_or_fetch_with_swr(&i_key, std::time::Duration::from_secs(10), move || async move {
                     load_ui_invoices_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
-                }).await.or(Some(vec![]))
-                }).await.or(Some(vec![]))
                 }).await.unwrap_or_default()
             }
         })
@@ -5895,7 +5887,7 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         "pending_approvals": approvals_res.unwrap_or_default(),
         "agent_feed": agent_feed_res.unwrap_or_default(),
         "priority_tasks": priority_tasks_res.unwrap_or_default(),
-        "invoices": invoices_res.unwrap_or_default(),
+        "invoices": invoices_res.unwrap_or_else(|_| vec![]),
     })
 }
 
