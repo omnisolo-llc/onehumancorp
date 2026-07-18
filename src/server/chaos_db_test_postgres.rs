@@ -127,3 +127,50 @@ mod postgres_chaos_tests {
             .unwrap();
     }
 }
+    #[tokio::test]
+    async fn test_chaos_universal_ledger_rls_isolation() {
+        let pg_db = setup_postgres_db().await;
+        let db = pg_db.expect("Postgres DB must be available for tests");
+
+        let mut handles = vec![];
+        for i in 0..50 {
+            let pool_clone = db.pool.clone();
+            handles.push(tokio::spawn(async move {
+                let tenant_id = if i % 2 == 0 { "tenant_a" } else { "tenant_b" };
+                let mut tx = pool_clone.begin().await.unwrap();
+
+                sqlx::query("SET LOCAL app.current_tenant = $1")
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap();
+
+                sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, event_type, payload, created_at) VALUES ($1, $2, 'Sales', 'test_event', '{}', CURRENT_TIMESTAMP)")
+                    .bind(format!("ledger_{}_{}", i, uuid::Uuid::new_v4()))
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .unwrap();
+
+                tx.commit().await.unwrap();
+            }));
+        }
+
+        for h in handles {
+            h.await.unwrap();
+        }
+
+        let mut tx_a = db.pool.begin().await.unwrap();
+        sqlx::query("SET LOCAL app.current_tenant = 'tenant_a'").execute(&mut *tx_a).await.unwrap();
+        let count_a: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_universal_ledger WHERE event_type = 'test_event'").fetch_one(&mut *tx_a).await.unwrap();
+        tx_a.commit().await.unwrap();
+
+        assert_eq!(count_a, 25, "Tenant A must only see exactly 25 records isolated by RLS");
+
+        let mut tx_b = db.pool.begin().await.unwrap();
+        sqlx::query("SET LOCAL app.current_tenant = 'tenant_b'").execute(&mut *tx_b).await.unwrap();
+        let count_b: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_universal_ledger WHERE event_type = 'test_event'").fetch_one(&mut *tx_b).await.unwrap();
+        tx_b.commit().await.unwrap();
+
+        assert_eq!(count_b, 25, "Tenant B must only see exactly 25 records isolated by RLS");
+}
