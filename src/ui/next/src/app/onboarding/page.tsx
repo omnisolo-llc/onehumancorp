@@ -1158,8 +1158,9 @@ export default function OnboardingWizard() {
                       and back-office agents.
                     </p>
                     <button
+                      type="button"
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                      className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1271,8 +1272,9 @@ export default function OnboardingWizard() {
                       Tell us a bit about your products or services.
                     </p>
                     <button
+                      type="button"
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                      className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1376,8 +1378,9 @@ export default function OnboardingWizard() {
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
+                      type="button"
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                      className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1478,8 +1481,9 @@ export default function OnboardingWizard() {
                       select the best tools for your business.
                     </p>
                     <button
+                      type="button"
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                      className="setup-nav-button min-h-[44px]"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1611,8 +1615,9 @@ export default function OnboardingWizard() {
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                  type="button"
+                      onClick={() => handleSaveDraft()}
+                  className="setup-nav-button min-h-[44px]"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
@@ -1821,8 +1826,9 @@ export default function OnboardingWizard() {
                   AI agents to manage it.
                 </p>
                 <button
-                  onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
+                  type="button"
+                      onClick={() => handleSaveDraft()}
+                  className="setup-nav-button min-h-[44px]"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
