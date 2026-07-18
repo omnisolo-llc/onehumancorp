@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Triage Action Feed UI', () => {
   test.use({ viewport: { width: 375, height: 812 } });

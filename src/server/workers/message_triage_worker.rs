@@ -309,6 +309,12 @@ Output JSON format:
                         action_payload_str = s.to_string();
                     }
                 }
+            } else if action_type == "Draft Reply" {
+                if let Some(payload) = extracted.get("action_payload") {
+                    if let Some(s) = payload.as_str() {
+                        action_payload_str = s.to_string();
+                    }
+                }
             }
             let mut action_payload = action_payload_str.clone();
 

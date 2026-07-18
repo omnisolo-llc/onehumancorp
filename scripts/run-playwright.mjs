@@ -90,11 +90,15 @@ async function main() {
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
-    env: {
+    env:
+      OHC_AGENT_TOKEN: "e2e-token"
+      OHC_AGENT_AUTH_KEY: "0123456789abcdef0123456789abcdef" {
       ...process.env,
       DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://ohc:ohc@localhost:5432/ohc',
       REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
       OHC_DEFAULT_TENANT_ID: process.env.OHC_DEFAULT_TENANT_ID ?? 'e2e-tenant',
+      OHC_AGENT_TOKEN: process.env.OHC_AGENT_TOKEN ?? 'e2e-token',
+      OHC_AGENT_AUTH_KEY: process.env.OHC_AGENT_AUTH_KEY ?? '0123456789abcdef0123456789abcdef',
     },
   });
 
@@ -122,7 +126,9 @@ async function runCommand(command, args) {
     const child = spawn(command, args, {
       cwd: ROOT,
       stdio: 'inherit',
-      env: process.env,
+      env:
+      OHC_AGENT_TOKEN: "e2e-token"
+      OHC_AGENT_AUTH_KEY: "0123456789abcdef0123456789abcdef" process.env,
       shell: false,
     });
     child.on('error', reject);
