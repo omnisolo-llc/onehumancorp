@@ -1,3 +1,4 @@
+#![allow(clippy::collapsible_if)]
 use sqlx::{PgPool, Row};
 use tracing::{error, warn};
 
@@ -71,8 +72,10 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
-static DAILY_COST_CACHE: OnceLock<Mutex<HashMap<String, (Instant, Vec<DailyCost>)>>> = OnceLock::new();
-static AGENT_COST_CACHE: OnceLock<Mutex<HashMap<String, (Instant, Vec<AgentCostRow>)>>> = OnceLock::new();
+type DailyCostCacheType = HashMap<String, (Instant, Vec<DailyCost>)>;
+static DAILY_COST_CACHE: OnceLock<Mutex<DailyCostCacheType>> = OnceLock::new();
+type AgentCostCacheType = HashMap<String, (Instant, Vec<AgentCostRow>)>;
+static AGENT_COST_CACHE: OnceLock<Mutex<AgentCostCacheType>> = OnceLock::new();
 
 const CACHE_TTL: Duration = Duration::from_secs(300); // 5 minutes
 
