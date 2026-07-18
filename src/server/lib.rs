@@ -3264,7 +3264,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+        let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(&opentelemetry::global::meter("ohc_server")));
+        let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
+        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client).with_token_tracking(tracker).with_telemetry(store))
     } else {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
