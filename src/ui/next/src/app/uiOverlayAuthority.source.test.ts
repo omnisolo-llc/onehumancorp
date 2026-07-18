@@ -10,7 +10,7 @@ describe("product-shell overlay authority", () => {
   it("mounts one global help and chat launcher", () => {
     const layout = source("src/app/layout.tsx");
     expect(layout.match(/<HelpWidget\b/g)).toHaveLength(1);
-    expect(layout).not.toMatch(/<HelpChat\b/);
+    expect(layout.match(/<HelpChat\b/g)).toHaveLength(1);
   });
 
   it("does not load API documentation assets on every page", () => {
