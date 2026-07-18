@@ -61,10 +61,6 @@ npx @bazel/bazelisk run //deploy:load_all_images
 # Start the stack using the local images
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d --build
 ```
-
-```bash
-docker compose -f deploy/docker-compose.yml up --build
-```
 Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set `OHC_HEADLESS=true` if you want the backend to run without serving the web client.
 
 > All build and test commands below are issued as `bazel …` (via Bazelisk).
