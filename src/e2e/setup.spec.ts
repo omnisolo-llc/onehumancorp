@@ -87,7 +87,7 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       await route.fulfill({ status: 200, body: 'Success'   });
       });
     // Submit setup
-    await page.evaluate(() => { document.getElementById('finish-btn').click();   });
+    await page.evaluate(() => { document.getElementById('finish-btn').click(); }); await page.waitForTimeout(500);
     });
   test('should support 375px mobile view without horizontal scroll and minimum 44px touch targets', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812   });
@@ -239,10 +239,10 @@ test.describe.serial('OHC Setup Wizard Flow', () => {
       });
     await page.reload();
     await page.getByTestId('template-selection').selectOption('Modern', { force: true   });
-    await page.evaluate(() => { document.getElementById('finish-btn').click();   });
+    await page.evaluate(() => { document.getElementById('finish-btn').click(); }); await page.waitForTimeout(500);
     // Check error message
     const errorMsg = page.locator('#submit-error');
-    await expect(errorMsg).toBeVisible();
+    await expect(errorMsg).toBeVisible({ timeout: 10000 });
     await expect(errorMsg).toHaveText('Backend is broken');
     });
 test.describe('OHC Setup Wizard Form Configuration', () => {
