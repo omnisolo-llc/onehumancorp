@@ -97,7 +97,6 @@ export default function ViralChallengeGeneratorPage() {
           >
              {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
           </button>
-          <button id="generate-btn" className="hidden">Generate</button>
         </div>
 
         <div className="flex-1 flex flex-col p-8 bg-gray-50/50 rounded-r-[24px]">
