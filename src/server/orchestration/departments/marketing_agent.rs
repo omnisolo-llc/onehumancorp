@@ -277,17 +277,10 @@ impl Department for MarketingAgent {
                                     .await;
 
                                 // Invalidate cache
+                                let invalidator = crate::services::cache_invalidator::EdgeCacheInvalidator::new();
+                                invalidator.invalidate_product_cache(&tenant_id_str, &product_id_str).await;
+
                                 let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
-                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
-
-                                let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                                cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cdn.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
-
                                 // Proactively pre-render the product cache
                                 if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
                                     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_uuid);
