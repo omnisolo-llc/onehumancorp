@@ -6,6 +6,7 @@ interface CustomerProfileSummary {
   segments: string[];
   preferences: string[];
   summary: string;
+  context_graph?: any;
 }
 
 interface ContextCardProps {
@@ -20,7 +21,7 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
   useEffect(() => {
     const fetchSummary = async () => {
       try {
-        const res = await fetch(`/api/v1/inbox/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
         if (res.ok) {
           const data = await res.json();
           setProfile(data);
@@ -47,8 +48,8 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
   }
 
   return (
-    <div className="w-full min-h-[44px] p-3 backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-xl mb-4 transition-all duration-300">
-      <div className="flex flex-col space-y-1">
+    <div className="w-full p-3 backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-xl mb-4 transition-all duration-300">
+      <div className="flex flex-col space-y-2">
         <div className="text-xs font-semibold text-gray-700 flex flex-wrap gap-1">
           {profile.segments.map((segment, idx) => (
             <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
@@ -67,6 +68,12 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
         <div className="text-xs text-gray-500 truncate">
           {profile.total_interactions} past orders &bull; Last order: {profile.last_interaction ? new Date(profile.last_interaction).toLocaleDateString() : 'N/A'}
         </div>
+        {profile.context_graph && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 p-2 bg-white/50 dark:bg-black/30 rounded-lg">
+            <span className="font-semibold text-gray-800 dark:text-gray-200 block mb-1">Agentic Context:</span>
+            {JSON.stringify(profile.context_graph)}
+          </div>
+        )}
       </div>
     </div>
   );

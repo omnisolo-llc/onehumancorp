@@ -17,7 +17,7 @@ function CustomerMemoryGraphContent() {
   useEffect(() => {
     const fetchMemoryGraph = async () => {
       try {
-        const res = await fetch(`/api/v1/inbox/summary/${tenantId}/${customerId}`);
+        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -33,7 +33,7 @@ function CustomerMemoryGraphContent() {
     };
 
     fetchMemoryGraph();
-  }, [tenantId, customerId]);
+  }, [customerId]);
 
   if (loading) {
     return (
@@ -57,6 +57,9 @@ function CustomerMemoryGraphContent() {
   const summary = data?.summary || "No summary available.";
   const customerName = data?.customer_name || "Unknown Customer";
 
+  // Use context_graph if available
+  const contextGraph = data?.context_graph || null;
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'ig_dm': return <FaInstagram className="text-pink-500" />;
@@ -72,7 +75,7 @@ function CustomerMemoryGraphContent() {
     <div className="flex flex-col h-screen w-full bg-gray-50 dark:bg-gray-900 text-[#1D1D1F] dark:text-[#F5F5F7]">
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6 pt-8 pb-20">
 
-        <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-6 shadow-sm">
+        <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-6 shadow-sm rounded-xl">
           <div className="flex items-center gap-4 mb-4">
              <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-2xl font-bold text-[#0066FF]">
                {customerName.charAt(0)}
@@ -90,6 +93,15 @@ function CustomerMemoryGraphContent() {
             </p>
             <p className="text-xs text-gray-500 mt-2">{data?.total_interactions || interactions.length} total interactions recorded.</p>
           </div>
+
+          {contextGraph && (
+            <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold mb-2">Agentic Memory Graph</h3>
+              <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded-md overflow-x-auto text-gray-700 dark:text-gray-300">
+                {JSON.stringify(contextGraph, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
 
         <div>
@@ -101,7 +113,7 @@ function CustomerMemoryGraphContent() {
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-800 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                      {getIcon(interaction.channel || interaction.type)}
                   </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 shadow-sm">
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 shadow-sm rounded-xl">
                      <div className="flex items-center justify-between mb-1">
                         <span className="font-bold text-sm">{interaction.channel || (interaction.type === 'agent_reply' ? 'OHC Agent' : 'Customer')}</span>
                         <time className="text-xs text-gray-500">{interaction.date || (interaction.created_at ? new Date(interaction.created_at).toLocaleString() : '')}</time>
