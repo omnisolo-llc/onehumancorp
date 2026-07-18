@@ -26,6 +26,7 @@ describe('ViralGiveGetWidgetPage', () => {
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === 'tenant_id' || key === 'tenant') return 'test-tenant';
+        if (key === 'has_pro') return 'false';
         return null;
       }),
       setItem: vi.fn(),
@@ -46,6 +47,20 @@ describe('ViralGiveGetWidgetPage', () => {
     expect(screen.getByText('Viral Give-Get Generator 🎁')).toBeDefined();
     expect(screen.getByText('Give (Friend\'s Reward)')).toBeDefined();
     expect(screen.getByText('Get (Your Reward)')).toBeDefined();
+  });
+
+  it('renders Powered by OHC branding by default', () => {
+    render(<ViralGiveGetWidgetPage />);
+    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+  });
+
+  it('shows paywall when trying to remove branding without pro', () => {
+    render(<ViralGiveGetWidgetPage />);
+    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    fireEvent.click(checkbox);
+
+    expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
+    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined(); // branding still there
   });
 
   it('updates give and get values', () => {
