@@ -1,23 +1,25 @@
 import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ShareAndSaveWidgetPage from './page';
-import * as navigation from 'next/navigation';
 
+const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 describe('ShareAndSaveWidgetPage', () => {
-  const mockPush = vi.fn();
-
   beforeEach(() => {
-    (navigation.useRouter as any).mockReturnValue({ push: mockPush });
     vi.clearAllMocks();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
 
     const localStorageMock = {
-      getItem: vi.fn().mockImplementation((key) => {
-        if (key === 'tenant') return 'test-tenant';
+      getItem: vi.fn((key) => {
+        if (key === 'business_display_name') return 'test-tenant';
         if (key === 'has_pro') return 'false';
         return null;
       }),
@@ -28,23 +30,53 @@ describe('ShareAndSaveWidgetPage', () => {
       value: localStorageMock,
       writable: true
     });
+
+    global.window.open = vi.fn();
   });
 
-  it('renders the widget UI correctly', async () => {
-    await act(async () => {
-      render(<ShareAndSaveWidgetPage />);
-    });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
+  it('renders correctly', () => {
+    render(<ShareAndSaveWidgetPage />);
     expect(screen.getByText('Unlock 10% Off!')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Share on X to Unlock' })).toBeDefined();
+    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
   });
 
-  it('shows the back to dashboard button', async () => {
-    await act(async () => {
-      render(<ShareAndSaveWidgetPage />);
-    });
+  it('renders Powered by OHC branding by default', () => {
+    render(<ShareAndSaveWidgetPage />);
+    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+  });
 
-    const backButton = screen.getByRole('button', { name: 'Back to Dashboard' });
-    expect(backButton).toBeDefined();
+  it('shows paywall when trying to remove branding without pro', () => {
+    render(<ShareAndSaveWidgetPage />);
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+
+    expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
+    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined(); // branding still there
+  });
+
+  it('navigates back to dashboard', () => {
+    render(<ShareAndSaveWidgetPage />);
+    const backBtn = screen.getByRole('button', { name: /Back to Dashboard/i });
+    fireEvent.click(backBtn);
+    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('handles sharing on twitter and revealing code', async () => {
+    render(<ShareAndSaveWidgetPage />);
+
+    const shareBtn = screen.getByRole('button', { name: /Share on X to Unlock/i });
+    fireEvent.click(shareBtn);
+
+    expect(global.window.open).toHaveBeenCalled();
+
+    // Wait for real timer since fake timers is breaking React 18 / RTL
+    await waitFor(() => {
+        expect(screen.getByText('Unlocked!')).toBeDefined();
+        expect(screen.getByText('SHARE10')).toBeDefined();
+    }, { timeout: 2000 });
   });
 });
