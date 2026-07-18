@@ -55,7 +55,7 @@ impl ToolExecutionEngine {
                         tokio::time::sleep(backoff).await;
                         continue;
                     } else {
-                        error!("Transient error retries exhausted: {}", msg);
+                        error!(error = %msg, "Transient error retries exhausted");
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
                         return Err(ToolError::Unexpected(format!(
                             "Transient error after retries: {}",
@@ -80,11 +80,11 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.
-                    error!("Fatal tool error encountered: {}", msg);
+                    error!(error = %msg, "Fatal tool error encountered");
                     return Err(ToolError::Fatal(msg));
                 }
                 Err(ToolError::Unexpected(msg)) => {
-                    error!("Unexpected tool error encountered: {}", msg);
+                    error!(error = %msg, "Unexpected tool error encountered");
                     return Err(ToolError::Unexpected(msg));
                 }
                 Err(ToolError::HandoffRequested(msg)) => {
