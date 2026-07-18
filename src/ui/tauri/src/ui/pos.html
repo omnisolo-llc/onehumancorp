@@ -1281,12 +1281,6 @@
 
           // Fallback logic for offline or when Stripe Terminal SDK fails
 
-
-          // Tap Success
-          tapOverlay.style.display = 'none';
-          posView.style.display = 'none';
-          receiptScreen.style.display = 'flex';
-
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
           if (!stripeTerminal && navigator.onLine) {
@@ -1324,6 +1318,9 @@
                           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
                           body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, lock_id: reserveData.lock_id })
                       }).then(res => res.json()).then(data => {
+                          tapOverlay.style.display = 'none';
+                          posView.style.display = 'none';
+                          receiptScreen.style.display = 'flex';
                           if (data.success && data.invoice_id) {
                               document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
                           } else {
@@ -1333,6 +1330,9 @@
                   }
               }).catch(console.error);
           } else if (!navigator.onLine) {
+              tapOverlay.style.display = 'none';
+              posView.style.display = 'none';
+              receiptScreen.style.display = 'flex';
               document.querySelector('.receipt-text').innerText = "Offline Quick Charge Saved.";
               enqueueOfflineMutation({
                   type: 'tap_to_pay',
