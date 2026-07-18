@@ -433,10 +433,14 @@ impl DB {
                                 options.custom_flags(0x0100); // O_NOFOLLOW
                             if let Ok(mut file) = options.open(&secret_path) {
                                 if let Ok(metadata) = file.metadata() {
-                                    let perms = metadata.permissions();
+                                    let mut perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
-                                        std::process::exit(1);
+                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
+                                        perms.set_mode(0o600);
+                                        if let Err(e) = file.set_permissions(perms) {
+                                            tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
+                                            std::process::exit(1);
+                                        }
                                     }
                                 }
                                 use std::io::Read;
