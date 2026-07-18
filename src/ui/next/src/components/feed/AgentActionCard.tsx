@@ -1,6 +1,7 @@
 import { ShiftReassignmentCard } from "../../app/dashboard/ShiftReassignmentCard";
 import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
+import { QuoteReviewModal } from "../QuoteReviewModal";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
 import React from "react";
 
@@ -2302,67 +2303,21 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ? (
-          editingId === approval.id ? (
-            <div className="flex flex-col gap-3 w-full">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500 font-semibold">
-                  Total Price ($)
-                </label>
-                <input
-                  type="number"
-                  className="w-full p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all"
-                  value={editQuotePrice}
-                  onChange={(e) => setEditQuotePrice(e.target.value)}
-                  data-testid="edit-quote-price"
-                  autoFocus
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500 font-semibold">
-                  Scope of Work
-                </label>
-                <textarea
-                  className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
-                  rows={3}
-                  value={editQuoteScope}
-                  onChange={(e) => setEditQuoteScope(e.target.value)}
-                  data-testid="edit-quote-scope"
-                />
-              </div>
-              <div className="flex gap-3 mt-2">
-                <button
-                  onClick={() => {
-                    handleDecision(
-                      approval.id,
-                      true,
-                      JSON.stringify({
-                        price: parseFloat(editQuotePrice),
-                        scope: editQuoteScope,
-                      }),
-                      approval.event_source,
-                    );
-                    setEditingId(null);
-                  }}
-                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                  data-testid="modal-approve-btn"
-                  disabled={loadingAction !== null}
-                >
-                  {isActionLoading("approve") ? (
-                    <span className="animate-pulse">Loading...</span>
-                  ) : (
-                    "Approve & Send"
-                  )}
-                </button>
-                <button
-                  onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                  data-testid="cancel-edit-quote"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
+          <div className="flex flex-col gap-3 w-full">
+            <QuoteReviewModal
+              isOpen={editingId === approval.id}
+              onClose={() => setEditingId(null)}
+              initialPayload={approval.proposed_action || approval.context_payload}
+              onApprove={(updatedPayload) => {
+                handleDecision(
+                  approval.id,
+                  true,
+                  JSON.stringify(updatedPayload),
+                  approval.event_source,
+                );
+                setEditingId(null);
+              }}
+            />
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
                 onClick={() =>
@@ -2386,16 +2341,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
               <button
                 onClick={() => {
-                  window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`;
+                  setEditingId(approval.id);
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                aria-label="Edit Draft"
-                data-testid="edit-quote-draft"
+                aria-label="Review Draft"
+                data-testid="review-quote-draft"
               >
-                Edit
+                Review
               </button>
             </div>
-          )
+          </div>
         ) : (approval.proposed_action || approval.context_payload)?.context
             ?.smart_pricing === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">

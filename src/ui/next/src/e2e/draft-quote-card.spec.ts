@@ -30,22 +30,22 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await expect(page.getByText('Suggested Price')).toBeVisible();
 
     // 5. Tap "Edit"
-    const editBtn = page.getByRole('button', { name: 'Edit' }).first();
+    const editBtn = page.getByRole('button', { name: 'Review' }).first();
     await editBtn.waitFor({ state: 'visible' });
     await editBtn.click();
 
     // 6. Edit the price
-    const priceInput = page.getByTestId('edit-quote-price');
+    const priceInput = page.locator('input[type="number"]').nth(1);
     await expect(priceInput).toBeVisible();
     await priceInput.fill('350');
 
     // 7. Edit the scope
-    const scopeInput = page.getByTestId('edit-quote-scope');
+    const scopeInput = page.locator('input[type="text"]').first();
     await expect(scopeInput).toBeVisible();
     await scopeInput.fill('Updated 2-Bedroom Apartment Painting including labor and standard materials plus extra parts.');
 
     // 8. Tap "Approve & Send" in modal
-    const approveBtn = page.getByTestId('modal-approve-btn');
+    const approveBtn = page.locator('role=dialog').getByTestId('modal-approve-btn');
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
 
@@ -81,10 +81,10 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
         await page.goto('/team');
         await page.getByText('The Salesperson').click();
 
-        await page.getByRole('button', { name: 'Edit' }).first().click();
+        await page.getByRole('button', { name: 'Review' }).first().click();
         await page.getByRole('button', { name: 'Cancel' }).click();
 
-        await expect(page.getByTestId('edit-quote-price')).not.toBeVisible();
+        await expect(page.locator('role=dialog')).not.toBeVisible();
     });
 
     test('Price formatting validates input correctly', async ({ page, loginAs, adminUser }) => {
@@ -96,9 +96,9 @@ test.describe('Draft Quote Action Card Edge Cases', () => {
         await page.goto('/team');
         await page.getByText('The Salesperson').click();
 
-        await page.getByRole('button', { name: 'Edit' }).first().click();
+        await page.getByRole('button', { name: 'Review' }).first().click();
 
-        const priceInput = page.getByTestId('edit-quote-price');
+        const priceInput = page.locator('input[type="number"]').nth(1);
         await priceInput.fill('abc');
         await expect(priceInput).toHaveValue(''); // Assuming type="number" strips non-numeric characters
     });
