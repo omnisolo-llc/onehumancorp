@@ -954,6 +954,16 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                             }
                         }
                     }
+                },
+                "post": {
+                    "summary": "Update a Tooltip",
+                    "description": "Updates or creates a tooltip for the current tenant",
+                    "operationId": "updateTooltip",
+                    "responses": {
+                        "200": {
+                            "description": "Success"
+                        }
+                    }
                 }
             },
 
