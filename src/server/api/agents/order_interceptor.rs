@@ -19,6 +19,8 @@ pub struct InterceptedOrder {
     pub intent: String,
     pub items: Vec<InterceptedOrderItem>,
     pub language: String,
+    pub notes: Option<String>,
+    pub translated_notes: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,7 +75,8 @@ pub async fn intercept_order(
     let prompt = format!(
         "Return strict JSON representing an order extracted from the following multilingual input. \
         The output language for item names must be translated to {tenant_language}. \
-        The JSON must have this structure: {{ \"intent\": \"Order\", \"items\": [{{ \"item\": \"item name\", \"quantity\": 1 }}], \"language\": \"detected source language\" }} \
+        Extract any special instructions or notes and provide them translated to {tenant_language} in 'translated_notes', and the original in 'notes'. \
+        The JSON must have this structure: {{ \"intent\": \"Order\", \"items\": [{{ \"item\": \"item name\", \"quantity\": 1 }}], \"language\": \"detected source language\", \"notes\": \"original notes\", \"translated_notes\": \"translated notes\" }} \
         Tenant: {tenant_id}. Input: {raw_input}"
     );
 
