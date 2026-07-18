@@ -214,12 +214,12 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <h3 id="clicks-stat">0</h3>
-                <p>Total Clicks</p>
+                <h3 id="affiliates-stat">0</h3>
+                <p>Total Affiliates</p>
             </div>
             <div class="stat-card">
-                <h3 id="conversions-stat">0</h3>
-                <p>Conversions</p>
+                <h3 id="commission-stat">0</h3>
+                <p>Total Commission (¢)</p>
             </div>
         </div>
     </div>
@@ -236,8 +236,8 @@
       const discountInput = document.getElementById('discountPercentage');
       const commissionInput = document.getElementById('commissionPercentage');
 
-      const clicksStat = document.getElementById('clicks-stat');
-      const conversionsStat = document.getElementById('conversions-stat');
+      const affiliatesStat = document.getElementById('affiliates-stat');
+      const commissionStat = document.getElementById('commission-stat');
 
       const getAuthHeaders = () => {
         const token = localStorage.getItem('ohc_token');
@@ -251,8 +251,8 @@
         });
         if (res.ok) {
             const data = await res.json();
-            clicksStat.textContent = data.clicks || '0';
-            conversionsStat.textContent = data.conversions || '0';
+            affiliatesStat.textContent = data.total_affiliates || '0';
+            commissionStat.textContent = data.total_commission_cents || '0';
         }
       } catch (e) {
           console.error("Failed to load stats", e);
