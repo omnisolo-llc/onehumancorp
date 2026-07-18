@@ -467,49 +467,6 @@
 
 
 
-        document.querySelectorAll('input, select, textarea').forEach(el => {
-          el.addEventListener('input', scheduleSave);
-          el.addEventListener('change', scheduleSave);
-        });
-
-
-
-        document.querySelectorAll('.context-card').forEach(card => {
-          card.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'INPUT') {
-               const input = card.querySelector('input');
-               input.checked = true;
-               scheduleSave();
-               updateCardSelection();
-            }
-          });
-          card.addEventListener('keydown', (e) => {
-             if (e.key === 'Enter' || e.key === ' ') {
-                 e.preventDefault();
-                 card.click();
-             }
-          });
-        });
-
-        document.querySelectorAll('.team-card').forEach(card => {
-          card.addEventListener('click', (e) => {
-             if (e.target.tagName !== 'INPUT') {
-                const input = card.querySelector('input');
-                input.checked = !input.checked;
-                scheduleSave();
-                updateCardSelection();
-             }
-          });
-          card.addEventListener('keydown', (e) => {
-             if (e.key === 'Enter' || e.key === ' ') {
-                 e.preventDefault();
-                 card.click();
-             }
-          });
-        });
-
-
-
         const saveDraftBtn = document.getElementById('save-draft-btn');
         if (saveDraftBtn) {
             saveDraftBtn.addEventListener('click', async () => {
