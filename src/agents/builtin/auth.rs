@@ -71,16 +71,6 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     }
 
     return Ok(AuthMode::Disabled);
-    let allowed_id = env::var("OHC_AGENT_SPIFFE_ID")
-        .map_err(|_| "configure OHC_AGENT_TOKEN or OHC_AGENT_SPIFFE_ID".to_string())?;
-    if allowed_id.trim().is_empty() {
-        return Err("OHC_AGENT_SPIFFE_ID must not be empty".to_string());
-    }
-    validate_spiffe_id(&allowed_id)?;
-    Err(
-        "SPIFFE authentication requires verified mTLS peer identity extraction, which is not yet configured for the builtin agent; use token authentication"
-            .to_string(),
-    )
 }
 
 /// Check a bearer token against an expected HMAC hash.
