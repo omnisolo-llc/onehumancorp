@@ -461,6 +461,9 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   OHC_PORT="$OHC_SERVER_PORT" \
   OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
   OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
+  OHC_AGENT_TOKEN="test_agent_token_must_be_at_least_32_bytes_long" \
+  OHC_AGENT_AUTH_KEY="test_agent_auth_key_must_be_at_least_32_bytes_long" \
+  OHC_ENV="test" \
     "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
