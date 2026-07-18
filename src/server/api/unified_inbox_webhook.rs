@@ -323,7 +323,7 @@ pub async fn handle_unified_webhook(
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DRAFT_REPLY', $4, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'Draft Reply', $4, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
@@ -380,7 +380,7 @@ pub async fn handle_unified_webhook(
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'Draft Reply', ?, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
