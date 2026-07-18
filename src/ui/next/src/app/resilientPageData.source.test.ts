@@ -15,8 +15,8 @@ describe("page rendering resilience", () => {
     expect(page("agent-debug-trace/page.tsx"))
       .toContain("setEvents(Array.isArray(data) ? data : [])");
     const kds = page("pos/kds/page.tsx");
-    expect(kds).toContain("setOrders(Array.isArray(ordersData) ? ordersData : [])");
-    expect(kds).toContain("setInventory(Array.isArray(invData) ? invData : [])");
+    expect(kds).toContain("setOrders(normalizedOrders)");
+    expect(kds).toContain("setInventory(normalizedInventory)");
     expect(page("changelog/page.tsx"))
       .toContain("setSections(Array.isArray(data) ? data : [])");
   });
