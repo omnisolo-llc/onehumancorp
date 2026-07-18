@@ -584,7 +584,15 @@ fn test_redact_interface_pii_edge_cases() {
             "phONe": "555-1234",
             "medical_history": "hypertension",
             "social_security_num": "987-65-4321",
-            "tax_ID_number": "123456789"
+            "tax_ID_number": "123456789",
+            "location_info": "home",
+            "user_lat": 40.7128,
+            "user_lon": -74.0060,
+            "patient_disease": "flu",
+            "user_gender": "male",
+            "user_race": "asian",
+            "user_religion": "buddhism",
+            "user_ethnicity": "hispanic"
         }
     });
 
@@ -608,6 +616,16 @@ fn test_redact_interface_pii_edge_cases() {
     assert_eq!(redacted_mixed["non_sensitive_parent"]["medical_history"], "[REDACTED]");
     assert_eq!(redacted_mixed["non_sensitive_parent"]["social_security_num"], "[REDACTED]");
     assert_eq!(redacted_mixed["non_sensitive_parent"]["tax_ID_number"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["location_info"], "[REDACTED]");
+    // "user_lat" and "user_lon" are not redacted because we only check for exact matches "lat", "lon" and "latitude", "longitude"
+    // to prevent aggressive sub-string redaction as identified in code review
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_lat"], 40.7128);
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_lon"], -74.0060);
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["patient_disease"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_gender"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_race"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_religion"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["user_ethnicity"], "[REDACTED]");
 }
 
 #[test]

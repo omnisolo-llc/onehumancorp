@@ -1378,6 +1378,16 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("salary")
         || k.contains("tax")
         || k.contains("socialsecurity")
+        || k.contains("location")
+        || k == "lat"
+        || k.contains("latitude")
+        || k == "lon"
+        || k.contains("longitude")
+        || k.contains("gender")
+        || k.contains("ethnicity")
+        || k.contains("race")
+        || k.contains("religion")
+        || k.contains("disease")
         || k.contains("iban")
         || k.contains("routing")
         || k.contains("pin")

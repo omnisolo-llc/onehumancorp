@@ -581,18 +581,21 @@ export default function SettingsPage() {
         </section>
 
         {/* Local Sovereignty Section */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8 relative">
+          <div className="absolute top-0 right-0 px-3 py-1 bg-gradient-to-l from-green-500/10 to-transparent border-b border-l border-white/30 rounded-bl-xl text-[10px] font-bold text-green-700 dark:text-green-400 tracking-wider">
+            🛡️ ZERO DATA LEAKAGE
+          </div>
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Sovereignty & Data Sharing</div>
-              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Control your privacy and telemetry in Standalone Mode.</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1 font-medium">Control your privacy and telemetry in Standalone Mode. Air-Gapped Autonomy is enforced by default.</div>
             </div>
           </div>
-          <div className="app-panel-body p-6 space-y-4">
-            <label className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-white dark:bg-gray-900 transition-colors">
+          <div className="app-panel-body p-6 space-y-4 bg-white/40 backdrop-blur-md">
+            <label className="flex items-center justify-between rounded-xl border border-gray-200/50 dark:border-gray-800/50 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-white/60 dark:bg-gray-900/60 shadow-sm hover:shadow transition-all duration-200">
               <div>
-                <span>Enable Product Telemetry (Standalone Mode)</span>
-                <p className="text-xs text-gray-500 font-normal mt-1">Shares anonymous usage data to help us improve OHC. Explicit opt-in required for Standalone Mode.</p>
+                <span className="font-semibold">Enable Product Telemetry (Standalone Mode)</span>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-normal mt-1 max-w-xl leading-relaxed">Shares anonymous usage data to help us improve OHC. Explicit opt-in required for Standalone Mode. No PII is ever transmitted.</p>
               </div>
               <input
                 type="checkbox"
