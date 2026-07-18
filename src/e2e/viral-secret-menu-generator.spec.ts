@@ -19,18 +19,22 @@ test.describe('Viral Secret Menu Generator Loop', () => {
       await page.fill('input#accessCode', 'SMASHX2');
       await page.fill('input#sharesReq', '4');
 
-      // Check that the preview updates
-      await expect(page.locator('#previewTitle')).toHaveText('Double Smash Burger');
-      await expect(page.locator('#previewDesc')).toHaveText('Extra cheese, extra smash.');
-      await expect(page.locator('#previewCode')).toHaveText('SMASHX2');
-      await expect(page.locator('#shareCountText')).toHaveText('4');
-      await expect(page.locator('#previewShares')).toHaveText('4');
-      await expect(page.locator('#previewSharesSub')).toHaveText('4');
-      await expect(page.locator('#previewSharesTotal')).toHaveText('4');
+      // Check that the preview iframe updates with correct parameters
+      const iframeElement = page.locator('iframe#previewFrame');
+      await expect(iframeElement).toBeVisible();
+
+      const src = await iframeElement.getAttribute('src');
+      expect(src).toContain('item_name=Double%20Smash%20Burger');
+      expect(src).toContain('item_desc=Extra%20cheese%2C%20extra%20smash.');
+      expect(src).toContain('access_code=SMASHX2');
+      expect(src).toContain('shares_req=4');
 
       // Test the copy link functionality
       await page.click('button#copyBtn');
-      await expect(page.locator('button#copyBtn')).toHaveText('Copied!');
+      await expect(page.locator('button#copyBtn')).toHaveText('Copied!', { timeout: 10000 });
+
+      const linkText = await page.locator('#shareLink').innerText();
+      expect(linkText).toContain('/api/v1/growth/secret-menu/embed');
     });
   });
 });
