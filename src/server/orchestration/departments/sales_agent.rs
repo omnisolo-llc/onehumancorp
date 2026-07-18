@@ -523,6 +523,53 @@ impl Department for SalesAgent {
                 let db = crate::db::get_pool();
                 let deposit_amount_cents = (price * 0.20 * 100.0) as i64;
                 let price_cents = (price * 100.0) as i64;
+                let proposal_id = uuid::Uuid::new_v4().to_string();
+                let proposal_line_item_id = uuid::Uuid::new_v4().to_string();
+                let project_task_id = uuid::Uuid::new_v4().to_string();
+                let project_id = uuid::Uuid::new_v4().to_string();
+                let parsed_customer_id = uuid::Uuid::parse_str(customer_id_val).unwrap_or_default();
+
+                if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
+                    .bind(&proposal_id)
+                    .bind(&event.tenant_id)
+                    .bind(parsed_customer_id)
+                    .bind(price_cents)
+                    .bind(deposit_amount_cents)
+                    .execute(&db)
+                    .await {
+                    tracing::error!("Failed to insert proposals record: {}", e);
+                }
+
+                if let Err(e) = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, NOW(), NOW())")
+                    .bind(&proposal_line_item_id)
+                    .bind(&proposal_id)
+                    .bind(&scope)
+                    .bind(price_cents)
+                    .execute(&db)
+                    .await {
+                    tracing::error!("Failed to insert proposal_line_items record: {}", e);
+                }
+
+                if let Err(e) = sqlx::query("INSERT INTO projects (id, tenant_id, customer_id, title, status) VALUES ($1, $2, $3, $4, 'Active')")
+                    .bind(&project_id)
+                    .bind(&event.tenant_id)
+                    .bind(parsed_customer_id)
+                    .bind(format!("{} Project", service_name))
+                    .execute(&db)
+                    .await {
+                    tracing::error!("Failed to insert projects record: {}", e);
+                }
+
+                if let Err(e) = sqlx::query("INSERT INTO project_tasks (id, tenant_id, project_id, proposal_id, title, status) VALUES ($1, $2, $3, $4, $5, 'Pending')")
+                    .bind(&project_task_id)
+                    .bind(&event.tenant_id)
+                    .bind(&project_id)
+                    .bind(&proposal_id)
+                    .bind(format!("Fulfill {}", service_name))
+                    .execute(&db)
+                    .await {
+                    tracing::error!("Failed to insert project_tasks record: {}", e);
+                }
 
                 if !service_lead_id.is_empty() {
                     let _ = sqlx::query("INSERT INTO estimates (id, tenant_id, service_lead_id, customer_id, description, min_price_cents, max_price_cents, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft')")
@@ -563,6 +610,8 @@ impl Department for SalesAgent {
                     "price": price,
                     "preferred_start_time": intent.preferred_start_time,
                     "preferred_end_time": intent.preferred_end_time,
+                    "proposal_id": proposal_id,
+                    "quote_id": proposal_id,
                 });
 
                 self.orchestrator
