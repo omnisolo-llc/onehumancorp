@@ -88,6 +88,7 @@ doc/api/
 
 # dotenv environment variables file
 .env*
+/.ohc-compose/
 
 # Avoid committing generated Javascript files:
 *.dart.js
@@ -137,3 +138,4 @@ dummy_*
 .next/
 /*.patch
 *.pid
+*.tsbuildinfo

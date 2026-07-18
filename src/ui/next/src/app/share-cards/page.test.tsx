@@ -1,12 +1,16 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import ShareCardsPage from './page';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() })
 }));
 
 describe('ShareCardsPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
+  });
   it('renders direct social share links', () => {
     render(<ShareCardsPage />);
 
@@ -26,7 +30,6 @@ describe('ShareCardsPage', () => {
   });
 
   it('shows soft paywall when trying to remove branding without Pro', () => {
-    window.localStorage.setItem('has_pro', 'false');
     render(<ShareCardsPage />);
     const toggle = screen.getByRole('checkbox');
     act(() => {
@@ -35,9 +38,10 @@ describe('ShareCardsPage', () => {
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
   });
 
-  it('allows removing branding with Pro', () => {
-    window.localStorage.setItem('has_pro', 'true');
+  it('allows removing branding when the plan API reports Pro', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
     render(<ShareCardsPage />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
     const toggle = screen.getByRole('checkbox');
     act(() => {
         toggle.click();

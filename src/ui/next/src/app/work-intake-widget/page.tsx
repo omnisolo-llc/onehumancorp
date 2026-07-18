@@ -12,7 +12,6 @@ export default function WorkIntakeWidgetPage() {
   const [showModal, setShowModal] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [isUnlocking, setIsUnlocking] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -22,39 +21,9 @@ export default function WorkIntakeWidgetPage() {
     document.title = "Embed Work Intake | OHC";
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
-  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
-
-  const handleShareToUnlock = async () => {
-    setIsUnlocking(true);
-    try {
-      let referralLink = `${window.location.origin}/onboarding?ref=${tenant}`;
-      try {
-        const res = await fetch("/api/v1/growth/referrals/generate", { method: "POST" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.referral_link) {
-            referralLink = data.referral_link;
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to generate referral link, using fallback", err);
-      }
-
-      const text = `I just built a custom Work Intake widget for my business on OneHumanCorp! 🚀\n\nStart your own business and get $50 off: ${referralLink}`;
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
-
-      // Simulate a verification delay
-      setTimeout(() => {
-        setRemoveBranding(true);
-        setShowSoftPaywall(false);
-        setIsUnlocking(false);
-      }, 1500);
-    } catch (e) {
-      console.error(e);
-      setIsUnlocking(false);
-    }
-  };
+  const encodedTenant = encodeURIComponent(tenant);
+  const embedUrl = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${encodedTenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
+  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -241,15 +210,7 @@ export default function WorkIntakeWidgetPage() {
             >
               Upgrade to Pro
             </button>
-            <p className="text-sm font-medium text-gray-500 mb-3">or</p>
-            <button
-              onClick={handleShareToUnlock}
-              disabled={isUnlocking}
-              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              {isUnlocking ? 'Verifying Share...' : 'Share on X to Unlock'}
-            </button>
+            <p className="text-sm text-gray-500">Share-based unlocking is unavailable because no referral verification service is connected.</p>
           </div>
         </div>
       )}

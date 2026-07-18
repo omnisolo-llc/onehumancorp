@@ -20,13 +20,6 @@ def _playwright_target_name(spec):
 def _playwright_shard_target_name(index, total):
     return "playwright_shard_{}_of_{}".format(index + 1, total)
 
-def _shard_specs(specs, index, total):
-    shard_specs = []
-    for spec_index, spec in enumerate(specs):
-        if spec_index % total == index:
-            shard_specs.append(spec)
-    return shard_specs
-
 def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = "long", exclusive = False, extra_env = {}, extra_data = []):
     tags = [
         "e2e",
@@ -41,7 +34,7 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
     env = {
         "BASE_URL": "http://localhost:18789",
         "NEXT_APP_PACKAGE_JSON": "$(rootpath //src/ui/next:package.json)",
-        "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
+        "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH": "$(rootpath @playwright_chromium//:chrome-headless-shell)",
         "PLAYWRIGHT_RETRIES": "0",
         "PLAYWRIGHT_TEST_TIMEOUT": "180000",
         "PLAYWRIGHT_VIDEO": "off",
@@ -65,22 +58,28 @@ def _playwright_sh_test(name, spec_args, common_data, manual = False, timeout = 
 
 def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = [], server = None, ci_discovery_data = []):
     """Generate one sharded all-spec CI test plus manual per-spec debug targets."""
-    common_data = [
+    enforcement_sources = [
+        "//:playwright.config.ts",
+        "//src/e2e:authenticate.ts",
         "//src/e2e:fixtures.ts",
-        "//src/e2e:current_app_smoke.ts",
-        "//src/e2e:ai-judge.ts",
         "//src/e2e:global-setup.ts",
+    ]
+    common_data = enforcement_sources + [
+        "//bazel/rules/playwright:discover_playwright_specs.sh",
+        "//bazel/rules/playwright:generate_test_tls.sh",
+        "//bazel/rules/playwright:playwright_no_substitutions.cjs",
+        "//src/e2e:current_app_smoke.ts",
         "//src/e2e:e2e-seed.sql",
         "//src/ui/next:package.json",
         "//src/ui/next:src/e2e/fixtures/test_img.png",
         "//src/agents/builtin:ohc-builtin-agent",
         "//deploy:docker-compose.e2e.yml",
-        "//:playwright.config.ts",
         "//:package.json",
         "//:package-lock.json",
         "//:node_modules",
-        "@playwright//:chromium-headless-shell",
-        "@playwright//:ffmpeg",
+        "@nodejs//:node",
+        "@playwright_chromium//:browser",
+        "@playwright_chromium//:chrome-headless-shell",
     ] + data
     if server:
         common_data.append(server)
@@ -106,28 +105,34 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         "size": "small",
         "tags": ["playwright"],
     }
-    if use_runfile_discovery:
-        coverage_attrs["args"] = ["--scan-runfiles"]
-        coverage_attrs["data"] = sorted(specs) + common_data + ci_discovery_data
-    else:
-        coverage_attrs["args"] = ["--all"] + sorted(specs) + ["--ci"] + sorted(ci_specs)
+    coverage_data = sorted(specs) + enforcement_sources + [
+        "//bazel/rules/playwright:playwright_no_substitutions.cjs",
+        "//src/e2e:current_app_smoke.ts",
+        "//:node_modules",
+        "@nodejs//:node",
+    ] + data + ci_discovery_data
+    coverage_attrs["args"] = (
+        ["--scan-runfiles", "--support"] +
+        ["$(rootpath {})".format(source) for source in enforcement_sources]
+    )
+    coverage_attrs["data"] = coverage_data
     sh_test(**coverage_attrs)
 
     shard_targets = []
     for index in range(ci_shard_count):
-        shard_specs = [] if use_runfile_discovery else _shard_specs(ci_specs, index, ci_shard_count)
-        if not use_runfile_discovery and not shard_specs:
-            continue
         shard_name = _playwright_shard_target_name(index, ci_shard_count)
         shard_targets.append(":" + shard_name)
         _playwright_sh_test(
             name = shard_name,
-            spec_args = shard_specs,
+            # Every target receives the complete curated set. Playwright then
+            # partitions individual tests, which prevents one large visual
+            # spec from overwhelming a single Next dev server.
+            spec_args = [] if use_runfile_discovery else ci_specs,
             common_data = common_data,
             manual = True,
             timeout = "eternal",
             exclusive = True,
-            extra_env = {"PLAYWRIGHT_SHARD": "{}/{}".format(index + 1, ci_shard_count)} if use_runfile_discovery else {},
+            extra_env = {"PLAYWRIGHT_SHARD": "{}/{}".format(index + 1, ci_shard_count)},
             extra_data = ci_discovery_data if use_runfile_discovery else [],
         )
 

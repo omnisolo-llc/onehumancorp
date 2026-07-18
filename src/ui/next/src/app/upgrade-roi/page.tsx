@@ -41,7 +41,7 @@ export default function UpgradeROIPage() {
           <div className="mb-6">
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Calculate Your Growth</h2>
              <p className="text-sm text-gray-600">
-               See how much extra revenue you could generate by unlocking Advanced AI Marketing, Automated Review Campaigns, and Smart Cross-Selling with the Pro Plan.
+               Explore an illustrative scenario using fixed 25% order and 15% order-value assumptions. This is not a forecast or guaranteed result.
              </p>
           </div>
 
@@ -98,7 +98,7 @@ export default function UpgradeROIPage() {
              <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-bl-full blur-2xl pointer-events-none"></div>
              <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/20 rounded-tr-full blur-xl pointer-events-none"></div>
 
-             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-200">Your Projected Impact</h2>
+             <h2 className="text-xl font-bold font-outfit mb-6 text-gray-200">Illustrative Scenario</h2>
 
              <div className="grid grid-cols-2 gap-4 mb-8">
                  <div className="p-4 bg-white/10 rounded-xl border border-white/5 backdrop-blur-[30px] saturate-[210%]">

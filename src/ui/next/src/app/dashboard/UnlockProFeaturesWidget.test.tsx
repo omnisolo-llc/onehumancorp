@@ -34,13 +34,13 @@ describe('UnlockProFeaturesWidget', () => {
   it('renders progress bar and title correctly', async () => {
     render(<UnlockProFeaturesWidget />);
 
-    expect(await screen.findByText(/Unlock Pro Features/i)).toBeDefined();
+    expect(await screen.findByText(/Referral Progress/i)).toBeDefined();
     expect(screen.getByText(/1 \/ 3 Invites/i)).toBeDefined();
   });
 
   it('copies share link to clipboard and updates button state', async () => {
     render(<UnlockProFeaturesWidget />);
-    await screen.findByText(/Unlock Pro Features/i);
+    await screen.findByText(/Referral Progress/i);
 
     const copyButton = screen.getByText(/Copy Invite Link/i).closest('button');
     expect(copyButton).toBeDefined();
@@ -54,7 +54,7 @@ describe('UnlockProFeaturesWidget', () => {
     expect(await screen.findByText(/Copied Link!/i)).toBeDefined();
   });
 
-  it('shows unlocked state when invites target is reached', async () => {
+  it('shows a reached target without claiming Pro entitlement', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
@@ -63,7 +63,9 @@ describe('UnlockProFeaturesWidget', () => {
     } as any);
     render(<UnlockProFeaturesWidget />);
 
-    expect(await screen.findByText(/Pro Features Unlocked!/i)).toBeDefined();
+    expect(await screen.findByText(/Invite target reached/i)).toBeDefined();
+    expect(screen.getByText(/Billing verification is required/)).toBeDefined();
+    expect(screen.queryByText(/Pro Features Unlocked!/i)).toBeNull();
     expect(screen.queryByText(/Copy Invite Link/i)).toBeNull();
   });
 });

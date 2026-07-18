@@ -1,3 +1,7 @@
+{{- $grpc := default dict .Values.backend.grpc -}}
+{{- $grpcPort := default 8081 $grpc.port -}}
+{{- $backendEnv := default dict .Values.backend.env -}}
+{{- $standaloneMode := eq (toString (default "false" (get $backendEnv "OHC_STANDALONE_MODE"))) "true" -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,3 +13,8 @@ spec:
     - port: {{ .Values.backend.service.port }}
       targetPort: {{ .Values.backend.service.port }}
       name: http
+    {{- if not $standaloneMode }}
+    - port: {{ $grpcPort }}
+      targetPort: grpc
+      name: grpc
+    {{- end }}

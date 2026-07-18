@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 
 export default function GiveawayGeneratorPage() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function GiveawayGeneratorPage() {
   const [tenant, setTenant] = useState('DEFAULT');
   const [giveawayLink, setGiveawayLink] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
@@ -19,13 +20,6 @@ export default function GiveawayGeneratorPage() {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
-
-      const checkStorage = () => {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
-      };
-      window.addEventListener('storage', checkStorage);
-      return () => window.removeEventListener('storage', checkStorage);
     }
   }, []);
 
@@ -51,13 +45,10 @@ export default function GiveawayGeneratorPage() {
     generateLink();
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
-    }
-    setHasPro(true);
+    if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     generateLink();
   };
@@ -75,6 +66,7 @@ export default function GiveawayGeneratorPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
+        {claimError && <p className="text-sm text-red-600" role="status">{claimError}</p>}
 
         {/* Campaign Settings */}
         <section className="w-full md:w-1/2 flex flex-col gap-6">
@@ -246,7 +238,7 @@ export default function GiveawayGeneratorPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
+              Share on X to activate Pro
             </button>
           </div>
         </div>

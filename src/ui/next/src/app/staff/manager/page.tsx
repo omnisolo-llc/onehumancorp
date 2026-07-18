@@ -39,42 +39,17 @@ export default function ManagerDashboard() {
     fetchData();
   }, []);
 
-  const simulateEvent = async () => {
-    try {
-      await fetch('/api/v1/staff/simulate-event', { method: 'POST' });
-      const res = await fetch('/api/v1/staff/tasks');
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const generateSummary = async () => {
-    try {
-      await fetch('/api/v1/staff/generate-summary', { method: 'POST' });
-      alert("Shift Summary Generated!");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <AppShell title="Manager Dashboard">
       <div className="max-w-[1440px] mx-auto min-h-screen p-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manager View (Jun)</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manager View</h1>
           <p className="text-gray-500 mt-2">Manage daily operations, shifts, and handle escalations.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <button onClick={simulateEvent} className="bg-blue-600 text-white p-4 rounded-[12px] shadow hover:bg-blue-700">
-            Simulate Business Event (Inventory Low)
-          </button>
-          <button onClick={generateSummary} className="bg-emerald-600 text-white p-4 rounded-[12px] shadow hover:bg-emerald-700">
-            Generate End of Shift Summary
+          <button disabled className="cursor-not-allowed bg-gray-200 text-gray-500 p-4 rounded-[12px] shadow">
+            Summary generation is unavailable
           </button>
         </div>
 

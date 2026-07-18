@@ -540,7 +540,7 @@ function FieldOpsJobsPageContent() {
             {!draftQuoteResult ? (
               <>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                  Speak your notes and the Sales Assistant will draft a professional quote. (Simulated)
+                  Type your notes and the Sales Assistant will request a professional quote draft.
                 </p>
                 <textarea
                   data-testid="voice-transcript-input"

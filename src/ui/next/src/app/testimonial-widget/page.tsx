@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import { useProPlan } from '../components/useProPlan';
 
 export default function TestimonialWidgetGenerator() {
   const [tenant, setTenant] = useState('my-business');
@@ -13,14 +14,12 @@ export default function TestimonialWidgetGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [hideBranding, setHideBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    // In a real app, we would fetch the user's plan here
-    // For now, we default to false to show the viral loop/paywall
   }, []);
 
   const embedUrl = `https://ohc.app/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}&branding=${!hideBranding}`;

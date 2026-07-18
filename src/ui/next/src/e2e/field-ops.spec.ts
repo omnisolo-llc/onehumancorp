@@ -1,5 +1,5 @@
-import { test, expect } from "../../../e2e/fixtures";
-import { e2eDbQuery } from "../../../e2e/db_utils";
+import { test, expect } from "../../../../e2e/fixtures";
+import { e2eDbQuery } from "../../../../e2e/db_utils";
 
 test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
   test("Carlos can tap 'Heading to Job', 'Start Work', and 'Job Done' to update status without crashing", async ({

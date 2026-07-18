@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../../components/PoweredByOHC';
 import { OnboardingChatAgent } from './components/OnboardingChatAgent';
@@ -8,11 +9,10 @@ import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 export default function ZeroClickBuilderPage() {
   const router = useRouter();
   const [generatedStore, setGeneratedStore] = useState<any>(null);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 

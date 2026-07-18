@@ -26,17 +26,3 @@ BEGIN
     END IF;
 END
 $$;
-
--- +goose Down
-DO $$
-BEGIN
-    IF to_regclass('subscriptions') IS NOT NULL THEN
-        ALTER TABLE subscriptions DROP COLUMN IF EXISTS health_score;
-        ALTER TABLE subscriptions DROP COLUMN IF EXISTS last_engagement_at;
-    END IF;
-    IF to_regclass('subscribers') IS NOT NULL THEN
-        ALTER TABLE subscribers DROP COLUMN IF EXISTS health_score;
-        ALTER TABLE subscribers DROP COLUMN IF EXISTS last_engagement_at;
-    END IF;
-END
-$$;

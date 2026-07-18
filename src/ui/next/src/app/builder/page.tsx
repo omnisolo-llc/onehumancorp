@@ -128,15 +128,7 @@ export default function BuilderPage() {
         }
       });
 
-      // For V2, we simulate 3 drafts by slightly varying the first one if only one is returned,
-      // or we just use what's there. In real V2, backend would return 3.
-      const draft2 = JSON.parse(JSON.stringify(newBlocks));
-      if (draft2[0] && draft2[0].props) draft2[0].props.headline += " (Variant B)";
-
-      const draft3 = JSON.parse(JSON.stringify(newBlocks));
-      if (draft3[0] && draft3[0].props) draft3[0].props.headline += " (Variant C)";
-
-      setDrafts([newBlocks, draft2, draft3]);
+      setDrafts([newBlocks]);
       setBlocks(newBlocks);
       setStatus("selection");
     } catch (error) {
@@ -199,7 +191,7 @@ export default function BuilderPage() {
         <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:glassmorphism shadow-2xl">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
-              <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
+              <p className="text-sm text-gray-500">The Architect returned this draft for review.</p>
            </div>
 
            <div className="flex-1 overflow-y-auto px-6 space-y-6 pb-24">

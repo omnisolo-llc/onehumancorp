@@ -161,12 +161,12 @@ describe('WebsiteBuilderPage', () => {
     expect(startCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
     expect(startRequest).toEqual(expect.objectContaining({
       company_name: 'My Shop',
-      company_description: expect.any(String),
+      company_description: '',
       selling_categories: ['physical'],
       payment_pref: 'Online',
       website_template: 'Modern',
       domain_choice: 'subdomain',
-      target_audience: 'Customers',
+      target_audience: '',
       ai_auto_respond: false,
     }));
     expect(startRequest.admin_password).toBeUndefined();
@@ -340,6 +340,23 @@ describe('WebsiteBuilderPage', () => {
 
   it('handles sync back to server state on change', async () => {
     useWebsiteBuilderStore.setState({ status: 'idle' });
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/v1/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_name: 'Bakery From Intake',
+            business_type: 'Bakery',
+            initial_products: [{ name: 'Cake', price: '20.00' }],
+            categories: ['physical'],
+          }),
+        });
+      }
+      if (url === '/api/v1/onboarding/start') {
+        return Promise.resolve({ ok: true, json: async () => ({ organization_id: 'org-1' }) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
     render(<WebsiteBuilderPage />);
 
     await waitFor(() => { expect(global.fetch).toHaveBeenCalled(); });
@@ -354,14 +371,11 @@ describe('WebsiteBuilderPage', () => {
       expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
     });
 
-    act(() => {
-      vi.advanceTimersByTime(2500); // Wait for debounce and status change to live
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"company_name":"Bakery From Intake"')
+      }));
     });
-
-    // Should have called fetch to start the store
-    expect(global.fetch).toHaveBeenCalledWith('/api/v1/onboarding/start', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"company_name":"My Business"')
-    }));
   });
 });

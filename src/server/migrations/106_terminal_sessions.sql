@@ -28,15 +28,3 @@ BEGIN
     END IF;
 END
 $$;
-
--- +goose Down
-DO $$
-BEGIN
-    IF to_regclass('pos_terminal_sessions') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_pos_terminal_sessions ON pos_terminal_sessions;
-        ALTER TABLE pos_terminal_sessions DISABLE ROW LEVEL SECURITY;
-    END IF;
-END
-$$;
-
-DROP TABLE IF EXISTS pos_terminal_sessions CASCADE;

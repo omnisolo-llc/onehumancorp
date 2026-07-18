@@ -7,10 +7,6 @@ test.use({
 });
 
 test('Maya the baker journey storefront v2', async ({ page }) => {
-  // Mock API responses
-    });
-  });
-
   await page.goto('/builder');
 
   // Screen 1: Onboarding

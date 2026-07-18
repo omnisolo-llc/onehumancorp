@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { AppShell } from '../components/AppShell';
 
 export default function ViralProductWidgetPage() {
@@ -11,7 +12,7 @@ export default function ViralProductWidgetPage() {
     const [description, setDescription] = useState('A rich, dark roast sourced from the best beans.');
     const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1559525839-b184a4d698c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');
     const [copied, setCopied] = useState(false);
-    const [hasPro, setHasPro] = useState(false);
+    const { hasPro } = useProPlan();
     const [showPaywall, setShowPaywall] = useState(false);
     const [hideBranding, setHideBranding] = useState(false);
     const [isClient, setIsClient] = useState(false);
@@ -21,8 +22,6 @@ export default function ViralProductWidgetPage() {
         if (typeof localStorage !== 'undefined') {
             const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
             setTenant(storedTenant);
-            const proStatus = localStorage.getItem('has_pro') === 'true';
-            setHasPro(proStatus);
         }
         document.title = "Viral Product Widget | OHC";
     }, []);

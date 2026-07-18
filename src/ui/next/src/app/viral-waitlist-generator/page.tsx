@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
@@ -11,14 +12,13 @@ export default function ViralWaitlistGeneratorPage() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -37,7 +37,7 @@ export default function ViralWaitlistGeneratorPage() {
           <input type="email" name="email" required placeholder="Enter your email" style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;" />
           <button type="submit" style="background: #0066ff; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">Join</button>
         </form>
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 12px; margin-bottom: 0;">Join 1,234 others on the waitlist</p>\`;`;
+        <p style="color: #9ca3af; font-size: 12px; margin-top: 12px; margin-bottom: 0;">Join the waitlist for updates</p>\`;`;
 
     if (!hasPro) {
       code += `
@@ -65,7 +65,8 @@ export default function ViralWaitlistGeneratorPage() {
         fetch(form.action, {
           method: 'POST',
           body: new FormData(form)
-        }).then(() => {
+        }).then((response) => {
+          if (!response.ok) throw new Error('Waitlist request failed');
           btn.innerText = 'Joined!';
           btn.style.background = '#10b981';
           form.querySelector('input[type="email"]').value = '';
@@ -176,7 +177,7 @@ export default function ViralWaitlistGeneratorPage() {
                         <input type="email" placeholder="Enter your email" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black" disabled />
                         <button className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg shadow-sm whitespace-nowrap" disabled>Join</button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">Join 1,234 others on the waitlist</p>
+                    <p className="text-xs text-gray-400 mt-3">Join the waitlist for updates</p>
                 </div>
 
                 {!hasPro && (

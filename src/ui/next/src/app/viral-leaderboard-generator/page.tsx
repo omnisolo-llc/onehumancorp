@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralLeaderboardGeneratorPage() {
@@ -10,7 +11,7 @@ export default function ViralLeaderboardGeneratorPage() {
   const [title, setTitle] = useState('Top Referrers');
   const [metric, setMetric] = useState<'referrers' | 'buyers'>('referrers');
   const [copied, setCopied] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -19,7 +20,6 @@ export default function ViralLeaderboardGeneratorPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Viral Leaderboard Generator | OHC";
   }, []);

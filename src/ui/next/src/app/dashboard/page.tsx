@@ -234,8 +234,8 @@ export default function Dashboard() {
           .catch(() => null);
 
         const usagePromise = fetch('/api/v1/user/usage')
-          .then(res => res.ok ? res.json() : { remainingActions: 9 })
-          .catch(() => ({ remainingActions: 9 }));
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
 
         const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
           unifiedPromise,
@@ -281,8 +281,8 @@ export default function Dashboard() {
         const inboxData = unifiedData.inbox || [];
         const supplyData = unifiedData.supply || {};
 
-        if (onboardingData?.wizardState?.aiAgents) {
-          setActiveDepartments(onboardingData.wizardState.aiAgents);
+        if (Array.isArray(onboardingData?.wizardState?.aiAgents)) {
+          setActiveDepartments(onboardingData.wizardState.aiAgents.filter((department: unknown): department is string => typeof department === "string"));
         } else {
           setActiveDepartments([]);
         }
@@ -334,7 +334,11 @@ export default function Dashboard() {
     { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
     { label: "Orders", value: String(metrics.pending_orders || 0), tone: metrics.pending_orders > 0 ? "warn" as const : "good" as const },
     { label: "Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" as const : "good" as const },
-    { label: "Growth", value: "Active", tone: "good" as const },
+    {
+      label: "Growth",
+      value: loading ? "Unknown" : error ? "Unavailable" : activeDepartments.some((department) => department.trim().toLowerCase() === "growth") ? "Active" : "Inactive",
+      tone: loading || error ? "neutral" as const : activeDepartments.some((department) => department.trim().toLowerCase() === "growth") ? "good" as const : "neutral" as const,
+    },
   ];
 
 
@@ -484,26 +488,12 @@ export default function Dashboard() {
               <button
                 type="button"
                 className="app-button primary min-h-[44px]"
-                onClick={() => {
-                  setMigrationStatus("running");
-                  window.setTimeout(() => setMigrationStatus("complete"), 750);
-                }}
-                disabled={!migrationUrl.trim() || migrationStatus === "running"}
+                disabled
               >
-                Start Migration
+                Migration unavailable
               </button>
             </div>
-            {migrationStatus === "running" && (
-              <p className="mt-4 app-list-subtitle">Our AI is carefully moving your catalog, product photos, and store settings.</p>
-            )}
-            {migrationStatus === "complete" && (
-              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p className="app-list-title">Migration Complete</p>
-                <button type="button" className="app-button min-h-[44px]" onClick={() => router.push("/products")}>
-                  Review & Publish
-                </button>
-              </div>
-            )}
+            <p className="mt-4 app-list-subtitle">Store migration is unavailable because no migration service is connected.</p>
           </div>
         </section>
       )}
@@ -562,29 +552,6 @@ export default function Dashboard() {
           <PromoterCard />
 
         <section>
-          <div className="mb-6 p-6 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">🎉</div>
-                <div>
-                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
-                  navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
-                  setActionMessage("Reward claimed. Invite link copied.");
-                }}
-                className="px-4 py-2 min-h-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-lg font-medium shadow-sm transition-colors"
-              >
-                Share & Claim Reward
-              </button>
-            </div>
-          </div>
-
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
@@ -594,6 +561,11 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
+            {loading ? (
+              <p className="app-list-subtitle">Loading business metrics…</p>
+            ) : error ? (
+              <p className="text-sm text-red-600">Business metrics are unavailable.</p>
+            ) : (
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
               <div className="app-card">
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your orders.">
@@ -618,6 +590,7 @@ export default function Dashboard() {
                 <div className="app-metric-note">Materials below threshold</div>
               </div>
             </div>
+            )}
 
 
           </div>
@@ -1157,14 +1130,14 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create engaging polls to capture leads and customer preferences.</p>
             </Link>
             </WithTooltip>
-            <WithTooltip id="trial-extension-tooltip" defaultText="Share your setup on X to instantly unlock 7 extra days of Pro.">
+            <WithTooltip id="trial-extension-tooltip" defaultText="Request Pro activation through the OHC entitlement service after sharing.">
             <Link href="/trial-extension" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Request Pro activation through the OHC entitlement service after sharing.</p>
             </Link>
             </WithTooltip>
 

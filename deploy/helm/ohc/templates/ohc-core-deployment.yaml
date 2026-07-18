@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-ohc-core
+        {{- include "ohc.selectorLabels" . | nindent 8 }}
     spec:
       securityContext:
         runAsNonRoot: true

@@ -1,4 +1,15 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'node:crypto';
+
+function inlineScriptValue(value: string): string {
+  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => ({
+    '<': '\\u003c',
+    '>': '\\u003e',
+    '&': '\\u0026',
+    '\u2028': '\\u2028',
+    '\u2029': '\\u2029',
+  })[character] ?? character);
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,6 +19,10 @@ export async function GET(request: Request) {
   const description = searchParams.get('description') || 'Enter your email below to get instant access.';
   const buttonText = searchParams.get('buttonText') || 'Download Now';
   const hideBranding = searchParams.get('hideBranding') === 'true';
+  const nonce = randomBytes(16).toString('base64url');
+  const tenantScriptValue = inlineScriptValue(tenant);
+  const titleScriptValue = inlineScriptValue(title);
+  const buttonTextScriptValue = inlineScriptValue(buttonText);
 
   const isDark = theme === 'dark';
 
@@ -161,7 +176,7 @@ export async function GET(request: Request) {
         </div>
       </div>
 
-      <script>
+      <script nonce="${nonce}">
         document.getElementById('leadForm').addEventListener('submit', async function(e) {
           e.preventDefault();
           const email = document.getElementById('email').value;
@@ -176,10 +191,10 @@ export async function GET(request: Request) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                tenant_id: '${tenant}',
+                tenant_id: ${tenantScriptValue},
                 email: email,
                 source: 'lead_magnet_embed',
-                campaign: '${escapeHtml(title)}'
+                campaign: ${titleScriptValue}
               })
             });
 
@@ -193,7 +208,7 @@ export async function GET(request: Request) {
             console.error('Error:', error);
             alert('Something went wrong. Please try again.');
             btn.classList.remove('loading');
-            btn.textContent = '${escapeHtml(buttonText)}';
+            btn.textContent = ${buttonTextScriptValue};
           }
         });
       </script>
@@ -205,6 +220,9 @@ export async function GET(request: Request) {
     headers: {
       'Content-Type': 'text/html',
       'Cache-Control': 'public, max-age=3600',
+      'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src 'self'; frame-ancestors *; base-uri 'none'; form-action 'none'`,
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
     },
   });
 }

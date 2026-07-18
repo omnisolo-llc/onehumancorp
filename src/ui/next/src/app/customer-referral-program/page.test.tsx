@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CustomerReferralProgramPage from './page';
 
@@ -10,6 +10,7 @@ vi.mock('next/navigation', () => ({
 describe('CustomerReferralProgramPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockResolvedValue(undefined),
@@ -90,16 +91,6 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('shows soft paywall when attempting to remove branding without pro', async () => {
-    const localStorageMock = {
-      getItem: vi.fn((key) => {
-        if (key === 'has_pro') return 'false';
-        return null;
-      }),
-    };
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-    });
-
     render(<CustomerReferralProgramPage />);
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
@@ -113,17 +104,10 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('removes branding when pro is true and toggle is clicked', async () => {
-    const localStorageMock = {
-      getItem: vi.fn((key) => {
-        if (key === 'has_pro') return 'true';
-        return null;
-      }),
-    };
-    Object.defineProperty(window, 'localStorage', {
-      value: localStorageMock,
-    });
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
     render(<CustomerReferralProgramPage />);
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 

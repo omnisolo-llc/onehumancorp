@@ -14,6 +14,7 @@ function QuizContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const questions = [
     "How do you handle stressful situations?",
@@ -31,11 +32,8 @@ function QuizContent() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsFinished(true);
-    }, 1000);
+    setSubmitError('Quiz result delivery is unavailable because no submission service is connected.');
+    setIsSubmitting(false);
   };
 
   const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/quiz?tenant=${encodeURIComponent(tenant)}&topic=${encodeURIComponent(topic)}&ref=user123` : '';
@@ -94,6 +92,7 @@ function QuizContent() {
                       Enter your email below to see your results and claim your reward!
                     </p>
                     <form onSubmit={handleSubmit} className="w-full space-y-4">
+                        {submitError && <p className="text-sm text-red-600" role="status">{submitError}</p>}
                         <input
                           type="email"
                           required

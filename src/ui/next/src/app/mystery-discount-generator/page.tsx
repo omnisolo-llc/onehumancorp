@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function MysteryDiscountGeneratorPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('my-store');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -23,7 +24,6 @@ export default function MysteryDiscountGeneratorPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     if (typeof document !== 'undefined') {
       document.title = "Mystery Discount Generator | OHC";

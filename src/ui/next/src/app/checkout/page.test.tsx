@@ -1,225 +1,115 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import CheckoutPage from './page';
-import * as React from 'react';
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import CheckoutPage from "./page";
 
 const mockPush = vi.fn();
 const mockUseSearchParams = vi.fn();
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
   useSearchParams: () => mockUseSearchParams(),
 }));
 
-vi.mock('../../components/TooltipRegistry', () => ({
+vi.mock("../../components/TooltipRegistry", () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
-}));
+vi.mock("../components/PoweredByOHC", () => ({ PoweredByOHC: () => null }));
+vi.mock("../components/OneTapReferral", () => ({ OneTapReferral: () => null }));
+vi.mock("../components/PostPurchaseShareWidget", () => ({ PostPurchaseShareWidget: () => null }));
+vi.mock("../components/ShareAndSaveWidget", () => ({ ShareAndSaveWidget: () => null }));
+vi.mock("../../hooks/useSyncGateway", () => ({ useSyncGateway: () => ({ lastMessage: null }) }));
 
-vi.mock('../components/OneTapReferral', () => ({
-  OneTapReferral: () => <div data-testid="one-tap-referral" />,
-}));
-
-vi.mock('../components/PostPurchaseShareWidget', () => ({
-  PostPurchaseShareWidget: () => <div data-testid="post-purchase-share-widget" />,
-  OneTapReferral: () => <div data-testid="one-tap-referral" />,
-}));
-
-vi.mock('../components/ShareAndSaveWidget', () => ({
-  ShareAndSaveWidget: () => <div data-testid="share-and-save-widget" />,
-}));
-
-describe('CheckoutPage', () => {
-  afterEach(() => {
-    mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));
-  });
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: vi.fn(() => 'fake-token'),
-      setItem: vi.fn(),
-    },
-    writable: true
-  });
+const response = (body: unknown, ok = true, status = ok ? 200 : 500) => ({
+  ok,
+  status,
+  json: async () => body,
 });
 
-  it('displays subscription UI when tier is provided and handles checkout session', async () => {
-    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
+describe("CheckoutPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseSearchParams.mockReturnValue(new URLSearchParams("product_id=prod-real&quantity=2"));
+    global.fetch = vi.fn(async (url) => {
+      if (url === "/api/v1/catalog/products") {
+        return response([{ id: "prod-real", title: "Seeded Product", price_cents: 1299 }]) as Response;
+      }
+      return response({}, false) as Response;
+    });
+  });
+
+  it("loads the selected product and price from the authenticated catalog", async () => {
+    render(<CheckoutPage />);
+
+    expect(await screen.findByText("Seeded Product")).toBeDefined();
+    expect(screen.getByText("$25.98")).toBeDefined();
+    expect(global.fetch).toHaveBeenCalledWith("/api/v1/catalog/products");
+    expect(document.body.textContent).not.toContain("Service Deposit");
+    expect(document.body.textContent).not.toContain("20% discount");
+  });
+
+  it("fails closed without an explicit valid product", async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams(""));
+    render(<CheckoutPage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("A valid product is required");
+    expect(global.fetch).not.toHaveBeenCalledWith("/api/v1/catalog/products");
+    expect(screen.queryByRole("button", { name: "Pay" })).toBeNull();
+  });
+
+  it("does not trust a success query flag without a verified paid order", async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams("success=true&orderId=order-1"));
+    global.fetch = vi.fn(async () => response([{ id: "order-1", status: "pending" }]) as Response);
+    render(<CheckoutPage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Payment has not been confirmed");
+    expect(screen.queryByText("Order Successful")).toBeNull();
+  });
+
+  it("renders success only for the exact order returned as paid", async () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams("success=true&orderId=order-1"));
+    global.fetch = vi.fn(async () => response([{ id: "order-1", status: "paid" }]) as Response);
+    render(<CheckoutPage />);
+
+    expect(await screen.findByText("Order Successful")).toBeDefined();
+    expect(screen.getByText("Order order-1 has a confirmed payment.")).toBeDefined();
+    expect(global.fetch).toHaveBeenCalledWith("/api/v1/ui/orders");
+  });
+
+  it("refuses an untrusted checkout redirect", async () => {
     const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
+    Object.defineProperty(window, "location", { configurable: true, value: { origin: "http://localhost", assign } });
+    global.fetch = vi.fn(async (url) => {
+      if (url === "/api/v1/catalog/products") {
+        return response([{ id: "prod-real", title: "Seeded Product", price_cents: 1299 }]) as Response;
+      }
+      return response({ checkout_url: "https://attacker.example/collect" }) as Response;
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        checkout_url: 'https://checkout.stripe.com/pay/test',
-      }),
-    } as any);
+    render(<CheckoutPage />);
 
-    await act(async () => { render(<CheckoutPage />); });
-
-    expect(screen.getByText('Plan Upgrade')).toBeDefined();
-    expect(screen.getByText('OHC Starter Plan')).toBeDefined();
-
-    const payButton = screen.getByText('Upgrade');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      const checkoutCall = vi.mocked(global.fetch).mock.calls.find(
-        ([url]) => url === '/api/v1/billing/create-checkout-session'
-      );
-      expect(checkoutCall).toBeDefined();
-      expect(checkoutCall?.[1]).toEqual(expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      }));
-      expect(checkoutCall?.[1]?.headers).not.toHaveProperty('Authorization');
-      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test');
-    });
+    fireEvent.click(await screen.findByRole("button", { name: "Pay" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Checkout is temporarily unavailable");
+    expect(assign).not.toHaveBeenCalled();
   });
 
-  it('handles regular checkout session flow correctly', async () => {
+  it("redirects to a trusted Stripe checkout returned by the backend", async () => {
     const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-    global.fetch = vi.fn().mockImplementation((url) => {
-      if (url.includes('/api/v1/pos/inventory')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
-        });
+    Object.defineProperty(window, "location", { configurable: true, value: { origin: "http://localhost", assign } });
+    global.fetch = vi.fn(async (url) => {
+      if (url === "/api/v1/catalog/products") {
+        return response([{ id: "prod-real", title: "Seeded Product", price_cents: 1299 }]) as Response;
       }
-      if (url.includes('/api/v1/billing/create-checkout-session')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit' }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      return response({ checkout_url: "https://checkout.stripe.com/c/pay/cs_live_real" }) as Response;
     });
+    render(<CheckoutPage />);
 
-    await act(async () => { render(<CheckoutPage />); });
-
-    expect(screen.getByText('Secure Checkout')).toBeDefined();
-    expect(screen.getByText('Service Deposit')).toBeDefined();
-    expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
-    expect(screen.getAllByText('$45.00')[0]).toBeDefined();
-
-    const payButton = screen.getByText('Pay');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
-        method: 'POST'
-      }));
-      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit');
+    fireEvent.click(await screen.findByRole("button", { name: "Pay" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.stripe.com/c/pay/cs_live_real"));
+    const call = vi.mocked(global.fetch).mock.calls.find(([url]) => url === "/api/v1/billing/create-checkout-session");
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      is_subscription: false,
+      product_id: "prod-real",
+      quantity: 2,
     });
-  });
-
-  it('handles Subscribe & Save checkout session flow correctly', async () => {
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-    global.fetch = vi.fn().mockImplementation((url) => {
-      if (url.includes('/api/v1/pos/inventory')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
-        });
-      }
-      if (url.includes('/api/v1/billing/create-checkout-session')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit-sub' }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
-
-    await act(async () => { render(<CheckoutPage />); });
-
-    const subscribeLabel = screen.getByText('Subscribe & Save 10%');
-    fireEvent.click(subscribeLabel);
-
-    const payButton = screen.getByText('Pay');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/create-checkout-session', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"is_subscription":true')
-      }));
-      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit-sub');
-    });
-  });
-
-  it('handles delivery quote flow correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        success: true,
-        fee: 10.50,
-      }),
-    } as any);
-
-    await act(async () => { render(<CheckoutPage />); });
-
-    const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
-    fireEvent.change(addressInput, { target: { value: '123 Main St' } });
-
-    const checkButton = screen.getByText('Check');
-    fireEvent.click(checkButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/checkout/delivery-quote', expect.objectContaining({
-        method: 'POST'
-      }));
-      expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();
-      expect(screen.getByText('Total with Delivery')).toBeDefined();
-      expect(screen.getByText('$55.50')).toBeDefined();
-    });
-  });
-
-  it('renders the PoweredByOHC component', async () => {
-    await act(async () => { render(<CheckoutPage />); });
-    const components = screen.getAllByTestId('powered-by-ohc');
-    expect(components.length).toBeGreaterThan(0);
   });
 });
-
-  it('handles item just sold out error', async () => {
-    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-    global.fetch = vi.fn().mockResolvedValue({
-      status: 409,
-      ok: false,
-      json: () => Promise.resolve({
-        error: 'Oops! Item just sold out.'
-      }),
-    } as any);
-
-    await act(async () => { render(<CheckoutPage />); });
-
-    const payButton = screen.getByText('Upgrade');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Oops! Item just sold out.')).toBeDefined();
-    });
-  });

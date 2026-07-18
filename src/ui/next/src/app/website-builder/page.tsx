@@ -561,22 +561,22 @@ export default function WebsiteBuilderPage() {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                company_name: businessName || 'My Business',
-                                business_type: businessType || 'Online Store',
-                                company_description: bio || `${businessName || 'My Business'} storefront`,
+                                company_name: businessName,
+                                business_type: businessType,
+                                company_description: bio,
                                 selling_categories: [
                                   ...(hasPhysicalProducts ? ['physical'] : []),
                                   ...(hasDigitalProducts ? ['digital'] : []),
                                 ],
-                                payment_pref: paymentMethod || 'online',
-                                website_template: template || 'Modern',
-                                first_product_name: productName || 'First Product',
-                                first_product_price: productPrice || '10.00',
-                                domain_choice: domainChoice || 'subdomain',
+                                payment_pref: paymentMethod,
+                                website_template: template,
+                                first_product_name: productName,
+                                first_product_price: productPrice,
+                                domain_choice: domainChoice,
                                 price_type: 'fixed',
-                                location: 'Unknown',
-                                target_audience: 'Customers',
-                                ai_agents: aiAgents.length > 0 ? aiAgents : ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
+                                location: '',
+                                target_audience: '',
+                                ai_agents: aiAgents,
                                 ai_auto_respond: aiAutoRespond,
                                 initial_products: []
                               })
@@ -618,17 +618,12 @@ export default function WebsiteBuilderPage() {
                         if (!bio.trim()) return;
                         setStatus('generating');
                         let completed = false;
-                        const finishWithFallback = async () => {
+                        const finishUnavailable = async () => {
                           if (completed) return;
                           completed = true;
-                          setBusinessName('My Business');
-                          setBusinessType('Online Store');
-                          setProductName('First Product');
-                          setProductPrice('10.00');
-
                           setStatus('draft');
                         };
-                        const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
+                        const safetyTimeout = window.setTimeout(finishUnavailable, 5000);
                         const controller = new AbortController();
                         const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
                         try {
@@ -642,16 +637,20 @@ export default function WebsiteBuilderPage() {
 
                           const data = await res.json();
                           if (res.ok) {
-                            setBusinessName(data.business_name || 'My Business');
-                            setBusinessType(data.business_type || 'Online Store');
-                            setProductName(data.initial_products?.[0]?.name || 'First Product');
-                            setProductPrice(data.initial_products?.[0]?.price || '10.00');
-
-                            const inferredBusinessName = data.business_name || 'My Business';
-                            const inferredBusinessType = data.business_type || 'Online Store';
-                            const inferredProductName = data.initial_products?.[0]?.name || 'First Product';
-                            const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
-                            const inferredLocation = data.location || 'Unknown';
+                            const initialProduct = data.initial_products?.[0];
+                            if (typeof data.business_name !== 'string' || typeof data.business_type !== 'string'
+                              || typeof initialProduct?.name !== 'string' || typeof initialProduct?.price === 'undefined') {
+                              throw new Error('Incomplete storefront draft');
+                            }
+                            const inferredBusinessName = data.business_name;
+                            const inferredBusinessType = data.business_type;
+                            const inferredProductName = initialProduct.name;
+                            const inferredProductPrice = String(initialProduct.price);
+                            const inferredLocation = typeof data.location === 'string' ? data.location : '';
+                            setBusinessName(inferredBusinessName);
+                            setBusinessType(inferredBusinessType);
+                            setProductName(inferredProductName);
+                            setProductPrice(inferredProductPrice);
 
                             const startRes = await fetch('/api/v1/onboarding/start', {
                               method: 'POST',
@@ -660,7 +659,7 @@ export default function WebsiteBuilderPage() {
                                 company_name: inferredBusinessName,
                                 business_type: inferredBusinessType,
                                 company_description: bio,
-                                selling_categories: data.categories || ['physical'],
+                                selling_categories: Array.isArray(data.categories) ? data.categories : [],
                                 payment_pref: 'online',
                                 website_template: 'Modern',
                                 first_product_name: inferredProductName,
@@ -668,7 +667,7 @@ export default function WebsiteBuilderPage() {
                                 domain_choice: 'subdomain',
                                 price_type: 'fixed',
                                 location: inferredLocation,
-                                target_audience: data.target_audience || 'Customers',
+                                target_audience: typeof data.target_audience === 'string' ? data.target_audience : '',
                                 ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
                                 ai_auto_respond: true,
                                 initial_products: data.initial_products || []
@@ -685,11 +684,11 @@ export default function WebsiteBuilderPage() {
                             setStatus('live');
                           } else {
                             console.error('Failed to generate storefront:', data);
-                            finishWithFallback();
+                            finishUnavailable();
                           }
                         } catch (err) {
                           console.error(err);
-                          finishWithFallback();
+                          finishUnavailable();
                         } finally {
                           window.clearTimeout(abortTimeout);
                         }

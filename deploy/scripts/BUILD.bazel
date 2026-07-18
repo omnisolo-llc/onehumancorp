@@ -1,1 +1,6 @@
-exports_files(["ohc-standalone.sh"])
+exports_files([
+    "ohc-agent-wizard.sh",
+    "ohc-seed-data.sh",
+    "ohc-standalone.sh",
+    "prepare-compose-env.sh",
+])

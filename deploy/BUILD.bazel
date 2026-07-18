@@ -5,6 +5,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 exports_files([
     "deploy_dev.sh",
@@ -12,6 +13,22 @@ exports_files([
     "docker-compose.e2e.yml",
     "setup_k8s.sh",
 ])
+
+filegroup(
+    name = "helm_chart_files",
+    srcs = glob(["helm/ohc/**"]),
+)
+
+rust_binary(
+    name = "grpc_mtls_probe",
+    srcs = ["tests/grpc_mtls_probe.rs"],
+    edition = "2024",
+    deps = [
+        "//src/server/ohc:server_ohc",
+        "@crates//:tokio",
+        "@crates//:tonic",
+    ],
+)
 
 
 # ── server image (onehumancorp/server) ────────────────────────────────────────
@@ -214,6 +231,7 @@ sh_test(
     size = "small",
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = [
+        ":helm_chart_files",
         "docker-compose.yml",
         "docker/server-init/bootstrap-admin.sh",
         "helm/ohc/Chart.yaml",
@@ -243,6 +261,7 @@ sh_test(
         "helm/ohc/dashboards/sandbox_observability.json",
         "helm/ohc/templates/_helpers.tpl",
         "helm/ohc/templates/backend-deployment.yaml",
+        "helm/ohc/templates/default-deny-network-policy.yaml",
         "helm/ohc/templates/backend-service.yaml",
         "helm/ohc/templates/fluent-bit.yaml",
         "helm/ohc/templates/fluent-bit-config.yaml",
@@ -270,6 +289,44 @@ sh_test(
 # Requires docker and curl on PATH.
 # Run with: bazel test //deploy:docker_compose_e2e_test
 sh_test(
+    name = "e2e_ci_execution_contract_test",
+    srcs = ["tests/e2e_ci_execution_contract_test.sh"],
+    args = [
+        "$(rootpath :tests/kind_e2e_test.sh)",
+        "$(rootpath :tests/docker_compose_e2e_test.sh)",
+        "$(rootpath :helm/ohc/templates/backend-deployment.yaml)",
+        "$(rootpath :helm/ohc/values.yaml)",
+        "$(rootpath :docker/server-init/bootstrap-admin.sh)",
+        "$(rootpath :docker-compose.yml)",
+    ],
+    data = [
+        "helm/ohc/templates/backend-deployment.yaml",
+        "helm/ohc/templates/default-deny-network-policy.yaml",
+        "helm/ohc/templates/prometheusrule.yaml",
+        "helm/ohc/values.yaml",
+        "docker/server-init/bootstrap-admin.sh",
+        "docker-compose.yml",
+        "tests/kind_e2e_test.sh",
+        "tests/docker_compose_e2e_test.sh",
+    ],
+    tags = ["lint"],
+)
+
+sh_test(
+    name = "operational_api_contract_test",
+    srcs = ["tests/operational_api_contract_test.sh"],
+    args = [
+        "$(rootpath //deploy/scripts:ohc-agent-wizard.sh)",
+        "$(rootpath //deploy/scripts:ohc-seed-data.sh)",
+    ],
+    data = [
+        "//deploy/scripts:ohc-agent-wizard.sh",
+        "//deploy/scripts:ohc-seed-data.sh",
+    ],
+    tags = ["lint"],
+)
+
+sh_test(
     name = "docker_compose_e2e_test",
     size = "large",
     timeout = "long",
@@ -277,7 +334,10 @@ sh_test(
     data = [
         "docker-compose.yml",
         "docker-compose.override.yml",
+        "docker/server-init/bootstrap-admin.sh",
         "docker/postgres/init-multiple-databases.sh",
+        "//bazel/rules/playwright:generate_test_tls.sh",
+        ":grpc_mtls_probe",
     ] + [
         ":load_all_images",
         "//src/server",
@@ -307,8 +367,10 @@ sh_test(
     timeout = "long",
     srcs = ["tests/kind_e2e_test.sh"],
     data = [
+        ":helm_chart_files",
         "docker-compose.yml",
         "helm/ohc/Chart.yaml",
+        ":grpc_mtls_probe",
         "helm/ohc/dashboards/ohc-agent-audit.json",
         "helm/ohc/dashboards/ohc-database.json",
         "helm/ohc/dashboards/grafana-dashboard.json",

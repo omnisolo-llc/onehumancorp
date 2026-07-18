@@ -234,16 +234,6 @@ export default function POSTerminal() {
     setChargeAmount('0');
   };
 
-  const handleSendReceipt = () => {
-    setReceiptSent(true);
-    setTimeout(() => {
-      setCheckoutComplete(false);
-      setCart([]);
-      setReceiptSent(false);
-      setCustomerEmail('');
-    }, 2000);
-  };
-
   const handleSelectProduct = (product: any) => {
     setSelectedProduct(product);
     setOrderStatus('');
@@ -624,11 +614,10 @@ export default function POSTerminal() {
                        className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none mb-4"
                      />
                      <button
-                       onClick={handleSendReceipt}
-                       disabled={!customerEmail}
+                       disabled
                        className="w-full bg-[#0066FF] text-white font-bold py-3 px-4 rounded-xl active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
                      >
-                       Send Receipt & Complete
+                       Receipt service unavailable
                      </button>
                      <button
                        onClick={() => { setCheckoutComplete(false); setCart([]); }}
@@ -637,9 +626,7 @@ export default function POSTerminal() {
                        No Receipt
                      </button>
                    </div>
-                 ) : (
-                   <p className="text-green-600 font-bold animate-pulse">Receipt sent! Loading new order...</p>
-                 )}
+                 ) : null}
                </div>
              </div>
            )}

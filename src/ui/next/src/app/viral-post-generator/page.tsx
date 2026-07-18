@@ -2,34 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 
 export default function ViralPostGeneratorPage() {
   const router = useRouter();
   const [productName, setProductName] = useState('');
   const [keyBenefit, setKeyBenefit] = useState('');
   const [generatedPost, setGeneratedPost] = useState('');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
-  const [hasSharedToUnlock, setHasSharedToUnlock] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
       const tenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenantId(tenant);
-      const hasShared = localStorage.getItem('ohc_post_gen_shared') === 'true';
-      setHasSharedToUnlock(hasShared);
-      if (hasShared) {
-        setRemoveBranding(true);
-      }
     }
   }, []);
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!hasPro && !hasSharedToUnlock) {
+    if (!hasPro) {
       e.preventDefault();
       setShowPaywall(true);
     } else {
@@ -43,13 +37,10 @@ export default function ViralPostGeneratorPage() {
     setGeneratedPost(post);
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenantId}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('ohc_post_gen_shared', 'true');
-    }
-    setHasSharedToUnlock(true);
+    if (!await claimTrial()) return;
     setRemoveBranding(true);
     setShowPaywall(false);
   };
@@ -202,6 +193,7 @@ export default function ViralPostGeneratorPage() {
               <svg className="w-5 h-5" style={{ width: '20px', height: '20px' }} fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to Unlock for Free
             </button>
+            {claimError && <p className="mt-3 text-sm text-red-600" role="status">{claimError}</p>}
           </div>
         </div>
       )}

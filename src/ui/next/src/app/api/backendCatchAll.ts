@@ -1,5 +1,15 @@
-import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+import {
+  proxyBackendRequest,
+  stripBrowserIdentityJsonRequestBody,
+} from "@/lib/auth/backendTransport";
 
 export function proxyCurrentBackendPath(request: Request): Promise<Response> {
-  return proxyBackendRequest(request, new URL(request.url).pathname);
+  const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  const path = new URL(request.url).pathname;
+  if (contentType === "application/json") {
+    return proxyBackendRequest(request, path, {
+      transformRequestBody: stripBrowserIdentityJsonRequestBody,
+    });
+  }
+  return proxyBackendRequest(request, path);
 }

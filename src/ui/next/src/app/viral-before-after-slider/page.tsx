@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralBeforeAfterSliderPage() {
@@ -10,7 +11,7 @@ export default function ViralBeforeAfterSliderPage() {
   const [beforeUrl, setBeforeUrl] = useState('https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=800');
   const [afterUrl, setAfterUrl] = useState('https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&q=80&w=800');
   const [copied, setCopied] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -20,7 +21,6 @@ export default function ViralBeforeAfterSliderPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Before & After Slider | OHC";
   }, []);

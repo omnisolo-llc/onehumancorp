@@ -1,7 +1,17 @@
-use std::sync::Arc;
 use crate::db::DB;
+use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
+
+const POSTGRES_ENQUEUE_HEALTH_JOBS_SQL: &str = r#"
+    INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+    SELECT gen_random_uuid()::text, tenant_id, 'subscription_health',
+           jsonb_build_object('subscriber_id', id, 'customer_id', customer_id),
+           'PENDING', NOW()
+    FROM subscribers
+    WHERE status IN ('ACTIVE', 'PAST_DUE')
+    ON CONFLICT DO NOTHING
+"#;
 
 pub struct SubscriptionHealthJob {
     pub db: Arc<DB>,
@@ -20,22 +30,23 @@ impl SubscriptionHealthJob {
                 interval.tick().await;
                 match &db.store {
                     crate::db::DbStore::Postgres => {
-                        let _ = sqlx::query(
-                            r#"
-                            INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-                            SELECT gen_random_uuid()::text, tenant_id, 'subscription_health',
-                                   json_build_object('subscriber_id', id, 'customer_id', customer_id)::text,
-                                   'PENDING', NOW()
-                            FROM subscribers
-                            WHERE status IN ('ACTIVE', 'PAST_DUE')
-                            ON CONFLICT DO NOTHING
-                            "#
-                        )
-                        .execute(&db.pool)
+                        let result = async {
+                            let mut transaction = db.pool.begin().await?;
+                            sqlx::query("SET LOCAL ROLE ohc_bypassrls")
+                                .execute(&mut *transaction)
+                                .await?;
+                            sqlx::query(POSTGRES_ENQUEUE_HEALTH_JOBS_SQL)
+                                .execute(&mut *transaction)
+                                .await?;
+                            transaction.commit().await
+                        }
                         .await;
-                    },
+                        if let Err(error) = result {
+                            tracing::warn!("subscription health job failed: {}", error);
+                        }
+                    }
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                         let rows = sqlx::query("SELECT id, tenant_id, customer_id FROM subscribers WHERE status IN ('ACTIVE', 'PAST_DUE')").fetch_all(sqlite_pool).await.unwrap_or_default();
+                        let rows = sqlx::query("SELECT id, tenant_id, customer_id FROM subscribers WHERE status IN ('ACTIVE', 'PAST_DUE')").fetch_all(sqlite_pool).await.unwrap_or_default();
                         for row in rows {
                             use sqlx::Row;
                             let subscriber_id: String = row.get("id");
@@ -52,5 +63,16 @@ impl SubscriptionHealthJob {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::POSTGRES_ENQUEUE_HEALTH_JOBS_SQL;
+
+    #[test]
+    fn postgres_health_jobs_keep_payload_as_jsonb() {
+        assert!(POSTGRES_ENQUEUE_HEALTH_JOBS_SQL.contains("jsonb_build_object"));
+        assert!(!POSTGRES_ENQUEUE_HEALTH_JOBS_SQL.contains("::text"));
     }
 }

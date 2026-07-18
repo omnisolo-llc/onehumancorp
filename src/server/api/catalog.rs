@@ -74,7 +74,19 @@ pub struct Product {
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
     pub inventory_count: Option<i32>,
+    pub image_url: Option<String>,
     pub variants: Option<Vec<ProductVariantRequest>>,
+}
+
+fn bounded_product_image_url(metadata: Option<&serde_json::Value>) -> Option<String> {
+    let image_url = metadata?.get("image_url")?.as_str()?.trim();
+    let is_safe_path = image_url.starts_with('/')
+        && !image_url.starts_with("//")
+        && image_url.len() <= 2_048
+        && !image_url.contains(['\\', '\r', '\n', '\0'])
+        && !image_url.split('/').any(|segment| matches!(segment, "." | ".."));
+
+    is_safe_path.then(|| image_url.to_string())
 }
 
 async fn handle_get_products(
@@ -111,7 +123,7 @@ async fn handle_get_products(
     }
 
     let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1"
+        "SELECT id, title, description, type as item_type, price_cents, inventory_count, metadata FROM products WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_all(&mut *conn)
@@ -122,6 +134,7 @@ async fn handle_get_products(
             let mut products = Vec::new();
             for row in rows {
                 let p_id: String = row.try_get("id").unwrap_or_default();
+                let metadata: Option<serde_json::Value> = row.try_get("metadata").ok();
 
                 let v_rows = sqlx::query(
                     "SELECT name, price_modifier FROM product_variants WHERE product_id = $1",
@@ -148,6 +161,7 @@ async fn handle_get_products(
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
                     inventory_count: row.try_get("inventory_count").ok(),
+                    image_url: bounded_product_image_url(metadata.as_ref()),
                     variants: if variants.is_empty() {
                         None
                     } else {
@@ -725,5 +739,24 @@ mod tests {
         };
 
         assert_eq!(validated_product_price(&payload), None);
+    }
+
+    #[test]
+    fn product_image_url_accepts_only_bounded_same_origin_paths() {
+        let valid = serde_json::json!({"image_url": "/dashboard_with_charts.png"});
+        assert_eq!(
+            bounded_product_image_url(Some(&valid)).as_deref(),
+            Some("/dashboard_with_charts.png")
+        );
+
+        for invalid in [
+            serde_json::json!({}),
+            serde_json::json!({"image_url": "https://example.com/product.png"}),
+            serde_json::json!({"image_url": "//example.com/product.png"}),
+            serde_json::json!({"image_url": "/../secret"}),
+            serde_json::json!({"image_url": format!("/{}", "x".repeat(2_048))}),
+        ] {
+            assert_eq!(bounded_product_image_url(Some(&invalid)), None);
+        }
     }
 }

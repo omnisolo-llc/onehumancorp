@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     transformRequestBody(body) {
       const payload = JSON.parse(decoder.decode(body));
       return encoder.encode(JSON.stringify({
-        customer_id: payload.customer_id,
+        customer_name: payload.customer_name,
+        customer_email: payload.customer_email,
         service_id: payload.product_id,
         start_time: payload.start_time,
         end_time: payload.end_time,

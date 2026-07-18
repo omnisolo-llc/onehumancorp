@@ -88,11 +88,21 @@ fn subscription_tenant(
     resolve_subscription_tenant(claims, policy.multitenant, &policy.configured_default)
 }
 
+async fn begin_subscription_tenant_transaction<'a>(
+    pool: &'a sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<sqlx::Transaction<'a, sqlx::Postgres>, sqlx::Error> {
+    let mut transaction = pool.begin().await?;
+    ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id).await?;
+    Ok(transaction)
+}
+
 async fn fetch_subscription_plans(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<SubscriptionPlanResponse>, sqlx::Error> {
-    sqlx::query_as::<_, SubscriptionPlanResponse>(
+    let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
+    let plans = sqlx::query_as::<_, SubscriptionPlanResponse>(
         "SELECT
             sp.id,
             COALESCE(p.title, sp.name) AS name,
@@ -108,15 +118,18 @@ async fn fetch_subscription_plans(
          ORDER BY sp.created_at ASC, sp.id ASC",
     )
     .bind(tenant_id)
-    .fetch_all(pool)
-    .await
+    .fetch_all(&mut *transaction)
+    .await?;
+    transaction.commit().await?;
+    Ok(plans)
 }
 
 async fn fetch_subscribers(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<SubscriberResponse>, sqlx::Error> {
-    sqlx::query_as::<_, SubscriberResponse>(
+    let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
+    let subscribers = sqlx::query_as::<_, SubscriberResponse>(
         "SELECT
             id,
             customer_id,
@@ -127,15 +140,18 @@ async fn fetch_subscribers(
          ORDER BY created_at ASC, id ASC",
     )
     .bind(tenant_id)
-    .fetch_all(pool)
-    .await
+    .fetch_all(&mut *transaction)
+    .await?;
+    transaction.commit().await?;
+    Ok(subscribers)
 }
 
 async fn fetch_fulfillment_batches(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<FulfillmentBatchResponse>, sqlx::Error> {
-    sqlx::query_as::<_, FulfillmentBatchResponse>(
+    let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
+    let batches = sqlx::query_as::<_, FulfillmentBatchResponse>(
         "SELECT
             id,
             fulfillment_date::TEXT AS fulfillment_date,
@@ -146,8 +162,10 @@ async fn fetch_fulfillment_batches(
          ORDER BY fulfillment_date ASC, created_at ASC, id ASC",
     )
     .bind(tenant_id)
-    .fetch_all(pool)
-    .await
+    .fetch_all(&mut *transaction)
+    .await?;
+    transaction.commit().await?;
+    Ok(batches)
 }
 
 async fn fetch_subscription_overview(
@@ -385,10 +403,17 @@ async fn handle_magic_link(
     Extension(hub): Extension<Arc<Hub>>,
     Json(payload): Json<MagicLinkRequest>,
 ) -> impl IntoResponse {
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
+    let mut transaction = match hub.pool.begin().await {
+        Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
+    if sqlx::query("SET LOCAL ROLE ohc_bypassrls")
+        .execute(&mut *transaction)
+        .await
+        .is_err()
+    {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response();
+    }
 
     let status = match payload.action.as_str() {
         "pause" => "Paused",
@@ -421,11 +446,14 @@ async fn handle_magic_link(
     let update = sqlx::query("UPDATE subscribers SET status = $1 WHERE id = $2")
         .bind(status)
         .bind(claims.subscriber_id)
-        .execute(&mut *conn)
+        .execute(&mut *transaction)
         .await;
 
     match update {
-        Ok(_) => (StatusCode::OK, Json(MagicLinkResponse { success: true })).into_response(),
+        Ok(_) => match transaction.commit().await {
+            Ok(()) => (StatusCode::OK, Json(MagicLinkResponse { success: true })).into_response(),
+            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+        },
         Err(e) => {
             ::server_telemetry::record_error_signal(
                 "[bug] Failed to update subscription via magic link",
@@ -451,8 +479,8 @@ async fn get_subscription_by_id(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
+    let mut transaction = match begin_subscription_tenant_transaction(&hub.pool, &tenant_id).await {
+        Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
 
@@ -472,11 +500,14 @@ async fn get_subscription_by_id(
     )
     .bind(&id)
     .bind(tenant_id)
-    .fetch_optional(&mut *conn)
+    .fetch_optional(&mut *transaction)
     .await;
 
     match result {
         Ok(Some(r)) => {
+            if transaction.commit().await.is_err() {
+                return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response();
+            }
             use sqlx::Row;
             let price: i64 = r.try_get("price").unwrap_or(0);
             let discount_percentage: i32 = r.try_get("discount_percentage").unwrap_or(0);
@@ -523,23 +554,26 @@ async fn subscription_action(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut conn = match hub.pool.acquire().await {
-        Ok(c) => c,
+    let mut transaction = match begin_subscription_tenant_transaction(&hub.pool, &tenant_id).await {
+        Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
 
     let update = match payload.action.as_str() {
         "pause" => sqlx::query("UPDATE subscriptions SET status = 'paused' WHERE id = $1 AND tenant_id = $2")
-            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+            .bind(&id).bind(&tenant_id).execute(&mut *transaction).await,
         "cancel" => sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE id = $1 AND tenant_id = $2")
-            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+            .bind(&id).bind(&tenant_id).execute(&mut *transaction).await,
         "skip" => sqlx::query("UPDATE subscriptions SET current_period_end = current_period_end + interval '1 month' WHERE id = $1 AND tenant_id = $2")
-            .bind(&id).bind(&tenant_id).execute(&mut *conn).await,
+            .bind(&id).bind(&tenant_id).execute(&mut *transaction).await,
         _ => return (StatusCode::BAD_REQUEST, "Invalid action").into_response(),
     };
 
     match update {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+        Ok(_) => match transaction.commit().await {
+            Ok(()) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
+        },
         Err(e) => {
             tracing::error!("Failed to update subscription: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()

@@ -136,9 +136,9 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
         let env_standalone =
             std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
-        let is_standalone = env_standalone
-            || cfg.standalone
-            || (!is_test && cfg.database_url.is_none());
+        let has_database_source =
+            cfg.database_url.is_some() || std::env::var_os("DATABASE_URL_FILE").is_some();
+        let is_standalone = env_standalone || cfg.standalone || (!is_test && !has_database_source);
 
         if !is_standalone {
             return cfg;
@@ -307,6 +307,25 @@ mod tests {
             env::remove_var("OHC_LISTEN_ADDR");
             env::remove_var("OHC_DATABASE_URL");
         }
+    }
+
+    #[test]
+    fn database_url_file_prevents_implicit_standalone_default() {
+        let _lock = ENV_MUTEX.lock().unwrap();
+        temp_env::with_vars(
+            [
+                ("TEST_WORKSPACE", None::<&str>),
+                ("TEST_TMPDIR", None::<&str>),
+                ("DATABASE_URL", None::<&str>),
+                ("DATABASE_URL_FILE", Some("/run/secrets/database-url")),
+                ("OHC_DATABASE_URL", None::<&str>),
+                ("OHC_STANDALONE_MODE", None::<&str>),
+            ],
+            || {
+                let cfg = load().unwrap();
+                assert!(!cfg.standalone);
+            },
+        );
     }
 
     #[test]

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralGoalTrackerPage() {
@@ -10,7 +11,7 @@ export default function ViralGoalTrackerPage() {
   const [reward, setReward] = useState('Free T-Shirt & 20% Off');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -19,7 +20,6 @@ export default function ViralGoalTrackerPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Viral Goal Tracker | OHC";
   }, []);
@@ -101,14 +101,14 @@ export default function ViralGoalTrackerPage() {
            <div className={`p-6 rounded-2xl shadow-sm border ${theme === 'dark' ? 'bg-[#1c1c1e] text-white border-[#333]' : 'bg-white text-gray-900 border-gray-200'}`}>
               <div className="text-center mb-4">
                  <h3 className="font-bold text-lg">Unlock: {reward}</h3>
-                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Invite friends to unlock your reward!</p>
+                 <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Illustrative widget preview</p>
               </div>
 
               <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden dark:bg-gray-700">
-                  <div className="bg-indigo-600 h-3 rounded-full" style={{ width: '40%' }}></div>
+                  <div className="bg-indigo-600 h-3 rounded-full" style={{ width: '0%' }}></div>
               </div>
               <div className={`flex justify-between text-xs mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <span>4 referrals completed</span>
+                  <span>0 referrals in preview</span>
                   <span>{target} target</span>
               </div>
 

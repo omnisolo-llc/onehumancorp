@@ -6,35 +6,29 @@ interface AgentUpsellPaywallProps {
   onSuccess: () => void;
 }
 
-export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallProps) {
+export function AgentUpsellPaywall({ onClose }: AgentUpsellPaywallProps) {
   const router = useRouter();
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const fallbackReferralLink = () => {
-    let tenant = "default";
-    if (typeof localStorage !== "undefined") {
-      tenant = localStorage.getItem("business_display_name") || "default";
-    }
-    return `https://ohc.app/join?ref=${encodeURIComponent(tenant)}&source=agent_paywall`;
-  };
+  const [error, setError] = useState("");
 
   const handleGenerateLink = async () => {
     setIsGenerating(true);
+    setError("");
     try {
       const response = await fetch("/api/v1/growth/referrals/generate", {
         method: "POST",
       });
+      if (!response.ok) throw new Error("Referral service unavailable");
       const data = await response.json();
-      if (data && data.referral_link) {
+      if (data && typeof data.referral_link === "string" && data.referral_link) {
         setReferralLink(data.referral_link);
       } else {
-        setReferralLink(fallbackReferralLink());
+        throw new Error("Invalid referral response");
       }
-    } catch (e) {
-      console.error("Failed to generate referral link", e);
-      setReferralLink(fallbackReferralLink());
+    } catch {
+      setError("A referral link could not be generated.");
     } finally {
       setIsGenerating(false);
     }
@@ -69,11 +63,11 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
           <div className="flex items-center gap-3 mb-2">
             <span className="text-xl">🎁</span>
             <h3 className="font-bold text-indigo-900 font-outfit text-sm">
-              Viral Growth Offer
+              Referral Link
             </h3>
           </div>
           <p className="text-indigo-800 text-xs font-medium">
-            Invite a friend and get <strong>14 Days of Pro for Free!</strong> They get 10% off their first year. ⚡ Powered by OHC
+            Generate a referral link. Any reward or plan entitlement must be confirmed separately by the billing service. ⚡ Powered by OHC
           </p>
         </div>
 
@@ -84,7 +78,7 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
               disabled={isGenerating}
               className="w-full px-4 py-3 bg-gray-900 text-white rounded-xl font-bold shadow-md hover:bg-black transition-colors flex items-center justify-center gap-2"
             >
-              {isGenerating ? "Generating link..." : "Get 14 Days Free via Invite"}
+              {isGenerating ? "Generating link..." : "Generate Referral Link"}
             </button>
             <button
               onClick={() => router.push("/pricing")}
@@ -117,40 +111,39 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
                   onClick={() => {
                     navigator.clipboard.writeText(referralLink);
                     setCopied(true);
-                    onSuccess(); // Grant them access optimistically
                     setTimeout(() => setCopied(false), 2000);
                   }}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                     copied ? "bg-green-100 text-green-700" : "bg-indigo-600 text-white hover:bg-indigo-700"
                   }`}
                 >
-                  {copied ? "Copied!" : "Copy & Claim"}
+                  {copied ? "Copied!" : "Copy"}
                 </button>
               </div>
             </div>
 
              <div className="flex flex-col gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Use my link to get 10% off your Pro plan: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Learn more through my referral link: ${referralLink} ⚡ Powered by OHC`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
-                  onClick={() => onSuccess()}
                 >
                   Share on WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Use my link to get 10% off your Pro plan: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Learn more through my referral link: ${referralLink} ⚡ Powered by OHC`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
-                  onClick={() => onSuccess()}
                 >
                   Share on X (Twitter)
                 </a>
               </div>
+              <p className="text-xs text-amber-700">Sharing does not unlock Pro until a referral reward is verified.</p>
           </div>
         )}
+        {error && <p className="mt-3 text-sm text-red-600" role="alert">{error}</p>}
       </div>
     </div>
   );

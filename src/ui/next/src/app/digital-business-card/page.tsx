@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 
 export default function DigitalBusinessCardGeneratorPage() {
   const router = useRouter();
@@ -20,20 +21,12 @@ export default function DigitalBusinessCardGeneratorPage() {
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
-  const [hasSharedToUnlock, setHasSharedToUnlock] = useState(false);
+  const { hasPro } = useProPlan();
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       const tenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenantId(tenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
-
-      const hasShared = localStorage.getItem('ohc_dbc_shared') === 'true';
-      setHasSharedToUnlock(hasShared);
-      if (hasShared) {
-        setRemoveBranding(true);
-      }
     }
   }, []);
 
@@ -53,7 +46,7 @@ export default function DigitalBusinessCardGeneratorPage() {
       website,
       linkedin,
       themeColor,
-      removeBranding: removeBranding && (hasPro || hasSharedToUnlock)
+      removeBranding: removeBranding && hasPro
     };
 
     // Safely encode unicode string to base64url for URLs
@@ -75,7 +68,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      if (!hasPro && !hasSharedToUnlock) {
+      if (!hasPro) {
         setShowSoftPaywall(true);
         setRemoveBranding(false);
       } else {
@@ -378,23 +371,7 @@ export default function DigitalBusinessCardGeneratorPage() {
               Upgrade to Pro
             </button>
 
-            <button
-              onClick={() => {
-                const shareText = "I just created my free Digital Business Card using OHC! Build yours here:";
-                const shareUrl = "https://ohc.app";
-                const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-                window.open(intentUrl, '_blank');
-
-                // Set unlock state
-                localStorage.setItem('ohc_dbc_shared', 'true');
-                setHasSharedToUnlock(true);
-                setRemoveBranding(true);
-                setShowSoftPaywall(false);
-              }}
-              className="w-full py-4 rounded-xl font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 mb-3 transition-all flex justify-center items-center gap-2"
-            >
-              <span className="text-xl">🐦</span> Share to Unlock for Free
-            </button>
+            <p className="mb-3 text-sm text-gray-500">Share-based white-label unlocking is unavailable without backend referral verification.</p>
 
 
             <button

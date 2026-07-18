@@ -1,58 +1,34 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 
 export function AIFeaturePaywallWidget() {
-  const [unlocked, setUnlocked] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [tenantId, setTenantId] = useState("default-team");
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name');
-      const finalTenant = storedTenant || "default-team";
-      setTenantId(finalTenant);
-    }
-  }, []);
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   const handleGenerateLink = async () => {
     setGenerating(true);
+    setReferralError(null);
     try {
-      // Use the official viral loop click tracking endpoint
-      const response = await fetch(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=ai_feature_paywall`, {
-        method: 'POST'
-      });
-      if (response.ok) {
-        const link = `${window.location.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=ai_feature_paywall`;
-        setReferralLink(link);
-      }
-    } catch (e) {
-      console.error(e);
+      const response = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+      if (!response.ok) throw new Error('Referral link generation is unavailable.');
+      const data = await response.json();
+      if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Referral link generation is unavailable.');
+      setReferralLink(data.referral_link);
+    } catch {
+      setReferralError('Referral link generation is unavailable.');
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleCopy = async () => {
+  const handleCopy = () => {
     if (navigator.clipboard && referralLink) {
       navigator.clipboard.writeText(referralLink);
       setCopied(true);
-
-      // Simulate "unlocking" immediately after the user engages with the share intent
-      // In a real system, this would happen via websocket/webhook after the referral signs up
-      try {
-         await fetch('/api/v1/agents/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
-         });
-         setUnlocked(true);
-      } catch (e) {
-         console.error(e);
-      }
 
       setTimeout(() => setCopied(false), 2000);
     }
@@ -60,56 +36,13 @@ export function AIFeaturePaywallWidget() {
 
   const shareText = `Start your business on OHC! Use my link to get $50 off your first month: ${referralLink}`;
 
-  const handleWhatsAppShare = async () => {
+  const handleWhatsAppShare = () => {
      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-     try {
-         await fetch('/api/v1/agents/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
-         });
-         setUnlocked(true);
-      } catch (e) {
-         console.error(e);
-      }
   };
 
-  const handleTwitterShare = async () => {
+  const handleTwitterShare = () => {
      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
-     try {
-         await fetch('/api/v1/agents/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agent: 'ai_feature', enabled: true })
-         });
-         setUnlocked(true);
-      } catch (e) {
-         console.error(e);
-      }
   };
-
-  if (unlocked) {
-      return (
-          <div className="mb-6 ohc-growth-card rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 border border-green-400/50 dark:border-[#34C759]/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-md">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center shrink-0">
-                 <span className="text-2xl">✨</span>
-              </div>
-              <div className="flex-1">
-                 <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-1">
-                   Advanced AI Analytics Unlocked!
-                 </h3>
-                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                   You have 7 days of free access to Smart Cross-Selling and Deep Insights.
-                 </p>
-              </div>
-              <Link href="/analytics" className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
-                View Insights
-              </Link>
-            </div>
-          </div>
-      );
-  }
 
   return (
     <div className="mb-6 ohc-growth-card rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden" data-testid="ai-feature-paywall">
@@ -123,7 +56,7 @@ export function AIFeaturePaywallWidget() {
              Pro Feature
           </div>
           <h2 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-            Unlock Advanced AI Analytics
+            Advanced AI Analytics
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 max-w-xl">
             See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.
@@ -141,7 +74,7 @@ export function AIFeaturePaywallWidget() {
                    disabled={generating}
                    className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-70 flex justify-center items-center gap-2"
                  >
-                   {generating ? 'Generating...' : 'Refer a Friend to Unlock for 7 Days'}
+                   {generating ? 'Generating...' : 'Generate Referral Link'}
                  </button>
              ) : (
                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -167,7 +100,9 @@ export function AIFeaturePaywallWidget() {
                     </button>
                  </div>
              )}
+             {referralError && <p className="text-sm text-red-600" role="status">{referralError}</p>}
           </div>
+          <p className="mt-3 text-xs text-gray-500">Referral rewards are applied only after backend verification.</p>
         </div>
       </div>
     </div>

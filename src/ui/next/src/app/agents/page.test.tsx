@@ -120,7 +120,7 @@ test('shows result inspection and extension surfaces from Workbuddy', async () =
 
   fireEvent.click(screen.getByRole('button', { name: 'Automations' }));
   expect(screen.getByText('Scheduled Tasks')).toBeDefined();
-  expect(screen.getByText('Weekly business review')).toBeDefined();
+  expect(screen.getByText(/Scheduled runs and execution history are unavailable/)).toBeDefined();
 
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
@@ -274,7 +274,7 @@ test('supports interactive tab transitions and toggling grid extensions', async 
   expect(screen.getByRole('button', { name: /Stripe Connected/i })).toBeDefined();
 });
 
-test('renders paywall dialog and handles simulated upgrade flow', async () => {
+test('closes the paywall only after the trial API confirms activation', async () => {
   const openSpy = vi.fn();
   vi.stubGlobal('open', openSpy);
 
@@ -287,12 +287,11 @@ test('renders paywall dialog and handles simulated upgrade flow', async () => {
   expect(screen.getByRole('heading', { name: 'Upgrade to Pro' })).toBeDefined();
   
   // Click share on X
-  fireEvent.click(screen.getByText('Share on X to get 7 Days Free'));
-  // Dialog closes and gives Pro
-  expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+  fireEvent.click(screen.getByText('Share on X to activate Pro'));
+  await waitFor(() => {
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/growth/trial-extension/claim', { method: 'POST' });
+    expect(screen.queryByRole('heading', { name: 'Upgrade to Pro' })).toBeNull();
+  });
   expect(openSpy).toHaveBeenCalled();
   vi.unstubAllGlobals();
 });
-
-
-

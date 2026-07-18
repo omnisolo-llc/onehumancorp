@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
+import { useProPlan } from '../components/useProPlan';
 import {
   automations,
   connectors,
@@ -110,7 +111,7 @@ export default function AgentsPage() {
   const [enabledSkills, setEnabledSkills] = useState<string[]>(['Web Research', 'Campaign Builder']);
   const [enabledConnectors, setEnabledConnectors] = useState<string[]>(['Tencent Docs', 'Stripe']);
   const [selectedResultTab, setSelectedResultTab] = useState('Artifacts');
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [contextReferences, setContextReferences] = useState('');
   const [attachments, setAttachments] = useState('');
@@ -276,11 +277,7 @@ export default function AgentsPage() {
                   aria-label="Toggle Pro Mode"
                   aria-pressed={hasPro}
                   onClick={() => {
-                    if (!hasPro) {
-                      setShowPaywall(true);
-                      return;
-                    }
-                    setHasPro(false);
+                    if (!hasPro) setShowPaywall(true);
                   }}
                   className={`h-6 w-10 rounded-full p-1 transition-colors outline-none ${hasPro ? 'bg-teal-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                 >
@@ -351,17 +348,17 @@ export default function AgentsPage() {
             </Link>
             <button
               type="button"
-              onClick={() => {
-                setHasPro(true);
-                setShowPaywall(false);
+              onClick={async () => {
                 if (typeof window !== 'undefined') {
                   window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OHC%20Expert%20Center', '_blank');
                 }
+                if (await claimTrial()) setShowPaywall(false);
               }}
               className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
             >
-              Share on X to get 7 Days Free
+              Share on X to activate Pro
             </button>
+            {claimError && <p className="mt-2 text-sm text-red-600" role="alert">{claimError}</p>}
             <button type="button" onClick={() => setShowPaywall(false)} className="mt-3 w-full text-sm font-semibold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300">
               Close
             </button>
@@ -1108,73 +1105,27 @@ function ConnectorsPanel({
   );
 }
 function AutomationsPanel() {
-  const scheduledTasks = [
-    { name: "Weekly business review", rule: "Every Monday 9:00", nextRun: "Starts in 18 hours", status: "Active" },
-    { name: "Daily inbox risk scan", rule: "Every 1 Hour", nextRun: "Paused", status: "Paused" },
-    { name: "Low inventory recovery", rule: "Every Day 20:00", nextRun: "Paused", status: "Paused" }
-  ];
-
-  const completedHistory = [
-    { name: "Weekly stats execution", status: "Success", time: "5 hours ago" },
-    { name: "Weekly archive extraction", status: "Success", time: "1 day ago" },
-    { name: "Daily inbox risk scan", status: "Success", time: "1 day ago" }
-  ];
-
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
-      <SectionHeader title="Scheduled Tasks" detail="Configure recurring expert runs with prompt, workspace, model, skills, connectors, and notifications." />
+      <SectionHeader title="Scheduled Tasks" detail="Recurring expert runs require an automation service connection." />
       
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
           Schedule rule
-          <input className="mt-1 h-9 w-full rounded-xl border border-zinc-350 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white" placeholder="Every Monday 9:00" />
+          <input disabled className="mt-1 h-9 w-full cursor-not-allowed rounded-xl border border-zinc-350 dark:border-zinc-700 bg-zinc-100/70 dark:bg-zinc-900/70 px-3 text-xs outline-none dark:text-white" placeholder="Unavailable" />
         </label>
         <div className="rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-3 text-xs font-bold text-zinc-700 dark:text-zinc-300">Execution history</div>
         <div className="rounded-xl border border-zinc-250 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-3 text-xs font-bold text-zinc-700 dark:text-zinc-300">Push notification</div>
       </div>
 
       <div className="flex items-center gap-2 mb-6">
-        <button className="rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-bold transition-colors">+ Add New</button>
-        <button className="rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">From Template</button>
+        <button disabled className="cursor-not-allowed rounded-full bg-zinc-200 text-zinc-500 px-4 py-2 text-xs font-bold">+ Add New</button>
+        <button disabled className="cursor-not-allowed rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-500">From Template</button>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-3">Scheduled Runs</h3>
-          <div className="space-y-3">
-            {scheduledTasks.map((task) => (
-              <div key={task.name} className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80">
-                <div className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${task.status === 'Active' ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-650'}`} />
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white leading-normal">{task.name}</h4>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">{task.rule}</p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">{task.nextRun}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-550 mb-3">Completed Executions</h3>
-          <div className="space-y-2">
-            {completedHistory.map((history, idx) => (
-              <div key={idx} className="flex items-center justify-between py-2.5 border-b border-zinc-100 dark:border-zinc-850 last:border-b-0 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{history.name}</span>
-                </div>
-                <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400">
-                  <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md text-[10px] font-bold">Success</span>
-                  <span>{history.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <p className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/60 p-4 text-sm text-zinc-600 dark:text-zinc-400">
+        Scheduled runs and execution history are unavailable because no automation backend is connected.
+      </p>
     </section>
   );
 }

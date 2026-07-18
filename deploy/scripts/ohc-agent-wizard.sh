@@ -1,6 +1,6 @@
 #!/bin/bash
 # OHC Hybrid Agentic OS - Day One Agent Provisioning Wizard
-set -e
+set -euo pipefail
 RESET="\033[0m"
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -55,17 +55,54 @@ esac
 echo -e "\n${BOLD}Model (optional):${RESET}"
 read -p "Enter a model name (leave blank for provider default): " agent_model
 
+for tool in curl jq; do
+    command -v "$tool" >/dev/null 2>&1 || {
+        echo "Required tool not found: $tool" >&2
+        exit 1
+    }
+done
+if [[ -n "${OHC_ACCESS_TOKEN:-}" && -n "${OHC_ACCESS_TOKEN_FILE:-}" ]]; then
+    echo "Set only OHC_ACCESS_TOKEN or OHC_ACCESS_TOKEN_FILE, not both." >&2
+    exit 1
+fi
+if [[ -n "${OHC_ACCESS_TOKEN_FILE:-}" ]]; then
+    [[ -f "$OHC_ACCESS_TOKEN_FILE" && -r "$OHC_ACCESS_TOKEN_FILE" ]] || {
+        echo "OHC_ACCESS_TOKEN_FILE must be a readable regular file." >&2
+        exit 1
+    }
+    ACCESS_TOKEN="$(<"$OHC_ACCESS_TOKEN_FILE")"
+else
+    ACCESS_TOKEN="${OHC_ACCESS_TOKEN:-}"
+fi
+[[ -n "$ACCESS_TOKEN" ]] || {
+    echo "OHC_ACCESS_TOKEN or OHC_ACCESS_TOKEN_FILE is required." >&2
+    exit 1
+}
+if [[ ${#ACCESS_TOKEN} -gt 4096 || "$ACCESS_TOKEN" == *$'\n'* || "$ACCESS_TOKEN" == *$'\r'* ]]; then
+    echo "Access token has an invalid format." >&2
+    exit 1
+fi
+
 PORT=${PORT:-8080}
-API_URL="http://127.0.0.1:${PORT}/api/agents/hire"
+API_URL="http://127.0.0.1:${PORT}/api/v1/agents/hire"
 echo -e "\n${DIM}[Hiring ${agent_name} as ${agent_role} via ${API_URL}...]${RESET}"
 
-PAYLOAD="{\"name\": \"${agent_name}\", \"role\": \"${agent_role}\", \"providerType\": \"${provider_type}\""
-if [ -n "$agent_model" ]; then
-    PAYLOAD="${PAYLOAD}, \"model\": \"${agent_model}\""
-fi
-PAYLOAD="${PAYLOAD}}"
+umask 077
+REQUEST_FILE="$(mktemp)"
+HEADER_FILE="$(mktemp)"
+trap 'rm -f "$REQUEST_FILE" "$HEADER_FILE"' EXIT
+jq -n \
+    --arg name "$agent_name" \
+    --arg role "$agent_role" \
+    --arg providerType "$provider_type" \
+    --arg model "$agent_model" \
+    '{name: $name, role: $role, providerType: $providerType}
+     + (if $model == "" then {} else {model: $model} end)' > "$REQUEST_FILE"
+printf '%s\n' 'Content-Type: application/json' "Authorization: Bearer ${ACCESS_TOKEN}" > "$HEADER_FILE"
 
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$API_URL" || echo "failed")
+RESPONSE=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+    --write-out "\n%{http_code}" --request POST \
+    --header "@${HEADER_FILE}" --data-binary "@${REQUEST_FILE}" "$API_URL" || echo "failed")
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "201" ]; then

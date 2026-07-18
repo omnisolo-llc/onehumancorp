@@ -31,15 +31,3 @@ BEGIN
     END IF;
 END
 $$;
-
--- +goose Down
-DO $$
-BEGIN
-    IF to_regclass('pos_offline_transactions') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_pos_offline_transactions ON pos_offline_transactions;
-        ALTER TABLE pos_offline_transactions DISABLE ROW LEVEL SECURITY;
-    END IF;
-END
-$$;
-
-DROP TABLE IF EXISTS pos_offline_transactions CASCADE;
