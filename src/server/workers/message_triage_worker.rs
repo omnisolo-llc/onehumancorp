@@ -130,7 +130,8 @@ Output JSON format:
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Reassign Shift\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
+    \"draft_reply\": \"The human-readable message to reply to the customer with. Include the magic token {{{{payment_link}}}} if asking for a deposit or payment.\",
+    \"action_payload\": \"The quote JSON string, booking JSON string, or null if Draft Reply.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -157,7 +158,8 @@ Output JSON format:
                 "feature_type": "general",
                 "context_summary": "Customer inquiry",
                 "action_type": "Draft Reply",
-                "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
+                "draft_reply": "Thanks for reaching out! We will review this and get back to you soon.",
+                "action_payload": null
             });
 
             let max_retries = 3;
@@ -185,7 +187,7 @@ Output JSON format:
                 match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
                     Ok(Ok(reply)) => {
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
-                            if parsed.is_object() && parsed.get("priority").is_some() && parsed.get("context_summary").is_some() && parsed.get("action_type").is_some() && parsed.get("action_payload").is_some() {
+                            if parsed.is_object() && parsed.get("priority").is_some() && parsed.get("context_summary").is_some() && parsed.get("action_type").is_some() {
                                 extracted = parsed;
                                 break;
                             }
@@ -299,17 +301,21 @@ Output JSON format:
             let omni_result = omni_result_res.unwrap();
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
+            let draft_reply_str = extracted.get("draft_reply").and_then(|v| v.as_str()).unwrap_or(&omni_result.final_draft).to_string();
 
-            let mut action_payload_str = omni_result.final_draft;
-            if action_type == "Draft Quote" || action_type == "Draft Booking" {
-                if let Some(payload) = extracted.get("action_payload") {
-                    if payload.is_object() || payload.is_array() {
-                        action_payload_str = serde_json::to_string(payload).unwrap_or(action_payload_str);
-                    } else if let Some(s) = payload.as_str() {
-                        action_payload_str = s.to_string();
-                    }
+            let mut action_payload_str = "".to_string();
+            if let Some(payload) = extracted.get("action_payload") {
+                if payload.is_object() || payload.is_array() {
+                    action_payload_str = serde_json::to_string(payload).unwrap_or("{}".to_string());
+                } else if let Some(s) = payload.as_str() {
+                    action_payload_str = s.to_string();
                 }
             }
+            if action_payload_str.is_empty() && (action_type == "Draft Quote" || action_type == "Draft Booking") {
+                 // Fallback if model put JSON in draft_reply by accident
+                 action_payload_str = draft_reply_str.clone();
+            }
+
             let mut action_payload = action_payload_str.clone();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
@@ -514,7 +520,7 @@ Output JSON format:
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(&action_payload)
+                        .bind(&draft_reply_str)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await {
@@ -522,7 +528,7 @@ Output JSON format:
                     }
 
                     if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(&action_payload)
+                        .bind(&draft_reply_str)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await {
@@ -598,7 +604,7 @@ Output JSON format:
                     }))
                     .bind(serde_json::json!({
                         "action_type": action_type,
-                        "draft_reply": action_payload,
+                        "draft_reply": draft_reply_str,
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
@@ -621,7 +627,7 @@ Output JSON format:
                     .bind(serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
-                        "generated_response": action_payload,
+                        "generated_response": draft_reply_str,
                         "context_used": context_summary,
                         "inbox_message_id": message_id,
                         "source": source,
@@ -643,7 +649,7 @@ Output JSON format:
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
-                        .bind(&action_payload)
+                        .bind(&draft_reply_str)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&*sqlite_pool).await {
@@ -651,7 +657,7 @@ Output JSON format:
                     }
 
                     if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
-                        .bind(&action_payload)
+                        .bind(&draft_reply_str)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&*sqlite_pool).await {
@@ -727,7 +733,7 @@ Output JSON format:
                     }).to_string())
                     .bind(serde_json::json!({
                         "action_type": action_type,
-                        "draft_reply": action_payload,
+                        "draft_reply": draft_reply_str,
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
@@ -750,7 +756,7 @@ Output JSON format:
                     .bind(serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
-                        "generated_response": action_payload,
+                        "generated_response": draft_reply_str,
                         "context_used": context_summary,
                         "inbox_message_id": message_id,
                         "source": source,
