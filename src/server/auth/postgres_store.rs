@@ -680,9 +680,13 @@ mod security_tests {
                 // Pass a different org_id argument to verify the model binds `org_id` argument instead
                 repo.create_user(user.clone(), &org_id).await.unwrap();
 
+
+                let mut tx = pool_clone.begin().await.unwrap();
+                super::set_org_context(&mut *tx, &org_id).await.unwrap();
+
                 let row = sqlx::query("SELECT tenant_id FROM users WHERE id = $1")
                     .bind(&user.id)
-                    .fetch_one(&pool_clone)
+                    .fetch_one(&mut *tx)
                     .await
                     .unwrap();
 
@@ -692,13 +696,16 @@ mod security_tests {
                 // Cleanup to remain hermetic
                 let _ = sqlx::query("DELETE FROM users WHERE id = $1")
                     .bind(&user.id)
-                    .execute(&pool_clone)
+                    .execute(&mut *tx)
                     .await;
+
+                tx.commit().await.unwrap();
 
                 let _ = sqlx::query("DELETE FROM organizations WHERE id = $1")
                     .bind(&org_id)
                     .execute(&pool_clone)
                     .await;
+
             }
         }).await;
     }
