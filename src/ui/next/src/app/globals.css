@@ -1282,7 +1282,7 @@ html.dark .glass-panel {
     -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
     border: 1px solid rgba(255, 255, 255, 0.4) !important;
     font-family: 'Outfit', 'Inter', sans-serif !important;
-    border-radius: 16px !important;
+    border-radius: 12px !important;
   }
 
   /* Dark Mode Translucent Glass */
@@ -1292,6 +1292,6 @@ html.dark .glass-panel {
     -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     font-family: 'Outfit', 'Inter', sans-serif !important;
-    border-radius: 16px !important;
+    border-radius: 12px !important;
   }
 }

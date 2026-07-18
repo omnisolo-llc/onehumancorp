@@ -58,11 +58,9 @@ export default function CostDashboardPage() {
   const [myPlanData, setMyPlanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
 
   const handleCancelSubscription = async () => {
     if (confirm('Are you sure you want to cancel your subscription?')) {
-      setIsActionLoading(true);
       try {
         const response = await fetch('/api/v1/billing/cancel-subscription', {
           method: 'POST',
@@ -77,14 +75,11 @@ export default function CostDashboardPage() {
         }
       } catch (error) {
         setActionMessage('Error canceling subscription.');
-      } finally {
-        setIsActionLoading(false);
       }
     }
   };
 
   const handleDownloadInvoice = async () => {
-    setIsActionLoading(true);
     try {
       const response = await fetch('/api/v1/billing/download-invoice', {
         method: 'POST',
@@ -103,13 +98,10 @@ export default function CostDashboardPage() {
       }
     } catch (error) {
       setActionMessage('Error downloading invoice.');
-    } finally {
-      setIsActionLoading(false);
     }
   };
 
   const handleManageBilling = async () => {
-    setIsActionLoading(true);
     try {
       const response = await fetch('/api/v1/billing/create-billing-portal-session', {
         method: 'POST',
@@ -129,8 +121,6 @@ export default function CostDashboardPage() {
     } catch (error) {
       console.error('Error initiating billing portal:', error);
       setActionMessage('Failed to initiate billing portal. Please try again.');
-    } finally {
-      setIsActionLoading(false);
     }
   };
 
@@ -251,16 +241,14 @@ export default function CostDashboardPage() {
                       <button
                           id="manage-billing-btn"
                           onClick={handleManageBilling}
-                          disabled={isActionLoading}
-                          className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                       >
                           Manage Billing
                       </button>
                       <button
                           id="cancel-subscription-btn"
                           onClick={handleCancelSubscription}
-                          disabled={isActionLoading}
-                          className="min-h-[44px] px-6 py-2 bg-transparent text-[#FF3B30] hover:bg-red-50 dark:hover:bg-red-950/10 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="min-h-[44px] px-6 py-2 bg-transparent text-[#FF3B30] hover:bg-red-50 dark:hover:bg-red-950/10 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                       >
                           Cancel Subscription
                       </button>
@@ -290,7 +278,7 @@ export default function CostDashboardPage() {
                        <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Transparency Dashboard</h1>
                        <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
                    </div>
-                   <button id="download-invoice-btn" onClick={handleDownloadInvoice} disabled={isActionLoading} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                   <button id="download-invoice-btn" onClick={handleDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
                        Download Invoice
                    </button>
                </div>

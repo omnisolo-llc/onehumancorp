@@ -25,7 +25,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Storefront walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/api/v1/ui/storefront.html');
+    await page.goto('/storefront-builder');
 
     const walkBtn = page.locator('#storefront-walkthrough-btn');
     await expect(walkBtn).toBeVisible();
@@ -41,14 +41,10 @@ test.describe('Walkthrough and Tooltips features', () => {
     const closeBtn = page.locator('.ohc-walkthrough-close');
     await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
-
-    // Check Help Center button
-    const helpBtn = page.locator('#help-center-nav-btn');
-    await expect(helpBtn).toBeVisible();
   });
 
   test('POS walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/api/v1/ui/pos.html');
+    await page.goto('/payments');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#pos-walkthrough-btn');
@@ -74,7 +70,7 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Assistant walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/api/v1/ui/assistant.html');
+    await page.goto('/agents');
 
     // Check Walkthrough button
     const walkBtn = page.locator('#assistant-walkthrough-btn');

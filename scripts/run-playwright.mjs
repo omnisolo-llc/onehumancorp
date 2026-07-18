@@ -86,9 +86,6 @@ async function main() {
   process.env.OHC_AGENT_TASK_TIMEOUT_SECS = process.env.OHC_AGENT_TASK_TIMEOUT_SECS || '240';
   process.env.OHC_LLM_TIMEOUT_SECS = process.env.OHC_LLM_TIMEOUT_SECS || '180';
 
-  process.env.OHC_AGENT_AUTH_DISABLED = process.env.OHC_AGENT_AUTH_DISABLED || 'true';
-  process.env.OHC_ENV = process.env.OHC_ENV || 'test';
-
   console.log(`[run-playwright] Starting server at ${serverBin}...`);
   const server = spawn(serverBin, [], {
     cwd: ROOT,

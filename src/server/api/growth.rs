@@ -6376,7 +6376,7 @@ pub struct SecretMenuParams {
 }
 
 pub async fn handle_secret_menu_embed(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
     axum::extract::Query(params): axum::extract::Query<SecretMenuParams>,
 ) -> impl axum::response::IntoResponse {
     let tenant = params.tenant;

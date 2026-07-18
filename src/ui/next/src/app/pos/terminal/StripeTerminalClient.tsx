@@ -389,7 +389,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                   });
                   if (!sessionRes.ok) {
                      if (sessionRes.status === 409) {
-                         setStatus('Error: Oops! Item just sold out.');
+                         setStatus('Failed to reserve inventory: Item is currently being checked out by another customer.');
                      } else {
                          setStatus('Failed to create checkout session.');
                      }

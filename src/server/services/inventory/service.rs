@@ -299,7 +299,7 @@ impl InventoryService {
             let pool = crate::db::get_pool();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
+                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
                         .bind(product_id)
                         .bind(tenant_id)
                         .fetch_optional(&mut *tx)
@@ -345,7 +345,7 @@ impl InventoryService {
 
                         if let Ok(res) = update_res {
                             if res.rows_affected() == 0 {
-                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .fetch_optional(&mut *tx)

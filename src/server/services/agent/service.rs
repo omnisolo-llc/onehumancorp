@@ -680,7 +680,7 @@ mod benchmark_tests {
         let _snapshot = service.get_snapshot("test_org", false).await.unwrap();
         let elapsed = start.elapsed();
 
-        tracing::debug!("AgentManagerService::get_snapshot benchmark completed in {} ms", elapsed.as_millis());
+        tracing::info!("AgentManagerService::get_snapshot benchmark completed in {} ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 500, "AgentManagerService::get_snapshot took too long: {} ms", elapsed.as_millis());
     }
 }

@@ -40,7 +40,7 @@ test.describe('Onboarding Flow', () => {
 
     // Navigate to onboarding page
      await page.goto('http://127.0.0.1:18789/setup.html');
-    await expect(page).toHaveTitle(/OneHumanCorp|OHC|Open secure onboarding/);
+    await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
     await expect(page.locator('.container')).toBeVisible();
@@ -139,7 +139,7 @@ test.describe('Onboarding Flow', () => {
 
     // Navigate to onboarding page
      await page.goto('http://127.0.0.1:18789/setup.html');
-    await expect(page).toHaveTitle(/OneHumanCorp|OHC|Open secure onboarding/);
+    await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
     await expect(page.locator('.container')).toBeVisible();

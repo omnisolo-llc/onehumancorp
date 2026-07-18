@@ -128,21 +128,21 @@ export default function MyPlanPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 w-full">
+            <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
                     onClick={() => router.push('/pricing')}
-                    className="w-full px-4 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
+                    className="w-full sm:w-auto px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
                     Upgrade
                 </button>
                 <button
                     onClick={handleManageBilling}
                     disabled={isManagingBilling}
-                    className="w-full px-4 py-3 glass-card glass-control backdrop-blur-md bg-white/50 border border-white/30 shadow-sm rounded-xl font-medium transition-all hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
+                    className="w-full sm:w-auto px-6 py-3 glass-card glass-control backdrop-blur-md bg-white/50 border border-white/30 shadow-sm rounded-xl font-medium transition-all hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
                     {isManagingBilling ? "Redirecting..." : "Manage Billing"}
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
-                    className="w-full px-4 py-3 glass-card glass-control backdrop-blur-md bg-white/50 border border-white/30 text-gray-700 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
+                    className="w-full sm:w-auto px-6 py-3 glass-card glass-control backdrop-blur-md bg-white/50 border border-white/30 text-gray-700 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
                     View Detailed Costs
                 </button>
             </div>

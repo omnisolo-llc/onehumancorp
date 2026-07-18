@@ -124,8 +124,6 @@ Because we use local images built from source instead of pulling from Docker Hub
     ```bash
     npx @bazel/bazelisk run //deploy:load_all_images
     ```
-    If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing base images, this local-first Bazel build flow is the required primary path to preload images into the Docker daemon.
-
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash
     # Note: If you encounter Docker Hub rate limits, run the Local Build & Launch flow first:

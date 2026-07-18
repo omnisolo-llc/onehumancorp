@@ -312,8 +312,7 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
+                            _ => "Current",
                         },
                         limit
                     )),
@@ -333,8 +332,7 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
+                            _ => "Current",
                         },
                         limit
                     )),
@@ -374,8 +372,7 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
+                            _ => "Current",
                         },
                         limit
                     )),
@@ -422,8 +419,7 @@ impl RedisRateLimiter {
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
+                            _ => "Current",
                         },
                         limit
                     )),

@@ -31,6 +31,7 @@ exports_files(
         "agent_action_worker.rs",
         "agent_action_worker_test.rs",
         "agent_session_summarizer.rs",
+        "customer_memory_graph_worker.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -66,6 +67,7 @@ rust_library(
         "daily_ops_routine_worker.rs",
         "agent_action_worker.rs",
         "agent_action_worker_test.rs",
+        "customer_memory_graph_worker.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
