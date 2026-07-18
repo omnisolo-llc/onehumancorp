@@ -368,6 +368,12 @@ pub struct AgentState {
     pub is_revert: bool,
 }
 
+impl crate::langgraph::AgentState for AgentState {
+    fn has_tool_calls(&self) -> bool {
+        self.has_tool_calls
+    }
+}
+
 pub struct AgentStateReducer;
 
 impl crate::langgraph::Reducer<AgentState> for AgentStateReducer {
@@ -1749,7 +1755,7 @@ impl Agent {
         let llm_tools = tools_def_arc.clone();
         let llm_client = llm.clone();
         let llm_sys = system_prompt.clone();
-        graph.add_node("llm_call", move |state| {
+        let llm_call_node = move |state: AgentState| {
             let llm_client_c = llm_client.clone();
             let llm_sys_c = llm_sys.clone();
             let llm_cfg_c = llm_cfg.clone();
@@ -1807,14 +1813,14 @@ impl Agent {
                     Err(e) => Err(format!("LLM Error: {}", e)),
                 }
             })
-        });
+        };
 
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
         let cfg_max_retries = cfg.max_retries;
         let _cfg_max_retries = cfg_max_retries;
         let checkpointer_clone = self.checkpointer.clone();
-        graph.add_node("tool_node", move |state| {
+        let tool_node = move |state: AgentState| {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
             let checkpointer_node = checkpointer_clone.clone();
@@ -2133,21 +2139,9 @@ impl Agent {
                     is_revert: false,
                 })
             })
-        });
+        };
 
-        // --- EDGES ---
-        graph.add_edge("tool_node", "llm_call");
-
-        // LangChain/LangGraph: conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
-        graph.add_conditional_edges("llm_call", |state| {
-            if state.has_tool_calls {
-                "tool_node".to_string()
-            } else {
-                crate::langgraph::END.to_string()
-            }
-        });
-
-        graph.set_entry_point("llm_call");
+        graph.build_standard_agent_harness(llm_call_node, tool_node);
 
         let initial_state = AgentState {
             messages: initial_messages.to_vec(),
