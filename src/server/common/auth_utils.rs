@@ -4,7 +4,7 @@ pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,
 {
-    query("SET ROLE ohc_bypassrls").execute(executor).await?;
+    query("SELECT set_config('role', 'ohc_bypassrls', true);").execute(executor).await?;
     Ok(())
 }
 
@@ -26,14 +26,7 @@ where
     }
 
     if org_id.trim().eq_ignore_ascii_case("system") {
-        // Elevate privileges for system-level queries.
-        // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
-        // and we cannot call execute multiple times because E is consumed.
-        // Wait, we can use `query` instead of `executor.execute`, because `query` takes `executor` which we can borrow if we used `&mut executor`, but wait, we had errors with `&mut executor` too because E doesn't implement `Executor` for `&mut E`.
-        // The right way is to use a single SQL function, or use an anonymous DO block if we want multiple statements!
-        // But DO blocks can't be used with extended query protocol either? Actually they can!
-        // Another option: "SET ROLE ohc_bypassrls" is all we need! We don't strictly *need* to set current_tenant to empty.
-        query("SET ROLE ohc_bypassrls").execute(executor).await?;
+        query("SELECT set_config('role', 'ohc_bypassrls', true);").execute(executor).await?;
     } else {
         // We MUST use transaction scope (true) to prevent tenant leakage across queries on the same connection.
         // Pool hooks handle global resets, but transaction-level scope ensures that if a transaction commits/rolls back,

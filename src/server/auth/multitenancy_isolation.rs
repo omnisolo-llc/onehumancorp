@@ -275,3 +275,42 @@ async fn test_rls_policies_protect_cross_tenant_writes() {
 
     tx1.rollback().await.unwrap();
 }
+
+#[tokio::test]
+async fn test_pool_connection_role_leakage_prevention() {
+    let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+    let Some(pool) = postgres_security_pool(1).await else {
+        return;
+    }; // Force reuse to test leakage.
+
+    // Set context to "system" to invoke SET ROLE
+    let mut tx1 = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx1, "system")
+        .await
+        .unwrap();
+
+    let row1: (String,) =
+        sqlx::query_as("SELECT current_user::text")
+            .fetch_one(&mut *tx1)
+            .await
+            .unwrap();
+    assert_eq!(row1.0, "ohc_bypassrls");
+
+    tx1.commit().await.unwrap();
+
+    // Now, without requesting a new connection from the pool directly (or using the same reused one),
+    // start a new transaction. The role MUST be reset to the original user.
+    let mut tx2 = pool.begin().await.unwrap();
+    let row2: (String,) =
+        sqlx::query_as("SELECT current_user::text")
+            .fetch_one(&mut *tx2)
+            .await
+            .unwrap();
+    tx2.commit().await.unwrap();
+
+    assert_eq!(
+        row2.0, "ohc_security_test",
+        "CRITICAL VULNERABILITY: Role context leaked across transactions on the same pooled connection!"
+    );
+}
