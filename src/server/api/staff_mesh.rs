@@ -442,7 +442,7 @@ pub async fn sync_timecard_handler(
                 .execute(&mut *tx)
                 .await;
                 if let Err(e) = res {
-                    tracing::error!("Failed to insert timecard event: {:?}", e);
+                    tracing::error!("Failed to insert timecard event: {:?}", e); // pii-safe
                     return (
                         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                         Json(serde_json::json!({"error": "db_error"})),

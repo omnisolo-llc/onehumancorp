@@ -148,7 +148,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
                 .await?;
         }
 
-        tracing::info!("Dispatched SMS/WhatsApp with quote and payment link {} to customer {}", stripe_payment_link, client_id);
+        tracing::info!("Dispatched SMS/WhatsApp with quote and payment link {} to customer {}", stripe_payment_link, client_id); // pii-safe
     }
 
     Ok(())

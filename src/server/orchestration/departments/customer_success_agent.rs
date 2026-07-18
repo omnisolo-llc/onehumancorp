@@ -240,7 +240,7 @@ impl Department for CustomerSuccessAgent {
                             let provider = TwilioProvider::new(account_sid, auth_token);
 
                             if from_phone.is_empty() {
-                                tracing::error!("Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials");
+                                tracing::error!("Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials"); // pii-safe
                                 return;
                             }
                             let twilio_from = from_phone;

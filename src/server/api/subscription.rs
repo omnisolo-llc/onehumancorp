@@ -181,7 +181,7 @@ async fn get_subscription_overview(
         Ok(overview) => (StatusCode::OK, Json(overview)).into_response(),
         Err(error) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscription overview");
-            tracing::error!(tenant_id, %error, "Failed to fetch subscription overview");
+            tracing::error!(tenant_id, %error, "Failed to fetch subscription overview"); // pii-safe
             (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response()
         }
     }

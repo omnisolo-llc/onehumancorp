@@ -68,7 +68,7 @@ pub async fn connect_whatsapp_cloud_api(
     .await;
 
     if let Err(e) = creds_res {
-        tracing::error!("Failed to save WhatsApp Cloud API credentials: {}", e);
+        tracing::error!("Failed to save WhatsApp Cloud API credentials: {}", e); // pii-safe
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
     }
 
@@ -145,7 +145,7 @@ pub async fn connect_whatsapp_twilio(
     .await;
 
     if let Err(e) = creds_res {
-        tracing::error!("Failed to save WhatsApp Twilio credentials: {}", e);
+        tracing::error!("Failed to save WhatsApp Twilio credentials: {}", e); // pii-safe
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
     }
 

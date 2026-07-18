@@ -57,7 +57,7 @@ pub async fn meta_webhook_post_handler(
     let secret = match std::env::var("META_APP_SECRET") {
         Ok(secret) if !secret.trim().is_empty() => secret,
         _ => {
-            tracing::error!("META_APP_SECRET is required for Meta webhook verification");
+            tracing::error!("META_APP_SECRET is required for Meta webhook verification"); // pii-safe
             return StatusCode::UNAUTHORIZED.into_response();
         }
     };

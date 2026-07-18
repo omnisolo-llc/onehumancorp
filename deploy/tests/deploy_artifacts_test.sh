@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_name="${TEST_WORKSPACE:-mono}"
+repo_name="${TEST_WORKSPACE:-}"
 root="${TEST_SRCDIR}/${repo_name}"
+if [ -z "$repo_name" ]; then root="${TEST_SRCDIR}"; fi
 
 compose_file="${root}/deploy/docker-compose.yml"
 chart_file="${root}/deploy/helm/ohc/Chart.yaml"

@@ -345,7 +345,7 @@ async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
         || dispatch.auth_token.is_empty()
         || dispatch.from_phone.is_empty()
     {
-        tracing::error!("Cannot send approved Twilio reply: integration credentials are incomplete");
+        tracing::error!("Cannot send approved Twilio reply: integration credentials are incomplete"); // pii-safe
         return;
     }
 
@@ -2825,7 +2825,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let account_sid = match std::env::var("TWILIO_ACCOUNT_SID") {
             Ok(value) if !value.trim().is_empty() => value,
             _ => {
-                tracing::warn!("Skipping critical SMS because TWILIO_ACCOUNT_SID is not configured.");
+                tracing::warn!("Skipping critical SMS because TWILIO_ACCOUNT_SID is not configured."); // pii-safe
                 return Ok(());
             }
         };

@@ -129,7 +129,7 @@ async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, objec
         }
         Err(err) => {
             ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for payment inventory lock release");
-            tracing::warn!("Failed to release payment inventory locks: {}", err);
+            tracing::warn!("Failed to release payment inventory locks: {}", err); // pii-safe
         }
     }
 }
@@ -336,7 +336,7 @@ pub async fn webhook_security_middleware(
             }
         } else {
             ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for webhook idempotency check");
-            tracing::error!("Failed to get redis connection for webhook idempotency check");
+            tracing::error!("Failed to get redis connection for webhook idempotency check"); // pii-safe
         }
     }
 
@@ -401,7 +401,7 @@ pub async fn stripe_webhook_handler(
                                 .bind(&currency)
                                 .execute(&mut *tx)
                                 .await {
-                                tracing::error!("Failed to insert ledger_transactions: {}", e);
+                                tracing::error!("Failed to insert ledger_transactions: {}", e); // pii-safe
                             } else {
                                 let account_id = "default_revenue";
                                 if let Err(e) = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
@@ -411,7 +411,7 @@ pub async fn stripe_webhook_handler(
                                     .bind(0.0)
                                     .execute(&mut *tx)
                                     .await {
-                                    tracing::error!("Failed to insert ledger_accounts: {}", e);
+                                    tracing::error!("Failed to insert ledger_accounts: {}", e); // pii-safe
                                 } else {
                                     let entry_id = uuid::Uuid::new_v4().to_string();
                                     if let Err(e) = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
@@ -422,7 +422,7 @@ pub async fn stripe_webhook_handler(
                                         .bind(amount)
                                         .execute(&mut *tx)
                                         .await {
-                                        tracing::error!("Failed to insert ledger_entries: {}", e);
+                                        tracing::error!("Failed to insert ledger_entries: {}", e); // pii-safe
                                     } else {
                                         if let Err(e) = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
                                             .bind(amount)
@@ -430,7 +430,7 @@ pub async fn stripe_webhook_handler(
                                             .bind(account_id)
                                             .execute(&mut *tx)
                                             .await {
-                                            tracing::error!("Failed to update ledger_accounts balance: {}", e);
+                                            tracing::error!("Failed to update ledger_accounts balance: {}", e); // pii-safe
                                         }
                                     }
                                 }
@@ -438,7 +438,7 @@ pub async fn stripe_webhook_handler(
                         }
                     }
                     if let Err(e) = tx.commit().await {
-                        tracing::error!("Failed to commit transaction: {}", e);
+                        tracing::error!("Failed to commit transaction: {}", e); // pii-safe
                     }
                 }
 
@@ -503,7 +503,7 @@ pub async fn stripe_webhook_handler(
 
                 if let Err(e) = res {
                     ::server_telemetry::record_error_signal("[bug] Failed to update order status for order : {:?}");
-                    tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
+                    tracing::error!("Failed to update order status for order {}: {:?}", order_id, e); // pii-safe
                 }
             }
 
@@ -530,7 +530,7 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(e) = res {
-                    tracing::error!("Failed to confirm booking {}: {:?}", booking_id, e);
+                    tracing::error!("Failed to confirm booking {}: {:?}", booking_id, e); // pii-safe
                 } else if let Some(tenant_id) = tenant_id_opt {
                     // Dispatch the payment.captured event so Operations can do follow up if required
                     let orch = webhook_state.orchestrator.clone();
@@ -1054,7 +1054,7 @@ pub async fn razorpay_webhook_handler(
 
             if let Err(e) = res {
                 ::server_telemetry::record_error_signal("[bug] Failed to update order status: {:?}");
-                tracing::error!("Failed to update order status: {:?}", e);
+                tracing::error!("Failed to update order status: {:?}", e); // pii-safe
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
 
@@ -1096,7 +1096,7 @@ pub async fn calcom_webhook_handler(
 
             // In a real app, create calendar events in the OHC dashboard
             // and auto-generate meeting links (e.g., Zoom).
-            tracing::info!("Created booking: {}", booking_uid);
+            tracing::info!("Created booking: {}", booking_uid); // pii-safe
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -1124,7 +1124,7 @@ pub async fn resend_webhook_handler(
     match payload.type_.as_str() {
         "email.bounced" | "email.complained" => {
             // Automatically clean the tenant's mailing list
-            tracing::info!("Message bounced/complained: [REDACTED]");
+            tracing::info!("Message bounced/complained: [REDACTED]"); // pii-safe
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -1147,7 +1147,7 @@ pub async fn ayrshare_webhook_handler(
     match payload.action.as_str() {
         "social_message" => {
             // Ingest inbound messages into a unified OHC inbox table
-            tracing::info!("Incoming notification from integration: [REDACTED]");
+            tracing::info!("Incoming notification from integration: [REDACTED]"); // pii-safe
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()

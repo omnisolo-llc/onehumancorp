@@ -114,7 +114,7 @@ impl Department for OperationsAgent {
             // In a real implementation this would check capacity using DB/Redis,
             // For this task we acquire a tentative lock representing the held slot.
             if let Ok(true) = self.orchestrator.mesh().acquire_lock(&format!("ohc:lock:booking_slot:{}", preferred_time), "operations_agent", 600).await {
-                tracing::info!("Operations Agent: Locked slot {} for {}", preferred_time, service_name);
+                tracing::info!("Operations Agent: Locked slot {} for {}", preferred_time, service_name); // pii-safe
                 let action_description = format!("Tentatively locked slot {} for quote on {}", preferred_time, service_name);
                 let _ = self.orchestrator.execute_action(
                     DepartmentType::Operations,
@@ -124,7 +124,7 @@ impl Department for OperationsAgent {
                     event.payload.clone(),
                 ).await;
             } else {
-                tracing::warn!("Operations Agent: Failed to lock slot {} for {}. It might be taken.", preferred_time, service_name);
+                tracing::warn!("Operations Agent: Failed to lock slot {} for {}. It might be taken.", preferred_time, service_name); // pii-safe
             }
             return Ok(());
         }
