@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Case Study Generator - OHC</title>
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #005ce6;
+      --bg: #F5F5F7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --card-bg: rgba(255, 255, 255, 0.7);
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode {
+      --bg: #000000;
+      --text: #f5f5f7;
+      --text-secondary: #a1a1a6;
+      --card-bg: rgba(28, 28, 30, 0.7);
+      --border: rgba(255, 255, 255, 0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+    }
+
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-size: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea { min-height: 80px; resize: vertical; }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button.primary:hover { background: var(--primary-hover); }
+    button.primary:active { transform: scale(0.98); }
+    button.primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: rgba(0,0,0,0.05); }
+    body.dark-mode .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+    .checkbox-group label {
+      margin: 0;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .preview-area {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 32px;
+      color: #111827;
+      position: relative;
+      overflow: hidden;
+    }
+    body.dark-mode .preview-area {
+       background: #111827;
+       border-color: #374151;
+       color: #f9fafb;
+    }
+
+    .preview-header { margin-bottom: 24px; text-align: center; }
+    .preview-header h2 { font-size: 24px; margin: 0 0 8px 0; }
+    .preview-header p { color: #6b7280; margin: 0; font-size: 16px; }
+    body.dark-mode .preview-header p { color: #9ca3af; }
+
+    .preview-metric {
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    body.dark-mode .preview-metric { background: #1f2937; }
+    .preview-metric .value { font-size: 32px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+    .preview-metric .label { font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .preview-section { margin-bottom: 20px; }
+    .preview-section h3 { font-size: 16px; text-transform: uppercase; color: var(--primary); margin: 0 0 8px 0; }
+    .preview-section p { font-size: 16px; line-height: 1.6; margin: 0; }
+
+    .powered-by {
+      display: block;
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    body.dark-mode .powered-by { border-color: #374151; }
+    .powered-by:hover { color: var(--text); }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal-content {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 24px; color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+    .modal-title { font-size: 24px; margin: 0 0 12px 0; text-align: center; font-weight: 700; }
+    .modal-desc { color: var(--text-secondary); margin: 0 0 24px 0; text-align: center; line-height: 1.5; }
+
+    .modal-actions { display: flex; flex-direction: column; gap: 12px; }
+
+    #soft-paywall-status {
+      display: none;
+      text-align: center;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 16px; }
+      .glassmorphism { padding: 16px; }
+      .preview-area { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>Viral Case Study Generator</h1>
+      <a href="/dashboard.html" class="btn-secondary">Dashboard</a>
+    </div>
+
+    <div class="glassmorphism">
+      <div class="form-group">
+        <label for="customer-name">Customer/Client Name</label>
+        <input type="text" id="customer-name" placeholder="e.g. Acme Corp">
+      </div>
+      <div class="form-group">
+        <label for="metric-value">Headline Metric (Result)</label>
+        <input type="text" id="metric-value" placeholder="e.g. 300% ROI">
+      </div>
+      <div class="form-group">
+        <label for="metric-label">Metric Label</label>
+        <input type="text" id="metric-label" placeholder="e.g. Return on Investment">
+      </div>
+      <div class="form-group">
+        <label for="challenge-text">The Challenge</label>
+        <textarea id="challenge-text" placeholder="They were struggling with..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="solution-text">Our Solution</label>
+        <textarea id="solution-text" placeholder="We implemented..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Theme</label>
+        <select id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="remove-branding">
+        <label for="remove-branding">Remove "Powered by OHC" watermark (Pro)</label>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <button class="primary" id="generate-btn">Update Preview</button>
+      </div>
+    </div>
+
+    <div class="glassmorphism" style="margin-top: 32px;">
+      <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 20px;">Live Preview</h2>
+
+      <div class="preview-area" id="preview-card">
+        <div class="preview-header">
+          <h2 id="preview-title">How Acme Corp Succeeded</h2>
+          <p id="preview-subtitle">A Customer Success Story</p>
+        </div>
+
+        <div class="preview-metric">
+          <div class="value" id="preview-metric-value">300% ROI</div>
+          <div class="label" id="preview-metric-label">Return on Investment</div>
+        </div>
+
+        <div class="preview-section">
+          <h3>The Challenge</h3>
+          <p id="preview-challenge">They were struggling with inefficient processes and low conversion rates.</p>
+        </div>
+
+        <div class="preview-section">
+          <h3>Our Solution</h3>
+          <p id="preview-solution">We implemented our automated workflow system to streamline operations.</p>
+        </div>
+
+        <a href="/setup.html?ref=viral-case-study" class="powered-by" id="preview-branding">⚡ Powered by OHC</a>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 12px;">
+         <button class="btn-secondary" style="flex: 1;" id="copy-link-btn">Copy Share Link</button>
+         <button class="primary" style="flex: 1;" id="get-embed-btn">Get Embed Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Soft Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-paywall">&times;</button>
+      <div class="modal-icon">✨</div>
+      <h2 class="modal-title">Upgrade to Pro</h2>
+      <p class="modal-desc">Removing the "Powered by OHC" watermark is a Pro feature. Upgrade your account or share OHC on social media to unlock a 7-day Pro trial.</p>
+
+      <div class="modal-actions">
+        <button class="primary" id="share-to-unlock-btn" style="background: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <button class="primary" id="upgrade-btn">Upgrade to Pro</button>
+      </div>
+      <div id="soft-paywall-status">Verifying...</div>
+    </div>
+  </div>
+
+  <!-- Embed Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <button class="modal-close" id="close-embed">&times;</button>
+      <h2 class="modal-title">Your Embed Code</h2>
+      <p class="modal-desc">Copy and paste this HTML snippet into your website.</p>
+
+      <textarea id="embed-code" readonly style="font-family: monospace; height: 150px; background: rgba(0,0,0,0.05); margin-bottom: 20px;"></textarea>
+
+      <button class="primary" id="copy-code-btn">Copy Code</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // State
+      let state = {
+        tenant: (() => { try { return localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
+        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+        customerName: 'Acme Corp',
+        metricValue: '300% ROI',
+        metricLabel: 'Return on Investment',
+        challenge: 'They were struggling with inefficient processes and low conversion rates.',
+        solution: 'We implemented our automated workflow system to streamline operations.',
+        theme: 'light',
+        removeBranding: false
+      };
+
+      // Elements
+      const customerInput = document.getElementById('customer-name');
+      const metricValInput = document.getElementById('metric-value');
+      const metricLabInput = document.getElementById('metric-label');
+      const challengeInput = document.getElementById('challenge-text');
+      const solutionInput = document.getElementById('solution-text');
+      const themeSelect = document.getElementById('theme-select');
+      const removeBrandingCheck = document.getElementById('remove-branding');
+      const generateBtn = document.getElementById('generate-btn');
+      const getEmbedBtn = document.getElementById('get-embed-btn');
+
+      const previewTitle = document.getElementById('preview-title');
+      const previewMetricVal = document.getElementById('preview-metric-value');
+      const previewMetricLab = document.getElementById('preview-metric-label');
+      const previewChallenge = document.getElementById('preview-challenge');
+      const previewSolution = document.getElementById('preview-solution');
+      const previewBranding = document.getElementById('preview-branding');
+      const previewCard = document.getElementById('preview-card');
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const closePaywallBtn = document.getElementById('close-paywall');
+      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+      const softPaywallStatus = document.getElementById('soft-paywall-status');
+
+      const embedModal = document.getElementById('embed-modal');
+      const closeEmbedBtn = document.getElementById('close-embed');
+      const embedCodeTextarea = document.getElementById('embed-code');
+      const copyCodeBtn = document.getElementById('copy-code-btn');
+      const copyLinkBtn = document.getElementById('copy-link-btn');
+
+      function escapeHtml(unsafe) {
+        return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      }
+
+      function updatePreview() {
+        previewTitle.textContent = `How ${state.customerName || 'Customer'} Succeeded`;
+        previewMetricVal.textContent = state.metricValue || '-';
+        previewMetricLab.textContent = state.metricLabel || '-';
+        previewChallenge.textContent = state.challenge || '...';
+        previewSolution.textContent = state.solution || '...';
+
+        if (state.theme === 'dark') {
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+        }
+
+        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+
+        // Update referral link tenant
+        previewBranding.href = `/setup.html?ref=${state.tenant}&utm_source=case-study`;
+      }
+
+      // Initial render
+      if(state.hasPro) removeBrandingCheck.checked = state.removeBranding;
+
+      // Event Listeners
+      const updateStateFromInputs = () => {
+        state.customerName = customerInput.value || customerInput.placeholder.replace('e.g. ', '');
+        state.metricValue = metricValInput.value || metricValInput.placeholder.replace('e.g. ', '');
+        state.metricLabel = metricLabInput.value || metricLabInput.placeholder.replace('e.g. ', '');
+        state.challenge = challengeInput.value || challengeInput.placeholder;
+        state.solution = solutionInput.value || solutionInput.placeholder;
+        state.theme = themeSelect.value;
+      };
+
+      [customerInput, metricValInput, metricLabInput, challengeInput, solutionInput].forEach(el => {
+        el.addEventListener('input', () => {
+          updateStateFromInputs();
+          updatePreview();
+        });
+      });
+
+      themeSelect.addEventListener('change', (e) => {
+        state.theme = e.target.value;
+        updatePreview();
+      });
+
+      generateBtn.addEventListener('click', () => {
+        updateStateFromInputs();
+        updatePreview();
+        generateBtn.textContent = 'Preview Updated!';
+        setTimeout(() => { generateBtn.textContent = 'Update Preview'; }, 2000);
+      });
+
+      removeBrandingCheck.addEventListener('click', (e) => {
+        if (!state.hasPro) {
+          e.preventDefault();
+          paywallModal.classList.add('active');
+          return;
+        }
+        state.removeBranding = e.target.checked;
+        updatePreview();
+      });
+
+      closePaywallBtn.addEventListener('click', () => {
+        paywallModal.classList.remove('active');
+      });
+
+      upgradeBtn.addEventListener('click', () => {
+          window.location.href = '/pricing.html';
+      });
+
+      if (shareToUnlockBtn) {
+        shareToUnlockBtn.addEventListener('click', async () => {
+          const message = `Check out this amazing Case Study generated with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${state.tenant}`;
+          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`, '_blank');
+
+          shareToUnlockBtn.style.display = 'none';
+          softPaywallStatus.style.display = 'block';
+          softPaywallStatus.innerText = 'Verifying Share...';
+
+          try {
+            let url = '/api/v1/growth/trial-extension/claim';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+            }
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenant_id: state.tenant })
+            });
+
+            if (response.ok) {
+              softPaywallStatus.innerText = 'Unlocked! 7 Days Pro Active.';
+              state.hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
+              setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheck.checked = true;
+                state.removeBranding = true;
+                updatePreview();
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 1500);
+            } else {
+              softPaywallStatus.innerText = 'Verification failed. Please try again later.';
+              setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+            }
+          } catch (err) {
+             softPaywallStatus.innerText = 'Network error. Please check your connection.';
+             setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+          }
+        });
+      }
+
+      getEmbedBtn.addEventListener('click', () => {
+        const origin = window.location.origin.includes('localhost') || window.location.protocol === 'file:' ? 'https://app.onehumancorp.com' : window.location.origin;
+
+        const code = `<div class="ohc-case-study-embed" data-tenant="${escapeHtml(state.tenant)}" data-customer="${escapeHtml(state.customerName)}" data-metric="${escapeHtml(state.metricValue)}" data-label="${escapeHtml(state.metricLabel)}" data-theme="${escapeHtml(state.theme)}" data-branding="${!state.removeBranding}"></div>\n<script src="${origin}/widgets/case-study.js" async><\/script>`;
+
+        embedCodeTextarea.value = code;
+        embedModal.classList.add('active');
+      });
+
+      closeEmbedBtn.addEventListener('click', () => {
+        embedModal.classList.remove('active');
+        copyCodeBtn.textContent = 'Copy Code';
+      });
+
+      copyCodeBtn.addEventListener('click', () => {
+        embedCodeTextarea.select();
+        try {
+          document.execCommand('copy');
+          copyCodeBtn.textContent = 'Copied!';
+          setTimeout(() => { copyCodeBtn.textContent = 'Copy Code'; }, 2000);
+        } catch(e) {}
+      });
+
+      copyLinkBtn.addEventListener('click', () => {
+          const origin = window.location.origin.includes('localhost') || window.location.protocol === 'file:' ? 'https://app.onehumancorp.com' : window.location.origin;
+          const params = new URLSearchParams({
+              t: state.tenant,
+              c: state.customerName,
+              m: state.metricValue,
+              l: state.metricLabel,
+              theme: state.theme,
+              brand: state.removeBranding ? '0' : '1'
+          });
+          const shareUrl = `${origin}/case-study?${params.toString()}`;
+
+          const tempInput = document.createElement('input');
+          tempInput.value = shareUrl;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          try {
+              document.execCommand('copy');
+              copyLinkBtn.textContent = 'Copied!';
+              setTimeout(() => { copyLinkBtn.textContent = 'Copy Share Link'; }, 2000);
+          } catch(e){}
+          document.body.removeChild(tempInput);
+      });
+
+      // Init
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
