@@ -5,7 +5,7 @@ build --color=yes
 build --config=remote-cache
 # Tests and builds execute on the local host. Remote storage is cache-only;
 # explicitly clear any executor inherited from a user or platform rc file.
-# build --remote_executor=
+build --remote_executor=
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=HOST_CPUS
@@ -106,7 +106,7 @@ build --action_env=CI
 # ── BuildBuddy  ──────────────────────────────────────
 # Self-hosted BuildBuddy cache. The web hostname multiplexes authenticated gRPC;
 # the legacy -grpc hostname returns a plain HTTP 404 for REAPI capabilities.
-# common:buildbuddy --remote_cache=grpcs://buildbuddy.phslc.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy.phslc.com
 common:buildbuddy --remote_cache_compression
 common:buildbuddy --remote_timeout=10m
 # Read only Bazel cache
