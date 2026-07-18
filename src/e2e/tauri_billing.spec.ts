@@ -69,8 +69,8 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
     // Verify initial monthly prices
-    const proPrice = page.locator('.ohc-growth-card:has-text("Pro") p.text-xl.font-semibold');
-    const businessPrice = page.locator('.ohc-growth-card:has-text("Business") p.text-xl.font-semibold');
+    const proPrice = page.locator('.ohc-growth-card:has-text("Pro") .plan-price');
+    const businessPrice = page.locator('.ohc-growth-card:has-text("Business") .plan-price');
 
     await expect(proPrice).toContainText('$79');
     await expect(proPrice).toContainText('/month');
