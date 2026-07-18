@@ -4261,9 +4261,25 @@ pub async fn update_ui_triage_action_handler(
                     action_payload_opt = Some(edited.clone());
                 }
 
-                if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
+                if let (Some(action_type), Some(mut action_payload)) = (action_type_opt, action_payload_opt) {
                     if action_type == "Draft Reply" {
+                        // Check if the payload contains {{payment_link}} or {{payment_link:AMOUNT}}
+                        static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+                        let re = RE.get_or_init(|| regex::Regex::new(r"\{\{payment_link(?::(\d+))?\}\}").unwrap());
+                        if let Some(captures) = re.captures(&action_payload) {
+                            let amount_cents = captures.get(1)
+                                .and_then(|m| m.as_str().parse::<i64>().ok())
+                                .unwrap_or(5000); // Default to $50.00
+                            let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                            if let Ok(link) = stripe_client.create_payment_link("Deposit Payment", amount_cents).await {
+                                let match_str = captures.get(0).unwrap().as_str();
+                                action_payload = action_payload.replace(match_str, &link);
+                            }
+                        }
+
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
                         )

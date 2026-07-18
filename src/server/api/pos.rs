@@ -426,12 +426,24 @@ pub async fn translate_order_notes_handler(
     };
 
     let notes = payload.notes;
+
+    // Fetch tenant's preferred language from the database
+    let pool = crate::db::get_pool();
+    let preferred_language: String = sqlx::query_scalar(
+        "SELECT preferred_language FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| "en".to_string());
+
     // Call LLM translation helper if available
     let translated = match crate::api::agents::translation::translate_inbox_message_with_llm(
         &tenant_id,
         "kitchen",
         &notes,
-        "Arabic",
+        &preferred_language,
     ).await {
         Ok(t) => t.translated_content,
         Err(_) => {
