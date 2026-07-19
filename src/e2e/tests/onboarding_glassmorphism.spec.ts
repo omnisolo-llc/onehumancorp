@@ -61,12 +61,12 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
     await page.goto('http://mock/setup.html');
 
     // Start wizard to reach an input
-    await page.getByText('Step-by-Step Setup').click();
+    await page.getByTestId('next-step-btn').first().click();
 
     // Check an input
-    const input = page.locator('.container input').first();
+    const input = page.locator('.glass-control').first();
     const borderRadiusInput = await input.evaluate((el) => window.getComputedStyle(el).borderRadius);
-    expect(borderRadiusInput).toBe('8px');
+    expect(borderRadiusInput).toBe('16px');
 
     // Check back/forward buttons or action buttons
     // The very first button might be the `setup-nav-button` which intentionally has a 999px border-radius,

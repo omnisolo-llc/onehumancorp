@@ -17,7 +17,7 @@ test.describe('Onboarding Wizard Optimization', () => {
     await page.waitForFunction(() => window.goToStep !== undefined);
 
     await page.evaluate(() => { window.goToStep('step-domain'); });
-    const domainInput = page.locator('#domain-name');
+    const domainInput = page.getByTestId('domain-name');
 
     await domainInput.fill('invalid_domain!');
     await page.locator('#step-domain .next-step-btn').click();
@@ -57,7 +57,7 @@ test.describe('Onboarding Wizard Optimization', () => {
   test('validates domain name min length correctly', async ({ page }) => {
     await page.waitForFunction(() => window.goToStep !== undefined);
     await page.evaluate(() => { window.goToStep('step-domain'); });
-    const domainInput = page.locator('#domain-name');
+    const domainInput = page.getByTestId('domain-name');
 
     await domainInput.fill('ab');
     await page.locator('#step-domain .next-step-btn').click();
@@ -68,7 +68,7 @@ test.describe('Onboarding Wizard Optimization', () => {
   test('validates domain error goes away', async ({ page }) => {
     await page.waitForFunction(() => window.goToStep !== undefined);
     await page.evaluate(() => { window.goToStep('step-domain'); });
-    const domainInput = page.locator('#domain-name');
+    const domainInput = page.getByTestId('domain-name');
 
     await domainInput.fill('ab');
     await page.locator('#step-domain .next-step-btn').click();
@@ -82,7 +82,7 @@ test.describe('Onboarding Wizard Optimization', () => {
   test('validates domain name does not accept special chars', async ({ page }) => {
     await page.waitForFunction(() => window.goToStep !== undefined);
     await page.evaluate(() => { window.goToStep('step-domain'); });
-    const domainInput = page.locator('#domain-name');
+    const domainInput = page.getByTestId('domain-name');
 
     await domainInput.fill('test domain');
     await page.locator('#step-domain .next-step-btn').click();
@@ -93,7 +93,7 @@ test.describe('Onboarding Wizard Optimization', () => {
   test('validates domain error goes away dynamically', async ({ page }) => {
     await page.waitForFunction(() => window.goToStep !== undefined);
     await page.evaluate(() => { window.goToStep('step-domain'); });
-    const domainInput = page.locator('#domain-name');
+    const domainInput = page.getByTestId('domain-name');
 
     await domainInput.fill('ab');
     await page.locator('#step-domain .next-step-btn').click();

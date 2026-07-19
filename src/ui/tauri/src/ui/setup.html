@@ -85,6 +85,7 @@
       <div id="step-intro" class="step active">
         <h2>Welcome</h2>
         <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" />
+        <input type="text" id="instant-image-url" class="glass-control glassmorphism" placeholder="Image URL (optional)" />
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
@@ -100,10 +101,12 @@
 
       <div id="step-categories" class="step">
         <h2>Categories</h2>
+        <div id="categories-error" class="error-msg" style="display: none; color: red;">Please select a category.</div>
         <select data-testid="business-categories" id="business-categories">
           <option value="">Select...</option>
           <option value="Home Baker">Home Baker</option>
         </select>
+        <div id="tone-error" class="error-msg" style="display: none; color: red;">Please select a tone.</div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
       </div>
 
@@ -117,7 +120,9 @@
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
         <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
+        <div id="assistant-name-error" class="error-msg" style="display: none; color: red;">Please select an assistant.</div>
         <select data-testid="assistant-tone">
+          <option value="">Choose a tone...</option>
           <option value="Friendly">Friendly</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
@@ -133,25 +138,32 @@
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" data-testid="first-offer" class="glass-control glassmorphism" placeholder="First Offer" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <button class="prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
+        <input type="text" data-testid="location-input" class="glass-control glassmorphism" placeholder="Location" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
       </div>
 
       <div id="step-target-audience" class="step">
         <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <button class="prev-step-btn" data-testid="prev-step-btn" data-prev="step-location">Back</button>
+        <input type="text" data-testid="target-audience" class="glass-control glassmorphism" placeholder="Target Audience" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <button class="prev-step-btn" data-testid="prev-step-btn" data-prev="step-target-audience">Back</button>
+        <div class="flex items-center gap-2 glass-control glassmorphism px-3 py-2 w-full mt-2">
+      <input type="text" id="domain-name" data-testid="domain-name" class="flex-1 bg-transparent outline-none" placeholder="your-store" />
+      <span class="text-sm opacity-60 pointer-events-none">.ohc.app</span>
+    </div>
+    <div id="domain-error" class="error-msg" style="display: none; color: red;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -319,12 +331,25 @@
         });
       }
 
-      function goToStep(stepId) {
-        document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-        document.getElementById(stepId).classList.add('active');
+      window.goToStep = function goToStep(stepId) {
+        document.querySelectorAll('.step').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+        const stepEl = document.getElementById(stepId);
+        if (stepEl) {
+            stepEl.style.display = 'block';
+            stepEl.classList.add('active');
+        }
         state.step = stepOrder.indexOf(stepId);
         saveState();
       }
+      window.goToStep = goToStep;
+
+      document.querySelectorAll('.prev-step-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.dataset.prev) {
+            goToStep(e.target.dataset.prev);
+          }
+        });
+      });
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -337,6 +362,36 @@
                 return; // Stop transition
               }
               document.getElementById('name-error').style.display = 'none';
+            }
+            if (currentStep === 'step-categories') {
+              const catVal = document.getElementById('business-categories').value;
+              if (!catVal) {
+                document.getElementById('categories-error').style.display = 'block';
+                document.getElementById('business-categories').classList.add('invalid-input');
+                return;
+              }
+              document.getElementById('categories-error').style.display = 'none';
+              document.getElementById('business-categories').classList.remove('invalid-input');
+            }
+            if (currentStep === 'step-assistant') {
+              const supportChecked = document.querySelector('input[data-testid="team-support"]:checked');
+              if (!supportChecked) {
+                document.getElementById('assistant-name-error').style.display = 'block';
+                return;
+              }
+              document.getElementById('assistant-name-error').style.display = 'none';
+              const toneVal = document.querySelector('[data-testid="assistant-tone"]').value;
+              if (!toneVal) {
+                document.getElementById('tone-error').style.display = 'block';
+                return;
+              }
+              document.getElementById('tone-error').style.display = 'none';
+              document.getElementById('assistant-name-error').style.display = 'none';
+            }
+            if (currentStep === 'step-domain') {
+              if (window.validateStep && !window.validateStep('step-domain')) {
+                  return;
+              }
             }
             goToStep(e.target.dataset.next);
           }
@@ -400,7 +455,50 @@
         }
       });
 
-      window.addEventListener('load', async () => {
+      window.validateStep = (stepId) => {
+        if (stepId === 'step-domain') {
+            const domainVal = document.getElementById('domain-name').value.trim();
+            const domainError = document.getElementById('domain-error');
+            const domainRegex = /^[a-z0-9-]+$/;
+
+            if (domainVal.length < 3) {
+                domainError.innerText = 'Domain name must be at least 3 characters.';
+                domainError.style.display = 'block';
+                return false;
+            }
+            if (!domainRegex.test(domainVal)) {
+                domainError.innerText = 'Domain name can contain only lowercase letters, numbers, and hyphens.';
+                domainError.style.display = 'block';
+                return false;
+            }
+            if (domainVal.startsWith('-') || domainVal.endsWith('-')) {
+                domainError.innerText = 'Domain name cannot start or end with a hyphen.';
+                domainError.style.display = 'block';
+                return false;
+            }
+            domainError.style.display = 'none';
+            return true;
+        }
+        return true;
+     };
+
+     document.addEventListener('DOMContentLoaded', () => {
+         const domainInput = document.getElementById('domain-name');
+         if (domainInput) {
+             domainInput.addEventListener('input', () => {
+                 const domainError = document.getElementById('domain-error');
+                 if (domainError.style.display === 'block') {
+                     const domainRegex = /^[a-z0-9-]+$/;
+                     const val = domainInput.value.trim();
+                     if (val.length >= 3 && domainRegex.test(val) && !val.startsWith('-') && !val.endsWith('-')) {
+                         domainError.style.display = 'none';
+                     }
+                 }
+             });
+         }
+     });
+
+     window.addEventListener('load', async () => {
         try {
           const res = await fetch('/api/v1/onboarding/draft');
           if (res.ok) {
