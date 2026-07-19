@@ -264,6 +264,7 @@ impl Department for MarketingAgent {
 
                         // Spawn a task to update DB, invalidate cache, and enqueue publish job
                         let seo_schema_clone = seo_schema.clone();
+                        let event_type_clone = event.event_type.clone();
                         tokio::spawn(async move {
                             if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
                                 // Update DB
@@ -276,22 +277,29 @@ impl Department for MarketingAgent {
                                     .execute(&pool)
                                     .await;
 
-                                // Invalidate cache
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
-                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                let mut tags = vec![format!("tenant-id:{}", tenant_id_str)];
+                                if !product_id_str.is_empty() {
+                                    tags.push(format!("entity:product:{}", product_id_str));
+                                }
 
-                                let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                                cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
-                                cdn.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                let invalidation_event = serde_json::json!({
+                                    "event": event_type_clone,
+                                    "tags": tags
+                                });
+
+                                if let Some(redis_client) = crate::get_redis_client() {
+                                    if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                                        let _: redis::RedisResult<()> = redis::cmd("PUBLISH")
+                                            .arg("cache_invalidation_events")
+                                            .arg(invalidation_event.to_string())
+                                            .query_async(&mut conn).await;
+                                    }
+                                }
 
                                 // Proactively pre-render the product cache
                                 if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
                                     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_uuid);
-                                    let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_uuid, cache_key, cache.clone()).await;
+                                    let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_uuid, cache_key, crate::builder::edge::get_edge_cache()).await;
                                 }
 
                                 // Trigger site publish job for all sites for the tenant
