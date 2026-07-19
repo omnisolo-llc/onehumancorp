@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 const POSTGRES_ENQUEUE_HEALTH_JOBS_SQL: &str = r#"
     INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
-    SELECT gen_random_uuid()::text, tenant_id, 'subscription_health',
+    SELECT CAST(gen_random_uuid() AS TEXT), tenant_id, 'subscription_health',
            jsonb_build_object('subscriber_id', id, 'customer_id', customer_id),
            'PENDING', NOW()
     FROM subscribers

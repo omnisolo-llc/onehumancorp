@@ -1168,6 +1168,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         owner_id TEXT,
                         name TEXT,
+                        tier TEXT DEFAULT 'free',
                         plan_tier TEXT DEFAULT 'free',
                         has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         subdomain TEXT,
@@ -1234,6 +1235,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         phone TEXT,
                         name TEXT,
                         preferences TEXT DEFAULT '{}',
+                        embedding BLOB,
+                        profile_summary TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_subscribable BOOLEAN DEFAULT FALSE,
@@ -2852,6 +2855,83 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         scheduled_time TIMESTAMP  NOT NULL,
                         created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS interaction_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+                        channel TEXT NOT NULL,
+                        raw_content TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS context_snippets (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+                        category TEXT NOT NULL,
+                        extracted_value TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS interaction_event_jobs (
+                        job_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        interaction_event_id TEXT NOT NULL REFERENCES interaction_events(id) ON DELETE CASCADE,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        retry_count INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customer_memory_context (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        context_graph TEXT NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, customer_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS raw_materials (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        current_quantity INTEGER DEFAULT 0,
+                        reorder_threshold INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bom_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        finished_good_id TEXT NOT NULL,
+                        raw_material_id TEXT NOT NULL,
+                        quantity_required INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS po_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        purchase_order_id TEXT NOT NULL,
+                        raw_material_id TEXT NOT NULL,
+                        quantity INTEGER DEFAULT 1,
+                        unit_price REAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS depletion_logs (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        raw_material_id TEXT NOT NULL,
+                        sales_event_id TEXT,
+                        quantity_deducted INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
