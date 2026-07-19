@@ -23,6 +23,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server:server_lib",
+        "//src/server/common:server_common",
         "//src/server/domain:server_domain",
         "@crates//:uuid",
         "@crates//:chrono",
