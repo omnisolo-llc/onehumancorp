@@ -95,6 +95,7 @@
       <div id="step-context" class="step">
         <h2>Context</h2>
         <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label>
+        <label class="context-card" data-testid="context-agency"><input type="radio" name="context" value="Agency or Studio"> Agency or Studio</label>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
       </div>
 
@@ -103,6 +104,7 @@
         <select data-testid="business-categories" id="business-categories">
           <option value="">Select...</option>
           <option value="Home Baker">Home Baker</option>
+          <option value="Design">Design</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
       </div>
@@ -116,9 +118,10 @@
 
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
-        <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
-        <select data-testid="assistant-tone">
+        <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-operations" value="Team Support"> Cap Inventory</label>
+        <select data-testid="assistant-tone" id="assistant-tone">
           <option value="Friendly">Friendly</option>
+          <option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
