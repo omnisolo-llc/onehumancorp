@@ -31,7 +31,7 @@ pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
-pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> String {
+pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str, message: &str) -> String {
     let pool = &db.pool;
 
     // 1. Check if identity exists in customer_identities
@@ -78,11 +78,38 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
         }
     };
 
+    // 3. Fallback: extract email from message
+    let extracted_email = if potential_customer_id.is_none() && !message.is_empty() {
+        let msg_lower = message.to_lowercase();
+        let mut email_opt = None;
+        if msg_lower.contains("@") {
+            let parts: Vec<&str> = msg_lower.split_whitespace().collect();
+            for p in parts {
+                if p.contains("@") && p.contains(".") {
+                    email_opt = Some(p.to_string());
+                    break;
+                }
+            }
+        }
+        email_opt
+    } else {
+        None
+    };
+
+    let potential_customer_id = if let Some(e) = &extracted_email {
+        match &db.store {
+            crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND email = $2 LIMIT 1").bind(tenant_id).bind(e).fetch_optional(pool).await.ok().flatten(),
+            crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND email = ? LIMIT 1").bind(tenant_id).bind(e).fetch_optional(sqlite_pool).await.ok().flatten(),
+        }
+    } else {
+        potential_customer_id
+    };
+
     let id = if let Some(found_id) = potential_customer_id {
         found_id
     } else {
         let new_id = Uuid::new_v4().to_string();
-        let email = if sender_id.contains('@') { sender_id } else { "" };
+        let email = if sender_id.contains('@') { sender_id.to_string() } else if let Some(e) = extracted_email { e } else { "".to_string() };
         let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_digit(10)) { sender_id } else { "" };
         let name = "Unknown Customer";
 
@@ -92,7 +119,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                     .bind(&new_id)
                     .bind(tenant_id)
                     .bind(name)
-                    .bind(if email.is_empty() { None } else { Some(email) })
+                    .bind(if email.is_empty() { None } else { Some(email.clone()) })
                     .bind(if phone.is_empty() { None } else { Some(phone) })
                     .execute(pool)
                     .await;
@@ -102,7 +129,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                     .bind(&new_id)
                     .bind(tenant_id)
                     .bind(name)
-                    .bind(if email.is_empty() { None } else { Some(email) })
+                    .bind(if email.is_empty() { None } else { Some(email.clone()) })
                     .bind(if phone.is_empty() { None } else { Some(phone) })
                     .execute(sqlite_pool)
                     .await;
@@ -163,7 +190,7 @@ pub async fn handle_omnichannel_webhook(
     let message = &payload.message;
 
     // 1. Resolve Identity
-    let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id).await;
+    let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id, message).await;
 
     // Create ServiceLead if applicable
     let service_lead_id = uuid::Uuid::new_v4().to_string();
@@ -379,7 +406,7 @@ mod tests {
             .unwrap();
 
         // 2. Test resolution by email
-        let resolved_id = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
+        let resolved_id = resolve_identity(&db, "tenant-1", "email", "test@example.com", "").await;
         assert_eq!(resolved_id, "cust-1".to_string());
 
         // 3. Test that it was cached in customer_identities
@@ -390,15 +417,15 @@ mod tests {
         assert_eq!(cached_id, "cust-1");
 
         // 4. Test resolution by phone
-        let resolved_id2 = resolve_identity(&db, "tenant-1", "whatsapp", "+1234567890").await;
+        let resolved_id2 = resolve_identity(&db, "tenant-1", "whatsapp", "+1234567890", "").await;
         assert_eq!(resolved_id2, "cust-1".to_string());
 
         // 5. Test resolution from cache directly (another call to same email)
-        let resolved_id3 = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
+        let resolved_id3 = resolve_identity(&db, "tenant-1", "email", "test@example.com", "").await;
         assert_eq!(resolved_id3, "cust-1".to_string());
 
         // 6. Test unknown identity creates a new customer and returns id
-        let resolved_id4 = resolve_identity(&db, "tenant-1", "instagram", "unknown_handle").await;
+        let resolved_id4 = resolve_identity(&db, "tenant-1", "instagram", "unknown_handle", "").await;
         assert!(!resolved_id4.is_empty());
         assert_ne!(resolved_id4, "cust-1");
     }

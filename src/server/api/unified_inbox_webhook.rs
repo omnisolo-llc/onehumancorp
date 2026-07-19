@@ -190,7 +190,7 @@ async fn generate_draft_reply(
 
     match llm_res {
         Ok(reply) => reply,
-        Err(_) => format!("Hi there! Thanks for your message: '{}'. How can we help?", customer_message),
+        Err(_) => format!("Hi there! Thanks for your message: '{}'. How can we help? Context: {}", customer_message, enriched_context_summary),
     }
 }
 

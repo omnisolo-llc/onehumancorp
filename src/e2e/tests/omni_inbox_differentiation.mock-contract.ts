@@ -54,7 +54,7 @@ test.describe('AI Unified Inbox Differentiation & Omnichannel Customer Memory', 
     await expect(replyLocator).toBeVisible();
 
     // 6. 1-Tap Approve button should be visible (Send Draft)
-    const approveButton = page.locator('button:has-text("Send Draft")');
+    const approveButton = page.locator('button:has-text("Approve & Send Draft")');
     await expect(approveButton).toBeVisible();
 
     await approveButton.click();

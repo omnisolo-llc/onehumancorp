@@ -935,7 +935,7 @@ impl Department for CustomerSuccessAgent {
                         .reason(&compressed_prompt)
                         .await
                         .unwrap_or_else(|_| {
-                            "Thank you for your message. We will get back to you shortly."
+                            format!("Thank you for your message. We will get back to you shortly. Context: {}", context_summary)
                                 .to_string()
                         })
                 }
@@ -943,7 +943,7 @@ impl Department for CustomerSuccessAgent {
                     .reason(&compressed_prompt)
                     .await
                     .unwrap_or_else(|_| {
-                        "Thank you for your message. We will get back to you shortly.".to_string()
+                        format!("Thank you for your message. We will get back to you shortly. Context: {}", context_summary).to_string()
                     }),
             };
 
