@@ -70,6 +70,12 @@ for record in "${tracked_records[@]}"; do
   metadata="${record%%$'\t'*}"
   path="${record#*$'\t'}"
   [[ -z "$path" ]] && scanner_error "empty tracked inventory path"
+  # `git ls-files` reports index entries that have been intentionally deleted
+  # in the current worktree. They are not active application inputs and must
+  # not make a residue scan of the pending tree fail internally.
+  if [[ ! -e "$path" && ! -L "$path" ]]; then
+    continue
+  fi
   all_tracked_paths+=("$path")
   mode="${metadata%% *}"
   case "$mode" in

@@ -34,20 +34,3 @@ BEGIN
         END IF;
     END IF;
 END $$;
-
--- +goose Down
-DO $$
-BEGIN
-    IF to_regclass('business_milestones') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_business_milestones ON business_milestones;
-        ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF to_regclass('shared_tasks_decomposition') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
-        ALTER TABLE IF EXISTS shared_tasks_decomposition DISABLE ROW LEVEL SECURITY;
-    END IF;
-END $$;

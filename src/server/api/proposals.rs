@@ -39,10 +39,23 @@ pub struct ProposalLineItem {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DraftAgentRequest {
     pub inquiry: String,
     pub customer_id: String,
-    pub tenant_id: String,
+}
+
+const GET_PROPOSAL_SQL: &str = "SELECT * FROM proposals WHERE id = $1 AND tenant_id = $2";
+const GET_LINE_ITEMS_SQL: &str = "SELECT pli.* FROM proposal_line_items pli JOIN proposals p ON p.id = pli.proposal_id WHERE pli.proposal_id = $1 AND p.tenant_id = $2";
+const APPROVE_PROPOSAL_SQL: &str = "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING *";
+
+fn authenticated_tenant(claims: &::server_common::Claims) -> Result<&str, StatusCode> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| !tenant_id.is_empty())
+        .ok_or(StatusCode::UNAUTHORIZED)
 }
 
 #[derive(Serialize)]
@@ -186,8 +199,13 @@ async fn draft_narrative_with_llm(
 
 async fn draft_agent(
     State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id.to_string(),
+        Err(status) => return status.into_response(),
+    };
     let llm = Arc::new(AdapterLlm {});
     let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
 
@@ -243,7 +261,7 @@ async fn draft_agent(
         "INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())"
     )
     .bind(&proposal_id)
-    .bind(&payload.tenant_id)
+    .bind(&tenant_id)
     .bind(&payload.customer_id)
     .bind(total_amount_cents)
     .bind(required_deposit_cents)
@@ -283,15 +301,23 @@ async fn draft_agent(
     (StatusCode::OK, Json(serde_json::json!({"id": proposal_id}))).into_response()
 }
 
-async fn get_proposal(State(pool): State<PgPool>, Path(id): Path<String>) -> impl IntoResponse {
+async fn get_proposal(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return status.into_response(),
+    };
     let (proposal_res, items_res) = tokio::join!(
-        sqlx::query_as::<_, Proposal>("SELECT * FROM proposals WHERE id = $1")
+        sqlx::query_as::<_, Proposal>(GET_PROPOSAL_SQL)
             .bind(&id)
+            .bind(tenant_id)
             .fetch_optional(&pool),
-        sqlx::query_as::<_, ProposalLineItem>(
-            "SELECT * FROM proposal_line_items WHERE proposal_id = $1"
-        )
+        sqlx::query_as::<_, ProposalLineItem>(GET_LINE_ITEMS_SQL)
         .bind(&id)
+        .bind(tenant_id)
         .fetch_all(&pool)
     );
 
@@ -322,7 +348,15 @@ async fn get_proposal(State(pool): State<PgPool>, Path(id): Path<String>) -> imp
         .into_response()
 }
 
-async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) -> impl IntoResponse {
+async fn approve_proposal(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id.to_string(),
+        Err(status) => return status.into_response(),
+    };
     let mut tx = match pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
@@ -331,10 +365,9 @@ async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) ->
         }
     };
 
-    let proposal = match sqlx::query_as::<_, Proposal>(
-        "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *",
-    )
+    let proposal = match sqlx::query_as::<_, Proposal>(APPROVE_PROPOSAL_SQL)
     .bind(&id)
+    .bind(&tenant_id)
     .fetch_optional(&mut *tx)
     .await
     {
@@ -347,9 +380,10 @@ async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) ->
     };
 
     let line_items = match sqlx::query_as::<_, ProposalLineItem>(
-        "SELECT * FROM proposal_line_items WHERE proposal_id = $1",
+        GET_LINE_ITEMS_SQL,
     )
     .bind(&id)
+    .bind(&tenant_id)
     .fetch_all(&mut *tx)
     .await
     {
@@ -382,9 +416,10 @@ async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>) ->
     };
 
     if !checkout_url.is_empty() {
-        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2")
+        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 AND tenant_id = $3")
             .bind(&checkout_url)
             .bind(&proposal.id)
+            .bind(&tenant_id)
             .execute(&mut *tx)
             .await;
     }
@@ -510,6 +545,26 @@ mod tests {
             session_id: None,
             jti: "proposal-test".to_string(),
         }
+    }
+
+    #[test]
+    fn proposal_access_is_scoped_to_authenticated_tenant() {
+        assert_eq!(authenticated_tenant(&claims(Some("tenant-a"))).unwrap(), "tenant-a");
+        assert_eq!(authenticated_tenant(&claims(None)), Err(StatusCode::UNAUTHORIZED));
+
+        for sql in [GET_PROPOSAL_SQL, GET_LINE_ITEMS_SQL, APPROVE_PROPOSAL_SQL] {
+            assert!(sql.contains("tenant_id"), "query must predicate authenticated tenant: {sql}");
+        }
+        assert!(GET_LINE_ITEMS_SQL.contains("JOIN proposals"));
+        assert!(APPROVE_PROPOSAL_SQL.contains("tenant_id = $2"));
+
+        let forged_body = serde_json::from_str::<DraftAgentRequest>(
+            r#"{"inquiry":"quote","customer_id":"customer-a","tenant_id":"tenant-b"}"#,
+        );
+        assert!(
+            forged_body.is_err(),
+            "draft requests must not accept a caller-supplied tenant"
+        );
     }
 
     fn narrative_app(organization_id: Option<&str>) -> Router {
@@ -726,12 +781,11 @@ mod social_tests {
 
     #[tokio::test]
     async fn test_list_social_post_proposals_route_exists() {
-        let pool =
-            sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/postgres").await;
-        if pool.is_err() {
-            return;
-        }
-        let app = router().with_state(pool.unwrap());
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@127.0.0.1:1/postgres")
+            .expect("test database URL should parse");
+        let app = router().with_state(pool);
 
         let req = Request::builder()
             .method("GET")
@@ -739,6 +793,7 @@ mod social_tests {
             .body(Body::empty())
             .unwrap();
 
-        let _res = app.oneshot(req).await.unwrap();
+        let res = app.oneshot(req).await.unwrap();
+        assert_ne!(res.status(), StatusCode::NOT_FOUND);
     }
 }

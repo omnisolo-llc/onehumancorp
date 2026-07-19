@@ -5,6 +5,9 @@ pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
 
+#[path = "api/setup.rs"]
+mod setup;
+
 
 use std::sync::RwLock;
 
@@ -12,6 +15,51 @@ use std::sync::RwLock;
 #[serde(deny_unknown_fields)]
 struct ChatRequest {
     message: String,
+}
+
+const DEFAULT_HELP_CHAT_LINKS: [&str; 8] = [
+    "/help?article=getting-started-1",
+    "/help?article=my-store-1",
+    "/help?article=payments-1",
+    "/help?article=ai-support",
+    "/help?article=marketing-tools",
+    "/help?article=billing-settings",
+    "/api-docs",
+    "/inbox",
+];
+
+#[cfg(test)]
+fn default_help_chat_links() -> &'static [&'static str] {
+    &DEFAULT_HELP_CHAT_LINKS
+}
+
+fn current_help_link(link: &str) -> String {
+    let link = link.trim();
+    if let Some(article_id) = link.strip_prefix("/help_article.html?id=") {
+        let article_id = article_id.split('&').next().unwrap_or_default();
+        if !article_id.is_empty()
+            && article_id
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+        {
+            return format!("/help?article={article_id}");
+        }
+    }
+
+    match link {
+        "/api-docs.html" => "/api-docs".to_string(),
+        "/inbox.html" => "/inbox".to_string(),
+        current if DEFAULT_HELP_CHAT_LINKS.contains(&current) => current.to_string(),
+        current
+            if current.starts_with("/help?article=")
+                && !current.contains(".html")
+                && !current.contains('\r')
+                && !current.contains('\n') =>
+        {
+            current.to_string()
+        }
+        _ => DEFAULT_HELP_CHAT_LINKS[0].to_string(),
+    }
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -953,56 +1001,26 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
+#[cfg(test)]
 fn authenticated_spiffe_id(
     standalone: bool,
     claimed_identity: Option<&str>,
     peer_certificate_der: Option<&[u8]>,
 ) -> Result<String, tonic::Status> {
-    if standalone {
-        let identity = claimed_identity
-            .ok_or_else(|| tonic::Status::unauthenticated("missing x-spiffe-id header"))?;
-        ::server_auth::parse_spiffe_id(identity)?;
-        return Ok(identity.to_string());
-    }
-
-    let certificate = peer_certificate_der
-        .ok_or_else(|| tonic::Status::unauthenticated("verified client certificate is required"))?;
-    ::server_auth::peer_identity::spiffe_id_from_certificate_der(certificate)
+    ::server_auth::peer_identity::authenticated_spiffe_id(
+        standalone,
+        claimed_identity,
+        peer_certificate_der,
+    )
 }
 
 fn spiffe_interceptor(
     mut req: tonic::Request<()>,
 ) -> Result<tonic::Request<()>, tonic::Status> {
-    let claimed_identity = req
-        .metadata()
-        .get("x-spiffe-id")
-        .map(|value| {
-            value
-                .to_str()
-                .map(str::to_string)
-                .map_err(|_| tonic::Status::invalid_argument("invalid x-spiffe-id header"))
-        })
-        .transpose()?;
-    let peer_certificates = req.peer_certs();
-    let peer_certificate = peer_certificates
-        .as_deref()
-        .and_then(|certificates| certificates.first())
-        .map(AsRef::as_ref);
-    let identity = authenticated_spiffe_id(
+    ::server_auth::peer_identity::authenticate_spiffe_request(
+        &mut req,
         crate::is_standalone_runtime(),
-        claimed_identity.as_deref(),
-        peer_certificate,
     )?;
-    let (org_id, agent_id) = ::server_auth::parse_spiffe_id(&identity)?;
-    let metadata_identity = identity
-        .parse()
-        .map_err(|_| tonic::Status::internal("verified SPIFFE identity is not valid metadata"))?;
-    req.metadata_mut().insert("x-spiffe-id", metadata_identity);
-    req.extensions_mut().insert(::server_auth::AuthInfo {
-        spiffe_id: identity,
-        org_id,
-        agent_id,
-    });
     tracing::info!("Authenticated verified SPIFFE identity.");
     Ok(req)
 }
@@ -1161,6 +1179,22 @@ struct HttpMetricsResponse {
     top_product: Option<String>,
 }
 
+fn dashboard_sales_query(postgres: bool) -> &'static str {
+    if postgres {
+        "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1 AND LOWER(status) IN ('paid', 'completed')"
+    } else {
+        "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS REAL) FROM orders WHERE tenant_id = ? AND LOWER(status) IN ('paid', 'completed')"
+    }
+}
+
+fn dashboard_top_product_query(postgres: bool) -> &'static str {
+    if postgres {
+        "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND oi.tenant_id = $1 AND p.tenant_id = $1 AND LOWER(o.status) IN ('paid', 'completed') GROUP BY p.title ORDER BY SUM(oi.quantity) DESC, p.title ASC LIMIT 1"
+    } else {
+        "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = ? AND oi.tenant_id = ? AND p.tenant_id = ? AND LOWER(o.status) IN ('paid', 'completed') GROUP BY p.title ORDER BY SUM(oi.quantity) DESC, p.title ASC LIMIT 1"
+    }
+}
+
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
@@ -1224,7 +1258,7 @@ async fn http_metrics_handler(
             sqlx::query_scalar::<_, i64>(query).bind(&t_id2).fetch_one(&pool2).await
         }),
         tokio::spawn(async move {
-            let query = if is_pg { "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1" } else { "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS REAL) FROM orders WHERE tenant_id = ?" };
+            let query = dashboard_sales_query(is_pg);
             sqlx::query_scalar::<_, f64>(query).bind(&t_id3).fetch_one(&pool3).await
         }),
         tokio::spawn(async move {
@@ -1232,11 +1266,11 @@ async fn http_metrics_handler(
             sqlx::query_scalar::<_, i64>(query).bind(&t_id4).fetch_one(&pool4).await
         }),
         tokio::spawn(async move {
-            let query = if is_pg { "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND p.tenant_id = $1 AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1" } else { "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = ? AND p.tenant_id = ? AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1" };
+            let query = dashboard_top_product_query(is_pg);
             if is_pg {
                 sqlx::query_scalar::<_, String>(query).bind(&t_id5).fetch_optional(&pool5).await
             } else {
-                sqlx::query_scalar::<_, String>(query).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await
+                sqlx::query_scalar::<_, String>(query).bind(&t_id5).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await
             }
         })
     );
@@ -1245,9 +1279,9 @@ async fn http_metrics_handler(
     let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
     let total_sales = sales_res.unwrap_or(Ok(0.0)).unwrap_or(0.0);
     let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let top_product = top_product_res.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or_else(|| "None".to_string());
+    let top_product = top_product_res.unwrap_or(Ok(None)).unwrap_or(None);
 
-    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, top_product: Some(top_product) };
+    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, top_product };
     cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
@@ -1949,6 +1983,11 @@ impl HubService for MyHubService {
         &self,
         request: Request<RegisterAgentRequest>,
     ) -> Result<Response<RegisterAgentResponse>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        ::server_auth::orchestration::authorize_register_agent(auth_info, request.get_ref())?;
         let req = request.into_inner();
         if let Some(agent) = req.agent {
             self.hub.register_agent(agent);
@@ -3059,10 +3098,35 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = !crate::is_standalone_runtime();
-    let mesh_transport = ohc_builtin_agent::mesh::transport::create_transport(
-        std::env::var("REDIS_URL").ok().as_deref(),
-        is_cloud
-    ).await.expect("Failed to create MeshTransport");
+    let redis_url = std::env::var("REDIS_URL").ok();
+    const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
+    let mut attempt = 1;
+    let mesh_transport = loop {
+        match ohc_builtin_agent::mesh::transport::create_transport(
+            redis_url.as_deref(),
+            is_cloud,
+        )
+        .await
+        {
+            Ok(transport) => break transport,
+            Err(error) if is_cloud && attempt < MESH_TRANSPORT_STARTUP_ATTEMPTS => {
+                tracing::warn!(
+                    attempt,
+                    max_attempts = MESH_TRANSPORT_STARTUP_ATTEMPTS,
+                    error = %error,
+                    "Mesh transport is not ready; retrying startup"
+                );
+                attempt += 1;
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            Err(error) => {
+                return Err(std::io::Error::other(format!(
+                    "Failed to create MeshTransport after {attempt} attempt(s): {error}"
+                ))
+                .into());
+            }
+        }
+    };
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
@@ -4779,6 +4843,7 @@ pub(crate) struct UiDashboardMetrics {
     total_sales: f64,
     total_campaigns_sent: i64,
     auto_replied: i64,
+    top_product: Option<String>,
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
@@ -4786,80 +4851,76 @@ pub(crate) async fn load_ui_dashboard_metrics(
     tenant_id: &str,
     _mobile_optimized: bool,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let t_id = tenant_id.to_string();
-
-    let (c_res, po_res, ts_res, cs_res, ar_res) = match &db.store {
+    match &db.store {
         crate::db::DbStore::Postgres => {
             let pool1 = db.pool.clone();
             let pool2 = db.pool.clone();
             let pool3 = db.pool.clone();
             let pool4 = db.pool.clone();
+            let pool5 = db.pool.clone();
 
-            let t_id1 = t_id.clone();
-            let t_id2 = t_id.clone();
-            let t_id3 = t_id.clone();
-            let t_id4 = t_id.clone();
+            let t_id1 = tenant_id.to_string();
+            let t_id2 = tenant_id.to_string();
+            let t_id3 = tenant_id.to_string();
+            let t_id4 = tenant_id.to_string();
+            let t_id5 = tenant_id.to_string();
 
-            let (c_res, orders_res, cs_res, ar_res) = tokio::join!(
+            let (c_res, orders_res, cs_res, ar_res, top_product_res) = tokio::join!(
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
+                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await })
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(true)).bind(&t_id5).fetch_optional(&pool5).await })
             );
-
-
-            let (po_res, ts_res): (Result<Result<Option<i64>, sqlx::Error>, tokio::task::JoinError>, Result<Result<Option<f64>, sqlx::Error>, tokio::task::JoinError>) = match orders_res {
-                Ok(Ok(val)) => (Ok(Ok(val.0)), Ok(Ok(val.1))),
-                Ok(Err(_)) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
-                Err(_) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
-            };
-            (c_res, po_res, ts_res, cs_res, ar_res)
-
+            let customers = c_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let orders = orders_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let campaigns = cs_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let auto_replied = ar_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let top_product = top_product_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            Ok(UiDashboardMetrics {
+                active_customers: customers,
+                pending_orders: orders.0.unwrap_or(0),
+                total_sales: orders.1.unwrap_or(0.0),
+                total_campaigns_sent: campaigns,
+                auto_replied,
+                top_product,
+            })
         },
         crate::db::DbStore::Sqlite(pool) => {
             let pool1 = pool.clone();
             let pool2 = pool.clone();
             let pool3 = pool.clone();
             let pool4 = pool.clone();
+            let pool5 = pool.clone();
 
-            let t_id1 = t_id.clone();
-            let t_id2 = t_id.clone();
-            let t_id3 = t_id.clone();
-            let t_id4 = t_id.clone();
+            let t_id1 = tenant_id.to_string();
+            let t_id2 = tenant_id.to_string();
+            let t_id3 = tenant_id.to_string();
+            let t_id4 = tenant_id.to_string();
+            let t_id5 = tenant_id.to_string();
 
-            let (c_res, orders_res, cs_res, ar_res) = tokio::join!(
+            let (c_res, orders_res, cs_res, ar_res, top_product_res) = tokio::join!(
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
+                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await })
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(false)).bind(&t_id5).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await })
             );
-
-
-            let (po_res, ts_res): (Result<Result<Option<i64>, sqlx::Error>, tokio::task::JoinError>, Result<Result<Option<f64>, sqlx::Error>, tokio::task::JoinError>) = match orders_res {
-                Ok(Ok(val)) => (Ok(Ok(val.0)), Ok(Ok(val.1))),
-                Ok(Err(_)) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
-                Err(_) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
-            };
-            (c_res, po_res, ts_res, cs_res, ar_res)
-
+            let customers = c_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let orders = orders_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let campaigns = cs_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let auto_replied = ar_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let top_product = top_product_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            Ok(UiDashboardMetrics {
+                active_customers: customers,
+                pending_orders: orders.0.unwrap_or(0),
+                total_sales: orders.1.unwrap_or(0.0),
+                total_campaigns_sent: campaigns,
+                auto_replied,
+                top_product,
+            })
         }
-    };
-
-    let row = (
-        c_res.unwrap_or(Ok(0))?,
-        po_res.unwrap_or(Ok(None))?,
-        ts_res.unwrap_or(Ok(None))?,
-        cs_res.unwrap_or(Ok(0))?,
-        ar_res.unwrap_or(Ok(0))?,
-    );
-
-    Ok(UiDashboardMetrics {
-        active_customers: row.0,
-        pending_orders: row.1.unwrap_or(0),
-        total_sales: row.2.unwrap_or(0.0),
-        total_campaigns_sent: row.3,
-        auto_replied: row.4,
-    })
+    }
 }
 
 
@@ -4956,6 +5017,7 @@ async fn ui_dashboard_analytics_briefing_handler(
                 total_sales: 0.0,
                 total_campaigns_sent: 0,
                 auto_replied: 0,
+                top_product: None,
             });
             let inbox_messages = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_default();
             let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
@@ -5027,7 +5089,7 @@ async fn ui_dashboard_analytics_chat_handler(
                     format!("Your latest messages are from: {}.", senders.join(", "))
                 }
             } else if text_bg.contains("order") || text_bg.contains("booking") || text_bg.contains("revenue") || text_bg.contains("sale") {
-                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0, top_product: None });
                 format!("You have {} pending orders. Total sales are ${:.2}.", metrics.pending_orders, metrics.total_sales)
             } else {
                 "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
@@ -6419,6 +6481,8 @@ async fn ui_dashboard_metrics_handler(
                 "pending_orders": 0,
                 "total_sales": 0.0,
                 "total_campaigns_sent": 0,
+                "auto_replied": 0,
+                "top_product": null,
             }))).into_response()
         }
     }
@@ -6594,8 +6658,12 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
+    let setup_router: axum::Router =
+        axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
+    let oauth_callback_router: axum::Router = axum::Router::new()
+        .nest("/api/v1/oauth", api::oauth::proxy::router())
+        .with_state(mesh_transport.clone());
     let app = axum::Router::new()
-        .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -6939,11 +7007,22 @@ async fn create_ui_bom_item_handler(
             "/api/v1/dev/seed",
             axum::routing::post({
                 let db = db.clone();
-                move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
+                move |
+                    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+                    axum::Json(payload): axum::Json<serde_json::Value>,
+                | async move {
+                    use axum::response::IntoResponse;
+
                     let scenario = payload.get("scenario").and_then(|v| v.as_str()).unwrap_or("");
 
                     if scenario == "launch-readiness" {
-                        let tenant_id = "default";
+                        let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
+                            return (
+                                axum::http::StatusCode::UNAUTHORIZED,
+                                axum::Json(serde_json::json!({ "ok": false, "error": "Unauthorized" })),
+                            ).into_response();
+                        };
+                        let tenant_id = tenant_id.as_str();
 
                         let result = db.execute_with_retry("seed_data", || async {
                             match &db.store {
@@ -7030,6 +7109,58 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
+                                        "INSERT OR IGNORE INTO inbox_messages (id, tenant_id, source, content, original_content, translated_from_language, draft_reply, status, sender_id, customer_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("inbox-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Instagram")
+                                    .bind("Can I order two sourdough loaves for Friday?")
+                                    .bind("Can I order two sourdough loaves for Friday?")
+                                    .bind("")
+                                    .bind("Absolutely — I can reserve those for Friday.")
+                                    .bind("unread")
+                                    .bind("alice-demo")
+                                    .bind("cust_demo1")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO vendors (id, tenant_id, name, contact_info) VALUES (?, ?, ?, ?)"
+                                    )
+                                    .bind("vendor-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Local Grain Co.")
+                                    .bind("orders@localgrain.example")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("material-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Bread Flour")
+                                    .bind(24)
+                                    .bind(10)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("bom-demo1")
+                                    .bind(tenant_id)
+                                    .bind("prod_demo1")
+                                    .bind("material-demo1")
+                                    .bind(1)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
                                         "INSERT OR IGNORE INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES (?, ?, ?, ?, ?)"
                                     )
                                     .bind("ord_demo1")
@@ -7096,7 +7227,7 @@ async fn create_ui_bom_item_handler(
                                     let videos = crate::api::docs::get_videos();
                                     for video in videos {
                                         sqlx::query(
-                                            "INSERT INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                            "INSERT INTO video_tutorials (tenant_id, id, title, duration, video_url) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, id) DO NOTHING"
                                         )
                                         .bind(tenant_id)
                                         .bind(video.id)
@@ -7150,6 +7281,58 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
+                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, original_content, translated_from_language, draft_reply, status, sender_id, customer_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("inbox-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Instagram")
+                                    .bind("Can I order two sourdough loaves for Friday?")
+                                    .bind("Can I order two sourdough loaves for Friday?")
+                                    .bind("")
+                                    .bind("Absolutely — I can reserve those for Friday.")
+                                    .bind("unread")
+                                    .bind("alice-demo")
+                                    .bind("cust_demo1")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("vendor-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Local Grain Co.")
+                                    .bind("orders@localgrain.example")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO raw_materials (id, tenant_id, name, current_quantity, reorder_threshold) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("material-demo1")
+                                    .bind(tenant_id)
+                                    .bind("Bread Flour")
+                                    .bind(24)
+                                    .bind(10)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO bom_items (id, tenant_id, finished_good_id, raw_material_id, quantity_required) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("bom-demo1")
+                                    .bind(tenant_id)
+                                    .bind("prod_demo1")
+                                    .bind("material-demo1")
+                                    .bind(1)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
                                         "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
                                     )
                                     .bind("ord_demo1")
@@ -7194,11 +7377,17 @@ async fn create_ui_bom_item_handler(
                         if let Err(e) = result {
                             ::server_telemetry::record_error_signal("[bug] Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
-                            return axum::Json(serde_json::json!({ "ok": false, "error": e }));
+                            return (
+                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                axum::Json(serde_json::json!({ "ok": false, "error": e })),
+                            ).into_response();
                         }
                     }
 
-                    axum::Json(serde_json::json!({ "ok": true }))
+                    (
+                        axum::http::StatusCode::OK,
+                        axum::Json(serde_json::json!({ "ok": true })),
+                    ).into_response()
                 }
             }),
         )
@@ -7318,7 +7507,7 @@ async fn create_ui_bom_item_handler(
         ).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
-        .nest("/api/v1/shipping", api::shipping::router())
+        .nest("/api/v1/shipping", api::shipping::router(db.clone()))
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/v1/payments/ledger", api::payment_ledger::router().with_state(api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() }))
@@ -7450,125 +7639,7 @@ async fn create_ui_bom_item_handler(
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/ui/help.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
-        }))
-        .route("/help", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
-        }))
-        .route("/api/v1/ui/help_article.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
-        }))
-        .route("/api/v1/ui/api-docs.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
-        }))
-        .route("/api-docs", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
-        }))
-        .route("/api/v1/ui/swagger-ui.css", axum::routing::get(|| async {
-            (axum::http::StatusCode::OK, [("content-type", "text/css")], include_str!("../ui/tauri/src/ui/swagger-ui.css"))
-        }))
-        .route("/api/v1/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
-            (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.txt"))
-        }))
-        .route("/kairos", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
-        }))
-        .route("/kairos.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
-        }))
-        .route("/tooltip-registry.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
-        }))
-        .route("/api/v1/ui/hybrid-landing.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/hybrid-landing.html"))
-        }))
-        .route("/api/v1/ui/changelog.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
-        }))
-        .route("/", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
-        }))
-        .route("/index.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
-        }))
-        .route("/login", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
-        }))
-        .route("/changelog", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/changelog.html"))
-        }))
-        .route("/onboarding", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/setup.html"))
-        }))
-        .route("/chaos-report", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
-        }))
-        .route("/api/v1/ui/dashboard.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
-        }))
-        .route("/api/v1/ui/storefront.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/storefront.html"))
-        }))
-        .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
-        }))
-        .route("/birthday-club-generator.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/birthday-club-generator.html"))
-        }))
-        .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
-        }))
-        .route("/api/v1/ui/pos.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
-        }))
-        .route("/pos.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
-        }))
-
-        .route("/api/v1/ui/help-widget.mjs", axum::routing::get(|| async {
-            axum::response::Response::builder()
-                .header("content-type", "application/javascript")
-                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/help-widget.mjs")))
-                .unwrap()
-        }))
-        .route("/api/v1/ui/voice-assistant.mjs", axum::routing::get(|| async {
-            axum::response::Response::builder()
-                .header("content-type", "application/javascript")
-                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/voice-assistant.mjs")))
-                .unwrap()
-        }))
-        .route("/api/v1/ui/assistant.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
-        }))
-        .route("/assistant.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
-        }))
-        .route("/tasks", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/tasks.html"))
-        }))
-        .route("/calendar", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))
-        }))
-        .route("/referrals", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/referrals.html"))
-        }))
-        .route("/plan", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
-        }))
-        .route("/cost-dashboard", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
-        }))
-        .route("/gift-cards", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/gift-cards.html"))
-        }))
-        .route("/pricing", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
-        }))
-        .route("/social-share-widget.html", axum::routing::get(|| async {
-            axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
-        }))
-                .route("/api/v1/chat", axum::routing::post(|
+        .route("/api/v1/chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
             axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
             axum::Json(req): axum::Json<ChatRequest>
@@ -7588,7 +7659,7 @@ async fn create_ui_bom_item_handler(
             let query = message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
-            let mut link_url = "/help_article.html?id=getting-started-1".to_string();
+            let mut link_url = DEFAULT_HELP_CHAT_LINKS[0].to_string();
 
             let articles: Vec<crate::api::docs::HelpArticle> = match &db.store {
                 crate::db::DbStore::Postgres => {
@@ -7659,7 +7730,7 @@ async fn create_ui_bom_item_handler(
 
                 if query.split_whitespace().any(|word| word.len() > 3 && (lower_title.contains(word) || lower_desc.contains(word))) {
                     reply = format!("Based on our help center: {}", article.desc);
-                    link_url = article.link;
+                    link_url = current_help_link(&article.link);
                     matched = true;
                     break;
                 }
@@ -7668,28 +7739,28 @@ async fn create_ui_bom_item_handler(
             if !matched {
                 if query.contains("getting started") {
                     reply = "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
-                    link_url = "/help_article.html?id=getting-started-1".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[0].to_string();
                 } else if query.contains("store") || query.contains("product") {
                     reply = "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.".to_string();
-                    link_url = "/help_article.html?id=my-store-1".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[1].to_string();
                 } else if query.contains("payment") {
                     reply = "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.".to_string();
-                    link_url = "/help_article.html?id=payments-1".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[2].to_string();
                 } else if query.contains("ai agent") {
                     reply = "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.".to_string();
-                    link_url = "/help_article.html?id=ai-support".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[3].to_string();
                 } else if query.contains("marketing") {
                     reply = "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.".to_string();
-                    link_url = "/help_article.html?id=marketing-tools".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[4].to_string();
                 } else if query.contains("billing") {
                     reply = "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string();
-                    link_url = "/help_article.html?id=billing-settings".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[5].to_string();
                 } else if query.contains("api") || query.contains("advanced") {
                     reply = "If you use custom tools, you can connect them to our system here. This is for advanced users.".to_string();
-                    link_url = "/api-docs.html".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[6].to_string();
                 } else if query.contains("operations") {
                     reply = "I have routed your request to the Operations department.".to_string();
-                    link_url = "/inbox.html".to_string();
+                    link_url = DEFAULT_HELP_CHAT_LINKS[7].to_string();
                     link_title = "Check your inbox for updates →";
                 }
             }
@@ -7741,6 +7812,8 @@ async fn create_ui_bom_item_handler(
         ))
         .merge(health_router)
         .merge(http_auth_router)
+        .merge(setup_router)
+        .merge(oauth_callback_router)
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")
@@ -7791,19 +7864,48 @@ async fn create_ui_bom_item_handler(
 
         let repo = Arc::new(crate::services::sync::local_repository_impl::PgLocalRepository::new(db.pool.clone()));
         let cloud_sync = Arc::new(crate::services::sync::cloud_synchronizer::CloudSynchronizerImpl::with_pool(repo, cloud_url.clone(), db.pool.clone()));
+        let cloud_sync_pool = db.pool.clone();
 
         let cloud_sync_clone = cloud_sync.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
             loop {
                 interval.tick().await;
-                if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    ::server_telemetry::record_error_signal("[bug] failed to push pending missions");
-                    tracing::trace!("failed to push pending missions: {}", e);
+                let tenant_ids = async {
+                    let mut transaction = cloud_sync_pool.begin().await?;
+                    sqlx::query("SET LOCAL ROLE ohc_bypassrls")
+                        .execute(&mut *transaction)
+                        .await?;
+                    let tenant_ids = sqlx::query_scalar::<_, String>(
+                        "SELECT id FROM tenants WHERE id <> 'system' ORDER BY id",
+                    )
+                    .fetch_all(&mut *transaction)
+                    .await?;
+                    transaction.commit().await?;
+                    Ok::<_, sqlx::Error>(tenant_ids)
                 }
-                if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    ::server_telemetry::record_error_signal("[bug] failed to pull mission updates");
-                    tracing::trace!("failed to pull mission updates: {}", e);
+                .await;
+
+                let tenant_ids = match tenant_ids {
+                    Ok(tenant_ids) => tenant_ids,
+                    Err(error) => {
+                        ::server_telemetry::record_error_signal(
+                            "[bug] failed to enumerate cloud sync tenants",
+                        );
+                        tracing::warn!("failed to enumerate cloud sync tenants: {}", error);
+                        continue;
+                    }
+                };
+
+                for tenant_id in tenant_ids {
+                    if let Err(error) = cloud_sync_clone.push_pending_missions(&tenant_id).await {
+                        ::server_telemetry::record_error_signal("[bug] failed to push pending missions");
+                        tracing::trace!(tenant_id = %tenant_id, "failed to push pending missions: {}", error);
+                    }
+                    if let Err(error) = cloud_sync_clone.pull_mission_updates(&tenant_id).await {
+                        ::server_telemetry::record_error_signal("[bug] failed to pull mission updates");
+                        tracing::trace!(tenant_id = %tenant_id, "failed to pull mission updates: {}", error);
+                    }
                 }
             }
         });
@@ -7916,7 +8018,16 @@ async fn create_ui_bom_item_handler(
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
         .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
+        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(
+            ::server_auth::AuthServiceServerImpl::new(
+                store,
+                if standalone {
+                    ::server_auth::AuthTransportMode::Standalone
+                } else {
+                    ::server_auth::AuthTransportMode::Cloud
+                },
+            ),
+        ))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
@@ -7952,6 +8063,146 @@ pub mod crypto;
 mod tests {
     use super::*;
     use crate::settings::Store;
+
+    #[test]
+    fn rust_server_does_not_register_legacy_browser_application_routes() {
+        let source = include_str!("lib.rs");
+        let production_source = source
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("server source must retain its final test-module boundary")
+            .0;
+        let legacy_routes = [
+            "/api/v1/ui/help.html",
+            "/help",
+            "/api/v1/ui/help_article.html",
+            "/api/v1/ui/api-docs.html",
+            "/api-docs",
+            "/api/v1/ui/swagger-ui.css",
+            "/api/v1/ui/swagger-ui-bundle.js",
+            "/kairos",
+            "/kairos.html",
+            "/tooltip-registry.html",
+            "/api/v1/ui/hybrid-landing.html",
+            "/api/v1/ui/changelog.html",
+            "/",
+            "/index.html",
+            "/login",
+            "/changelog",
+            "/onboarding",
+            "/chaos-report",
+            "/api/v1/ui/dashboard.html",
+            "/dashboard",
+            "/dashboard.html",
+            "/birthday-club-generator.html",
+            "/agent-audit-dashboard.html",
+            "/api/v1/ui/pos.html",
+            "/pos.html",
+            "/api/v1/ui/help-widget.mjs",
+            "/api/v1/ui/voice-assistant.mjs",
+            "/api/v1/ui/assistant.html",
+            "/assistant.html",
+            "/tasks",
+            "/calendar",
+            "/referrals",
+            "/plan",
+            "/cost-dashboard",
+            "/gift-cards",
+            "/pricing",
+            "/social-share-widget.html",
+        ];
+
+        for path in legacy_routes {
+            let route_registration = format!(".route({path:?},");
+            let multiline_route_registration = format!(".route(\n            {path:?},");
+            assert!(
+                !production_source.contains(&route_registration)
+                    && !production_source.contains(&multiline_route_registration),
+                "Rust production code must not retain legacy browser path {path}"
+            );
+        }
+
+        for api_route in [
+            "/api/v1/help",
+            "/api/v1/changelog",
+            "/api/v1/api-docs-spec",
+        ] {
+            let path_literal = format!("{api_route:?}");
+            assert!(
+                production_source.contains(&path_literal),
+                "expected API route {api_route} to remain registered"
+            );
+        }
+        assert!(production_source.contains(".fallback(api_not_found_handler)"));
+    }
+
+    #[test]
+    fn dashboard_sales_and_top_product_use_qualifying_orders() {
+        for sql in [dashboard_sales_query(true), dashboard_sales_query(false)] {
+            assert!(sql.contains("paid"));
+            assert!(sql.contains("completed"));
+        }
+        for sql in [dashboard_top_product_query(true), dashboard_top_product_query(false)] {
+            assert!(sql.contains("paid"));
+            assert!(sql.contains("completed"));
+            assert!(sql.contains("SUM(oi.quantity)"));
+            assert!(sql.contains("oi.tenant_id"));
+        }
+        assert_eq!(dashboard_top_product_query(false).matches('?').count(), 3);
+    }
+
+    #[tokio::test]
+    async fn dashboard_metrics_use_real_tenant_scoped_order_data() {
+        let sqlite = crate::db::create_sqlite_pool_for_test().await;
+        for statement in [
+            "CREATE TABLE orders (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, total_amount REAL NOT NULL, status TEXT NOT NULL)",
+            "CREATE TABLE products (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, title TEXT NOT NULL)",
+            "CREATE TABLE order_items (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, order_id TEXT NOT NULL, product_id TEXT NOT NULL, quantity INTEGER NOT NULL)",
+            "INSERT INTO products VALUES ('product-a', 'tenant-a', 'Starter Kit')",
+            "INSERT INTO products VALUES ('product-b', 'tenant-a', 'Premium Kit')",
+            "INSERT INTO products VALUES ('product-other', 'tenant-b', 'Other Tenant Kit')",
+            "INSERT INTO orders VALUES ('paid-a', 'tenant-a', 10.0, 'PAID')",
+            "INSERT INTO orders VALUES ('completed-a', 'tenant-a', 20.0, 'completed')",
+            "INSERT INTO orders VALUES ('pending-a', 'tenant-a', 30.0, 'pending')",
+            "INSERT INTO orders VALUES ('cancelled-a', 'tenant-a', 1000.0, 'cancelled')",
+            "INSERT INTO orders VALUES ('paid-other', 'tenant-b', 5000.0, 'paid')",
+            "INSERT INTO order_items VALUES ('item-paid', 'tenant-a', 'paid-a', 'product-a', 2)",
+            "INSERT INTO order_items VALUES ('item-completed', 'tenant-a', 'completed-a', 'product-b', 5)",
+            "INSERT INTO order_items VALUES ('item-cancelled', 'tenant-a', 'cancelled-a', 'product-a', 100)",
+            "INSERT INTO order_items VALUES ('item-other', 'tenant-b', 'paid-other', 'product-other', 500)",
+        ] {
+            sqlx::query(statement).execute(&sqlite).await.unwrap();
+        }
+
+        let total_sales = sqlx::query_scalar::<_, f64>(dashboard_sales_query(false))
+            .bind("tenant-a")
+            .fetch_one(&sqlite)
+            .await
+            .unwrap();
+        let top_product = sqlx::query_scalar::<_, String>(dashboard_top_product_query(false))
+            .bind("tenant-a")
+            .bind("tenant-a")
+            .bind("tenant-a")
+            .fetch_optional(&sqlite)
+            .await
+            .unwrap();
+
+        assert_eq!(total_sales, 30.0);
+        assert_eq!(top_product.as_deref(), Some("Premium Kit"));
+    }
+
+    #[test]
+    fn help_chat_links_only_to_current_next_routes() {
+        for (legacy, expected) in [
+            ("/help_article.html?id=getting-started-1", "/help?article=getting-started-1"),
+            ("/api-docs.html", "/api-docs"),
+            ("/inbox.html", "/inbox"),
+        ] {
+            assert_eq!(current_help_link(legacy), expected);
+        }
+        for link in default_help_chat_links() {
+            assert!(!link.contains(".html"), "legacy browser link remains: {link}");
+        }
+    }
 
     #[test]
     fn agent_rpc_gateway_confines_methods_and_destination() {

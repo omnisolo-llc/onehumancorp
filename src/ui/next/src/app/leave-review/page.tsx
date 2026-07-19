@@ -16,33 +16,13 @@ function LeaveReviewContent() {
   const [submitted, setSubmitted] = useState(false);
   const [referralLink, setReferralLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async () => {
     if (rating === 0) return;
     setIsSubmitting(true);
-
-    try {
-      const response = await fetch('/api/v1/growth/referrals/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customMessage: 'I just left a 5-star review!' }),
-      });
-
-      let link = 'https://ohc.app/invite?ref=demo';
-      if (response.ok) {
-        const data = await response.json();
-        if (data.referral_link) {
-           link = data.referral_link;
-        }
-      }
-      setReferralLink(link);
-      setSubmitted(true);
-    } catch (error) {
-       setReferralLink('https://ohc.app/invite?ref=demo');
-       setSubmitted(true);
-    } finally {
-      setIsSubmitting(false);
-    }
+    setSubmitError('Review submission is unavailable because no review API is connected.');
+    setIsSubmitting(false);
   };
 
   if (submitted) {
@@ -130,6 +110,7 @@ function LeaveReviewContent() {
                  </button>
               ))}
            </div>
+           {submitError && <p className="mb-4 text-sm text-red-600" role="alert">{submitError}</p>}
 
            <div className="mb-6">
               <label htmlFor="review" className="block text-sm font-medium text-gray-700 mb-2">Tell us more (optional)</label>

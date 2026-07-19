@@ -12,24 +12,37 @@
 #   8. Cleans up the cluster on exit
 #
 # Prerequisites (on PATH):
-#   kind, helm, kubectl, docker, curl
+#   kind, helm, kubectl, docker, curl, openssl
 set -euo pipefail
-
-if [[ -n "${CI:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  echo "Skipping test in CI environment due to infrastructure limitations."
-  exit 0
-fi
-
-
+umask 077
 
 CLUSTER_NAME="ohc-e2e-$$"
 NAMESPACE="ohc-e2e"
 CLOUD_RELEASE_NAME="ohc-cloud"
 STANDALONE_RELEASE_NAME="ohc-standalone"
+GRPC_TLS_SECRET_NAME="ohc-e2e-grpc-tls"
+GRPC_TLS_DIR="${TEST_TMPDIR:-/tmp}/ohc-grpc-tls-$$"
+GRPC_PROBE=""
+SETUP_SECRET_NAME="ohc-e2e-setup"
+AUTH_SECRET_NAME="ohc-e2e-auth"
+AGENT_AUTH_SECRET_NAME="ohc-e2e-agent-auth"
+ADMIN_USERNAME="kind-e2e-admin"
+ADMIN_EMAIL="kind-e2e-admin@example.test"
+ADMIN_ORGANIZATION_ID="kind-e2e-org"
 FAILED_COMMAND=""
 FAILED_LINE=""
 
 log() { echo "[kind-e2e] $*"; }
+
+curl_bounded() {
+  command curl \
+    --connect-timeout 5 \
+    --max-time 30 \
+    --retry 5 \
+    --retry-delay 1 \
+    --retry-connrefused \
+    "$@"
+}
 
 record_failure() {
   FAILED_LINE="$1"
@@ -52,7 +65,14 @@ ensure_image_loaded_in_kind() {
     log "Image ${image} not found locally. Pulling ..."
     docker pull "${image}"
   fi
-  kind load docker-image "${image}" --name "${CLUSTER_NAME}"
+  if ! kind load docker-image "${image}" --name "${CLUSTER_NAME}"; then
+    # Docker's containerd image store can retain a multi-platform OCI index
+    # while only the native child manifest is present. `kind load` then asks
+    # containerd to import missing platforms. Pulling inside the node resolves
+    # the tag for the node's platform and avoids that lossy archive boundary.
+    log "Docker archive for ${image} is incomplete; pulling it inside the Kind node ..."
+    docker exec "${CLUSTER_NAME}-control-plane" crictl pull "${image}"
+  fi
 }
 
 cleanup() {
@@ -61,6 +81,10 @@ cleanup() {
   fi
   log "Deleting Kind cluster ${CLUSTER_NAME} ..."
   kind delete cluster --name "${CLUSTER_NAME}" 2>/dev/null || true
+  rm -rf "${GRPC_TLS_DIR}" "${CHART_DIR:-}"
+  if [[ -n "${KUBECONFIG:-}" ]]; then
+    rm -f "${KUBECONFIG}"
+  fi
 }
 
 dump_diagnostics() {
@@ -83,6 +107,7 @@ dump_diagnostics() {
   kubectl describe pods --namespace "${NAMESPACE}" 2>/dev/null || true
   kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l app.kubernetes.io/name=valkey 2>/dev/null || true
   kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l "app=${CLOUD_RELEASE_NAME}-backend" 2>/dev/null || true
+  kubectl logs --namespace "${NAMESPACE}" --all-containers --previous --tail=200 -l "app=${CLOUD_RELEASE_NAME}-backend" 2>/dev/null || true
   kubectl logs --namespace "${NAMESPACE}" --all-containers --tail=100 -l "app=${STANDALONE_RELEASE_NAME}-backend" 2>/dev/null || true
 
   if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
@@ -101,9 +126,14 @@ on_exit() {
 trap on_exit EXIT
 
 # ── Prerequisites ──────────────────────────────────────────────────────────────
-for tool in kind helm kubectl docker curl; do
+for tool in kind helm jq kubectl docker curl openssl timeout; do
   require_tool "${tool}"
 done
+SETUP_TOKEN="$(openssl rand -hex 32)"
+JWT_SECRET="$(openssl rand -hex 32)"
+AGENT_TOKEN="$(openssl rand -hex 32)"
+AGENT_AUTH_KEY="$(openssl rand -hex 32)"
+ADMIN_PASSWORD="OHC-E2E-Aa1-$(openssl rand -hex 24)"
 
 # ── Locate repo root (works both inside and outside Bazel sandbox) ────────────
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
@@ -116,19 +146,18 @@ fi
 
 log "Repo root: ${REPO_ROOT}"
 
-CHART_DIR="${TEST_TMPDIR:-/tmp}/ohc-chart-$$"
-rm -rf "${CHART_DIR}"
-cp -RL "${REPO_ROOT}/deploy/helm/ohc" "${CHART_DIR}"
+CHART_DIR="$(mktemp -d "${TEST_TMPDIR:-/tmp}/ohc-chart.XXXXXX")"
+cp -RL "${REPO_ROOT}/deploy/helm/ohc/." "${CHART_DIR}/"
 chmod -R u+w "${CHART_DIR}"
 
 COMMON_HELM_SMOKE_ARGS=(
   --set backend.replicas=1
   --set backend.autoscaling.enabled=false
   --set backend.vpa.enabled=false
-  --set backend.resources.requests.cpu=100m
-  --set backend.resources.requests.memory=128Mi
-  --set backend.resources.limits.cpu=500m
-  --set backend.resources.limits.memory=512Mi
+  --set backend.resources.requests.cpu=500m
+  --set backend.resources.requests.memory=256Mi
+  --set backend.resources.limits.cpu=2
+  --set backend.resources.limits.memory=1Gi
   --set valkey.enabled=false
   --set cnpg.enabled=false
   --set ohcCore.enabled=false
@@ -136,6 +165,8 @@ COMMON_HELM_SMOKE_ARGS=(
   --set kube-prometheus-stack.enabled=false
   --set fluentBit.enabled=false
   --set resourceQuota.enabled=false
+  --set-string backend.setup.existingSecret=${SETUP_SECRET_NAME}
+  --set-string backend.auth.existingSecret=${AUTH_SECRET_NAME}
 )
 
 CLOUD_HELM_SMOKE_ARGS=(
@@ -143,9 +174,10 @@ CLOUD_HELM_SMOKE_ARGS=(
   --set multiTenant.enabled=true
   --set valkey.enabled=true
   --set valkey.image.tag=8-alpine
+  --set-string backend.grpcTls.existingSecret=${GRPC_TLS_SECRET_NAME}
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
   --set-string backend.env.OHC_STANDALONE_MODE=false
-  --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
+  --set-string backend.env.OHC_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance
 )
 
 STANDALONE_HELM_SMOKE_ARGS=(
@@ -155,7 +187,7 @@ STANDALONE_HELM_SMOKE_ARGS=(
   --set-string backend.env.OHC_SQLITE_KEY=kind-e2e-standalone-sqlite-key
   --set-string backend.env.OHC_STANDALONE_MODE=true
   --set-string backend.env.OHC_TELEMETRY_ENABLED=false
-  --set-string backend.env.OHC_STANDALONE_MODE=true
+  --set-string backend.agentAuth.existingSecret=${AGENT_AUTH_SECRET_NAME}
 )
 
 # ── Create Kind cluster ────────────────────────────────────────────────────────
@@ -163,8 +195,8 @@ log "Creating Kind cluster '${CLUSTER_NAME}' ..."
 
 # Set KUBECONFIG to a temporary file BEFORE creating the cluster to avoid
 # trying to lock the user's read-only default kubeconfig in the sandbox.
-export KUBECONFIG="${TEST_TMPDIR:-/tmp}/kind-kubeconfig-$$"
-touch "${KUBECONFIG}"
+export KUBECONFIG="$(mktemp "${TEST_TMPDIR:-/tmp}/kind-kubeconfig.XXXXXX")"
+chmod 600 "${KUBECONFIG}"
 
 kind create cluster --name "${CLUSTER_NAME}" --wait 120s
 
@@ -177,6 +209,7 @@ kubectl wait --for=condition=Ready node --all --timeout=120s
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
   log "Bazel environment detected. Loading images from runfiles..."
   SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
+  GRPC_PROBE="${REPO_ROOT}/deploy/grpc_mtls_probe"
 
   if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
     SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "load_all_images" -type f -executable | head -1)"
@@ -184,6 +217,13 @@ if [[ -n "${TEST_SRCDIR:-}" ]]; then
 
   if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
     echo "error: could not find executable load_all_images in Bazel runfiles" >&2
+    exit 1
+  fi
+  if [[ ! -x "${GRPC_PROBE}" ]]; then
+    GRPC_PROBE="$(find "${TEST_SRCDIR}" -name grpc_mtls_probe -type f -executable | head -1)"
+  fi
+  if [[ -z "${GRPC_PROBE}" || ! -x "${GRPC_PROBE}" ]]; then
+    echo "error: could not find executable grpc_mtls_probe in Bazel runfiles" >&2
     exit 1
   fi
 
@@ -194,6 +234,8 @@ else
   require_tool bazelisk
   log "Manual run detected. Building server image via Bazel..."
   bazelisk run //deploy:server_load
+  bazelisk build //deploy:grpc_mtls_probe
+  GRPC_PROBE="$(bazelisk cquery --output=files //deploy:grpc_mtls_probe | head -1)"
   docker tag onehumancorp/server:latest onehumancorp/server:e2e
 fi
 
@@ -211,7 +253,7 @@ wait_for_backend() {
   local max_attempts=30
   local attempt=0
   while (( attempt < max_attempts )); do
-    if curl -sf "${backend_url}/healthz" >/dev/null 2>&1; then
+    if curl_bounded -sf "${backend_url}/healthz" >/dev/null 2>&1; then
       return 0
     fi
     attempt=$((attempt + 1))
@@ -227,9 +269,30 @@ stop_port_forward() {
     wait "${PF_PID}" 2>/dev/null || true
     PF_PID=""
   fi
-  # Also kill any kubectl port-forward processes matching our ports
-  pkill -f "port-forward.*18080:8080" || true
-  pkill -f "port-forward.*18081:8080" || true
+}
+
+verify_grpc_mtls() {
+  local grpc_port="$1"
+  local authenticated_tls
+  if ! authenticated_tls="$(timeout 10 openssl s_client \
+    -connect "127.0.0.1:${grpc_port}" \
+    -servername localhost \
+    -verify_return_error \
+    -verify_hostname localhost \
+    -alpn h2 \
+    -CAfile "${GRPC_TLS_DIR}/ca.crt" \
+    -cert "${GRPC_TLS_DIR}/client.crt" \
+    -key "${GRPC_TLS_DIR}/client.key" </dev/null 2>&1)"; then
+    echo "error: gRPC TLS listener rejected or timed out for a CA-signed client certificate" >&2
+    return 1
+  fi
+  if ! grep -Fq 'Verify return code: 0 (ok)' <<<"${authenticated_tls}" || \
+     ! grep -Fq 'ALPN protocol: h2' <<<"${authenticated_tls}"; then
+    echo "error: gRPC listener did not negotiate a verified HTTP/2 TLS session" >&2
+    return 1
+  fi
+  "${GRPC_PROBE}" "https://localhost:${grpc_port}" \
+    "${GRPC_TLS_DIR}/ca.crt" - - tls-rejected
 }
 
 install_ohc_release() {
@@ -259,7 +322,12 @@ run_rest_smoke_tests() {
   local release_name="$1"
   local mode_name="$2"
   local local_port="$3"
+  local grpc_local_port=$((local_port + 1000))
   local backend_url="http://127.0.0.1:${local_port}"
+  local port_mappings=("${local_port}:8080")
+  if [[ "${mode_name}" == "cloud/web mode" ]]; then
+    port_mappings+=("${grpc_local_port}:8081")
+  fi
 
   log "Port-forwarding ${mode_name} backend service in a loop ..."
   stop_port_forward
@@ -268,7 +336,7 @@ run_rest_smoke_tests() {
       kubectl port-forward \
         --namespace "${NAMESPACE}" \
         "svc/${release_name}-backend" \
-        "${local_port}:8080" >/dev/null 2>&1 || true
+        "${port_mappings[@]}" >/dev/null 2>&1 || true
       sleep 1
     done
   ) &
@@ -279,88 +347,163 @@ run_rest_smoke_tests() {
   log "Waiting for ${mode_name} backend /healthz ..."
   wait_for_backend "${backend_url}"
 
+  if [[ "${mode_name}" == "cloud/web mode" ]]; then
+    log "Verifying ${mode_name} gRPC mutual TLS handshake ..."
+    verify_grpc_mtls "${grpc_local_port}"
+  fi
+
   log "Running ${mode_name} REST smoke tests ..."
 
 # --- health check ---
-  response="$(curl -sf "${backend_url}/healthz")"
+  response="$(curl_bounded -sf "${backend_url}/healthz")"
   [[ "${response}" == "ok" ]] || { echo "healthz failed: ${response}" >&2; exit 1; }
   log "  /healthz ✓"
 
-  response="$(curl -sf "${backend_url}/readyz")"
+  response="$(curl_bounded -sf "${backend_url}/readyz")"
   [[ "${response}" == "ok" ]] || { echo "readyz failed: ${response}" >&2; exit 1; }
   log "  /readyz ✓"
 
-# --- seed demo data ---
-  curl -sf -X POST "${backend_url}/api/dev/seed" \
+# --- one-time setup and normal login ---
+  wrong_setup_status="$(curl_bounded -sS -o /dev/null -w '%{http_code}' \
+    -X POST "${backend_url}/api/v1/setup/admin" \
     -H 'Content-Type: application/json' \
-    -d '{"scenario":"launch-readiness"}' >/dev/null
-  log "  /api/dev/seed ✓"
+    -H 'Authorization: Bearer wrong-setup-token-at-least-32-bytes' \
+    -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"organizationId\":\"${ADMIN_ORGANIZATION_ID}\"}")"
+  [[ "${wrong_setup_status}" == "401" ]] || {
+    echo "wrong-setup-token was not denied: HTTP ${wrong_setup_status}" >&2
+    exit 1
+  }
+  missing_setup_status="$(curl_bounded -sS -o /dev/null -w '%{http_code}' \
+    -X POST "${backend_url}/api/v1/setup/admin" \
+    -H 'Content-Type: application/json' \
+    -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"organizationId\":\"${ADMIN_ORGANIZATION_ID}\"}")"
+  [[ "${missing_setup_status}" == "401" ]] || {
+    echo "setup without a token was not denied: HTTP ${missing_setup_status}" >&2
+    exit 1
+  }
+
+  curl_bounded -sf -X POST "${backend_url}/api/v1/setup/admin" \
+    -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer ${SETUP_TOKEN}" \
+    -d "{\"username\":\"${ADMIN_USERNAME}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"organizationId\":\"${ADMIN_ORGANIZATION_ID}\"}" >/dev/null
+  log "  initial admin setup ✓"
+
+  login_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/auth/login" \
+    -H 'Content-Type: application/json' \
+    -d "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\",\"organization_id\":\"${ADMIN_ORGANIZATION_ID}\"}")"
+  if ! access_token="$(printf '%s' "${login_response}" | jq -er '.token | select(type == "string" and length > 0)')"; then
+    echo "error: login response did not contain a nonempty JWT" >&2
+    exit 1
+  fi
+  auth_headers=(-H "Authorization: Bearer ${access_token}")
+  log "  authenticated login ✓"
+
+  if [[ "${mode_name}" == "cloud/web mode" ]]; then
+    log "Verifying a real SPIFFE-intercepted gRPC request ..."
+    "${GRPC_PROBE}" "https://localhost:${grpc_local_port}" \
+      "${GRPC_TLS_DIR}/ca.crt" \
+      "${GRPC_TLS_DIR}/client.crt" \
+      "${GRPC_TLS_DIR}/client.key" \
+      success "${ADMIN_ORGANIZATION_ID}"
+    "${GRPC_PROBE}" "https://localhost:${grpc_local_port}" \
+      "${GRPC_TLS_DIR}/ca.crt" \
+      "${GRPC_TLS_DIR}/client-no-spiffe.crt" \
+      "${GRPC_TLS_DIR}/client-no-spiffe.key" \
+      unauthenticated "${ADMIN_ORGANIZATION_ID}"
+  fi
+
+  protected_status="$(curl_bounded -sS -o /dev/null -w '%{http_code}' \
+    -H 'Authorization: Bearer wrong-jwt' "${backend_url}/api/v1/dashboard")"
+  [[ "${protected_status}" == "401" ]] || {
+    echo "wrong-jwt was not denied: HTTP ${protected_status}" >&2
+    exit 1
+  }
+  missing_jwt_status="$(curl_bounded -sS -o /dev/null -w '%{http_code}' \
+    "${backend_url}/api/v1/dashboard")"
+  [[ "${missing_jwt_status}" == "401" ]] || {
+    echo "protected API without a JWT was not denied: HTTP ${missing_jwt_status}" >&2
+    exit 1
+  }
+
+# --- seed demo data ---
+  seed_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/dev/seed" \
+    "${auth_headers[@]}" \
+    -H 'Content-Type: application/json' \
+    -d '{"scenario":"launch-readiness"}')"
+  printf '%s' "${seed_response}" | jq -e '.ok == true' >/dev/null
+  log "  /api/v1/dev/seed ✓"
 
 # --- dashboard ---
-  dashboard="$(curl -sf "${backend_url}/api/dashboard")"
+  dashboard="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/dashboard")"
   echo "${dashboard}" | grep -q '"organization"' || { echo "dashboard missing 'organization'" >&2; exit 1; }
-  log "  /api/dashboard ✓"
+  log "  /api/v1/dashboard ✓"
 
 # --- agents list ---
-  agents="$(curl -sf "${backend_url}/api/agents")"
+  agents="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/agents")"
   echo "${agents}" | grep -q '\[' || { echo "agents response not a JSON array" >&2; exit 1; }
-  log "  /api/agents ✓"
+  log "  /api/v1/agents ✓"
 
 # --- hire agent ---
-  hire_response="$(curl -sf -X POST "${backend_url}/api/agents/hire" \
+  hire_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/agents/hire" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d '{"name":"E2E Test Agent","role":"SOFTWARE_ENGINEER","model":"gpt-4o-mini"}')"
   echo "${hire_response}" | grep -q '"id"' || { echo "hire agent failed: ${hire_response}" >&2; exit 1; }
-  log "  /api/agents/hire ✓"
+  log "  /api/v1/agents/hire ✓"
 
 # --- meetings ---
-  meetings="$(curl -sf "${backend_url}/api/meetings")"
+  meetings="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/meetings")"
   echo "${meetings}" | grep -q '\[' || { echo "meetings response not a JSON array" >&2; exit 1; }
-  log "  /api/meetings ✓"
+  log "  /api/v1/meetings ✓"
 
 # --- costs ---
-  costs="$(curl -sf "${backend_url}/api/costs")"
+  costs="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/costs")"
   echo "${costs}" | grep -q '"totalCostUSD"' || { echo "costs missing totalCostUSD" >&2; exit 1; }
-  log "  /api/costs ✓"
+  log "  /api/v1/costs ✓"
 
 # --- approval flow ---
-  approval_response="$(curl -sf -X POST "${backend_url}/api/approvals/request" \
+  approval_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/approvals/request" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d '{"agentId":"swe-1","action":"deploy-to-production","reason":"E2E test","estimatedCostUsd":0.01,"riskLevel":"low"}')"
   echo "${approval_response}" | grep -q '"id"' || { echo "approval create failed: ${approval_response}" >&2; exit 1; }
   approval_id="$(echo "${approval_response}" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)"
-  log "  /api/approvals/request ✓ (id=${approval_id})"
+  log "  /api/v1/approvals/request ✓ (id=${approval_id})"
 
-  curl -sf -X PUT "${backend_url}/api/approvals/decide" \
+  curl_bounded -sf -X PUT "${backend_url}/api/v1/approvals/decide" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d "{\"approvalId\":\"${approval_id}\",\"decision\":\"approve\",\"decidedBy\":\"e2e-test\"}" >/dev/null
-  log "  /api/approvals/decide ✓"
+  log "  /api/v1/approvals/decide ✓"
 
 # --- warm handoff ---
-  handoff_response="$(curl -sf -X POST "${backend_url}/api/handoffs" \
+  handoff_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/handoffs" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d '{"fromAgentId":"swe-1","toHumanRole":"MANAGER","intent":"need-review","failedAttempts":1,"currentState":"blocked"}')"
   echo "${handoff_response}" | grep -q '"id"' || { echo "handoff create failed: ${handoff_response}" >&2; exit 1; }
-  log "  /api/handoffs ✓"
+  log "  /api/v1/handoffs ✓"
 
 # --- billing costs ---
-  costs2="$(curl -sf "${backend_url}/api/costs")"
+  costs2="$(curl_bounded -sf "${auth_headers[@]}" "${backend_url}/api/v1/costs")"
   echo "${costs2}" | grep -q '"totalCostUSD"' || { echo "costs2 missing totalCostUSD" >&2; exit 1; }
-  log "  /api/costs (post-hire) ✓"
+  log "  /api/v1/costs (post-hire) ✓"
 
 # --- skill pack import ---
-  skill_response="$(curl -sf -X POST "${backend_url}/api/skills/import" \
+  skill_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/skills/import" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d '{"name":"E2E Skill Pack","domain":"testing","description":"e2e","source":"custom","roles":[{"role":"SOFTWARE_ENGINEER","basePrompt":"e2e prompt"}]}')"
   echo "${skill_response}" | grep -q '"id"' || { echo "skill import failed: ${skill_response}" >&2; exit 1; }
-  log "  /api/skills/import ✓"
+  log "  /api/v1/skills/import ✓"
 
 # --- org snapshot ---
-  snapshot_response="$(curl -sf -X POST "${backend_url}/api/snapshots/create" \
+  snapshot_response="$(curl_bounded -sf -X POST "${backend_url}/api/v1/snapshots/create" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     -d '{"label":"e2e-snapshot"}')"
   echo "${snapshot_response}" | grep -q '"id"' || { echo "snapshot create failed: ${snapshot_response}" >&2; exit 1; }
-  log "  /api/snapshots/create ✓"
+  log "  /api/v1/snapshots/create ✓"
 
   stop_port_forward
   log "  ${mode_name} smoke ✓"
@@ -377,17 +520,102 @@ helm template "${STANDALONE_RELEASE_NAME}" "${CHART_DIR}" "${STANDALONE_HELM_SMO
 
 log "Loading images into Kind cluster ..."
   kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
-  ensure_image_loaded_in_kind mirror.gcr.io/pgvector/pgvector:pg15
-  ensure_image_loaded_in_kind mirror.gcr.io/valkey/valkey:8-alpine
+  ensure_image_loaded_in_kind pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+  ensure_image_loaded_in_kind valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
 
 # ── Create namespace ───────────────────────────────────────────────────────────
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+log "Creating ephemeral setup Secret ..."
+kubectl create secret generic "${SETUP_SECRET_NAME}" \
+  --namespace "${NAMESPACE}" \
+  --from-literal=token="${SETUP_TOKEN}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+log "Creating ephemeral authentication Secret ..."
+kubectl create secret generic "${AUTH_SECRET_NAME}" \
+  --namespace "${NAMESPACE}" \
+  --from-literal=jwtSecret="${JWT_SECRET}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+log "Creating ephemeral built-in agent authentication Secret ..."
+kubectl create secret generic "${AGENT_AUTH_SECRET_NAME}" \
+  --namespace "${NAMESPACE}" \
+  --from-literal=agentToken="${AGENT_TOKEN}" \
+  --from-literal=authKey="${AGENT_AUTH_KEY}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Cloud mode requires mTLS for its gRPC listener. Generate a short-lived test
+# CA and server identity, then supply them through the same existing-Secret
+# interface used by real deployments.
+log "Creating ephemeral gRPC TLS Secret ..."
+umask 077
+mkdir -p "${GRPC_TLS_DIR}"
+openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 1 \
+  -keyout "${GRPC_TLS_DIR}/ca.key" \
+  -out "${GRPC_TLS_DIR}/ca.crt" \
+  -subj "/CN=ohc-kind-e2e-ca" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign" >/dev/null 2>&1
+openssl req -new -newkey rsa:2048 -nodes -sha256 \
+  -keyout "${GRPC_TLS_DIR}/tls.key" \
+  -out "${GRPC_TLS_DIR}/server.csr" \
+  -subj "/CN=${CLOUD_RELEASE_NAME}-backend" >/dev/null 2>&1
+printf '%s\n' \
+  "subjectAltName=DNS:${CLOUD_RELEASE_NAME}-backend,DNS:${CLOUD_RELEASE_NAME}-backend.${NAMESPACE}.svc,DNS:localhost,IP:127.0.0.1" \
+  "extendedKeyUsage=serverAuth" > "${GRPC_TLS_DIR}/server.ext"
+openssl x509 -req -sha256 -days 1 \
+  -in "${GRPC_TLS_DIR}/server.csr" \
+  -CA "${GRPC_TLS_DIR}/ca.crt" \
+  -CAkey "${GRPC_TLS_DIR}/ca.key" \
+  -CAcreateserial \
+  -out "${GRPC_TLS_DIR}/tls.crt" \
+  -extfile "${GRPC_TLS_DIR}/server.ext" >/dev/null 2>&1
+openssl req -new -newkey rsa:2048 -nodes -sha256 \
+  -keyout "${GRPC_TLS_DIR}/client.key" \
+  -out "${GRPC_TLS_DIR}/client.csr" \
+  -subj '/CN=kind-e2e-client' >/dev/null 2>&1
+printf '%s\n' \
+  'basicConstraints=critical,CA:FALSE' \
+  'keyUsage=critical,digitalSignature,keyEncipherment' \
+  'extendedKeyUsage=clientAuth' \
+  "subjectAltName=URI:spiffe://ohc.local/org/${ADMIN_ORGANIZATION_ID}/agent/e2e-client" \
+  > "${GRPC_TLS_DIR}/client.ext"
+openssl x509 -req -sha256 -days 1 \
+  -in "${GRPC_TLS_DIR}/client.csr" \
+  -CA "${GRPC_TLS_DIR}/ca.crt" \
+  -CAkey "${GRPC_TLS_DIR}/ca.key" \
+  -CAcreateserial \
+  -out "${GRPC_TLS_DIR}/client.crt" \
+  -extfile "${GRPC_TLS_DIR}/client.ext" >/dev/null 2>&1
+openssl req -new -newkey rsa:2048 -nodes -sha256 \
+  -keyout "${GRPC_TLS_DIR}/client-no-spiffe.key" \
+  -out "${GRPC_TLS_DIR}/client-no-spiffe.csr" \
+  -subj '/CN=kind-e2e-client-without-spiffe' >/dev/null 2>&1
+printf '%s\n' \
+  'basicConstraints=critical,CA:FALSE' \
+  'keyUsage=critical,digitalSignature,keyEncipherment' \
+  'extendedKeyUsage=clientAuth' \
+  > "${GRPC_TLS_DIR}/client-no-spiffe.ext"
+openssl x509 -req -sha256 -days 1 \
+  -in "${GRPC_TLS_DIR}/client-no-spiffe.csr" \
+  -CA "${GRPC_TLS_DIR}/ca.crt" \
+  -CAkey "${GRPC_TLS_DIR}/ca.key" \
+  -CAcreateserial \
+  -out "${GRPC_TLS_DIR}/client-no-spiffe.crt" \
+  -extfile "${GRPC_TLS_DIR}/client-no-spiffe.ext" >/dev/null 2>&1
+kubectl create secret generic "${GRPC_TLS_SECRET_NAME}" \
+  --namespace "${NAMESPACE}" \
+  --from-file=tls.crt="${GRPC_TLS_DIR}/tls.crt" \
+  --from-file=tls.key="${GRPC_TLS_DIR}/tls.key" \
+  --from-file=ca.crt="${GRPC_TLS_DIR}/ca.crt" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 # ── Install PostgreSQL for the cloud/web backend smoke test ───────────────────
 log "Installing PostgreSQL ..."
 kubectl run postgres \
   --namespace "${NAMESPACE}" \
-  --image mirror.gcr.io/pgvector/pgvector:pg15 \
+  --image pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
   --env POSTGRES_USER=ohc \
   --env POSTGRES_PASSWORD=ohc \
   --env POSTGRES_DB=ohc \

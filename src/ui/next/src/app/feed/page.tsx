@@ -42,34 +42,6 @@ export default function FeedPage() {
     }
   };
 
-  const simulateInvoiceDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-invoice-draft', { method: 'POST' });
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const simulateInvoiceFollowup = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-invoice-followup', { method: 'POST' });
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
 
     fetchFeed();
@@ -209,96 +181,6 @@ export default function FeedPage() {
       alert(err.message);
     } finally {
       setProcessingId(null);
-    }
-  };
-
-    const simulateShiftCoverageDraft = async () => {
-    try {
-      const tenantId = localStorage.getItem('business_display_name') || 'default_tenant';
-      const response = await fetch('/api/v1/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: tenantId,
-          type: 'SHIFT_COVERAGE',
-          status: 'PENDING',
-          title: 'Shift Coverage Request',
-          proposed_action: {
-            action_type: 'Reassign Shift',
-            description: 'Reassign tomorrow\'s shift from Sam (sick) to Alex.',
-            endpoint: '/api/v1/shifts/reassign',
-            payload: { shift_id: 'shift_123', new_staff_id: 'staff_alex' }
-          },
-          context_payload: {
-            context: 'Sam called out sick for tomorrow. Alex is available and has the required skills. Should I reassign the shift to Alex?',
-            summary: 'Shift coverage needed due to sickness.'
-          }
-        })
-      });
-      if (response.ok) {
-        fetchFeed();
-      }
-    } catch (error) {
-      console.error('Error simulating shift coverage draft:', error);
-    }
-  };
-
-  const simulateBookingDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-booking-draft', { method: 'POST' });
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const simulateDisputeDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-dispute-resolution', { method: 'POST' });
-      // The websocket should pick it up, but we can also refetch
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  const simulatePromoterDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-promoter-draft', { method: 'POST' });
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const simulateAmbassadorDraft = async () => {
-    try {
-      setLoading(true);
-      await fetch('/api/v1/agents/approvals/simulate-ambassador-draft', { method: 'POST' });
-      // The websocket should pick it up, but we can also refetch
-      const res = await fetch('/api/v1/agent-feed');
-      const data = await res.json();
-      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -549,61 +431,6 @@ export default function FeedPage() {
           })}
         </div>
 
-        {/* Hidden test button to trigger simulation easily during development/testing */}
-        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center gap-2">
-          <button
-             onClick={simulateAmbassadorDraft}
-             data-testid="simulate-ambassador-btn"
-             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Ambassador Draft
-          </button>
-          <button
-             onClick={simulatePromoterDraft}
-             data-testid="simulate-promoter-btn"
-             className="text-xs bg-[#E8F0FE] text-[#0066FF] border border-[#B3D1FF] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Promoter
-          </button>
-
-          <button
-             onClick={simulateDisputeDraft}
-             data-testid="simulate-dispute-btn"
-             className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Dispute
-          </button>
-
-                    <button
-             onClick={simulateShiftCoverageDraft}
-             data-testid="simulate-shift-coverage-btn"
-             className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Shift Coverage
-          </button>
-
-          <button
-             onClick={simulateInvoiceFollowup}
-             data-testid="simulate-invoice-followup-btn"
-             className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Invoice Follow-up
-          </button>
-          <button
-             onClick={simulateInvoiceDraft}
-             data-testid="simulate-invoice-draft-btn"
-             className="text-xs bg-blue-100 text-blue-700 border border-blue-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Invoice Draft
-          </button>
-          <button
-             onClick={simulateBookingDraft}
-             data-testid="simulate-booking-btn"
-             className="text-xs bg-green-100 text-green-700 border border-green-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
-          >
-            Simulate Booking
-          </button>
-        </div>
       </div>
     </AppShell>
   );
