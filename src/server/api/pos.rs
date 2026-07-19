@@ -54,6 +54,7 @@ where
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
         .route("/auth", axum::routing::post(pos_auth_handler))
+        .route("/sync", axum::routing::post(pos_sync_handler))
         .route("/orders/translate", axum::routing::post(translate_order_notes_handler))
         .with_state(hub)
 }
@@ -458,4 +459,199 @@ pub async fn translate_order_notes_handler(
     };
 
     Json(json!({ "translatedNotes": translated })).into_response()
+}
+
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct PosSyncPayload {
+    pub transaction_id: String,
+    pub product_id: String,
+    pub quantity_deducted: i32,
+    pub amount_cents: Option<i64>,
+    pub currency: Option<String>,
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct PosSyncRequest {
+    pub transactions: Vec<PosSyncPayload>,
+}
+
+pub async fn pos_sync_handler(
+    State(_hub): State<Arc<Hub>>,
+    claims: Option<Extension<::server_common::Claims>>,
+    Json(payload): Json<PosSyncRequest>,
+) -> impl axum::response::IntoResponse {
+    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let pool = crate::db::get_pool();
+    let mut failed_count = 0;
+
+    for tx_payload in &payload.transactions {
+        let mutation_ts = chrono::Utc::now().to_rfc3339();
+
+        let mut db_tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(_) => {
+                failed_count += 1;
+                continue;
+            }
+        };
+
+        if ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.is_err() {
+            failed_count += 1;
+            continue;
+        }
+
+        // Deduplication using pos_offline_transactions (id matches transaction_id usually for offline POS)
+        // Ensure idempotency using the transaction ID
+        let res = sqlx::query(
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, created_at, updated_at, _sync_status, terminal_id)
+             VALUES ($1, $2, 'offline-sync', 'RESOLVED', $3, $4, $5::jsonb, $6::timestamptz, $6::timestamptz, 'synced', 'offline')
+             ON CONFLICT (id) DO NOTHING"
+        )
+        .bind(&tx_payload.transaction_id)
+        .bind(&tenant_id)
+        .bind(tx_payload.amount_cents.unwrap_or(0))
+        .bind(tx_payload.currency.as_deref().unwrap_or("USD"))
+        .bind(serde_json::to_value(tx_payload).unwrap_or(serde_json::json!({})))
+        .bind(&mutation_ts)
+        .execute(&mut *db_tx)
+        .await;
+
+        match res {
+            Ok(result) => {
+                if result.rows_affected() > 0 {
+                    let job_id = uuid::Uuid::new_v4().to_string();
+                    let job_payload = serde_json::json!({
+                        "transaction_id": tx_payload.transaction_id,
+                        "product_id": tx_payload.product_id,
+                        "quantity_deducted": tx_payload.quantity_deducted,
+                        "amount_cents": tx_payload.amount_cents,
+                        "currency": tx_payload.currency,
+                        "inventory_already_deducted": false,
+                    }).to_string();
+
+                    let job_res = sqlx::query(
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                         VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+                    )
+                    .bind(&job_id)
+                    .bind(&tenant_id)
+                    .bind(&job_payload)
+                    .execute(&mut *db_tx)
+                    .await;
+
+                    if job_res.is_err() {
+                        let _ = db_tx.rollback().await;
+                        failed_count += 1;
+                        continue;
+                    }
+                }
+            }
+            Err(_) => {
+                let _ = db_tx.rollback().await;
+                failed_count += 1;
+                continue;
+            }
+        }
+
+        let _ = db_tx.commit().await;
+    }
+
+    if failed_count > 0 {
+        Json(json!({ "success": false, "failed_count": failed_count })).into_response()
+    } else {
+        Json(json!({ "success": true, "failed_count": 0 })).into_response()
+    }
+}
+
+
+#[cfg(test)]
+mod sync_tests {
+    use super::*;
+    use axum::http::HeaderMap;
+
+    #[tokio::test]
+    async fn test_pos_sync_handler_unauthorized() {
+        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let state = State(Arc::new(Hub::new(tx, pool.clone())));
+
+        let req = PosSyncRequest { transactions: vec![] };
+        let response = pos_sync_handler(state, None, Json(req)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn test_pos_sync_handler_success_and_idempotency() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-pos-sync', 'POS Sync Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let state = State(Arc::new(Hub::new(tx, pool.clone())));
+
+        let tx_id = format!("tx-sync-{}", uuid::Uuid::new_v4());
+        let req = PosSyncRequest {
+            transactions: vec![
+                PosSyncPayload {
+                    transaction_id: tx_id.clone(),
+                    product_id: "prod-pos-sync-1".to_string(),
+                    quantity_deducted: 2,
+                    amount_cents: Some(1500),
+                    currency: Some("USD".to_string()),
+                    client_mutation_id: None,
+                },
+            ],
+        };
+
+        let claims = Extension(::server_common::Claims {
+            sub: "user_123".to_string(),
+            username: "maya".to_string(),
+            email: "".to_string(),
+            organization_id: Some("tenant-pos-sync".to_string()),
+            roles: vec!["OWNER".to_string()],
+            exp: 0,
+            iat: 0,
+            session_id: Some("".to_string()),
+            jti: "".to_string(),
+        });
+
+        // 1. Initial success
+        let response = pos_sync_handler(state.clone(), Some(claims.clone()), Json(req.clone())).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["failed_count"], 0);
+
+        let count_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE payload::jsonb->>'transaction_id' = $1")
+            .bind(&tx_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_jobs.0, 1);
+
+        // 2. Idempotency test (should not fail, but should not create another job)
+        let response_dup = pos_sync_handler(state.clone(), Some(claims.clone()), Json(req)).await.into_response();
+        assert_eq!(response_dup.status(), axum::http::StatusCode::OK);
+
+        let body_bytes_dup = axum::body::to_bytes(response_dup.into_body(), usize::MAX).await.unwrap();
+        let body_json_dup: serde_json::Value = serde_json::from_slice(&body_bytes_dup).unwrap();
+        assert_eq!(body_json_dup["success"], true);
+
+        let count_jobs_dup: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE payload::jsonb->>'transaction_id' = $1")
+            .bind(&tx_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_jobs_dup.0, 1); // Still 1
+    }
 }
