@@ -121,7 +121,7 @@ impl JobHandler for DraftQuoteWorker {
 
             let req = ChatRequest {
                 model: "default-model".to_string(),
-                system: system_prompt,
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                 messages: vec![Message::user(inquiry.to_string())],
                 temperature: 0.1,
                 max_tokens: 1024,

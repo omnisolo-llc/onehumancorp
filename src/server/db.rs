@@ -2939,7 +2939,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
                 use futures::stream::StreamExt;
                 let results = futures::stream::iter(futures)
-                    .buffer_unordered(10)
+                    .buffer_unordered(10) // NOTE: Parallel Execution already applied and optimized
                     .collect::<Vec<_>>()
                     .await;
 

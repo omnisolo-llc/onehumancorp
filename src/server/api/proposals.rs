@@ -193,7 +193,7 @@ async fn draft_agent(
 
     let req = ChatRequest {
         model: "default-model".to_string(),
-        system: system_prompt,
+        system: ::server_pricing::compression::reduce_tokens(&system_prompt),
         messages: vec![Message::user(payload.inquiry.clone())],
         temperature: 0.1,
         max_tokens: 1024,
