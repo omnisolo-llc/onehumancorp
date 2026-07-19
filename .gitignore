@@ -137,3 +137,4 @@ dummy_*
 .next/
 /*.patch
 *.pid
+.agent/
