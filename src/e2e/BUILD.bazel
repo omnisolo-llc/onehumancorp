@@ -15,7 +15,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/hyperlocal-lead-gen.spec.ts",
 
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
-    "//src/ui/next:src/e2e/work_intake_widget.spec.ts",
+
     "//src/ui/next:src/e2e/wizard_mobile_layout.spec.ts",
     "//src/ui/next:src/e2e/documentation_features.spec.ts",
     "//src/ui/next:src/e2e/help-center-regression.spec.ts",

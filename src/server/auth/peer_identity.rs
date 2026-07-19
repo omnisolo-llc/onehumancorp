@@ -1,4 +1,5 @@
 use tonic::{Request, Status};
+use tonic::transport::Certificate;
 use x509_parser::extensions::GeneralName;
 use x509_parser::parse_x509_certificate;
 
@@ -39,11 +40,11 @@ pub fn authenticate_spiffe_request<T>(
                 .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))
         })
         .transpose()?;
-    let peer_certificates = request.peer_certs();
+    let peer_certificates = request.extensions().get::<std::sync::Arc<Vec<Certificate>>>().cloned();
     let peer_certificate = peer_certificates
         .as_deref()
         .and_then(|certificates| certificates.first())
-        .map(AsRef::as_ref);
+        .map(|c| c.get_ref());
     let identity =
         authenticated_spiffe_id(standalone, claimed_identity.as_deref(), peer_certificate)?;
     let (org_id, agent_id) = crate::parse_spiffe_id(&identity)?;
