@@ -887,7 +887,7 @@ impl VectorRepository {
                         WHERE b_inner.tenant_id = a.tenant_id
                           AND b_inner.id > a.id
                           AND b_inner.embedding <=> a.embedding < 0.05
-                        ORDER BY b_inner.embedding <=> a.embedding
+                        ORDER BY b_inner.embedding <=> a.embedding, b_inner.id DESC
                         LIMIT 1
                     ) b ON true
                     LIMIT 100
@@ -920,7 +920,7 @@ impl VectorRepository {
                             SELECT id FROM consolidated_memory b_inner
                             WHERE b_inner.tenant_id = a.tenant_id
                               AND b_inner.id > a.id
-                            ORDER BY vec_distance_cosine(b_inner.embedding, a.embedding)
+                            ORDER BY vec_distance_cosine(b_inner.embedding, a.embedding), b_inner.id DESC
                             LIMIT 1
                         )
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
@@ -1017,7 +1017,7 @@ impl VectorRepository {
 
                     'outer: for current_tenant_id in tenant_ids {
                         // Limit to the latest 500 records to prevent memory exhaustion and CPU bottlenecks while allowing more coverage
-                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 500";
+                        let query = "SELECT id, tenant_id, embedding FROM consolidated_memory WHERE tenant_id = ? ORDER BY created_at DESC, id DESC LIMIT 500";
                         let rows = sqlx::query(query)
                             .bind(&current_tenant_id)
                             .fetch_all(pool)
