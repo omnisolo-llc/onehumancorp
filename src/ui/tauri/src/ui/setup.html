@@ -43,7 +43,7 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
+      .step { display: none; }
       .step.active { display: block; }
       .next-step-btn {
         width: 100%;
@@ -133,26 +133,31 @@
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" id="first-offer" data-testid="first-offer" placeholder="First Offer" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <input type="text" id="location-input" data-testid="location-input" placeholder="Location" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
       </div>
 
       <div id="step-target-audience" class="step">
         <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <input type="text" id="target-audience" data-testid="target-audience" placeholder="Target Audience" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glassmorphism glass-control" style="display: flex; align-items: center; padding: 0 12px; margin-bottom: 12px;">
+          <input type="text" data-testid="domain-name" id="domain-name" placeholder="Domain Name" style="border: none; background: transparent; margin: 0; padding: 12px 0; outline: none; flex-grow: 1;" />
+          <span style="color: #666;">.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-target-audience" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 8px;">Back</button>
       </div>
 
       <div id="step-template" class="step">
@@ -319,12 +324,42 @@
         });
       }
 
+      function validateStep(stepId) {
+        if (stepId === 'step-domain') {
+          const domainInput = document.getElementById('domain-name');
+          const errorDiv = document.getElementById('domain-error');
+          const val = domainInput.value.trim();
+
+          if (val.length < 3) {
+            errorDiv.innerText = 'Domain must be at least 3 characters long.';
+            errorDiv.style.display = 'block';
+            return false;
+          }
+          if (/[^a-z0-9\-]/.test(val)) {
+            errorDiv.innerText = 'Domain can contain only lowercase letters, numbers, and hyphens.';
+            errorDiv.style.display = 'block';
+            return false;
+          }
+          if (val.startsWith('-') || val.endsWith('-')) {
+            errorDiv.innerText = 'Domain cannot start or end with a hyphen.';
+            errorDiv.style.display = 'block';
+            return false;
+          }
+
+          errorDiv.style.display = 'none';
+          return true;
+        }
+        return true;
+      }
+      window.validateStep = validateStep;
+
       function goToStep(stepId) {
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById(stepId).classList.add('active');
         state.step = stepOrder.indexOf(stepId);
         saveState();
       }
+      window.goToStep = goToStep;
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -338,7 +373,18 @@
               }
               document.getElementById('name-error').style.display = 'none';
             }
+            if (window.validateStep && !window.validateStep(currentStep)) {
+              return; // Stop transition if validation fails
+            }
             goToStep(e.target.dataset.next);
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-prev]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.dataset.prev) {
+            goToStep(e.target.dataset.prev);
           }
         });
       });
