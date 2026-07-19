@@ -25,6 +25,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:temp-env",
+        "@crates//:tempfile",
         "//src/server/config:server_config",
         "//src/server/common:server_common",
         "//src/server/ohc:server_ohc",
