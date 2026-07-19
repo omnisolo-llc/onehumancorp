@@ -270,17 +270,28 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       }
                     </p>
                   </div>
-                  {(approval.proposed_action || approval.context_payload)?.line_items && (
+                  {(approval.proposed_action || approval.context_payload)
+                    ?.line_items && (
                     <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm mt-2">
-                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                         Line Items
                       </p>
                       <ul className="space-y-2">
-                        {((approval.proposed_action || approval.context_payload)?.line_items || []).map((item: any, idx: number) => (
-                           <li key={idx} className="flex justify-between items-center text-[12px]">
-                            <span className="text-gray-700 dark:text-gray-300">{item.description}</span>
-                            <span className="font-medium text-gray-900 dark:text-gray-100">${(item.amount_cents / 100).toFixed(2)}</span>
-                           </li>
+                        {(
+                          (approval.proposed_action || approval.context_payload)
+                            ?.line_items || []
+                        ).map((item: any, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex justify-between items-center text-[12px]"
+                          >
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {item.description}
+                            </span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              ${(item.amount_cents / 100).toFixed(2)}
+                            </span>
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -297,22 +308,31 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       ).toFixed(2)}
                     </span>
                   </div>
-                  {(approval.proposed_action || approval.context_payload)?.drafted_email && (
-                     <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm mt-2">
-                         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          Drafted Email
-                        </p>
-                        <p className="text-[12px] text-gray-700 dark:text-gray-300 italic whitespace-pre-wrap">
-                          "{(approval.proposed_action || approval.context_payload)?.drafted_email?.generated_message}"
-                        </p>
-                     </div>
+                  {(approval.proposed_action || approval.context_payload)
+                    ?.drafted_email && (
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm mt-2">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                        Drafted Email
+                      </p>
+                      <p className="text-[12px] text-gray-700 dark:text-gray-300 italic whitespace-pre-wrap">
+                        "
+                        {
+                          (approval.proposed_action || approval.context_payload)
+                            ?.drafted_email?.generated_message
+                        }
+                        "
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "invoice" && (
-              <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-xl" data-testid="invoice-card">
+              <div
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm rounded-xl"
+                data-testid="invoice-card"
+              >
                 <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center text-xl">
                     🧾
@@ -320,7 +340,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   Invoice Follow-up
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
-                  Details: <span className="inline break-words font-semibold text-gray-800 dark:text-gray-200">{(approval.context_payload)?.description || "Invoice requires attention."}</span>
+                  Details:{" "}
+                  <span className="inline break-words font-semibold text-gray-800 dark:text-gray-200">
+                    {approval.context_payload?.description ||
+                      "Invoice requires attention."}
+                  </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
@@ -362,15 +386,28 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <div className="flex flex-col gap-3">
                 <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-800/50">
                   <p className="text-[13px] text-amber-700 dark:text-amber-300 font-medium mb-1">
-                    {(approval.proposed_action || approval.context_payload)?.original_message}
+                    {
+                      (approval.proposed_action || approval.context_payload)
+                        ?.original_message
+                    }
                   </p>
                   <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70">
-                    Drafted a reminder for {(approval.proposed_action || approval.context_payload)?.suggested_channel || 'email'}.
+                    Drafted a reminder for{" "}
+                    {(approval.proposed_action || approval.context_payload)
+                      ?.suggested_channel || "email"}
+                    .
                   </p>
                 </div>
                 <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm relative group">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Message</span>
-                  <p className="text-[13px] text-gray-800 dark:text-gray-200 mt-1">{(approval.proposed_action || approval.context_payload)?.generated_response}</p>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    Drafted Message
+                  </span>
+                  <p className="text-[13px] text-gray-800 dark:text-gray-200 mt-1">
+                    {
+                      (approval.proposed_action || approval.context_payload)
+                        ?.generated_response
+                    }
+                  </p>
                 </div>
               </div>
             )}
@@ -383,12 +420,24 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 setEditContent={setEditContent}
                 onEdit={() => {
                   setEditingId(approval.id);
-                  const textToEdit = approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "";
+                  const textToEdit =
+                    approval.payload?.generated_response ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.generated_response ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.original_payload?.generated_response ||
+                    approval.payload?.original_payload?.generated_response ||
+                    "";
                   setEditContent(textToEdit);
                 }}
                 onCancelEdit={() => setEditingId(null)}
                 onSaveEdit={() => {
-                  handleDecision(approval.id, true, editContent, approval.event_source);
+                  handleDecision(
+                    approval.id,
+                    true,
+                    editContent,
+                    approval.event_source,
+                  );
                   setEditingId(null);
                 }}
                 onApprove={() =>
@@ -477,11 +526,21 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   Message Requires Attention
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
-                  Customer: <div className="triage-context inline break-words font-semibold text-gray-800 dark:text-gray-200">{(approval.context_payload)?.description || "You have an open customer conversation waiting for your reply."}</div>
+                  Customer:{" "}
+                  <div className="triage-context inline break-words font-semibold text-gray-800 dark:text-gray-200">
+                    {approval.context_payload?.description ||
+                      "You have an open customer conversation waiting for your reply."}
+                  </div>
                 </div>
                 <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm mt-1 border border-gray-100 dark:border-gray-800">
-                  <div className="font-semibold text-xs uppercase mb-1 block tracking-wider text-blue-600 dark:text-blue-400">Drafted Action:</div>
-                  <div className="whitespace-pre-wrap">{approval.proposed_action?.draft_reply || approval.proposed_action?.message || "Resolve Message"}</div>
+                  <div className="font-semibold text-xs uppercase mb-1 block tracking-wider text-blue-600 dark:text-blue-400">
+                    Drafted Action:
+                  </div>
+                  <div className="whitespace-pre-wrap">
+                    {approval.proposed_action?.draft_reply ||
+                      approval.proposed_action?.message ||
+                      "Resolve Message"}
+                  </div>
                 </div>
 
                 {editingId === approval.id ? (
@@ -531,7 +590,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       data-testid="feed-approve-btn"
                     >
                       {isActionLoading("approve") ? (
-                        <span className="animate-pulse flex items-center gap-2">Processing...</span>
+                        <span className="animate-pulse flex items-center gap-2">
+                          Processing...
+                        </span>
                       ) : (
                         "Approve & Send"
                       )}
@@ -542,7 +603,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-[8px] font-medium transition-all"
                       onClick={() => {
                         setEditingId(approval.id);
-                        setEditContent(approval.proposed_action?.draft_reply || approval.proposed_action?.message || "");
+                        setEditContent(
+                          approval.proposed_action?.draft_reply ||
+                            approval.proposed_action?.message ||
+                            "",
+                        );
                       }}
                       disabled={loadingAction !== null}
                       data-testid="feed-modify-btn"
@@ -840,10 +905,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Product Name
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {
-                      (approval.proposed_action || approval.context_payload)
-                        ?.product_name || "New Product"
-                    }
+                    {(approval.proposed_action || approval.context_payload)
+                      ?.product_name || "New Product"}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
@@ -862,7 +925,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Suggested Price
                   </span>
                   <span className="font-semibold text-green-600 dark:text-green-400">
-                    ${(approval.proposed_action || approval.context_payload)
+                    $
+                    {(approval.proposed_action || approval.context_payload)
                       ?.suggested_price || 0}
                   </span>
                 </div>
@@ -891,7 +955,6 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   Action Required: Approve Estimate for{" "}
                   {(approval.proposed_action || approval.context_payload)
                     .service || "Plumbing Fix"}{" "}
-
                 </div>
                 <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                   {
@@ -994,26 +1057,55 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     🚀 Share & Earn $50
                   </span>
                 </div>
-                {(approval.proposed_action || approval.context_payload)?.referral_link && (
+                {(approval.proposed_action || approval.context_payload)
+                  ?.referral_link && (
                   <div className="p-3 mb-1 rounded-[8px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800/50 flex flex-col gap-2 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><circle cx="12" cy="12" r="10"></circle><path d="M16 12l-4-4-4 4M12 8v8"></path></svg>
+                      <svg
+                        width="64"
+                        height="64"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-blue-500"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M16 12l-4-4-4 4M12 8v8"></path>
+                      </svg>
                     </div>
-                    <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">Magic Share Link</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-300">Share your new product. When another owner signs up via your link, you both get a $50 credit.</div>
+                    <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">
+                      Magic Share Link
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">
+                      Share your new product. When another owner signs up via
+                      your link, you both get a $50 credit.
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex-1 bg-white dark:bg-gray-800 px-3 py-2 rounded-[6px] text-xs text-gray-500 dark:text-gray-400 truncate border border-gray-200 dark:border-gray-700">
-                        {(approval.proposed_action || approval.context_payload)?.referral_link}
+                        {
+                          (approval.proposed_action || approval.context_payload)
+                            ?.referral_link
+                        }
                       </div>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          navigator.clipboard.writeText((approval.proposed_action || approval.context_payload)?.referral_link);
+                          navigator.clipboard.writeText(
+                            (
+                              approval.proposed_action ||
+                              approval.context_payload
+                            )?.referral_link,
+                          );
                           const btn = e.currentTarget;
                           const originalText = btn.innerHTML;
-                          btn.innerHTML = 'Copied!';
-                          setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+                          btn.innerHTML = "Copied!";
+                          setTimeout(() => {
+                            btn.innerHTML = originalText;
+                          }, 2000);
                         }}
                         className="bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-2 rounded-[6px] text-xs font-medium transition-colors shadow-sm whitespace-nowrap"
                       >
