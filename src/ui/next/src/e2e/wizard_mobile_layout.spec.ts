@@ -70,6 +70,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/onboarding');
 
+
     await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
