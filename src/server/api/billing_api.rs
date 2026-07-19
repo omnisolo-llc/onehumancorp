@@ -21,6 +21,7 @@ pub struct MyPlanResponse {
     pub next_bill_estimated: i32,
     pub soft_limit_reached: bool,
     pub user_message: Option<String>,
+    pub department_tier_usage: Option<Vec<DepartmentTierUsageRow>>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -406,8 +407,17 @@ pub async fn my_plan_handler(
         )
     });
 
-    let (tier_res, ai_used_res, storage_used_bytes_res, trend_res, auditor_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future, trend_future, auditor_future);
+    let department_future = tokio::task::spawn({
+        let h = hub.clone();
+        let t = tenant_id.clone();
+        async move {
+            department_tier_usage_for_tenant(&h, &t).await
+        }
+    });
 
+    let (tier_res, ai_used_res, storage_used_bytes_res, trend_res, auditor_res, department_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future, trend_future, auditor_future, department_future);
+
+    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
     let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let ai_used = ai_used_res.unwrap_or(0);
     let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
@@ -486,6 +496,7 @@ pub async fn my_plan_handler(
         next_bill_estimated,
         soft_limit_reached,
         user_message,
+        department_tier_usage: Some(department_tier_usage.departments),
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Ok(Json(resp))

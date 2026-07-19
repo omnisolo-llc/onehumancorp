@@ -1,23 +1,34 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { WithTooltip } from '../../components/TooltipRegistry';
+import { WithTooltip } from '@/components/TooltipRegistry';
 
-interface MyPlanData {
-  current_plan: string;
-  ai_actions_used: number;
-  ai_actions_limit: number | null;
-  storage_used_bytes: number;
-  storage_limit_bytes: number | null;
-  next_bill_estimated: number;
-  soft_limit_reached?: boolean;
-  user_message?: string;
+interface DepartmentTierUsage {
+    department: string;
+    tier: string;
+    actions_used: number;
+    action_limit?: number;
+    usage_percent?: number;
+    department_type: string;
+    soft_limit_reached: boolean;
 }
 
-export default function MyPlanPage() {
+interface PlanData {
+  current_plan: string;
+  ai_actions_used: number;
+  ai_actions_limit?: number;
+  storage_used_bytes: number;
+  storage_limit_bytes?: number;
+  next_bill_estimated: number;
+  user_message?: string;
+  soft_limit_reached?: boolean;
+  department_tier_usage?: DepartmentTierUsage[];
+}
+
+export default function PlanPage() {
   const router = useRouter();
-  const [data, setData] = useState<MyPlanData | null>(null);
+  const [data, setData] = useState<PlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isManagingBilling, setIsManagingBilling] = useState(false);
 
@@ -97,7 +108,7 @@ export default function MyPlanPage() {
             Back
           </button>
           <WithTooltip id="my-plan-tooltip" defaultText="View and manage your subscription plan and usage.">
-            <h1 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 tracking-tight">My Plan</h1>
+            <h1 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 tracking-tight" id="plan-name">My Plan</h1>
           </WithTooltip>
         </div>
       </header>
@@ -122,7 +133,7 @@ export default function MyPlanPage() {
                     </h2>
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
+                    <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2" id="plan-price">
                         Estimated Next Bill <span className="text-gray-900">{formatCurrency(data?.next_bill_estimated || 0)}</span>
                     </h2>
                 </div>
@@ -158,7 +169,7 @@ export default function MyPlanPage() {
                   {/* AI Actions */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">AI Actions Used</span>
+                          <span className="font-medium text-gray-700 text-lg" id="ai-actions-used">AI Actions Used</span>
                           <span className="font-bold text-gray-900 text-lg">
                               {data?.ai_actions_used || 0} <span className="text-gray-500 font-normal text-base">{data?.ai_actions_limit != null && data.ai_actions_limit > 0 ? `/ ${data.ai_actions_limit}` : '/ Unlimited'}</span>
                           </span>
@@ -174,7 +185,7 @@ export default function MyPlanPage() {
                   {/* Storage */}
                   <div>
                       <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">Storage Used</span>
+                          <span className="font-medium text-gray-700 text-lg" id="storage-used">Storage Used</span>
                           <span className="font-bold text-gray-900 text-lg">
                               {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{(data?.storage_limit_bytes ?? 0) > 0 ? `/ ${formatStorage(data!.storage_limit_bytes!)}` : '/ Unlimited'}</span>
                           </span>
@@ -186,6 +197,34 @@ export default function MyPlanPage() {
                           </div>
                       </div>
                   </div>
+
+                  {/* Department Tier Usage */}
+                  {data?.department_tier_usage && data.department_tier_usage.length > 0 && (
+                      <div className="mt-6">
+                          <h3 className="text-lg font-bold text-gray-900 mb-4">Department Tier Usage</h3>
+                          <div className="grid gap-4">
+                              {data.department_tier_usage.map((dept, index) => (
+                                  <div key={index} className="bg-white/50 rounded-xl p-4 border border-gray-100 shadow-sm">
+                                      <div className="flex justify-between items-center mb-2">
+                                          <div>
+                                              <span className="font-medium text-gray-900">{dept.department_type}</span>
+                                          </div>
+                                          <span className="text-sm font-medium text-gray-600">
+                                              {dept.actions_used} {dept.action_limit ? `/ ${dept.action_limit}` : ''} actions
+                                          </span>
+                                      </div>
+                                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                          <div
+                                              className="bg-gradient-to-r from-emerald-400 to-teal-500 h-2 rounded-full transition-all duration-500"
+                                              style={{ width: dept.usage_percent != null ? `${dept.usage_percent}%` : '5%' }}>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                  )}
+
               </div>
           </div>
         </section>

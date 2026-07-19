@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
 }));
 
-vi.mock('../../components/TooltipRegistry', () => ({
+vi.mock('@/components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
@@ -25,7 +25,7 @@ describe('MyPlanPage', () => {
     (useRouter as any).mockReturnValue({ push: mockPush });
     global.fetch = vi.fn();
 
-    (global.fetch as any).mockImplementation(async (url) => {
+    (global.fetch as any).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -38,6 +38,16 @@ describe('MyPlanPage', () => {
             next_bill_estimated: 2900,
             soft_limit_reached: false,
             user_message: "You've reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!",
+            department_tier_usage: [
+                {
+                    department: "Engineering",
+                    tier: "Starter",
+                    actions_used: 50,
+                    action_limit: 100,
+                    department_type: "Engineering",
+                    soft_limit_reached: false
+                }
+            ]
           }),
         };
       }
@@ -62,7 +72,7 @@ describe('MyPlanPage', () => {
   });
 
   it('renders soft limit reached message', async () => {
-    (global.fetch as any).mockImplementation(async (url) => {
+    (global.fetch as any).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -97,7 +107,7 @@ describe('MyPlanPage', () => {
   });
 
   it('renders unlimited limits properly for 0 limits', async () => {
-    (global.fetch as any).mockImplementation(async (url) => {
+    (global.fetch as any).mockImplementation(async (url: string) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
@@ -131,6 +141,12 @@ describe('MyPlanPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/cost-dashboard');
   });
 
+  it('renders Department Tier Usage', async () => {
+    render(<MyPlanPage />);
+    expect(await screen.findByText('Department Tier Usage')).toBeDefined();
+    expect(screen.getByText('Engineering')).toBeDefined();
+  });
+
   it('initiates manage billing flow', async () => {
     const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
     let resolvePortal: any;
@@ -138,7 +154,7 @@ describe('MyPlanPage', () => {
       resolvePortal = resolve;
     });
 
-    (global.fetch as any).mockImplementation(async (url, options) => {
+    (global.fetch as any).mockImplementation(async (url: string, options: any) => {
       if (url === '/api/v1/billing/my-plan') {
         return {
           ok: true,
