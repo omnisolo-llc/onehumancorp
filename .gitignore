@@ -137,3 +137,9 @@ dummy_*
 .next/
 /*.patch
 *.pid
+.agent/
+src/ui/tauri/next_out/
+src/ui/tauri/src/ui/*.html
+src/ui/tauri/src/ui/*.mjs
+src/ui/tauri/src/ui/*.css
+src/ui/tauri/tauri_out/
