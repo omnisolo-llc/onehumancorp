@@ -280,6 +280,14 @@ pub async fn offline_sync_handler(
                             "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", mutation.product_id)
                         }).to_string();
 
+                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'offline_sync', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                            .bind(&ai_task_id)
+                            .bind(&tenant_id_clone)
+                            .bind(&mutation.product_id)
+                            .bind(&ai_payload)
+                            .execute(&mut *db_tx)
+                            .await;
+
                         let _ = sqlx::query(
                             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                              VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"

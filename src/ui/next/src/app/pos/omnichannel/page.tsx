@@ -58,6 +58,15 @@ export default function OmnichannelCartPage() {
           unit_price_cents: 1500, // $15.00
         }),
       });
+      // Trigger inventory reservation backend call
+      await fetch("/api/v1/pos/inventory/adjustment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item_id: productId,
+          quantity_change: -1
+        }),
+      });
       const data = await res.json();
       if (res.ok) {
         setCartItems([...cartItems, { product_id: productId, quantity: 1, unit_price_cents: 1500 }]);

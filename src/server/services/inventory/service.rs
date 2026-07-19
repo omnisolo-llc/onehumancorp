@@ -225,6 +225,15 @@ impl InventoryService {
         ttl_seconds: i32,
     ) -> Result<ReserveResult, String> {
         let lock_id = Uuid::new_v4().to_string();
+        let pool = crate::db::get_pool();
+        let _ = sqlx::query("INSERT INTO inventory_reservations (id, tenant_id, product_id, session_id, quantity, expires_at) VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes') ON CONFLICT DO NOTHING")
+            .bind(Uuid::new_v4().to_string())
+            .bind(tenant_id)
+            .bind(product_id)
+            .bind(&lock_id)
+            .bind(quantity)
+            .execute(&pool)
+            .await;
         let lock_key = Self::get_lock_key(tenant_id, product_id);
 
         let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 }; // Distributed lock TTL
