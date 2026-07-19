@@ -27,6 +27,7 @@ pub struct DraftAgentRequest {
 struct AdapterLlm {}
 
 #[cfg(test)]
+#[allow(dead_code)]
 fn forced_test_service_item_response(prompt: &str) -> Option<String> {
     let candidate = prompt
         .split_once("test-service-item:")?

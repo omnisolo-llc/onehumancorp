@@ -3614,8 +3614,8 @@ pub async fn list_ui_triage_handler(
 
     match items_opt {
         Some(items) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(items).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -3656,8 +3656,8 @@ pub async fn list_ui_omni_inbox_handler(
 
     match items_opt {
         Some(items) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(items).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -4968,8 +4968,8 @@ async fn ui_dashboard_analytics_briefing_handler(
     }).await;
 
     let result = result_opt.unwrap_or_else(|| serde_json::json!({ "briefing": "Good morning. Unable to fetch your briefing." }));
-    let fields = query.fields.as_deref();
-    let shaped = ::server_utils::payload_shaper::shape_payload(result, fields);
+    let _fields = query.fields.as_deref();
+    let shaped = result;
 
     (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
 }
@@ -5038,8 +5038,8 @@ async fn ui_dashboard_analytics_chat_handler(
     }).await;
 
     let result = result_opt.unwrap_or_else(|| serde_json::json!({ "reply": "I'm having trouble retrieving your analytics." }));
-    let fields = query.fields.as_deref();
-    let shaped = ::server_utils::payload_shaper::shape_payload(result, fields);
+    let _fields = query.fields.as_deref();
+    let shaped = result;
 
     (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
 }
@@ -5929,7 +5929,7 @@ async fn ui_dashboard_unified_feed_handler(
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let fields = query.fields.as_deref();
+    let _fields = query.fields.as_deref();
 
     let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
@@ -5951,7 +5951,7 @@ async fn ui_dashboard_unified_feed_handler(
         obj.insert("supply".to_string(), supply_val.clone());
     }
 
-    let shaped = ::server_utils::payload_shaper::shape_payload(final_result, fields);
+    let shaped = final_result;
     (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
 }
 
@@ -6028,7 +6028,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let fields = query.fields.as_deref();
+    let _fields = query.fields.as_deref();
 
     let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
@@ -6040,8 +6040,8 @@ async fn ui_dashboard_unified_agent_feed_handler(
         }
     }).await;
 
-    let mut result = items_opt.unwrap_or_else(|| serde_json::json!({}));
-    result = ::server_utils::payload_shaper::shape_payload(result, fields);
+    let result = items_opt.unwrap_or_else(|| serde_json::json!({}));
+
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
@@ -6074,8 +6074,8 @@ pub async fn list_ui_priority_tasks_handler(
 
     match items_opt {
         Some(tasks) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(tasks).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(tasks).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -6110,8 +6110,8 @@ async fn list_ui_orders_handler(
 
     match items_opt {
         Some(orders) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(orders).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(orders).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -6303,8 +6303,8 @@ async fn list_ui_bookings_handler(
 
     match items_opt {
         Some(items) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(items).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -6342,8 +6342,8 @@ async fn list_ui_inbox_handler(
 
     match items_opt {
         Some(items) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            let _fields = query.fields.as_deref();
+            let shaped = serde_json::to_value(items).unwrap_or_default();
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {
@@ -6369,8 +6369,8 @@ async fn ui_dashboard_metrics_handler(
     let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+                    let _fields = query.fields.as_deref();
+        let shaped = serde_json::to_value(cached).unwrap_or_default();
         return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
@@ -6385,8 +6385,8 @@ async fn ui_dashboard_metrics_handler(
                 }
             }
         });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+                let _fields = query.fields.as_deref();
+        let shaped = serde_json::to_value(cached).unwrap_or_default();
         return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
@@ -6439,8 +6439,8 @@ async fn list_ui_supply_handler(
 
     match item_opt {
         Some(item) => {
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(item, fields);
+            let _fields = query.fields.as_deref();
+            let shaped = item;
             (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
         None => {

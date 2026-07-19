@@ -75,6 +75,7 @@ pub struct PaginationQuery {
     pub offset: Option<i64>,
     pub limit: Option<i64>,
     pub mobile_optimized: Option<bool>,
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -228,7 +229,9 @@ async fn list_feed_items(
     ).await;
 
     match result {
-        Some(any_response) => (StatusCode::OK, Json(any_response)).into_response(),
+        Some(any_response) => {
+            (StatusCode::OK, Json(any_response)).into_response()
+        },
         None => {
             if mobile_optimized {
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response()
