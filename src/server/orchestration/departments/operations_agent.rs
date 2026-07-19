@@ -103,6 +103,48 @@ impl Department for OperationsAgent {
             }
         }
 
+        if event.event_type == "voice.intent.synced" {
+            let transcription = event.payload.get("transcription").and_then(|v| v.as_str()).unwrap_or("Unknown transcription");
+            tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
+
+            // Log intent to memory
+            let _ = self.orchestrator.write_long_term_memory(
+                ohc_builtin_agent::memory_store::EmbeddingRecord {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    agent_id: "OperationsAgent".to_string(),
+                    content: format!("Parsed offline voice intent: {}", transcription),
+                    embedding: vec![],
+                    source_type: "voice_intent".to_string(),
+                    created_at: chrono::Utc::now(),
+                    last_referenced_at: chrono::Utc::now(),
+                    reference_count: 0,
+                    reliability_score: 100,
+                    owner_override: false,
+                    metadata: Some(serde_json::json!({"department": "Operations"}).to_string()),
+                }
+            ).await;
+
+            // Create a triage item or feed item to show the drafted order based on the intent
+            let pool = self.orchestrator.db().pool.clone();
+            let action_payload = serde_json::json!({
+                "action_type": "Draft Voice Order",
+                "transcription": transcription,
+                "status": "pending_approval"
+            });
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
+                 VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
+            )
+            .bind(&event.tenant_id)
+            .bind(format!("Voice Command: \"{}\"", transcription))
+            .bind(action_payload)
+            .execute(&pool)
+            .await;
+
+            return Ok(());
+        }
+
         if event.event_type == "tenant.quote.requires_scheduling" {
             let preferred_time = event.payload.get("preferred_time").and_then(|v| v.as_str()).unwrap_or("");
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
@@ -136,7 +178,7 @@ impl Department for OperationsAgent {
             let msg_lower = message.to_lowercase();
             if msg_lower.contains("sick") || msg_lower.contains("call out") || msg_lower.contains("can't make it") || msg_lower.contains("can't make my shift") || msg_lower.contains("not feeling well") {
                 // Check if sender is staff
-                let pool = crate::db::get_pool();
+                let pool = self.orchestrator.db().pool.clone();
                 let staff_res: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT id, name, role FROM ohc_staff_member WHERE tenant_id = $1 AND phone_number = $2 LIMIT 1")
                     .bind(&event.tenant_id)
                     .bind(&sender_id)
@@ -202,7 +244,7 @@ impl Department for OperationsAgent {
                         let _proposed_staff_name = payload.get("proposed_staff_name").and_then(|v| v.as_str()).unwrap_or("");
 
                         if !shift_id.is_empty() && !proposed_staff_id.is_empty() {
-                            let pool = crate::db::get_pool();
+                            let pool = self.orchestrator.db().pool.clone();
                             let _ = sqlx::query("UPDATE shifts SET staff_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
                                 .bind(proposed_staff_id)
                                 .bind(shift_id)
@@ -335,7 +377,7 @@ impl Department for OperationsAgent {
             },
 
             "tenant.booking.confirmed" => {
-                let pool = crate::db::get_pool();
+                let pool = self.orchestrator.db().pool.clone();
                 // We just confirmed a booking. Let's do nightly/daily routing simulation
                 // by generating an optimized service route for today or tomorrow.
                 let staff_id = event.payload.get("staff_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -504,7 +546,7 @@ impl Department for OperationsAgent {
                     ).await;
 
                     // Create an actionable task in the owner's Triage Feed asking how to resolve it
-                    let pool = crate::db::get_pool();
+                    let pool = self.orchestrator.db().pool.clone();
                     let triage_id = uuid::Uuid::new_v4().to_string();
                     let action_id = uuid::Uuid::new_v4().to_string();
 

@@ -46,6 +46,7 @@ rust_library(
         "@crates//:tracing",
         "@crates//:uuid",
         "@crates//:x509-parser",
+        "@crates//:tempfile",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -61,7 +62,6 @@ rust_test(
     },
     deps = [
         "@crates//:rcgen",
-        "@crates//:tempfile",
         "@crates//:tower-0.5.3",
     ],
     edition = "2024",
