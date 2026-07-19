@@ -246,11 +246,45 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
 }
 
 #[cfg(test)]
-
 mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use axum::response::Html;
 
     #[test]
-    fn test_storefront_headers_dummy() {
-        assert!(true);
+    fn test_set_storefront_headers() {
+        let html = "<html><body><h1>Hello, OHC!</h1></body></html>";
+        let tenant_id = Uuid::new_v4();
+        let custom_tags = Some(vec!["entity:product:123".to_string()]);
+
+        let mut response = Html(html.to_string()).into_response();
+        set_storefront_headers(&mut response, html, tenant_id, custom_tags);
+
+        let headers = response.headers();
+
+        // Check Cache-Control
+        assert_eq!(
+            headers.get(axum::http::header::CACHE_CONTROL).unwrap().to_str().unwrap(),
+            "public, s-maxage=60, stale-while-revalidate=86400"
+        );
+
+        // Check ETag
+        let mut hasher = Sha256::new();
+        hasher.update(html.as_bytes());
+        let expected_etag = format!("\"{:x}\"", hasher.finalize());
+        assert_eq!(
+            headers.get(axum::http::header::ETAG).unwrap().to_str().unwrap(),
+            expected_etag
+        );
+
+        // Check Surrogate-Key
+        let surrogate_key = headers.get("Surrogate-Key").unwrap().to_str().unwrap();
+        assert!(surrogate_key.contains(&format!("tenant-id:{}", tenant_id)));
+        assert!(surrogate_key.contains("entity:product:123"));
+
+        // Check Cache-Tag
+        let cache_tag = headers.get("Cache-Tag").unwrap().to_str().unwrap();
+        assert!(cache_tag.contains(&format!("tenant-id:{}", tenant_id)));
+        assert!(cache_tag.contains("entity:product:123"));
     }
 }
