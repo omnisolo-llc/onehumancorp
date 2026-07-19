@@ -299,7 +299,7 @@ impl InventoryService {
             let pool = crate::db::get_pool();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
+                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE SKIP LOCKED")
                         .bind(product_id)
                         .bind(tenant_id)
                         .fetch_optional(&mut *tx)
@@ -315,23 +315,24 @@ impl InventoryService {
                                 lock_id: "".to_string(),
                                 error_message: format!("Insufficient inventory. Available: {}", stock)
                             });
-                        } else {
-                            let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
-                                .bind(quantity)
-                                .bind(product_id)
-                                .bind(tenant_id)
-                                .execute(&mut *tx)
-                                .await;
-                            if let Ok(res) = update_res {
-                                if res.rows_affected() == 0 {
-                                    let _ = tx.rollback().await;
-                                    self.locker.clear(&lock_key).await;
-                                    return Ok(ReserveResult {
-                                        success: false,
-                                        lock_id: "".to_string(),
-                                        error_message: format!("Insufficient inventory.")
-                                    });
-                                }
+                        }
+
+                        let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
+                            .bind(quantity)
+                            .bind(product_id)
+                            .bind(tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+
+                        if let Ok(res) = update_res {
+                            if res.rows_affected() == 0 {
+                                let _ = tx.rollback().await;
+                                self.locker.clear(&lock_key).await;
+                                return Ok(ReserveResult {
+                                    success: false,
+                                    lock_id: "".to_string(),
+                                    error_message: format!("Insufficient inventory.")
+                                });
                             }
                         }
                     } else {
@@ -345,7 +346,7 @@ impl InventoryService {
 
                         if let Ok(res) = update_res {
                             if res.rows_affected() == 0 {
-                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                                let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE SKIP LOCKED")
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .fetch_optional(&mut *tx)

@@ -160,7 +160,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         const intentRes = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId })
+            body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId, cart: cart })
         });
         const intentData = await intentRes.json();
         intentSecret = intentData.client_secret;
@@ -192,7 +192,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_intent_id: res.paymentIntent.id, product_id: productId, lock_id: lockId, amount_cents: amount })
+                body: JSON.stringify({ payment_intent_id: res.paymentIntent.id, product_id: productId, lock_id: lockId, amount_cents: amount, cart: cart })
             });
             if (captureRes.ok) {
                 setStatus('Payment successful!');
