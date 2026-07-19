@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import { useProPlan } from '../components/useProPlan';
 
 export default function SeasonalPromoPage() {
   const router = useRouter();
@@ -10,13 +11,12 @@ export default function SeasonalPromoPage() {
   const [discount, setDiscount] = useState('');
   const [result, setResult] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro, claimTrial, claimError } = useProPlan();
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [tenantId, setTenantId] = useState('DEFAULT');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
       setTenantId(localStorage.getItem('business_display_name') || 'DEFAULT');
     }
   }, []);
@@ -56,14 +56,11 @@ export default function SeasonalPromoPage() {
     generatePromo();
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
-    }
-    setHasPro(true);
+    if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     generatePromo();
   };
@@ -84,6 +81,7 @@ export default function SeasonalPromoPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-2xl mx-auto w-full flex flex-col gap-8">
+        {claimError && <p className="text-sm text-red-600" role="status">{claimError}</p>}
         <section className="mb-6 p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <div className="flex items-center gap-4 mb-4">
             <h2 className="text-xl font-semibold font-outfit m-0" style={{ color: '#1D1D1F' }}>Create Campaign</h2>
@@ -170,7 +168,7 @@ export default function SeasonalPromoPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
+              Share on X to activate Pro
             </button>
           </div>
         </div>

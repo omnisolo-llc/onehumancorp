@@ -321,7 +321,7 @@ describe("server-only authenticated backend transport", () => {
     expect(new TextDecoder().decode(validated)).toBe(source);
   });
 
-  it("removes top-level browser-selected identity from JSON bodies", () => {
+  it("removes browser-selected identity recursively while preserving domain roles", () => {
     const source = {
       tenant_id: "attacker-tenant",
       tenant: "attacker-tenant",
@@ -333,7 +333,10 @@ describe("server-only authenticated backend transport", () => {
       authorization: "Bearer attacker",
       token: "attacker",
       message: "keep me",
-      nested: { user_id: "business-data-is-not-an-auth-header" },
+      nested: {
+        user_id: "attacker-user",
+        rows: [{ authorization: "Bearer attacker", role: "Cashier", roles: ["editor"], safe: true }],
+      },
     };
 
     const sanitized = stripBrowserIdentityJsonRequestBody(
@@ -342,7 +345,25 @@ describe("server-only authenticated backend transport", () => {
 
     expect(JSON.parse(new TextDecoder().decode(sanitized))).toEqual({
       message: "keep me",
-      nested: { user_id: "business-data-is-not-an-auth-header" },
+      roles: ["owner"],
+      nested: { rows: [{ role: "Cashier", roles: ["editor"], safe: true }] },
+    });
+  });
+
+  it("removes browser identity aliases regardless of casing or separators", () => {
+    const sanitized = stripBrowserIdentityJsonRequestBody(
+      new TextEncoder().encode(JSON.stringify({
+        TenantId: "attacker-tenant",
+        "ORGANIZATION-ID": "attacker-org",
+        userId: "attacker-user",
+        "X-User-Roles": ["owner"],
+        AccessToken: "attacker-token",
+        nested: { AUTHORIZATION: "Bearer attacker", safe: "kept" },
+      })),
+    );
+
+    expect(JSON.parse(new TextDecoder().decode(sanitized))).toEqual({
+      nested: { safe: "kept" },
     });
   });
 

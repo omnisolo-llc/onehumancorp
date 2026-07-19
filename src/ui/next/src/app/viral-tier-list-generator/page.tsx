@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import Head from 'next/head';
 import Link from 'next/link';
 
 export default function ViralTierListGeneratorPage() {
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [tenant, setTenant] = useState('demo-store');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
       const t = localStorage.getItem('business_display_name');
       if (t) setTenant(t);
     }

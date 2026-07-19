@@ -70,7 +70,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
             >
               <div>
                 <h3 className="font-semibold">{neighbor.name}</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Complementary Vibe Match</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Nearby business returned by the mesh service</p>
               </div>
               <button
                 onClick={() => handleInvite(neighbor.id)}

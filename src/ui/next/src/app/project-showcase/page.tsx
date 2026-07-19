@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
@@ -14,7 +15,7 @@ export default function ProjectShowcasePage() {
   const [ctaLink, setCtaLink] = useState('');
 
   const [removeBranding, setRemoveBranding] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -22,9 +23,6 @@ export default function ProjectShowcasePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isPro = localStorage.getItem('has_pro') === 'true';
-      setHasPro(isPro);
-      if (isPro) setRemoveBranding(true);
       setTenant(localStorage.getItem('business_display_name') || 'demo');
     }
   }, []);

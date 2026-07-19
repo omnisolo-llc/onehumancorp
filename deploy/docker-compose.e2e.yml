@@ -11,7 +11,7 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
@@ -32,7 +32,7 @@ services:
       - SYS_ADMIN
       - DAC_READ_SEARCH
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     deploy:
       resources:
         limits:
@@ -40,14 +40,14 @@ services:
           memory: 256M
 
   valkey:
-    image: mirror.gcr.io/library/redis:7
+    image: mirror.gcr.io/library/redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 30
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     deploy:
       resources:
         limits:

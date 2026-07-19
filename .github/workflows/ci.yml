@@ -178,6 +178,7 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -323,6 +324,7 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -353,11 +355,21 @@ jobs:
           - name: spec coverage
             target: //src/e2e:playwright_spec_coverage
             artifact: playwright-ui-e2e-spec-coverage
-          - name: shard 1/1
-            target: //src/e2e:playwright_shard_1_of_1
-            artifact: playwright-ui-e2e-shard-1-of-1
+          - name: shard 1/4
+            target: //src/e2e:playwright_shard_1_of_4
+            artifact: playwright-ui-e2e-shard-1-of-4
+          - name: shard 2/4
+            target: //src/e2e:playwright_shard_2_of_4
+            artifact: playwright-ui-e2e-shard-2-of-4
+          - name: shard 3/4
+            target: //src/e2e:playwright_shard_3_of_4
+            artifact: playwright-ui-e2e-shard-3-of-4
+          - name: shard 4/4
+            target: //src/e2e:playwright_shard_4_of_4
+            artifact: playwright-ui-e2e-shard-4-of-4
     env:
-      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      # E2E must never depend on or spend against a production provider key.
+      MINIMAX_API_KEY: "ci-e2e-placeholder-not-a-real-key"
       PLAYWRIGHT_REPORT_RETENTION_DAYS: 30
     steps:
       - uses: actions/checkout@v6
@@ -399,6 +411,7 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -410,8 +423,9 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          # Keep these identical to deploy/docker-compose.e2e.yml.
+          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull mirror.gcr.io/library/redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
 
       - name: Test Playwright UI E2E target
         run: |
@@ -464,7 +478,7 @@ jobs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       KIND_VERSION: "v0.31.0"
       KUBECTL_VERSION: "v1.36.1"
@@ -475,7 +489,7 @@ jobs:
       KUBECTL_SHA256_ARM64: "59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7"
       HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
-      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      MINIMAX_API_KEY: "ci-e2e-placeholder-not-a-real-key"
     steps:
       - uses: actions/checkout@v6
 
@@ -549,6 +563,7 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -562,7 +577,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: /tmp/ohc-kind-images
-          key: ${{ runner.os }}-${{ runner.arch }}-kind-images-v1
+          key: ${{ runner.os }}-${{ runner.arch }}-kind-images-18d16372b840-94365b275456
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-kind-images-
 
@@ -571,12 +586,12 @@ jobs:
           if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
             docker load -i /tmp/ohc-kind-images/images.tar
           fi
-          docker pull pgvector/pgvector:pg15
-          docker pull valkey/valkey:8-alpine
+          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
           mkdir -p /tmp/ohc-kind-images
           docker save \
-            pgvector/pgvector:pg15 \
-            valkey/valkey:8-alpine \
+            pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
+            valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
             -o /tmp/ohc-kind-images/images.tar
 
       - name: Run Kind smoke test
@@ -593,6 +608,7 @@ jobs:
           fi
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
+            --test_timeout=2700 \
             --nocache_test_results
 
   docker-e2e:
@@ -601,9 +617,9 @@ jobs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
-      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      MINIMAX_API_KEY: "ci-e2e-placeholder-not-a-real-key"
     steps:
       - uses: actions/checkout@v6
 
@@ -629,7 +645,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: /tmp/ohc-docker-compose-images
-          key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml', 'deploy/docker-compose.override.yml') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-
 
@@ -641,12 +657,15 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
-          docker pull valkey/valkey:8-alpine
+          # Keep these identical to the effective base + E2E override stack.
+          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
+          docker pull curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg16 \
-            valkey/valkey:8-alpine \
+            pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
+            valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
+            curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b \
             -o /tmp/ohc-docker-compose-images/images.tar
 
       - name: Set Bazel cache week
@@ -661,6 +680,7 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -677,6 +697,7 @@ jobs:
           command -v bazelisk
           bazelisk test //deploy:docker_compose_e2e_test \
             --config=linux \
+            --test_timeout=1800 \
             --nocache_test_results
 
   postgres-security:

@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useProPlan } from '../components/useProPlan';
 
 export default function ViralPoweredByOHCWidgetPage() {
   const [tenant, setTenant] = useState('my-business');
     const [copied, setCopied] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -14,7 +15,6 @@ export default function ViralPoweredByOHCWidgetPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     if (typeof document !== 'undefined') {
       document.title = "Viral Widget | OHC";

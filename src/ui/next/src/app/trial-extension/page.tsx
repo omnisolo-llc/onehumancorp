@@ -6,9 +6,11 @@ import Link from 'next/link';
 export default function TrialExtensionPage() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [error, setError] = useState('');
 
   const handleShareAndClaim = async () => {
     setIsClaiming(true);
+    setError('');
 
     const message = "I just set up my AI-powered storefront using OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OneHumanCorp #SmallBiz";
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
@@ -27,12 +29,10 @@ export default function TrialExtensionPage() {
       if (response.ok) {
         setHasClaimed(true);
       } else {
-        console.error('Failed to claim trial extension');
-        alert("Failed to claim trial extension. Please try again.");
+        setError("Pro activation could not be confirmed. Please try again.");
       }
-    } catch (error) {
-      console.error('Error claiming trial extension:', error);
-      alert("Error claiming trial extension. Please try again.");
+    } catch {
+      setError("The Pro activation service is unavailable. Please try again later.");
     } finally {
       setIsClaiming(false);
     }
@@ -41,7 +41,7 @@ export default function TrialExtensionPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism backdrop-blur-[30px] saturate-[210%] border-white/40">
-        <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Interactive Trial Extension</h1>
+        <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Interactive Pro Activation</h1>
         <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
         </Link>
@@ -57,9 +57,9 @@ export default function TrialExtensionPage() {
               <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
                 ⏳
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Want 7 Extra Days of Pro?</h2>
+              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Activate Pro Access?</h2>
               <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                Unlock an additional week of our Advanced AI features, automated review generation, and smart SEO entirely for free! Just share your new storefront on X (Twitter) to claim your extension.
+                Share your new storefront on X, then ask the OHC entitlement service to activate Pro access for this account.
               </p>
 
               <button
@@ -78,19 +78,20 @@ export default function TrialExtensionPage() {
                 ) : (
                   <>
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                    Share on X to Unlock 7 Days
+                    Share on X to Activate Pro
                   </>
                 )}
               </button>
+              {error && <p className="mt-3 text-sm text-red-600" role="alert">{error}</p>}
             </div>
           ) : (
             <div className="animate-fade-in">
               <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">
                 🎉
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Trial Extended!</h2>
+              <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-4">Pro Access Activated</h2>
               <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                Thank you for sharing! Your Pro trial has been successfully extended by 7 days. Enjoy the extra time to explore everything OneHumanCorp has to offer.
+                Thank you for sharing. The backend confirmed Pro access for this account.
               </p>
 
               <Link href="/dashboard" className="inline-block w-full md:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all hover:-translate-y-1 text-lg">

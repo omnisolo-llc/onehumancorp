@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PostPurchaseShareWidget } from './PostPurchaseShareWidget';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
@@ -21,8 +21,8 @@ describe('PostPurchaseShareWidget', () => {
 
   it('renders correctly with default props', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
-    expect(screen.getByText('Unlock VIP Concierge')).toBeInTheDocument();
-    expect(screen.getByText('Pro Feature')).toBeInTheDocument();
+    expect(screen.getByText('Share your purchase')).toBeInTheDocument();
+    expect(screen.getByText(/only after backend verification/)).toBeInTheDocument();
   });
 
   it('generates the correct referral link', () => {
@@ -31,15 +31,14 @@ describe('PostPurchaseShareWidget', () => {
     expect(input.value).toBe('https://ohc.app/shop/test-tenant?ref=post_purchase_123');
   });
 
-  it('copies link to clipboard and unlocks', async () => {
+  it('copies link to clipboard without granting an entitlement', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
     const copyButton = screen.getByText('Copy');
 
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/shop/test-tenant?ref=post_purchase_default');
-    // UI immediately updates to unlocked state now, so we verify that instead
-    expect(screen.getByText('VIP Concierge Unlocked!')).toBeInTheDocument();
+    expect(screen.queryByText('VIP Concierge Unlocked!')).not.toBeInTheDocument();
   });
 
   it('shares to WhatsApp', () => {
@@ -55,7 +54,7 @@ describe('PostPurchaseShareWidget', () => {
 
   it('shares to Twitter/X with Powered by OHC branding', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" storeName="Cool Store" />);
-    const twitterButton = screen.getByText('Share on X (Twitter)');
+    const twitterButton = screen.getByText('Share on X');
     fireEvent.click(twitterButton);
 
     expect(window.open).toHaveBeenCalled();
@@ -65,22 +64,17 @@ describe('PostPurchaseShareWidget', () => {
     expect(urlArg).toContain('Powered%20by%20OHC'); // Verifying loop branding
   });
 
-  it('shows VIP Concierge Unlocked message after copying', async () => {
-    // Setup mock fetch for the unlock tracking
+  it('records sharing without showing an unverified unlock', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true });
 
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
 
-    expect(screen.getByText('Unlock VIP Concierge')).toBeDefined();
+    expect(screen.getByText('Share your purchase')).toBeDefined();
 
     const copyButton = screen.getByText('Copy');
     fireEvent.click(copyButton);
 
-    // Verify that fetch was called
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant&source=post_purchase_share', expect.any(Object));
-
-    // Verify the UI updates to show the unlocked state
-    expect(await screen.findByText('VIP Concierge Unlocked!')).toBeDefined();
-    expect(screen.queryByText('Unlock VIP Concierge')).toBeNull();
+    expect(screen.queryByText('VIP Concierge Unlocked!')).toBeNull();
   });
 });

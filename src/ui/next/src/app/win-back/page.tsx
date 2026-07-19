@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export default function WinBackCampaignPage() {
   const router = useRouter();
   const [productName, setProductName] = useState('');
@@ -11,25 +15,35 @@ export default function WinBackCampaignPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [isSent, setIsSent] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      setHasPro(localStorage.getItem('has_pro') === 'true');
-    }
+    fetch('/api/v1/billing/my-plan')
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => setHasPro(['pro', 'business'].includes(String(data.current_plan || '').toLowerCase())))
+      .catch(() => setHasPro(false));
   }, []);
 
-  const generateDraft = () => {
+  const generateDraft = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      const storeName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'Our Store' : 'Our Store';
-      const storeSlug = storeName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'my-store';
-      const draft = `Subject: We miss you! Here's ${discountOffer}% off your next order 🎁\n\nHi there,\n\nIt's been a while since we last saw you at ${storeName}. We noticed you loved our products, and we wanted to welcome you back with something special.\n\nUse code WINBACK${discountOffer} to get ${discountOffer}% off your next purchase${productName ? ` of our ${productName}` : ''}!\n\nShop now: /bio/${storeSlug}\n\nBest,\nThe ${storeName} Team\n\n⚡ Powered by OHC`;
-      setGeneratedDraft(draft);
+    setError(null);
+    try {
+      const response = await fetch('/api/v1/growth/campaign/generate-win-back', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offer: discountOffer ? `${discountOffer}% off${productName ? ` ${productName}` : ''}` : undefined }),
+      });
+      if (!response.ok) throw new Error('Win-back campaign generation is unavailable.');
+      const data: unknown = await response.json();
+      if (!isRecord(data) || typeof data.subject !== 'string' || typeof data.body !== 'string') throw new Error('Win-back campaign generation is unavailable.');
+      setGeneratedDraft(`Subject: ${data.subject}\n\n${data.body}`);
       setIsGenerating(false);
-      setIsSent(false);
-    }, 1500);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Win-back campaign generation is unavailable.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleGenerate = () => {
@@ -41,21 +55,20 @@ export default function WinBackCampaignPage() {
     generateDraft();
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
+    try {
+      const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
+      if (!response.ok) throw new Error('Pro activation is unavailable.');
+      setHasPro(true);
+      setShowSoftPaywall(false);
+      setTrialStatus('Pro access activated.');
+      await generateDraft();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pro activation is unavailable.');
     }
-    setHasPro(true);
-    setShowSoftPaywall(false);
-    setTrialStatus('Your 7-day Pro trial has been activated.');
-    generateDraft();
-  };
-
-  const handleSend = () => {
-    setIsSent(true);
   };
 
   return (
@@ -72,6 +85,7 @@ export default function WinBackCampaignPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-8">
         {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
+        {error && <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800" role="status">{error}</p>}
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl p-6 shadow-sm">
            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Re-engage Inactive Customers</h2>
            <p className="text-gray-600 text-sm">
@@ -135,18 +149,13 @@ export default function WinBackCampaignPage() {
                   </pre>
                 </div>
 
-                {isSent ? (
-                  <div className="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl text-center border border-green-200">
-                    ✅ Campaign sent to 34 inactive customers!
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleSend}
-                    className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 relative overflow-hidden group"
-                  >
-                    Send to 34 Inactive Customers
-                  </button>
-                )}
+                <button
+                  disabled
+                  aria-label="Campaign sending unavailable"
+                  className="w-full cursor-not-allowed rounded-xl bg-gray-300 py-3 font-bold text-gray-600"
+                >
+                  Sending unavailable until a real dispatcher is connected
+                </button>
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
@@ -196,7 +205,7 @@ export default function WinBackCampaignPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
+              Share on X to activate Pro
             </button>
           </div>
         </div>

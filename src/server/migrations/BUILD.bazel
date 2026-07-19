@@ -1,5 +1,21 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
 filegroup(
     name = "migrations",
     srcs = glob(["*.sql"]),
     visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "sqlx_migration_contract_test",
+    srcs = ["sqlx_migration_contract_test.sh"],
+    data = [":migrations"],
+    tags = ["lint"],
+)
+
+sh_test(
+    name = "inbox_schema_contract_test",
+    srcs = ["inbox_schema_contract_test.sh"],
+    data = [":migrations"],
+    tags = ["lint"],
 )
