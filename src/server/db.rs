@@ -418,7 +418,10 @@ impl DB {
             }
 
             // Enforce SQLCipher for Standalone mode unconditionally
-            let key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
+            let key = if let Some(config_key) = crate::config::get().sqlite_encryption_key.clone().filter(|k| !k.trim().is_empty()) {
+                config_key
+            } else {
+                std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
                     let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
                         #[cfg(unix)]
@@ -486,7 +489,8 @@ impl DB {
                     }
 
                     new_key
-                });
+                })
+            };
 
             if key.trim().is_empty() {
                 return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
