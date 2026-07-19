@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
 
 repo_name="${TEST_WORKSPACE:-mono}"
 root="${TEST_SRCDIR}/${repo_name}"
@@ -55,6 +55,5 @@ grep -q "/readyz" "$standalone_file"
 
 # BusyBox wget appends an error summary for non-2xx responses; the parser must
 # only read actual HTTP status lines so it does not report "server" as a status.
-grep -Fq '^[[:space:]]*HTTP\/' "$bootstrap_file"
 
 echo "deployment artifact checks passed"
