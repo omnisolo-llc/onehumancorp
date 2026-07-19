@@ -55,6 +55,37 @@ export function VoiceAssistantFAB() {
     setIsProcessing(true);
     setStatus("processing");
     try {
+      if (!navigator.onLine) {
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const base64Audio = reader.result as string;
+          import('../../lib/sync/SyncManager').then(({ syncManager }) => {
+            syncManager.enqueueMutation({
+              type: 'sync_event',
+              payload: {
+                entity_type: 'audio_intent',
+                entity_id: crypto.randomUUID(),
+                action_type: 'ProcessVoiceCommand',
+                payload: {
+                  audio_data: base64Audio
+                }
+              }
+            });
+          });
+          setTranscription("Audio captured. (Queued for Sync)");
+          setStatus("success");
+          if ('vibrate' in navigator) navigator.vibrate(200);
+
+          setTimeout(() => {
+            setStatus("idle");
+            setTranscription("");
+          }, 3000);
+        };
+        setIsProcessing(false);
+        return;
+      }
+
       const formData = new FormData();
       formData.append('audio', audioBlob, 'command.webm');
       const response = await fetch('/api/v1/voice/command', {
@@ -69,6 +100,7 @@ export function VoiceAssistantFAB() {
       const result = await response.json();
       setTranscription(result.transcription);
       setStatus("success");
+      if ('vibrate' in navigator) navigator.vibrate(200);
 
       // In a real implementation, this would trigger a refetch of the Agent Feed
       // Dispatch a custom event to notify UnifiedAgentFeed
