@@ -990,10 +990,38 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span className="text-gray-500 dark:text-gray-400 font-semibold">
                     New product detected!
                   </span>
-                  <span className="text-pink-500 font-bold text-xs">
-                    Schedule a post?
+                  <span className="text-pink-500 font-bold text-xs bg-pink-50 dark:bg-pink-900/20 px-2 py-1 rounded-full border border-pink-200 dark:border-pink-800/50">
+                    🚀 Share & Earn $50
                   </span>
                 </div>
+                {(approval.proposed_action || approval.context_payload)?.referral_link && (
+                  <div className="p-3 mb-1 rounded-[8px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800/50 flex flex-col gap-2 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><circle cx="12" cy="12" r="10"></circle><path d="M16 12l-4-4-4 4M12 8v8"></path></svg>
+                    </div>
+                    <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">Magic Share Link</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300">Share your new product. When another owner signs up via your link, you both get a $50 credit.</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex-1 bg-white dark:bg-gray-800 px-3 py-2 rounded-[6px] text-xs text-gray-500 dark:text-gray-400 truncate border border-gray-200 dark:border-gray-700">
+                        {(approval.proposed_action || approval.context_payload)?.referral_link}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigator.clipboard.writeText((approval.proposed_action || approval.context_payload)?.referral_link);
+                          const btn = e.currentTarget;
+                          const originalText = btn.innerHTML;
+                          btn.innerHTML = 'Copied!';
+                          setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+                        }}
+                        className="bg-[#0066FF] hover:bg-[#0052CC] text-white px-3 py-2 rounded-[6px] text-xs font-medium transition-colors shadow-sm whitespace-nowrap"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="app-card dark:bg-gray-800 p-3 rounded-[8px] border border-pink-100 dark:border-pink-900/50">
                   <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-pink-500"></span>{" "}
