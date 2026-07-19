@@ -231,7 +231,7 @@ export function HelpChat() {
         <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
-            id="ai-chat-header"
+            id="ohc-floating-help-header"
             className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-md"
           >
             <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export function HelpChat() {
               <button
               onClick={() => setIsOpen(false)}
               className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
-              aria-label="Close help chat"
+              aria-label="Close"
               aria-expanded={isOpen}
               aria-controls="ai-chat-interface"
             >

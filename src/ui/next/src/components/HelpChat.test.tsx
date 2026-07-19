@@ -41,7 +41,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
     expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close help chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
   });
 
