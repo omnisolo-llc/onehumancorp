@@ -167,7 +167,7 @@ export default function PricingPage() {
             isAnnual={isAnnual}
             isRecommended={true}
             recommendationText="Suggested for growing stores"
-            features={["3 Agents Limit", "1,000 AI actions / month", "5GB Storage Quota", "100 Products Limit"]}
+            features={["3 Agents Limit", "1,000 AI actions / month", "10GB Storage Quota", "100 Products Limit"]}
             currentPlan={currentPlan}
             loading={loading}
             onManageBilling={handleManageBilling}
