@@ -202,6 +202,23 @@ pub async fn get_tooltips(
         tooltips.insert("help-advanced-toggle-tooltip".to_string(), "Show advanced developer options.".to_string());
         tooltips.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
         tooltips.insert("checkout-pay-tooltip".to_string(), "Click to process your payment.".to_string());
+        tooltips.insert("assistant-nav-tooltip".to_string(), "Talk to your AI Assistant to get things done.".to_string());
+        tooltips.insert("onboarding-nav-tooltip".to_string(), "Set up your workspace and integrations.".to_string());
+        tooltips.insert("triage-nav-tooltip".to_string(), "Review incoming requests and items needing your attention.".to_string());
+        tooltips.insert("inbox-nav-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
+        tooltips.insert("agents-nav-tooltip".to_string(), "Manage your AI workforce.".to_string());
+        tooltips.insert("business_analytics-nav-tooltip".to_string(), "View detailed business reports.".to_string());
+        tooltips.insert("dashboardcampaigns-nav-tooltip".to_string(), "Manage marketing campaigns.".to_string());
+        tooltips.insert("lead_magnet_generator-nav-tooltip".to_string(), "Generate lead magnets.".to_string());
+        tooltips.insert("settings-nav-tooltip".to_string(), "Configure your account settings.".to_string());
+        tooltips.insert("ai_usage_paywall-nav-tooltip".to_string(), "View your AI usage and limits.".to_string());
+        tooltips.insert("calendar-nav-tooltip".to_string(), "Manage your schedule.".to_string());
+        tooltips.insert("langgraph-nav-tooltip".to_string(), "View AI workflows.".to_string());
+        tooltips.insert("visual_workflow-nav-tooltip".to_string(), "Build and manage visual workflows.".to_string());
+        tooltips.insert("agent_protocol-nav-tooltip".to_string(), "Configure agent protocols.".to_string());
+        tooltips.insert("integrations-nav-tooltip".to_string(), "Connect external tools.".to_string());
+        tooltips.insert("cost_dashboard-nav-tooltip".to_string(), "Monitor your spending.".to_string());
+        tooltips.insert("diagnostics-nav-tooltip".to_string(), "System diagnostics.".to_string());
     }
 
     Ok(Json(tooltips))

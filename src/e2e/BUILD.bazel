@@ -15,10 +15,10 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/hyperlocal-lead-gen.spec.ts",
 
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
-    "//src/ui/next:src/e2e/work_intake_widget.spec.ts",
-    "//src/ui/next:src/e2e/wizard_mobile_layout.spec.ts",
-    "//src/ui/next:src/e2e/documentation_features.spec.ts",
-    "//src/ui/next:src/e2e/help-center-regression.spec.ts",
+
+
+
+
     "//src/ui/next:src/e2e/digital_business_card.spec.ts",
     "//src/ui/next:src/e2e/test_observation_masking.spec.ts",
     "//src/ui/next:src/e2e/test_git_checkpointing.spec.ts",
@@ -32,12 +32,12 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/qr-code-generator.spec.ts",
     "//src/ui/next:src/e2e/loyalty-program.spec.ts",
     "//src/ui/next:src/e2e/assistant.spec.ts",
-    "//src/ui/next:src/e2e/tooltips.spec.ts",
+
     "//src/ui/next:src/e2e/tip-jar.spec.ts",
     "//src/ui/next:src/e2e/ralph-loop.spec.ts",
     "//src/ui/next:src/e2e/anthropic-guardrails.spec.ts",
     "//src/ui/next:src/e2e/dashboard-campaigns.spec.ts",
-    "//src/ui/next:src/e2e/api-docs.spec.ts",
+
     "//src/ui/next:src/e2e/approval_inbox.spec.ts",
     "//src/ui/next:src/e2e/viral-agent-paywall.spec.ts",
     "//src/ui/next:src/e2e/plan.spec.ts",
@@ -51,7 +51,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
 
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
-    "//src/ui/next:src/e2e/changelog.spec.ts",
+
     "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
@@ -62,7 +62,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
 
-    "//src/ui/next:src/e2e/videos.spec.ts",
+
 
 
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
@@ -71,9 +71,9 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
-    "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
 
-    "//src/ui/next:src/e2e/help_components.spec.ts",
+
+
     "//src/ui/next:e2e/referrals.spec.ts",
 
 

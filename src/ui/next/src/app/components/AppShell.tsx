@@ -119,35 +119,49 @@ function NavLink({ item }: { item: NavItem }) {
     </Link>
   );
 
-  if (item.href === "/kairos") {
-    return (
-      <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
-        {link}
-      </WithTooltip>
-    );
-  }
+  const tooltipIds: Record<string, string> = {
+    "/kairos": "kairos-nav-link-tooltip",
+    "/dashboard": "dashboard-tooltip",
+    "/changelog": "changelog-nav-tooltip",
+    "/inventory": "inventory-tooltip",
+    "/orders": "orders-tooltip",
+    "/help": "help-nav-tooltip",
+  };
 
-  if (item.href === "/dashboard") {
-    return <WithTooltip id="dashboard-tooltip" defaultText="View your daily sales and overall business health.">{link}</WithTooltip>;
-  }
+  const defaultTexts: Record<string, string> = {
+    "/kairos": "Click here to see what your AI helpers are working on and how they plan.",
+    "/dashboard": "View your daily sales and overall business health.",
+    "/changelog": "See what's new in the latest updates.",
+    "/inventory": "Manage your inventory, prices, and stock levels.",
+    "/orders": "See what customers bought and track order fulfillment.",
+    "/help": "Help Center",
+    "/assistant": "Talk to your AI Assistant to get things done.",
+    "/onboarding": "Set up your workspace and integrations.",
+    "/triage": "Review incoming requests and items needing your attention.",
+    "/inbox": "Keep track of recent customer messages.",
+    "/agents": "Manage your AI workforce.",
+    "/business-analytics": "View detailed business reports.",
+    "/dashboard/campaigns": "Manage marketing campaigns.",
+    "/lead-magnet-generator": "Generate lead magnets.",
+    "/settings": "Configure your account settings.",
+    "/ai-usage-paywall": "View your AI usage and limits.",
+    "/calendar": "Manage your schedule.",
+    "/langgraph": "View AI workflows.",
+    "/visual-workflow": "Build and manage visual workflows.",
+    "/agent-protocol": "Configure agent protocols.",
+    "/integrations": "Connect external tools.",
+    "/cost-dashboard": "Monitor your spending.",
+    "/diagnostics": "System diagnostics.",
+  };
 
-  if (item.href === "/changelog") {
-    return <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest updates.">{link}</WithTooltip>;
-  }
+  const tooltipId = tooltipIds[item.href] || `${item.href.replace(/\//g, "").replace(/-/g, "_") || "home"}-nav-tooltip`;
+  const defaultText = defaultTexts[item.href] || item.label;
 
-  if (item.href === "/inventory") {
-    return <WithTooltip id="inventory-tooltip" defaultText="Manage your inventory, prices, and stock levels.">{link}</WithTooltip>;
-  }
-
-  if (item.href === "/orders") {
-    return <WithTooltip id="orders-tooltip" defaultText="See what customers bought and track order fulfillment.">{link}</WithTooltip>;
-  }
-
-  if (item.href === "/help") {
-    return <WithTooltip id="help-nav-tooltip" defaultText="Help Center">{link}</WithTooltip>;
-  }
-
-  return link;
+  return (
+    <WithTooltip id={tooltipId} defaultText={defaultText}>
+      {link}
+    </WithTooltip>
+  );
 }
 
 export function AppShell({
