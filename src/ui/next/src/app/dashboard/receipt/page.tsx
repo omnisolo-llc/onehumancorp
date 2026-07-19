@@ -10,8 +10,8 @@ export default function SnapReceiptPage() {
 
   // To avoid mock data, we allow the user to input the amount and vendor,
   // or default to something based on the file. In a real app, the backend would OCR this.
-  const [amount, setAmount] = useState<number>(45.20);
-  const [vendor, setVendor] = useState<string>("Home Depot");
+  const [amount, setAmount] = useState<number | "">("");
+  const [vendor, setVendor] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -62,12 +62,12 @@ export default function SnapReceiptPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold font-outfit mb-6 text-gray-900">Snap Receipt</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+      <div className="p-6 rounded-2xl shadow-lg w-full max-w-md glassmorphism">
+        <h1 className="text-2xl font-bold font-outfit mb-6 text-gray-900 dark:text-gray-100">Snap Receipt</h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer relative">
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer relative">
             <input
               type="file"
               accept="image/*"
@@ -82,32 +82,34 @@ export default function SnapReceiptPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Amount (Detected)</label>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Amount (Detected)</label>
             <input
               type="number"
               step="0.01"
               value={amount}
-              onChange={e => setAmount(parseFloat(e.target.value))}
-              className="border p-2 rounded-lg"
+              required
+              onChange={e => setAmount(e.target.value ? parseFloat(e.target.value) : "")}
+              className="glass-control w-full p-3 border border-white/40 dark:border-white/10 text-gray-900 dark:text-gray-100 placeholder-gray-500"
               data-testid="receipt-amount-input"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Vendor (Detected)</label>
+            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Vendor (Detected)</label>
             <input
               type="text"
               value={vendor}
+              required
               onChange={e => setVendor(e.target.value)}
-              className="border p-2 rounded-lg"
+              className="glass-control w-full p-3 border border-white/40 dark:border-white/10 text-gray-900 dark:text-gray-100 placeholder-gray-500"
               data-testid="receipt-vendor-input"
             />
           </div>
 
           <button
             type="submit"
-            disabled={!fileSelected || isUploading}
-            className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-md mt-4 ${fileSelected && !isUploading ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
+            disabled={!fileSelected || isUploading || amount === "" || vendor === ""}
+            className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-md mt-4 min-h-[44px] ${fileSelected && !isUploading && amount !== "" && vendor !== "" ? 'bg-[#0066FF] hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
             data-testid="submit-receipt-btn"
           >
             {isUploading ? 'Processing...' : 'Upload Receipt'}
