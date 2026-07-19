@@ -54,6 +54,21 @@ pub trait CheckpointSaver: Send + Sync {
     fn storage_prefix(&self) -> &'static str {
         "db"
     }
+    /// Compares two checkpoints and returns a formatted diff.
+    #[allow(unused_variables)]
+    async fn diff_checkpoints(&self, from_id: &str, to_id: &str) -> Result<String, String> {
+        Ok(String::new())
+    }
+    /// Forks the workspace from a specific checkpoint into a designated branch.
+    #[allow(unused_variables)]
+    async fn fork_checkpoint(&self, checkpoint_id: &str, branch_name: &str) -> Result<(), String> {
+        Ok(())
+    }
+    /// Prunes/cleans old restore or temporary checkpoint branches.
+    #[allow(unused_variables)]
+    async fn prune_checkpoint_branches(&self, older_than_minutes: u64) -> Result<Vec<String>, String> {
+        Ok(vec![])
+    }
 }
 
 pub struct PgCheckpointer {
@@ -81,6 +96,28 @@ pub struct GitCheckpointer {
 }
 
 impl GitCheckpointer {
+    pub async fn resolve_ref(&self, checkpoint_id: &str) -> Result<String, String> {
+        let refs = vec![
+            Self::safe_tag_name(checkpoint_id),
+            format!("checkpoint-{}", checkpoint_id),
+            checkpoint_id.to_string(),
+        ];
+        for r in refs {
+            let res = Command::new("git")
+                .arg("rev-parse")
+                .arg("--verify")
+                .arg(&r)
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| e.to_string())?;
+            if res.status.success() {
+                return Ok(r);
+            }
+        }
+        Err(format!("Could not resolve checkpoint ID '{}' to any valid git reference.", checkpoint_id))
+    }
+
     fn safe_tag_name(id: &str) -> String {
         format!(
             "checkpoint-{}",
@@ -517,6 +554,141 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         Ok(threads.into_iter().collect())
+    }
+
+    async fn diff_checkpoints(&self, from_id: &str, to_id: &str) -> Result<String, String> {
+        let from_ref = self.resolve_ref(from_id).await?;
+        let to_ref = self.resolve_ref(to_id).await?;
+
+        let res = Command::new("git")
+            .arg("diff")
+            .arg(&from_ref)
+            .arg(&to_ref)
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if res.status.success() {
+            Ok(String::from_utf8_lossy(&res.stdout).into_owned())
+        } else {
+            Err(String::from_utf8_lossy(&res.stderr).into_owned())
+        }
+    }
+
+    /// Forks the workspace from a specific checkpoint into a designated branch.
+    ///
+    /// # Warning
+    /// This method switches branches and executes `git reset --hard HEAD` and `git clean -fdx`,
+    /// which will completely clean the workspace and delete any uncommitted/untracked files.
+    /// It should only be run inside isolated sandboxes or workspaces where untracked files can be discarded.
+    async fn fork_checkpoint(&self, checkpoint_id: &str, branch_name: &str) -> Result<(), String> {
+        let target_ref = self.resolve_ref(checkpoint_id).await?;
+
+        let output = Command::new("git")
+            .arg("checkout")
+            .arg("-B")
+            .arg(branch_name)
+            .arg(&target_ref)
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(format!(
+                "Failed to fork checkpoint: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+
+        let _ = Command::new("git")
+            .arg("reset")
+            .arg("--hard")
+            .arg("HEAD")
+            .current_dir(&self.repo_path)
+            .output()
+            .await;
+
+        let _ = Command::new("git")
+            .arg("clean")
+            .arg("-fdx")
+            .current_dir(&self.repo_path)
+            .output()
+            .await;
+
+        Ok(())
+    }
+
+    async fn prune_checkpoint_branches(&self, older_than_minutes: u64) -> Result<Vec<String>, String> {
+        let current_out = Command::new("git")
+            .arg("rev-parse")
+            .arg("--abbrev-ref")
+            .arg("HEAD")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let current_branch = String::from_utf8_lossy(&current_out.stdout).trim().to_string();
+
+        let branches_out = Command::new("git")
+            .arg("for-each-ref")
+            .arg("--format=%(refname:short)|%(committerdate:unix)")
+            .arg("refs/heads/")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !branches_out.status.success() {
+            return Err(format!(
+                "Failed to list branches: {}",
+                String::from_utf8_lossy(&branches_out.stderr)
+            ));
+        }
+
+        let output_str = String::from_utf8_lossy(&branches_out.stdout);
+        let now_unix = Utc::now().timestamp();
+        let mut pruned = Vec::new();
+
+        for line in output_str.lines() {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() == 2 {
+                let branch_name = parts[0].trim();
+                let time_str = parts[1].trim();
+
+                if (branch_name.starts_with("agent-restore-") || branch_name.starts_with("agent-fork-"))
+                    && branch_name != current_branch
+                {
+                    if let Ok(unix_time) = time_str.parse::<i64>() {
+                        let age_seconds = now_unix - unix_time;
+                        if age_seconds >= (older_than_minutes * 60) as i64 {
+                            let del_out = Command::new("git")
+                                .arg("branch")
+                                .arg("-D")
+                                .arg(branch_name)
+                                .current_dir(&self.repo_path)
+                                .output()
+                                .await
+                                .map_err(|e| e.to_string())?;
+
+                            if del_out.status.success() {
+                                pruned.push(branch_name.to_string());
+                            } else {
+                                tracing::warn!(
+                                    "Failed to delete branch '{}': {}",
+                                    branch_name,
+                                    String::from_utf8_lossy(&del_out.stderr).trim()
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(pruned)
     }
 }
 
@@ -1319,5 +1491,153 @@ mod restore_stash_tests {
         assert!(untracked_file_path.exists());
         let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
         assert_eq!(untracked_content, "untracked work");
+    }
+}
+
+#[cfg(test)]
+mod sota_git_features_tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_diff_checkpoints() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-diff".to_string(),
+            checkpoint_id: "cp-diff-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        // Write a test file
+        let file_path = temp_dir.path().join("diff_test.txt");
+        std::fs::write(&file_path, "original content\n").unwrap();
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Modify the file
+        std::fs::write(&file_path, "modified content\n").unwrap();
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-diff".to_string(),
+            checkpoint_id: "cp-diff-2".to_string(),
+            parent_id: Some("cp-diff-1".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        // Get diff between cp-diff-1 and cp-diff-2
+        let diff = saver.diff_checkpoints("cp-diff-1", "cp-diff-2").await.unwrap();
+
+        assert!(!diff.is_empty());
+        assert!(diff.contains("-original content"));
+        assert!(diff.contains("+modified content"));
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_fork_checkpoint() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-fork".to_string(),
+            checkpoint_id: "cp-fork-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        let file_path = temp_dir.path().join("fork_test.txt");
+        std::fs::write(&file_path, "state 1").unwrap();
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        std::fs::write(&file_path, "state 2").unwrap();
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-fork".to_string(),
+            checkpoint_id: "cp-fork-2".to_string(),
+            parent_id: Some("cp-fork-1".to_string()),
+            data: serde_json::json!({"state": "2"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+
+        // Fork from cp-fork-1 to a new branch agent-fork-test
+        saver.fork_checkpoint("cp-fork-1", "agent-fork-test").await.unwrap();
+
+        // Verify we are on the agent-fork-test branch
+        let output = std::process::Command::new("git")
+            .arg("branch")
+            .arg("--show-current")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        assert_eq!(branch, "agent-fork-test");
+
+        // Verify the file content is at cp-fork-1's state
+        let content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(content, "state 1");
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_prune_branches() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-prune".to_string(),
+            checkpoint_id: "cp-prune-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Create branches that start with agent-restore- and agent-fork-
+        // Note: GitCheckpointer's restore_checkpoint creates an agent-restore-* branch.
+        saver.restore_checkpoint("cp-prune-1").await.unwrap();
+
+        // Verify that the restore branch is created
+        let output = std::process::Command::new("git")
+            .arg("branch")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        let branch_list = String::from_utf8_lossy(&output.stdout);
+        assert!(branch_list.contains("agent-restore-cp-prune-1"));
+
+        // Fork to another branch so the restore branch is not the current branch
+        saver.fork_checkpoint("cp-prune-1", "other-branch").await.unwrap();
+
+        // Now prune branches older than 0 minutes (will prune agent-restore-cp-prune-1)
+        let pruned = saver.prune_checkpoint_branches(0).await.unwrap();
+
+        assert!(pruned.contains(&"agent-restore-cp-prune-1".to_string()));
+
+        // Verify it was deleted from git
+        let output2 = std::process::Command::new("git")
+            .arg("branch")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        let branch_list2 = String::from_utf8_lossy(&output2.stdout);
+        assert!(!branch_list2.contains("agent-restore-cp-prune-1"));
     }
 }
