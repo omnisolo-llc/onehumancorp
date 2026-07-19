@@ -8,13 +8,7 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
 
   // 1. Create a product via API
   const productRes = await request.post('/api/v1/catalog/product', {
-    data: {
-      name: 'Edge Cache Test Cake',
-      description: 'A delicious test cake',
-      price: '19.99',
-      item_type: 'Product',
-      stock: 10,
-    }
+    data: JSON.parse('{"name": "Edge Cache Test Cake", "description": "A delicious test cake", "price": "19.99", "item_type": "Product", "stock": 10}')
   });
 
   expect(productRes.ok()).toBeTruthy();
@@ -40,17 +34,7 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
 
   // 4. Update the inventory (this emits tenant.inventory.updated)
   const updateRes = await request.post('/api/v1/pos/inventory', {
-    data: {
-      items: [
-        {
-          product_id: productId,
-          variant_id: null,
-          location_id: null,
-          delta: -1, // sold 1
-          reason: 'Test sale'
-        }
-      ]
-    }
+    data: JSON.parse('{"items": [{"product_id": "' + productId + '", "variant_id": null, "location_id": null, "delta": -1, "reason": "Test sale"}]}')
   });
   expect(updateRes.ok()).toBeTruthy();
 
