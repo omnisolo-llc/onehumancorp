@@ -1,20 +1,16 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) => {
+test('storefront_storefront_edge_caching', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
 
   const tenantId = adminUser.tenantId;
 
   // 1. Create a product via API
+  const productDataRes = await request.get('/api/v1/catalog/product/template');
+  const payloadData = await productDataRes.json();
   const productRes = await request.post('/api/v1/catalog/product', {
-    data: {
-      name: 'Edge Cache Test Cake',
-      description: 'A delicious test cake',
-      price: '19.99',
-      item_type: 'Product',
-      stock: 10,
-    }
+    data: payloadData
   });
 
   expect(productRes.ok()).toBeTruthy();
@@ -39,18 +35,10 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
   expect(cacheStatus).toBe('HIT');
 
   // 4. Update the inventory (this emits tenant.inventory.updated)
+  const inventoryPayload = await (await request.get('/api/v1/pos/inventory/template')).json();
+  inventoryPayload.items[0].product_id = productId;
   const updateRes = await request.post('/api/v1/pos/inventory', {
-    data: {
-      items: [
-        {
-          product_id: productId,
-          variant_id: null,
-          location_id: null,
-          delta: -1, // sold 1
-          reason: 'Test sale'
-        }
-      ]
-    }
+    data: inventoryPayload
   });
   expect(updateRes.ok()).toBeTruthy();
 

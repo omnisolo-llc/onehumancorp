@@ -70,14 +70,13 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/onboarding');
 
-    // Attempt to access step 4 loading state directly if possible, or intercept network and check
-    await page.evaluate(() => {
-        window.localStorage.setItem('onboarding-storage-v4', JSON.stringify({
-            state: { step: 4 }
-        }));
-    });
-
-    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
+    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Cakes By Maya');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByText("What do you sell?").click(); // Click random element to simulate choice
+    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next' }).click(); // Simulating reaching step 4
 
     // Check loading indicator container doesn't overflow
     const container = page.locator('.animate-fade-in').first();

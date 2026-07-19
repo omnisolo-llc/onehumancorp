@@ -47,14 +47,14 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
 
     test('embed API endpoint returns the work intake HTML and submit works', async ({ request }) => {
         // Test GET endpoint
-        const response = await request.get('/api/v1/growth/work-intake/embed?tenant=my-business&theme=light&title=TestRequest');
+        const response = await request.get('/api/v1/growth/work-intake/embed?tenant=my-business&theme=light&title=Inquiry');
         expect(response.ok()).toBeTruthy();
 
         const html = await response.text();
 
         // Assert the HTML contains the correct structure and elements
         expect(html).toContain('<!DOCTYPE html>');
-        expect(html).toContain('TestRequest');
+        expect(html).toContain('Inquiry');
         expect(html).toContain('Send Request');
 
         // Ensure the referral growth loop is intact in the footer
@@ -63,12 +63,11 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         expect(html).toContain('/onboarding?ref=my-business');
 
         // Test POST submit endpoint
+        const formDataRes = await request.get('/api/v1/work-intake/template');
+        const formData = await formDataRes.json();
+
         const submitResponse = await request.post('/api/v1/work-intake/submit?tenant=my-business', {
-           data: {
-             name: 'Playwright Test',
-             email: 'test@example.com',
-             details: 'Test details'
-           },
+           data: formData,
            headers: {
              'Content-Type': 'application/x-www-form-urlencoded'
            }
@@ -78,7 +77,7 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
 
         const submitHtml = await submitResponse.text();
         expect(submitHtml).toContain('Request Received!');
-        expect(submitHtml).toContain('Thanks, Playwright Test!');
+        expect(submitHtml).toContain('Thanks, ' + formData.name + '!');
 
         // Confirm viral loop is still present on success screen
         expect(submitHtml).toContain('Powered by');
