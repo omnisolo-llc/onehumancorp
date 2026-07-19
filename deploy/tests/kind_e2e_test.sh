@@ -61,17 +61,15 @@ require_tool() {
 ensure_image_loaded_in_kind() {
   local image="$1"
   log "Ensuring image ${image} is loaded into Kind cluster ..."
-  if ! docker image inspect "${image}" >/dev/null 2>&1; then
-    log "Image ${image} not found locally. Pulling ..."
-    docker pull "${image}"
-  fi
-  if ! kind load docker-image "${image}" --name "${CLUSTER_NAME}"; then
-    # Docker's containerd image store can retain a multi-platform OCI index
-    # while only the native child manifest is present. `kind load` then asks
-    # containerd to import missing platforms. Pulling inside the node resolves
-    # the tag for the node's platform and avoids that lossy archive boundary.
-    log "Docker archive for ${image} is incomplete; pulling it inside the Kind node ..."
-    docker exec "${CLUSTER_NAME}-control-plane" crictl pull "${image}"
+  # Always attempt to pull inside the Kind node directly first to avoid Docker multi-platform archive issues
+  log "Pulling image directly inside the Kind node using crictl ..."
+  if ! docker exec "${CLUSTER_NAME}-control-plane" crictl pull "${image}" 2>/dev/null; then
+    log "crictl pull failed; falling back to host pull and kind load ..."
+    if ! docker image inspect "${image}" >/dev/null 2>&1; then
+      log "Image ${image} not found locally. Pulling ..."
+      docker pull "${image}"
+    fi
+    kind load docker-image "${image}" --name "${CLUSTER_NAME}"
   fi
 }
 
@@ -198,7 +196,7 @@ log "Creating Kind cluster '${CLUSTER_NAME}' ..."
 export KUBECONFIG="$(mktemp "${TEST_TMPDIR:-/tmp}/kind-kubeconfig.XXXXXX")"
 chmod 600 "${KUBECONFIG}"
 
-kind create cluster --name "${CLUSTER_NAME}" --wait 120s
+kind create cluster --name "${CLUSTER_NAME}" --image kindest/node:v1.29.2 --wait 120s
 
 log "Waiting for cluster nodes ..."
 kubectl wait --for=condition=Ready node --all --timeout=120s
