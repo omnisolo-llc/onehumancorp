@@ -61,10 +61,10 @@ export function UnlockProFeaturesWidget() {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white font-outfit text-xl flex items-center gap-2">
-            <span className="text-2xl">✨</span> Referral Progress
+            <span className="text-2xl">✨</span> Unlock Pro Features
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-            Track confirmed invites. Any associated reward must be verified by the billing service.
+            Invite {targetInvites} friends to unlock Advanced AI Analytics permanently.
           </p>
         </div>
         <div className="bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-bold px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
@@ -90,9 +90,9 @@ export function UnlockProFeaturesWidget() {
       {isUnlocked ? (
         <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 text-center">
           <div className="text-emerald-500 text-3xl mb-2">🎉</div>
-          <h4 className="font-bold text-emerald-900 dark:text-emerald-300 mb-1">Invite target reached</h4>
+          <h4 className="font-bold text-emerald-900 dark:text-emerald-300 mb-1">Pro Features Unlocked!</h4>
           <p className="text-sm text-emerald-700 dark:text-emerald-400">
-            Billing verification is required before any Pro entitlement is applied.
+            Thank you for sharing OHC! You now have permanent access to Advanced AI Analytics.
           </p>
         </div>
       ) : (

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from "../components/AppShell";
-import { useProPlan } from '../components/useProPlan';
 
 export default function LeadMagnetGeneratorPage() {
   const router = useRouter();
@@ -15,12 +14,13 @@ export default function LeadMagnetGeneratorPage() {
   const [copied, setCopied] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -42,8 +42,12 @@ export default function LeadMagnetGeneratorPage() {
   };
 
   const handleUpgrade = () => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('has_pro', 'true');
+    }
+    setHasPro(true);
+    setRemoveBranding(true);
     setShowSoftPaywall(false);
-    router.push('/pricing');
   };
 
   return (

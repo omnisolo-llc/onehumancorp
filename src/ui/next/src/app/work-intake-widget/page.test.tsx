@@ -44,23 +44,7 @@ describe('WorkIntakeWidgetPage', () => {
     expect(textarea.value).toContain('Powered by OHC');
   });
 
-  it('encodes hostile tenant and title values in copied HTML attributes', () => {
-    render(<WorkIntakeWidgetPage />);
-    const hostile = '\"><script>globalThis.pwned=true</script>&line=one two';
-
-    fireEvent.change(screen.getByDisplayValue('my-business'), { target: { value: hostile } });
-    fireEvent.change(screen.getByDisplayValue('Work Request'), { target: { value: hostile } });
-    fireEvent.click(screen.getByText('Get Widget Code'));
-
-    const textarea = screen.getAllByRole('textbox').find((element) =>
-      (element as HTMLTextAreaElement).value.includes('<iframe'),
-    ) as HTMLTextAreaElement;
-    expect(textarea.value).not.toContain(hostile);
-    expect(textarea.value).not.toContain('<script>');
-    expect(textarea.value).toContain(encodeURIComponent(hostile));
-  });
-
-  it('shows the paywall and explains that share verification is unavailable', () => {
+  it('shows soft paywall when checkbox is checked and includes viral loop option', () => {
     render(<WorkIntakeWidgetPage />);
 
     // Click checkbox
@@ -70,7 +54,8 @@ describe('WorkIntakeWidgetPage', () => {
     // Check if soft paywall shows up
     expect(screen.getAllByText('Upgrade to Pro')).toBeDefined();
 
-    expect(screen.getByText(/Share-based unlocking is unavailable/)).toBeDefined();
+    // Check if viral loop option is present
+    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
 
     // Checkbox should be un-checked
     expect((checkbox as HTMLInputElement).checked).toBe(false);

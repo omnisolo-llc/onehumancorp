@@ -1,7 +1,6 @@
 "use client";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralROICalculatorPage() {
@@ -11,7 +10,7 @@ export default function ViralROICalculatorPage() {
   const [currency, setCurrency] = useState('$');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -21,6 +20,7 @@ export default function ViralROICalculatorPage() {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'My Business';
       setTenantId(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 

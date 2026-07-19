@@ -56,12 +56,8 @@ rust_test(
     name = "server_auth_unit_test",
     size = "small",
     crate = ":server_auth",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
     deps = [
         "@crates//:rcgen",
-        "@crates//:tempfile",
         "@crates//:tower-0.5.3",
     ],
     edition = "2024",

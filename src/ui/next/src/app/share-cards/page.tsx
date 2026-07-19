@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useProPlan } from '../components/useProPlan';
 
 export default function ShareCardsPage() {
   const router = useRouter();
@@ -13,13 +12,16 @@ export default function ShareCardsPage() {
   const [shareLink, setShareLink] = useState('');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const { hasPro, claimTrial, claimError } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [trialStatus, setTrialStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     setShareLink(`${origin}/onboarding?ref=${tenant}`);
+    if (typeof localStorage !== 'undefined') {
+        setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
   }, []);
 
   const handleToggleBranding = () => {
@@ -30,13 +32,16 @@ export default function ShareCardsPage() {
     setRemoveBranding(!removeBranding);
   };
 
-  const claimTrialExtension = async () => {
+  const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
+    }
+    setHasPro(true);
     setShowSoftPaywall(false);
-    setTrialStatus('Pro access activated.');
+    setTrialStatus('Your 7-day Pro trial has been activated.');
     setRemoveBranding(true);
   };
 
@@ -71,7 +76,6 @@ export default function ShareCardsPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
-        {claimError && <p className="text-sm text-red-600" role="status">{claimError}</p>}
         {/* Editor Settings */}
         <section className="w-full md:w-1/3 flex flex-col gap-6">
             {trialStatus && (
@@ -264,7 +268,7 @@ export default function ShareCardsPage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Share on X to get 7 Days Free
             </button>
           </div>
         </div>

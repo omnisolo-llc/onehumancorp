@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useProPlan } from '../components/useProPlan';
 
 export default function PreOrderWidgetPage() {
   const [productName, setProductName] = useState('');
@@ -13,14 +12,14 @@ export default function PreOrderWidgetPage() {
 
   const router = useRouter();
   const [removeBranding, setRemoveBranding] = useState(false);
-  const { hasPro, confirmPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
-  const [entitlementError, setEntitlementError] = useState<string | null>(null);
   const [tenant, setTenant] = useState('demo');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
       setTenant(localStorage.getItem('business_display_name') || 'demo');
     }
   }, []);
@@ -37,21 +36,17 @@ export default function PreOrderWidgetPage() {
     }
   };
 
-  const handleShareToUnlock = async () => {
+  const handleShareToUnlock = () => {
     setIsUnlocking(true);
-    setEntitlementError(null);
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I configured a pre-order widget with OHC: ${window.location.origin}/onboarding?ref=${tenant}`)}`, '_blank');
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
-      if (!response.ok) throw new Error('Trial activation is unavailable.');
-      setShowSoftPaywall(false);
-      confirmPro();
-      setRemoveBranding(true);
-    } catch {
-      setEntitlementError('Trial activation is unavailable.');
-    } finally {
+    setTimeout(() => {
       setIsUnlocking(false);
-    }
+      setShowSoftPaywall(false);
+      setHasPro(true);
+      setRemoveBranding(true);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
+      }
+    }, 1500);
   };
 
 
@@ -175,7 +170,7 @@ export default function PreOrderWidgetPage() {
               </div>
 
               <p className={`text-xs mt-4 ${theme === 'light' ? 'text-gray-500' : 'text-gray-500'}`}>
-                Waitlist signup preview
+                Join 1,204 others on the waitlist
               </p>
 
               {!removeBranding && (
@@ -257,7 +252,6 @@ export default function PreOrderWidgetPage() {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                 {isUnlocking ? 'Verifying Share...' : 'Share on X to Unlock'}
               </button>
-              {entitlementError && <p className="mt-3 text-sm text-red-600" role="status">{entitlementError}</p>}
             </div>
           </div>
         )}

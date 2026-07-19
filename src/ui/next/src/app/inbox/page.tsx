@@ -1,6 +1,7 @@
 "use client";
+import DOMPurify from 'isomorphic-dompurify';
 
-import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
@@ -28,73 +29,31 @@ function badgeTone(status?: string) {
 }
 
 
-function normalizeExternalHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function textWithLineBreaks(value: string, keyPrefix: string): ReactNode[] {
-  return value.split("\n").flatMap((line, index) => [
-    index > 0 ? <br key={`${keyPrefix}-break-${index}`} /> : null,
-    <Fragment key={`${keyPrefix}-line-${index}`}>{line}</Fragment>,
-  ]);
-}
-
-function renderMessageContent(content: string): ReactNode {
+function renderMessageContent(content: string) {
   if (!content) return "Empty message";
 
-  const tokenPattern = /\[Media:\s*(.+?)\s+-\s+(https?:\/\/[^\]\s]+)\]|!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  let tokenIndex = 0;
+  // Basic XSS mitigation - encode HTML tags
+  let safeContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  for (const match of content.matchAll(tokenPattern)) {
-    const offset = match.index ?? cursor;
-    nodes.push(...textWithLineBreaks(content.slice(cursor, offset), `text-${tokenIndex}`));
-
-    const mediaType = match[1]?.trim();
-    const rawUrl = match[2] ?? match[4];
-    const url = rawUrl ? normalizeExternalHttpUrl(rawUrl) : null;
-    const alt = mediaType ?? match[3] ?? "Attached image";
-
-    if (!url) {
-      nodes.push(...textWithLineBreaks(match[0], `invalid-${tokenIndex}`));
-    } else if (!mediaType || mediaType.startsWith("image/")) {
-      nodes.push(
-        <span className="my-2 block" key={`image-${tokenIndex}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- customer media uses an external, runtime URL */}
-          <img
-            src={url}
-            alt={alt}
-            className="h-auto max-h-[300px] max-w-full rounded-md shadow-sm"
-          />
-        </span>,
-      );
-    } else {
-      nodes.push(
-        <span className="my-2 block" key={`attachment-${tokenIndex}`}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 underline"
-          >
-            Attached Media ({mediaType})
-          </a>
-        </span>,
-      );
+  // Format Twilio Media tags e.g. [Media: image/jpeg - https://example.com/image.jpg]
+  safeContent = safeContent.replace(/\[Media:\s*([^-]+?)\s*-\s*(https?:\/\/[^\]]+)\]/g, (match, type, url) => {
+    if (type.startsWith('image/')) {
+      // url is sanitized via DOMPurify below
+      return `<div class="my-2"><img src="${url}" alt="${type}" class="max-w-full h-auto rounded-md shadow-sm" style="max-height: 300px;" /></div>`;
     }
+    return `<div class="my-2"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">Attached Media (${type})</a></div>`;
+  });
 
-    cursor = offset + match[0].length;
-    tokenIndex += 1;
-  }
+  // Format standard Markdown images e.g. ![Alt text](https://example.com/image.jpg)
+  safeContent = safeContent.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (match, alt, url) => {
+    return `<div class="my-2"><img src="${url}" alt="${alt}" class="max-w-full h-auto rounded-md shadow-sm" style="max-height: 300px;" /></div>`;
+  });
 
-  nodes.push(...textWithLineBreaks(content.slice(cursor), `text-${tokenIndex}`));
-  return nodes;
+  // Format basic line breaks
+  safeContent = safeContent.replace(/\n/g, '<br />');
+
+  // Sanitize the final HTML using DOMPurify
+  return DOMPurify.sanitize(safeContent);
 }
 
 function formatStatus(status?: string) {
@@ -423,13 +382,13 @@ function InboxWorkspace({
                     )}
                   </div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
+                    <div dangerouslySetInnerHTML={{ __html: renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message") }} />
                   </div>
                 </div>
                 <div className="mb-4">
                   <div className="app-metric-label">Draft Reply</div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
+                    <div dangerouslySetInnerHTML={{ __html: renderMessageContent(selected.draft_reply || "No draft reply stored for this message.") }} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

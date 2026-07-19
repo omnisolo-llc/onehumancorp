@@ -3,22 +3,10 @@
 import { useState, useEffect } from "react";
 import { AppShell } from "../components/AppShell";
 
-type CatalogProduct = {
-  id: string;
-  title: string;
-  price_cents: number;
-  image_url?: string | null;
-};
 
-type ImportedProduct = {
-  id: string;
-  name: string;
-  price: string;
-  imageUrl: string | null;
-};
 
 export default function ProductsPage() {
-  const [importedProducts, setImportedProducts] = useState<ImportedProduct[]>([]);
+  const [importedProducts, setImportedProducts] = useState<any[]>([]);
   useEffect(() => {
     fetch('/api/v1/catalog/products')
       .then(res => {
@@ -27,20 +15,19 @@ export default function ProductsPage() {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setImportedProducts((data as CatalogProduct[]).map((p) => ({
-            id: p.id,
-            name: p.title,
-            price: "$" + (p.price_cents / 100).toFixed(2),
-            imageUrl: p.image_url ?? null,
-          })));
+            setImportedProducts(data.map(p => ({
+                name: p.title,
+                price: "$" + (p.price_cents / 100).toFixed(2),
+                status: "Active"
+            })));
         }
       })
       .catch(() => setImportedProducts([]));
   }, []);
-  const [selectedProduct, setSelectedProduct] = useState<ImportedProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<{ name: string; price: string; status: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
-  const handleGenerateQR = (product: ImportedProduct) => {
+  const handleGenerateQR = (product: { name: string; price: string; status: string }) => {
     setSelectedProduct(product);
     setIsQRModalOpen(true);
   };
@@ -52,8 +39,7 @@ export default function ProductsPage() {
 
   const downloadQR = () => {
     if (!selectedProduct) return;
-    const checkoutUrl = `https://ohc.app/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(checkoutUrl)}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`https://ohc.app/checkout?product=${encodeURIComponent(selectedProduct.name)}`)}`;
     const link = document.createElement('a');
     link.href = qrUrl;
     link.download = `QR_Code_${selectedProduct.name.replace(/\s+/g, '_')}.png`;
@@ -82,19 +68,10 @@ export default function ProductsPage() {
         </div>
         <div className="app-list">
           {importedProducts.map((product) => (
-            <div key={product.id} className="app-list-item flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {product.imageUrl && (
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="h-14 w-14 rounded-lg object-cover"
-                  />
-                )}
-                <div>
-                  <div className="app-list-title">{product.name}</div>
-                  <div className="app-list-subtitle">{product.price}</div>
-                </div>
+            <div key={product.name} className="app-list-item flex items-center justify-between">
+              <div>
+                <div className="app-list-title">{product.name}</div>
+                <div className="app-list-subtitle">{product.price}</div>
               </div>
               <div className="flex items-center gap-4">
                 <button
@@ -104,6 +81,7 @@ export default function ProductsPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
                   Generate QR Code
                 </button>
+                <span className="app-badge good">{product.status}</span>
               </div>
             </div>
           ))}
@@ -132,7 +110,7 @@ export default function ProductsPage() {
 
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`https://ohc.app/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`https://ohc.app/checkout?product=${encodeURIComponent(selectedProduct.name)}`)}`}
                   alt={`QR Code for ${selectedProduct.name}`}
                   className="w-48 h-48 object-contain"
                 />

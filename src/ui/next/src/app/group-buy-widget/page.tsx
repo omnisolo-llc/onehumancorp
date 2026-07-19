@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import Link from 'next/link';
@@ -16,7 +15,7 @@ export default function GroupBuyWidgetPage() {
   const [timeLimit, setTimeLimit] = useState('24'); // Hours
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [hideBranding, setHideBranding] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -26,6 +25,7 @@ export default function GroupBuyWidgetPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Group Buy Widget Builder | OHC";
   }, []);
@@ -227,14 +227,14 @@ export default function GroupBuyWidgetPage() {
                       Unlock Progress
                     </span>
                     <span className={`text-sm font-bold ${theme === 'dark' ? 'text-pink-400' : 'text-pink-600'}`}>
-                      0 / {requiredBuyers || 5} Buyers (Preview)
+                      1 / {requiredBuyers || 5} Buyers
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2 overflow-hidden">
-                    <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-3 rounded-full" style={{ width: '0%' }}></div>
+                    <div className="bg-gradient-to-r from-pink-500 to-rose-500 h-3 rounded-full" style={{ width: `${(1 / parseInt(requiredBuyers || '5')) * 100}%` }}></div>
                   </div>
                   <div className={`text-xs text-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Configured duration: {timeLimit || 24} hours
+                    ⏳ {timeLimit || 24} hours left to unlock deal
                   </div>
                 </div>
 

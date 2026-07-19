@@ -1,35 +1,4 @@
 {{- $backendEnv := default dict .Values.backend.env -}}
-{{- $grpcTls := default dict .Values.backend.grpcTls -}}
-{{- $grpc := default dict .Values.backend.grpc -}}
-{{- $grpcPort := default 8081 $grpc.port -}}
-{{- $setup := default dict .Values.backend.setup -}}
-{{- $auth := default dict .Values.backend.auth -}}
-{{- $agentAuth := default dict .Values.backend.agentAuth -}}
-{{- $probes := default dict .Values.backend.probes -}}
-{{- $startupProbe := default dict (get $probes "startup") -}}
-{{- $grpcTlsSecret := default "" $grpcTls.existingSecret -}}
-{{- $setupSecret := default "" $setup.existingSecret -}}
-{{- $authSecret := default "" $auth.existingSecret -}}
-{{- $agentAuthSecret := default "" $agentAuth.existingSecret -}}
-{{- $standaloneMode := eq (toString (default "false" (get $backendEnv "OHC_STANDALONE_MODE"))) "true" -}}
-{{- if and (not $standaloneMode) (empty $grpcTlsSecret) -}}
-{{- fail "backend.grpcTls.existingSecret is required when OHC_STANDALONE_MODE is not true" -}}
-{{- end -}}
-{{- if and (not $standaloneMode) (empty $authSecret) -}}
-{{- fail "backend.auth.existingSecret is required in cloud mode" -}}
-{{- end -}}
-{{- if and (not $standaloneMode) (or (hasKey $backendEnv "JWT_SECRET") (hasKey $backendEnv "JWT_SECRET_FILE")) -}}
-{{- fail "backend.env.JWT_SECRET and backend.env.JWT_SECRET_FILE are not supported in cloud mode; use backend.auth.existingSecret" -}}
-{{- end -}}
-{{- if and $standaloneMode (empty $agentAuthSecret) -}}
-{{- fail "backend.agentAuth.existingSecret is required in standalone mode" -}}
-{{- end -}}
-{{- if or (hasKey $backendEnv "OHC_AGENT_TOKEN") (hasKey $backendEnv "OHC_AGENT_TOKEN_FILE") (hasKey $backendEnv "OHC_AGENT_AUTH_KEY") (hasKey $backendEnv "OHC_AGENT_AUTH_KEY_FILE") -}}
-{{- fail "backend.env.OHC_AGENT_TOKEN, backend.env.OHC_AGENT_TOKEN_FILE, backend.env.OHC_AGENT_AUTH_KEY, and backend.env.OHC_AGENT_AUTH_KEY_FILE are not supported; use backend.agentAuth.existingSecret" -}}
-{{- end -}}
-{{- if and (hasKey $backendEnv "OHC_GRPC_PORT") (ne (toString (get $backendEnv "OHC_GRPC_PORT")) (toString $grpcPort)) -}}
-{{- fail "backend.env.OHC_GRPC_PORT must match backend.grpc.port" -}}
-{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -48,14 +17,7 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
-        {{- include "ohc.selectorLabels" . | nindent 8 }}
     spec:
-      automountServiceAccountToken: false
-      securityContext:
-        fsGroup: 1000
-        fsGroupChangePolicy: OnRootMismatch
-        seccompProfile:
-          type: RuntimeDefault
       containers:
         - name: backend
           image: {{ .Values.backend.image }}
@@ -71,20 +33,10 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            {{- if $grpcTlsSecret }}
-            - name: grpc-tls
-              mountPath: /etc/ohc/grpc-tls
-              readOnly: true
-            {{- end }}
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           ports:
-            - name: http
-              containerPort: {{ .Values.backend.service.port }}
-            {{- if not $standaloneMode }}
-            - name: grpc
-              containerPort: {{ $grpcPort }}
-            {{- end }}
+            - containerPort: {{ .Values.backend.service.port }}
           env:
             - name: LOG_FORMAT
               value: "json"
@@ -94,10 +46,6 @@ spec:
               value: "{{ .Values.backend.service.port }}"
             - name: OHC_PORT
               value: "{{ .Values.backend.service.port }}"
-            {{- if not (hasKey $backendEnv "OHC_GRPC_PORT") }}
-            - name: OHC_GRPC_PORT
-              value: "{{ $grpcPort }}"
-            {{- end }}
             {{- if and .Values.valkey.enabled (not (hasKey $backendEnv "REDIS_ADDR")) }}
             - name: REDIS_ADDR
               value: {{ include "ohc.valkey.addr" . | quote }}
@@ -119,28 +67,6 @@ spec:
               value: "{{ .Values.multiTenant.enabled }}"
             - name: OHC_HEADLESS
               value: "{{ .Values.backend.headless }}"
-            {{- if and $setupSecret (not (hasKey $backendEnv "OHC_SETUP_TOKEN")) (not (hasKey $backendEnv "OHC_SETUP_TOKEN_FILE")) }}
-            - name: OHC_SETUP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $setupSecret | quote }}
-                  key: token
-                  optional: true
-            {{- end }}
-            {{- if $grpcTlsSecret }}
-            {{- if not (hasKey $backendEnv "OHC_GRPC_TLS_CERT_PATH") }}
-            - name: OHC_GRPC_TLS_CERT_PATH
-              value: /etc/ohc/grpc-tls/tls.crt
-            {{- end }}
-            {{- if not (hasKey $backendEnv "OHC_GRPC_TLS_KEY_PATH") }}
-            - name: OHC_GRPC_TLS_KEY_PATH
-              value: /etc/ohc/grpc-tls/tls.key
-            {{- end }}
-            {{- if not (hasKey $backendEnv "OHC_GRPC_CLIENT_CA_PATH") }}
-            - name: OHC_GRPC_CLIENT_CA_PATH
-              value: /etc/ohc/grpc-tls/ca.crt
-            {{- end }}
-            {{- end }}
             {{- range $name, $value := $backendEnv }}
             - name: {{ $name }}
               value: {{ $value | quote }}
@@ -149,32 +75,14 @@ spec:
             - name: OHC_CORE_URL
               value: "http://{{ .Release.Name }}-ohc-core:{{ .Values.ohcCore.service.port }}"
             {{- end }}
-            {{- if and $authSecret (not (hasKey $backendEnv "JWT_SECRET")) (not (hasKey $backendEnv "JWT_SECRET_FILE")) }}
+            {{- if not (hasKey $backendEnv "JWT_SECRET") }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ $authSecret | quote }}
+                  name: {{ .Release.Name }}-backend-secret
                   key: jwtSecret
+                  optional: true
             {{- end }}
-            {{- if $agentAuthSecret }}
-            - name: OHC_AGENT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $agentAuthSecret | quote }}
-                  key: agentToken
-            - name: OHC_AGENT_AUTH_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $agentAuthSecret | quote }}
-                  key: authKey
-            {{- end }}
-          startupProbe:
-            httpGet:
-              path: /healthz
-              port: {{ .Values.backend.service.port }}
-            failureThreshold: {{ default 60 (get $startupProbe "failureThreshold") }}
-            periodSeconds: {{ default 5 (get $startupProbe "periodSeconds") }}
-            timeoutSeconds: {{ default 2 (get $startupProbe "timeoutSeconds") }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -190,16 +98,3 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if $grpcTlsSecret }}
-        - name: grpc-tls
-          secret:
-            secretName: {{ $grpcTlsSecret | quote }}
-            defaultMode: 0440
-            items:
-              - key: tls.crt
-                path: tls.crt
-              - key: tls.key
-                path: tls.key
-              - key: ca.crt
-                path: ca.crt
-        {{- end }}

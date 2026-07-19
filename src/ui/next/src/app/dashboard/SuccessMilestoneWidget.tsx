@@ -6,7 +6,6 @@ export function SuccessMilestoneWidget() {
   const [milestone, setMilestone] = useState<{ title: string; subtitle: string; shareText: string; reward: string } | null>(null);
   const [isShared, setIsShared] = useState(false);
   const [tenantId, setTenantId] = useState("default");
-  const [status, setStatus] = useState<"loading" | "ready" | "empty" | "error">("loading");
 
   useEffect(() => {
     let currentTenant = "default";
@@ -16,24 +15,16 @@ export function SuccessMilestoneWidget() {
     }
 
     fetch(`/api/v1/growth/milestone?tenant_id=${encodeURIComponent(currentTenant)}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Milestone request failed");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        if (data && !data.error && typeof data.title === "string" && typeof data.subtitle === "string" && typeof data.shareText === "string" && typeof data.reward === "string") {
+        if (data && !data.error && data.title) {
           setMilestone(data);
-          setStatus("ready");
-        } else {
-          setStatus("empty");
         }
       })
-      .catch(() => setStatus("error"));
+      .catch(err => console.error("Failed to fetch milestone", err));
   }, []);
 
-  if (status === "loading") return <p className="mb-6 text-sm text-gray-500">Loading milestone…</p>;
-  if (status === "error") return <p className="mb-6 text-sm text-red-600">Milestone data is unavailable.</p>;
-  if (status === "empty" || !milestone) return <p className="mb-6 text-sm text-gray-500">No milestone is available yet.</p>;
+  if (!milestone) return null;
 
   const referralLink = `/onboarding?ref=${tenantId}&source=milestone_share`;
   const fullShareText = `${milestone.shareText} https://ohc.app${referralLink}\n\n⚡ Powered by OHC`;
@@ -73,7 +64,7 @@ export function SuccessMilestoneWidget() {
           <div className="app-list-subtitle text-gray-700 dark:text-gray-300 font-medium mt-1">{milestone.subtitle}</div>
         </div>
         <div className="flex items-center gap-2 px-4 py-1.5 bg-green-100 dark:bg-green-900/30 rounded-full border border-green-200 dark:border-green-800 shadow-sm">
-          <span className="text-sm font-bold text-green-700 dark:text-green-400">Available reward: {milestone.reward}</span>
+          <span className="text-sm font-bold text-green-700 dark:text-green-400">{milestone.reward}</span>
         </div>
       </div>
       <div className="app-panel-body pt-5">
@@ -93,7 +84,7 @@ export function SuccessMilestoneWidget() {
             {isShared ? (
               <><span>✓</span> Copied to Clipboard!</>
             ) : (
-              <><span>🔗</span> Copy Share Text</>
+              <><span>🔗</span> Copy & Share to Unlock</>
             )}
           </button>
 

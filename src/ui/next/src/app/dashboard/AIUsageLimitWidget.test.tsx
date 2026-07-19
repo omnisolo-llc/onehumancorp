@@ -21,11 +21,11 @@ describe('AIUsageLimitWidget', () => {
     });
 
     // Mock fetch for the API call
-    global.fetch = vi.fn((url: string) => Promise.resolve(
-      url.includes('department-tier-usage')
-        ? { ok: true, json: () => Promise.resolve({ departments: [{ actions_used: 85, action_limit: 100 }] }) }
-        : { ok: true, json: () => Promise.resolve({ referral_link: 'https://ohc.app/onboarding?ref=verified' }) },
-    )) as any;
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ departments: [{ actions_used: 85, action_limit: 100 }] }),
+      })
+    ) as any;
   });
 
   afterEach(() => {
@@ -41,7 +41,7 @@ describe('AIUsageLimitWidget', () => {
     });
     expect(screen.getByText(/\/ 100/)).toBeDefined();
     expect(screen.getByText(/Upgrade to Pro \(Unlimited\)/)).toBeDefined();
-    expect(screen.getByText(/Generate Referral Link/)).toBeDefined();
+    expect(screen.getByText(/Share on X to get \+50 Actions/)).toBeDefined();
   });
 
   it('generates link and copies it', async () => {
@@ -51,8 +51,10 @@ describe('AIUsageLimitWidget', () => {
       expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
     });
 
-    const generateBtn = screen.getByText(/Generate Referral Link/);
+    const generateBtn = screen.getByText(/Share on X to get \+50 Actions/);
     fireEvent.click(generateBtn);
+
+    expect(screen.getByText(/Generating.../)).toBeDefined();
 
     await waitFor(() => {
       expect(screen.getByText(/Copy Link/)).toBeDefined();
@@ -62,15 +64,22 @@ describe('AIUsageLimitWidget', () => {
     fireEvent.click(copyBtn);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      'https://ohc.app/onboarding?ref=verified'
+      expect.stringContaining('/onboarding?ref=test-tenant&source=ai_limit_paywall')
     );
 
     expect(screen.getByText(/Copied Link!/)).toBeDefined();
 
-    expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    await waitFor(() => {
+        expect(screen.getAllByText(/35/).length).toBeGreaterThan(0);
+    }, { timeout: 2000 });
+
+    await waitFor(() => {
+        expect(screen.queryByText(/Copied Link!/)).toBeNull();
+        expect(screen.getByText(/Copy Link/)).toBeDefined();
+    }, { timeout: 2500 });
   });
 
-  it('opens X share intent without changing recorded usage', async () => {
+  it('opens X share intent and updates usage', async () => {
     render(<AIUsageLimitWidget />);
 
     await waitFor(() => {
@@ -79,7 +88,7 @@ describe('AIUsageLimitWidget', () => {
 
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
-    const generateBtn = screen.getByText(/Generate Referral Link/);
+    const generateBtn = screen.getByText(/Share on X to get \+50 Actions/);
     fireEvent.click(generateBtn);
 
     await waitFor(() => {
@@ -97,17 +106,24 @@ describe('AIUsageLimitWidget', () => {
       '_blank'
     );
 
-    expect(screen.getAllByText(/85/).length).toBeGreaterThan(0);
+    await waitFor(() => {
+        expect(screen.getAllByText(/35/).length).toBeGreaterThan(0);
+    }, { timeout: 2000 });
   });
 
   it('handles fetch failure gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     global.fetch = vi.fn(() => Promise.reject(new Error("API Down"))) as any;
 
     render(<AIUsageLimitWidget />);
 
+    // Should default to 0 used and 100 limit, and log an error
     await waitFor(() => {
-      expect(screen.getByText('Usage data is unavailable.')).toBeDefined();
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch usage", expect.any(Error));
     });
-    expect(screen.queryByText(/\/ 100/)).toBeNull();
+
+    expect(screen.getByText(/Approaching Free Tier Limit/i)).toBeDefined();
+    expect(screen.getAllByText(/0/).length).toBeGreaterThan(0);
   });
 });

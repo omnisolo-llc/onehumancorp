@@ -1,7 +1,7 @@
-use crate::db::DB;
-use sqlx::Row;
 use std::sync::Arc;
 use tokio::time::Duration;
+use crate::db::DB;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub struct SubscriptionReplenishmentWorker {
@@ -55,9 +55,7 @@ impl SubscriptionReplenishmentWorker {
                 if let Some(r) = row {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
-                    let payload: serde_json::Value = r
-                        .try_get("payload")
-                        .map_err(|e| format!("invalid subscription replenishment payload: {e}"))?;
+                    let payload: serde_json::Value = serde_json::from_str(r.get("payload")).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
                         .bind(&id)
@@ -71,7 +69,7 @@ impl SubscriptionReplenishmentWorker {
                     tx.rollback().await.map_err(|e| e.to_string())?;
                     None
                 }
-            }
+            },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
@@ -91,8 +89,7 @@ impl SubscriptionReplenishmentWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
-                    let payload: serde_json::Value = serde_json::from_str(&payload_str)
-                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&id)
@@ -111,35 +108,29 @@ impl SubscriptionReplenishmentWorker {
 
         if let Some((job_id, tenant_id, payload)) = job {
             if let Some(order_id) = payload.get("order_id").and_then(|v| v.as_str()) {
-                let customer_id = payload
-                    .get("customer_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                 let customer_name = match &self.db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, String>(
-                        "SELECT name FROM customers WHERE id = $1 AND tenant_id = $2",
-                    )
-                    .bind(customer_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .unwrap_or_default()
-                    .unwrap_or_else(|| "Customer".to_string()),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar::<_, String>(
-                        "SELECT name FROM customers WHERE id = ? AND tenant_id = ?",
-                    )
-                    .bind(customer_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(sqlite_pool)
-                    .await
-                    .unwrap_or_default()
-                    .unwrap_or_else(|| "Customer".to_string()),
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = $1 AND tenant_id = $2")
+                            .bind(customer_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&self.db.pool)
+                            .await
+                            .unwrap_or_default()
+                            .unwrap_or_else(|| "Customer".to_string())
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = ? AND tenant_id = ?")
+                            .bind(customer_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(sqlite_pool)
+                            .await
+                            .unwrap_or_default()
+                            .unwrap_or_else(|| "Customer".to_string())
+                    }
                 };
 
-                let item_name = payload
-                    .get("item_name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("your item");
+                let item_name = payload.get("item_name").and_then(|v| v.as_str()).unwrap_or("your item");
 
                 let proposed_action = serde_json::json!({
                     "action_type": "Draft Reply",
@@ -165,7 +156,7 @@ impl SubscriptionReplenishmentWorker {
                         .bind(proposed_action.to_string())
                         .execute(&self.db.pool)
                         .await;
-                    }
+                    },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
                         let _ = sqlx::query(
                             "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -189,7 +180,7 @@ impl SubscriptionReplenishmentWorker {
                         .execute(&self.db.pool)
                         .await
                         .map_err(|e| e.to_string())?;
-                }
+                },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)

@@ -18,7 +18,6 @@ vi.mock('../components/PoweredByOHC', () => ({
 describe('Group Buy Widget Page', () => {
   beforeEach(() => {
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
   it('renders the builder with default values', async () => {
@@ -35,6 +34,7 @@ describe('Group Buy Widget Page', () => {
   });
 
   it('shows paywall when removing branding without pro', async () => {
+    localStorage.setItem('has_pro', 'false');
     render(<Page />);
 
     await waitFor(() => {
@@ -50,12 +50,11 @@ describe('Group Buy Widget Page', () => {
   });
 
   it('allows removing branding with pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    localStorage.setItem('has_pro', 'true');
     render(<Page />);
 
     await waitFor(() => {
       expect(screen.getByText('Remove OHC Branding')).toBeInTheDocument();
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan');
     });
 
     const brandingToggle = screen.getByRole('checkbox', { hidden: true });

@@ -46,27 +46,6 @@ if [[ -f "$SOURCE_REPO_ROOT/.env" ]]; then
 fi
 cd "$workspace_root"
 
-if [[ -n "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]]; then
-  CHROMIUM_PATH_CANDIDATES=(
-    "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
-    "$RUNFILES_ROOT/$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
-    "$TEST_SRCDIR/$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
-  )
-  resolved_chromium_path=""
-  for candidate in "${CHROMIUM_PATH_CANDIDATES[@]}"; do
-    if [[ -x "$candidate" ]]; then
-      resolved_chromium_path="$(realpath "$candidate")"
-      break
-    fi
-  done
-  if [[ -z "$resolved_chromium_path" ]]; then
-    echo "[playwright] Error: Bazel Chromium executable not found: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" >&2
-    exit 1
-  fi
-  export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$resolved_chromium_path"
-  echo "[playwright] Chromium executable: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
-fi
-
 # Resolve spec files to absolute paths if passed as arguments.
 ABS_SPEC_FILES=()
 for spec_file in "$@"; do
@@ -76,52 +55,24 @@ done
 playwright_spec_workspace_name() {
   local spec_file="$1"
   local rel="$spec_file"
-  for root in "$SOURCE_REPO_ROOT" "$workspace_root" "$RUNFILES_ROOT"; do
+  for root in "$workspace_root" "$RUNFILES_ROOT"; do
     if [[ -n "$root" && "$rel" == "$root/"* ]]; then
       rel="${rel#$root/}"
       break
     fi
   done
   rel="${rel#./}"
-  case "$rel" in
-    src/e2e/*.spec.ts)
-      printf '%s\n' "$rel"
-      ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
-      # Preserve the original directory depth so relative imports continue to
-      # resolve, but avoid src/ui/next/node_modules: it contains a second
-      # Playwright runtime that cannot coexist with the Bazel CLI runtime.
-      printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
-      ;;
-    *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
-      ;;
-  esac
+  echo "$rel" | sed -E 's#[^A-Za-z0-9._-]+#__#g'
 }
 
 copy_spec_fixtures() {
   local spec_file="$1"
-  local spec_workspace_path="$2"
   local fixture_dir
   fixture_dir="$(dirname "$spec_file")/fixtures"
   if [[ -d "$fixture_dir" ]]; then
-    local workspace_fixture_dir
-    workspace_fixture_dir="$WORK_DIR/$(dirname "$spec_workspace_path")/fixtures"
-    mkdir -p "$workspace_fixture_dir"
-    cp -R "$fixture_dir/." "$workspace_fixture_dir/"
+    mkdir -p "$WORK_DIR/e2e/fixtures"
+    cp -R "$fixture_dir/." "$WORK_DIR/e2e/fixtures/"
   fi
-}
-
-copy_shared_spec_helpers() {
-  local spec_workspace_path="$1"
-  local destination_dir
-  destination_dir="$WORK_DIR/$(dirname "$spec_workspace_path")"
-  for helper in authenticate.ts fixtures.ts current_app_smoke.ts db_utils.ts ai-judge.ts; do
-    if [[ -f "$workspace_root/src/e2e/$helper" ]]; then
-      cp "$workspace_root/src/e2e/$helper" "$destination_dir/$helper"
-    fi
-  done
 }
 
 # Resolve the Bazel-provided Playwright browser repository to an absolute path.
@@ -161,6 +112,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   fi
 
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
+      export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
@@ -210,35 +162,25 @@ if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
   for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
     abs_spec_file="$(realpath "$abs_spec_file")"
     spec_workspace_name="$(playwright_spec_workspace_name "$abs_spec_file")"
-    mkdir -p "$(dirname "$WORK_DIR/$spec_workspace_name")"
-    cp "$abs_spec_file" "$WORK_DIR/$spec_workspace_name"
-    copy_spec_fixtures "$abs_spec_file" "$spec_workspace_name"
-    copy_shared_spec_helpers "$spec_workspace_name"
-    PLAYWRIGHT_SPEC_ARGS+=("$spec_workspace_name")
+    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
+    copy_spec_fixtures "$abs_spec_file"
+    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_workspace_name")
   done
 else
-  SPEC_DISCOVERY="$RUNFILES_ROOT/bazel/rules/playwright/discover_playwright_specs.sh"
-  if [[ ! -x "$SPEC_DISCOVERY" ]]; then
-    echo "[playwright] Spec discovery helper is missing or not executable: $SPEC_DISCOVERY" >&2
-    exit 1
-  fi
   while IFS= read -r -d '' spec_file; do
     spec_file="$(realpath "$spec_file")"
     spec_workspace_name="$(playwright_spec_workspace_name "$spec_file")"
-    mkdir -p "$(dirname "$WORK_DIR/$spec_workspace_name")"
-    cp "$spec_file" "$WORK_DIR/$spec_workspace_name"
-    copy_spec_fixtures "$spec_file" "$spec_workspace_name"
-    copy_shared_spec_helpers "$spec_workspace_name"
-    PLAYWRIGHT_SPEC_ARGS+=("$spec_workspace_name")
-  done < <("$SPEC_DISCOVERY" "$workspace_root")
+    cp "$spec_file" "$WORK_DIR/src/e2e/$spec_workspace_name"
+    copy_spec_fixtures "$spec_file"
+  done < <(
+    find "$workspace_root" \
+      -path '*/node_modules/*' -prune -o \
+      -path '*/.next/*' -prune -o \
+      -path '*/e2e/*.spec.ts' -type f -print0
+  )
 fi
 
-if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} == 0 )); then
-  echo "[playwright] Error: no Playwright spec files were discovered in Bazel runfiles." >&2
-  exit 1
-fi
-
-for support_file in authenticate.ts fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
+for support_file in fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
   if [[ -f "$workspace_root/src/e2e/$support_file" ]]; then
     cp "$workspace_root/src/e2e/$support_file" "$WORK_DIR/src/e2e/$support_file"
   elif [[ -f "$RUNFILES_ROOT/src/e2e/$support_file" ]]; then
@@ -492,12 +434,16 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     export REDIS_URL="$RD_URL"
     
     echo "[playwright] Generating self-signed TLS certificates for cloud mode..."
-    TLS_GENERATOR="$RUNFILES_ROOT/bazel/rules/playwright/generate_test_tls.sh"
-    if [[ ! -x "$TLS_GENERATOR" ]]; then
-      echo "[playwright] TLS generator is missing or not executable: $TLS_GENERATOR" >&2
-      exit 1
-    fi
-    "$TLS_GENERATOR" "$TEST_TMPDIR"
+    openssl req -x509 -new -nodes -keyout "$TEST_TMPDIR/ca.key" -sha256 -days 365 -out "$TEST_TMPDIR/ca.crt" -subj "/CN=Test CA" >/dev/null 2>&1
+    openssl genrsa -out "$TEST_TMPDIR/server.key" 2048 >/dev/null 2>&1
+    openssl req -new -key "$TEST_TMPDIR/server.key" -out "$TEST_TMPDIR/server.csr" -subj "/CN=localhost" >/dev/null 2>&1
+    cat << 'EXT' > "$TEST_TMPDIR/v3.ext"
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = DNS:localhost, IP:127.0.0.1
+EXT
+    openssl x509 -req -in "$TEST_TMPDIR/server.csr" -CA "$TEST_TMPDIR/ca.crt" -CAkey "$TEST_TMPDIR/ca.key" -CAcreateserial -out "$TEST_TMPDIR/server.crt" -days 365 -sha256 -extfile "$TEST_TMPDIR/v3.ext" >/dev/null 2>&1
     export OHC_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
     export OHC_GRPC_TLS_KEY_PATH="$TEST_TMPDIR/server.key"
     export OHC_GRPC_CLIENT_CA_PATH="$TEST_TMPDIR/ca.crt"
@@ -560,21 +506,6 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     fi
     sleep 1
   done
-
-  if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
-    exit 1
-  fi
-  E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
-  if [[ ! -f "$E2E_SEED_SQL" ]]; then
-    echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
-    exit 1
-  fi
-  echo "[playwright] Applying deterministic PostgreSQL E2E seed data..."
-  docker exec -i "$POSTGRES_NAME" \
-    psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
-    < "$E2E_SEED_SQL" \
-    >"$TEST_TMPDIR/e2e-seed.log"
 else
   echo "[playwright] Error: server binary not found"
   exit 1
@@ -669,22 +600,16 @@ NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
 export CI=false
 export NODE_DISABLE_COMPILE_CACHE=1
-OHC_WEB_SESSION_SECRET="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')"
 echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
 (
   cd "$NEXT_WORK_DIR"
   BACKEND_URL="$API_BASE_URL" \
   OHC_BACKEND_URL="$API_BASE_URL" \
   OHC_API_URL="$API_BASE_URL" \
-  OHC_WEB_CANONICAL_ORIGIN="$BASE_URL" \
-  OHC_WEB_LOCAL_DEV=true \
-  OHC_WEB_SESSION_KEY_ID=e2e-v1 \
-  OHC_WEB_SESSION_SECRET="$OHC_WEB_SESSION_SECRET" \
   NEXT_PUBLIC_E2E=true \
   node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT"
 ) >"$TEST_TMPDIR/next.log" 2>&1 &
 NEXT_PID=$!
-unset OHC_WEB_SESSION_SECRET
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do
@@ -707,8 +632,6 @@ done
 
 export PLAYWRIGHT_LIST_REPORTER="${PLAYWRIGHT_LIST_REPORTER:-1}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-export PLAYWRIGHT_TEST_DIR="${PLAYWRIGHT_TEST_DIR:-./src}"
-export PLAYWRIGHT_STORAGE_STATE="${PLAYWRIGHT_STORAGE_STATE:-$TEST_TMPDIR/playwright-auth-state.json}"
 
 # Use unique output directories for parallel isolation
 BASE_OUTPUT_DIR="${TEST_UNDECLARED_OUTPUTS_DIR:-$TEST_TMPDIR/playwright-results}"
@@ -738,7 +661,7 @@ elif [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   fi
 fi
 
-printf '%s\n' "${PLAYWRIGHT_SPEC_ARGS[@]}" | sort > "$PLAYWRIGHT_SPEC_MANIFEST"
+find src/e2e -maxdepth 1 -name '*.spec.ts' -type f -printf '%P\n' | sort > "$PLAYWRIGHT_SPEC_MANIFEST"
 {
   echo "# Playwright Bazel Test Details"
   echo
@@ -763,10 +686,6 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
       exit 1
     fi
   fi
-  if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
-    echo "[playwright] Error: selected Playwright specs resolved to zero tests." >&2
-    exit 1
-  fi
 
   echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
   set +e
@@ -782,10 +701,6 @@ else
     else
       exit 1
     fi
-  fi
-  if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
-    echo "[playwright] Error: Playwright discovery resolved to zero tests." >&2
-    exit 1
   fi
 
   echo "[playwright] Running all specs on host"

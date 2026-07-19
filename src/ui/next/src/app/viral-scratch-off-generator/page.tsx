@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
@@ -11,13 +10,14 @@ export default function ViralScratchOffGeneratorPage() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [embedCode, setEmbedCode] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -74,7 +74,7 @@ export default function ViralScratchOffGeneratorPage() {
   };
 
   const claimTrialExtension = () => {
-    const text = `I'm using an OHC Scratch Off widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
+    const text = `I'm capturing more leads with my OHC Scratch Off widget! Get 1 month free when you join: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     setShowSoftPaywall(false);
   };
@@ -228,7 +228,7 @@ export default function ViralScratchOffGeneratorPage() {
               onClick={claimTrialExtension}
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
-              Share on X
+              Share on X to get 7 Days Free
             </button>
           </div>
         </div>

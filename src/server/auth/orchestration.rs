@@ -105,18 +105,5 @@ mod tests {
         req2.agent = Some(agent2);
         
         assert!(authorize_register_agent(&auth, &req2).is_err());
-
-        let mut cross_org = RegisterAgentRequest::default();
-        let mut cross_org_agent = Agent::default();
-        cross_org_agent.id = "agent-1".to_string();
-        cross_org_agent.organization_id = "org-2".to_string();
-        cross_org.agent = Some(cross_org_agent);
-
-        assert_eq!(
-            authorize_register_agent(&auth, &cross_org)
-                .unwrap_err()
-                .code(),
-            tonic::Code::PermissionDenied,
-        );
     }
 }

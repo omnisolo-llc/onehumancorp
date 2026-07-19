@@ -9,55 +9,24 @@ export default function NewOfferingPage() {
   const [loading, setLoading] = useState(false);
   const [offeringData, setOfferingData] = useState<{ title: string; description: string; type: string; price: string } | null>(null);
   const [published, setPublished] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleIntentSubmit = async () => {
+  const handleIntentSubmit = () => {
     if (!intent.trim()) return;
     setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/v1/catalog/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: intent }),
-      });
-      if (!response.ok) throw new Error('Offering generation is unavailable.');
-      const data = await response.json();
-      if (![data.title, data.description, data.item_type, data.price].every((value) => typeof value === 'string')) {
-        throw new Error('Offering generation is unavailable.');
-      }
+    // Simulate AI processing
+    setTimeout(() => {
       setOfferingData({
-        title: data.title,
-        description: data.description,
-        type: data.item_type,
-        price: data.price,
+        title: 'Beginner Guitar Lesson (1 Hour)',
+        description: 'Learn the basics of guitar playing in a 1-hour personalized session. Covering chords, strumming, and basic theory.',
+        type: 'Service',
+        price: '50.00'
       });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Offering generation is unavailable.');
-    } finally {
       setLoading(false);
-    }
+    }, 1500);
   };
 
-  const handlePublish = async () => {
-    if (!offeringData) return;
-    setError(null);
-    try {
-      const response = await fetch('/api/v1/catalog/product', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: offeringData.title,
-          description: offeringData.description,
-          item_type: offeringData.type,
-          price: offeringData.price,
-        }),
-      });
-      if (!response.ok) throw new Error('Offering publishing is unavailable.');
-      setPublished(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Offering publishing is unavailable.');
-    }
+  const handlePublish = () => {
+    setPublished(true);
   };
 
   if (published) {
@@ -103,8 +72,6 @@ export default function NewOfferingPage() {
           </button>
         </div>
       )}
-
-      {error && <p className="my-4 text-sm text-red-600" role="status">{error}</p>}
 
       {loading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6">

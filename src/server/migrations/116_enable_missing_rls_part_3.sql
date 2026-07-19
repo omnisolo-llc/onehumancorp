@@ -49,3 +49,40 @@ BEGIN
     END LOOP;
 END
 $$;
+
+-- +goose Down
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'agent_actions',
+            'ai_memories',
+            'bom_items',
+            'customer_timeline',
+            'depletion_logs',
+            'interactions',
+            'order_line_items',
+            'po_line_items',
+            'raw_materials'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+        END IF;
+    END LOOP;
+END
+$$;
+
+ALTER TABLE IF EXISTS agent_actions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ai_memories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS bom_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS customer_timeline DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS depletion_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS interactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS order_line_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS po_line_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS raw_materials DISABLE ROW LEVEL SECURITY;

@@ -150,7 +150,7 @@ body {
 }
 
 .app-topbar {
-  min-height: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -187,7 +187,6 @@ body {
 .app-topbar-right {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
 }

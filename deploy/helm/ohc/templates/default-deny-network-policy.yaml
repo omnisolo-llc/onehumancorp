@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
+  podSelector: {}
   policyTypes:
     - Ingress
     - Egress

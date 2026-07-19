@@ -19,7 +19,6 @@ rust_test(
     size = "small",
     crate = ":server_config",
     edition = "2024",
-    deps = ["@crates//:temp-env"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

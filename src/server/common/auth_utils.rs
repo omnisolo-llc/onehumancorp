@@ -1,4 +1,4 @@
-use sqlx::{query, Executor, Postgres};
+use sqlx::{Executor, Postgres, query};
 
 pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
 where

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ShareAndSaveWidgetPage from './page';
 
@@ -40,9 +40,8 @@ describe('ShareAndSaveWidgetPage', () => {
 
   it('renders correctly', () => {
     render(<ShareAndSaveWidgetPage />);
-    expect(screen.getByText('Share This Store')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Share on X' })).toBeDefined();
-    expect(screen.getByText(/sharing will not issue a code/i)).toBeDefined();
+    expect(screen.getByText('Unlock 10% Off!')).toBeDefined();
+    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
   });
 
   it('renders Powered by OHC branding by default', () => {
@@ -66,15 +65,18 @@ describe('ShareAndSaveWidgetPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('opens the share window without fabricating a discount code', async () => {
+  it('handles sharing on twitter and revealing code', async () => {
     render(<ShareAndSaveWidgetPage />);
 
-    const shareBtn = screen.getByRole('button', { name: 'Share on X' });
+    const shareBtn = screen.getByRole('button', { name: /Share on X to Unlock/i });
     fireEvent.click(shareBtn);
 
     expect(global.window.open).toHaveBeenCalled();
-    expect(await screen.findByText('Share window opened')).toBeDefined();
-    expect(screen.getByText(/no discount code was issued/i)).toBeDefined();
-    expect(screen.queryByText('SHARE10')).toBeNull();
+
+    // Wait for real timer since fake timers is breaking React 18 / RTL
+    await waitFor(() => {
+        expect(screen.getByText('Unlocked!')).toBeDefined();
+        expect(screen.getByText('SHARE10')).toBeDefined();
+    }, { timeout: 2000 });
   });
 });

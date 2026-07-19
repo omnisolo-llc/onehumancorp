@@ -8,12 +8,10 @@ services:
     image: onehumancorp/server:latest
 
   postgres:
-    image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
-    pull_policy: missing
+    image: pgvector/pgvector:pg15
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
-    image: valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
-    pull_policy: missing
+    image: valkey/valkey:7.2
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

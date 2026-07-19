@@ -84,3 +84,34 @@ BEGIN
     END LOOP;
 END
 $$;
+
+-- +goose Down
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'agent_action_requests',
+            'agent_actions',
+            'ai_memories',
+            'bom_items',
+            'customer_timeline',
+            'depletion_logs',
+            'embedding_cache',
+            'interactions',
+            'order_line_items',
+            'po_line_items',
+            'raw_materials',
+            'services',
+            'telemetry_buffer'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+        END IF;
+    END LOOP;
+END
+$$;

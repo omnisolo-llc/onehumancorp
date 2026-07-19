@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function ViralChallengeGeneratorPage() {
@@ -12,7 +11,7 @@ export default function ViralChallengeGeneratorPage() {
   const [duration, setDuration] = useState('30');
   const [reward, setReward] = useState('Free T-Shirt');
   const [copied, setCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -22,6 +21,7 @@ export default function ViralChallengeGeneratorPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Viral Challenge Generator | OHC";
   }, []);

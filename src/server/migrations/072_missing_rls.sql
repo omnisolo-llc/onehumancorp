@@ -87,3 +87,38 @@ BEGIN
     END LOOP;
 END
 $$;
+
+-- +goose Down
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'interactions',
+            'agent_actions',
+            'mcp_tools',
+            'invoices',
+            'invoice_line_items',
+            'payment_events',
+            'ledger_entries',
+            'local_queue_jobs',
+            'customer_timeline',
+            'timecard_events',
+            'staff_members',
+            'agent_memory_embeddings',
+            'bus_checkpoints',
+            'bus_messages',
+            'bus_locks',
+            'sync_queue'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+            EXECUTE format('ALTER TABLE %I DISABLE ROW LEVEL SECURITY', t_name);
+        END IF;
+    END LOOP;
+END
+$$;

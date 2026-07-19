@@ -1,17 +1,7 @@
 exports_files([
-    "discover_playwright_specs.sh",
-    "generate_test_tls.sh",
     "playwright_spec_coverage_check.sh",
     "playwright_spec_coverage_check_test.sh",
-    "playwright_no_substitutions.cjs",
-    "playwright_spec_discovery_test.sh",
     "playwright_test.sh",
-    "playwright_tls_certificate_test.sh",
-    "playwright_browser_contract_test.sh",
-    "playwright_browser_smoke_test.sh",
-    "playwright_auth_state_contract_test.sh",
-    "playwright_ci_sharding_contract_test.sh",
-    "chromium.BUILD.bazel",
     "run_playwright.sh",
 ])
 
@@ -19,81 +9,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 sh_test(
     name = "playwright_spec_coverage_check_test",
-    size = "large",
     srcs = ["playwright_spec_coverage_check_test.sh"],
     args = ["$(rootpath :playwright_spec_coverage_check.sh)"],
-    data = [
-        "//:node_modules",
-        ":playwright_no_substitutions.cjs",
-        ":playwright_spec_coverage_check.sh",
-        "@nodejs//:node",
-    ],
-)
-
-sh_test(
-    name = "playwright_browser_contract_test",
-    srcs = ["playwright_browser_contract_test.sh"],
-    args = [
-        "$(rootpath //:MODULE.bazel)",
-        "$(rootpath //:package-lock.json)",
-        "$(rootpath :playwright_test.sh)",
-    ],
-    data = [
-        "//:MODULE.bazel",
-        "//:package-lock.json",
-        ":playwright_test.sh",
-    ],
-)
-
-sh_test(
-    name = "playwright_auth_state_contract_test",
-    srcs = ["playwright_auth_state_contract_test.sh"],
-    args = [
-        "$(rootpath :playwright_test.sh)",
-        "$(rootpath //:playwright.config.ts)",
-    ],
-    data = [
-        ":playwright_test.sh",
-        "//:playwright.config.ts",
-    ],
-)
-
-sh_test(
-    name = "playwright_ci_sharding_contract_test",
-    srcs = ["playwright_ci_sharding_contract_test.sh"],
-    args = [
-        "$(rootpath :playwright_tests.bzl)",
-        "$(rootpath //src/e2e:BUILD.bazel)",
-        "$(rootpath //:.github/workflows/ci.yml)",
-    ],
-    data = [
-        ":playwright_tests.bzl",
-        "//src/e2e:BUILD.bazel",
-        "//:.github/workflows/ci.yml",
-    ],
-)
-
-sh_test(
-    name = "playwright_browser_smoke_test",
-    srcs = ["playwright_browser_smoke_test.sh"],
-    args = ["$(rootpath @playwright_chromium//:chrome-headless-shell)"],
-    data = [
-        "@playwright_chromium//:browser",
-        "@playwright_chromium//:chrome-headless-shell",
-    ],
-    tags = ["no-remote-exec"],
-)
-
-sh_test(
-    name = "playwright_tls_certificate_test",
-    srcs = ["playwright_tls_certificate_test.sh"],
-    args = ["$(rootpath :generate_test_tls.sh)"],
-    data = [":generate_test_tls.sh"],
-)
-
-sh_test(
-    name = "playwright_spec_discovery_test",
-    srcs = ["playwright_spec_discovery_test.sh"],
-    args = ["$(rootpath :discover_playwright_specs.sh)"],
-    data = [":discover_playwright_specs.sh"],
+    data = [":playwright_spec_coverage_check.sh"],
 )

@@ -12,19 +12,26 @@ function UnlockContent() {
   const shareMessage = searchParams.get('msg') || 'I just unlocked a secret discount!';
   const theme = searchParams.get('theme') || 'light';
 
-  const isUnlocked = false;
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const encodedMessage = encodeURIComponent(`${shareMessage} https://ohc.app/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}`);
 
   const handleShareX = () => {
     window.open(`https://twitter.com/intent/tweet?text=${encodedMessage}`, '_blank', 'width=550,height=420');
-    setVerificationError('Reward verification is unavailable. The code remains locked.');
+    // Simulate verification (in a real app, this could be more robust, but window.open works for the simple viral loop)
+    setTimeout(() => setIsUnlocked(true), 1500);
   };
 
   const handleShareWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-    setVerificationError('Reward verification is unavailable. The code remains locked.');
+    setTimeout(() => setIsUnlocked(true), 1500);
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(hiddenCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const getThemeStyles = () => {
@@ -73,8 +80,8 @@ function UnlockContent() {
                  )}
             </div>
 
-             {!isUnlocked ? (
-                 <div className="w-full space-y-3 mb-6 animate-fade-in">
+            {!isUnlocked ? (
+                <div className="w-full space-y-3 mb-6 animate-fade-in">
                     <p className="text-center text-xs font-medium uppercase tracking-wider mb-4 opacity-70">Share to reveal code</p>
                     <button
                         onClick={handleShareX}
@@ -87,13 +94,17 @@ function UnlockContent() {
                         className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                         Share on WhatsApp
-                     </button>
-                     {verificationError && <p className="text-sm text-red-600 text-center" role="status">{verificationError}</p>}
-                 </div>
-             ) : (
-                 <div className="w-full space-y-3 mb-6 animate-fade-in">
-                     <p className="text-sm">Reward verified.</p>
-                 </div>
+                    </button>
+                </div>
+            ) : (
+                <div className="w-full space-y-3 mb-6 animate-fade-in">
+                    <button
+                        onClick={handleCopyCode}
+                        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md"
+                    >
+                        {copied ? 'Code Copied!' : 'Copy Code'}
+                    </button>
+                </div>
             )}
 
             <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>

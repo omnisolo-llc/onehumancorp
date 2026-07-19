@@ -39,3 +39,10 @@ CREATE POLICY tenant_isolation_shift_summaries
 ON shift_summaries
 USING (tenant_id = current_setting('app.current_tenant', true))
 WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+
+-- +goose Down
+DROP POLICY IF EXISTS tenant_isolation_shift_summaries ON shift_summaries;
+DROP TABLE IF EXISTS shift_summaries CASCADE;
+
+DROP POLICY IF EXISTS tenant_isolation_staff_tasks ON staff_tasks;
+DROP TABLE IF EXISTS staff_tasks CASCADE;

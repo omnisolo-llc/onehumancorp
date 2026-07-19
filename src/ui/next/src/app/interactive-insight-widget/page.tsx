@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function InteractiveInsightWidgetPage() {
@@ -11,7 +10,7 @@ export default function InteractiveInsightWidgetPage() {
   const [metricLabel, setMetricLabel] = useState('Projects Completed');
   const [metricValue, setMetricValue] = useState('150+');
   const [copied, setCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [origin, setOrigin] = useState('https://ohc.app');
 
@@ -21,6 +20,7 @@ export default function InteractiveInsightWidgetPage() {
       if (typeof localStorage !== 'undefined') {
         const storedTenant = localStorage.getItem('business_display_name');
         if (storedTenant) setTenant(storedTenant);
+        setHasPro(localStorage.getItem('has_pro') === 'true');
       }
     }
     document.title = "Insight Widget | OHC";

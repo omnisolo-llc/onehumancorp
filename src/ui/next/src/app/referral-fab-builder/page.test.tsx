@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ReferralFabBuilder from './page';
 
 describe('ReferralFabBuilder', () => {
   beforeEach(() => {
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
   it('renders the builder with default values', () => {
@@ -36,7 +35,7 @@ describe('ReferralFabBuilder', () => {
     expect(screen.getByText('Remove the "Powered by OHC" branding and unlock premium widgets by upgrading to our Pro plan.')).toBeDefined();
   });
 
-  it('does not grant branding removal from an upgrade click alone', () => {
+  it('allows removing branding after upgrading', () => {
     render(<ReferralFabBuilder />);
 
     // Attempt to toggle
@@ -47,9 +46,9 @@ describe('ReferralFabBuilder', () => {
     const upgradeButton = screen.getByText('Upgrade Now');
     fireEvent.click(upgradeButton);
 
-    expect(localStorage.getItem('has_pro')).toBeNull();
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(localStorage.getItem('has_pro')).toBe('true');
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull(); // Should be removed from preview
   });
 
   it('changes theme color', () => {

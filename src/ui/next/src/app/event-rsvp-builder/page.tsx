@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 
 export default function EventRSVPBuilderPage() {
   const router = useRouter();
   const [tenant, setTenant] = useState('demo-business');
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -27,6 +26,7 @@ export default function EventRSVPBuilderPage() {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'demo-business';
       setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 

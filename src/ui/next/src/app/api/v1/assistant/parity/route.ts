@@ -1,3 +1,6 @@
-export function GET(): Response {
-  return Response.json({ error: "assistant parity data is not implemented" }, { status: 501 });
+import { NextResponse } from 'next/server';
+import { listAgentParity } from '../store';
+
+export async function GET() {
+  return NextResponse.json(listAgentParity());
 }

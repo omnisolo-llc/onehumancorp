@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralCountdownWidgetPage from './page';
 
@@ -12,7 +12,6 @@ vi.mock('next/navigation', () => ({
 describe('ViralCountdownWidgetPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
     Object.defineProperty(window, 'localStorage', {
       value: {
         getItem: vi.fn(() => null),
@@ -63,11 +62,18 @@ describe('ViralCountdownWidgetPage', () => {
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
   });
 
-  it('allows removing branding if the plan API reports pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+  it('allows removing branding if user has pro', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn((key) => {
+          if (key === 'has_pro') return 'true';
+          return null;
+        }),
+      },
+      writable: true,
+    });
 
     render(<ViralCountdownWidgetPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
     fireEvent.click(removeBrandingCheckbox);

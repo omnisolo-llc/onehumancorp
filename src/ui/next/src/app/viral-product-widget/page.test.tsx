@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralProductWidgetPage from './page';
 
@@ -15,7 +15,6 @@ describe('ViralProductWidgetPage', () => {
       window.localStorage.clear();
     }
     vi.clearAllMocks();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
   it('renders the initial configuration form', () => {
@@ -51,11 +50,13 @@ describe('ViralProductWidgetPage', () => {
     expect(screen.getByText(/White-label your embedded product widgets/i)).toBeDefined();
   });
 
-  it('allows removing branding if the plan API reports pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+  it('allows removing branding if user has pro', () => {
+    // Mock user has pro
+    if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('has_pro', 'true');
+    }
 
     render(<ViralProductWidgetPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const removeBrandingCheckbox = screen.getByLabelText(/Remove Branding/i);
     fireEvent.click(removeBrandingCheckbox);

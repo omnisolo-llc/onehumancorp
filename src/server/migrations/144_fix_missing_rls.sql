@@ -43,3 +43,35 @@ BEGIN
 END
 $$;
 -- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'agent_actions',
+            'ai_memories',
+            'bom_items',
+            'customer_timeline',
+            'depletion_logs',
+            'interactions',
+            'order_line_items',
+            'po_line_items',
+            'raw_materials',
+            'tool_integrations'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+            -- Only drop RLS if we don't know who else depends on it
+            -- EXECUTE format('ALTER TABLE IF EXISTS %I DISABLE ROW LEVEL SECURITY', t_name);
+        END IF;
+    END LOOP;
+END
+$$;
+-- +goose StatementEnd

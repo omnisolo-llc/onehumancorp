@@ -55,3 +55,21 @@ BEGIN
     END IF;
 END
 $$;
+
+-- +goose Down
+DO $$
+BEGIN
+    IF to_regclass('carts') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_carts ON carts;
+        ALTER TABLE carts DISABLE ROW LEVEL SECURITY;
+    END IF;
+
+    IF to_regclass('cart_items') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_cart_items ON cart_items;
+        ALTER TABLE cart_items DISABLE ROW LEVEL SECURITY;
+    END IF;
+END
+$$;
+
+DROP TABLE IF EXISTS cart_items CASCADE;
+DROP TABLE IF EXISTS carts CASCADE;

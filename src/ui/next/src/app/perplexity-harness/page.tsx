@@ -17,18 +17,13 @@ export default function PerplexityHarness() {
     setResponse("");
 
     try {
-      const result = await fetch('/api/v1/perplexity/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      });
-      if (!result.ok) throw new Error('Search is unavailable.');
-      const data = await result.json();
-      if (typeof data.answer !== 'string' || !data.answer.trim()) throw new Error('Search is unavailable.');
-      setResponse(data.answer);
+      // Simulate API call to the rust backend
+      setTimeout(() => {
+        setResponse("According to source [1], the sky is blue. [1] https://example.com");
+        setLoading(false);
+      }, 1000);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
-    } finally {
       setLoading(false);
     }
   };

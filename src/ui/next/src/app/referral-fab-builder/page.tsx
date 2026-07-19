@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Head from "next/head";
-import { useProPlan } from '../components/useProPlan';
 
 export default function ReferralFabBuilder() {
   const [reward, setReward] = useState("$10");
@@ -11,12 +10,13 @@ export default function ReferralFabBuilder() {
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
       const storedTenant = localStorage.getItem("business_display_name") || "my-business";
       setTenantId(storedTenant);
+      setHasPro(localStorage.getItem("has_pro") === "true");
     }
     document.title = "Referral FAB Builder | OHC";
   }, []);
@@ -34,8 +34,12 @@ export default function ReferralFabBuilder() {
   };
 
   const handleUpgrade = () => {
+    setRemoveBranding(true);
+    setHasPro(true);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("has_pro", "true");
+    }
     setShowPaywall(false);
-    window.location.href = '/pricing';
   };
 
   const embedUrl = `https://ohc.app/api/v1/growth/referral-fab/embed?tenant=${encodeURIComponent(tenantId)}&reward=${encodeURIComponent(reward)}&themeColor=${encodeURIComponent(themeColor)}&removeBranding=${removeBranding}`;

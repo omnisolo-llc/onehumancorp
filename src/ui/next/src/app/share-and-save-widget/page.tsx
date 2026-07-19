@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 export default function ShareAndSaveWidgetPage() {
   const router = useRouter();
   const [tenantId, setTenantId] = useState('DEFAULT');
-  const [shareOpened, setShareOpened] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
@@ -26,7 +27,16 @@ export default function ShareAndSaveWidgetPage() {
     const url = `https://ohc.app/store/${tenantId}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
 
-    setShareOpened(true);
+    // Reveal the discount code after clicking share
+    setTimeout(() => {
+        setShowCode(true);
+    }, 1500);
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText("SHARE10");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,29 +72,40 @@ export default function ShareAndSaveWidgetPage() {
         </div>
 
         <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-          Share This Store
+          Unlock 10% Off!
         </h1>
 
         <p className="text-gray-600 dark:text-gray-300 mb-8 px-4 text-sm leading-relaxed">
-          Share our store with your friends on X. Automatic discount verification is not connected, so sharing will not issue a code.
+          Love our products? Share our store with your friends on X (Twitter) and we'll instantly give you a 10% discount code for your next order.
         </p>
 
-        {!shareOpened ? (
+        {!showCode ? (
           <button
             onClick={handleShareOnTwitter}
             className="w-full relative group overflow-hidden bg-black text-white font-semibold py-4 px-6 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-3"
           >
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <svg className="w-5 h-5 relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-            <span className="relative z-10">Share on X</span>
+            <span className="relative z-10">Share on X to Unlock</span>
           </button>
         ) : (
           <div className="w-full flex flex-col items-center animate-in fade-in zoom-in duration-300">
-            <p className="text-sm text-indigo-700 font-bold mb-3 flex items-center gap-1">
+            <p className="text-sm text-[#34C759] font-bold mb-3 flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              Share window opened
+              Unlocked!
             </p>
-            <p className="text-sm text-gray-600">No discount code was issued because share verification is unavailable.</p>
+            <div className="w-full flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 p-2 rounded-xl">
+              <div className="flex-1 text-center font-mono font-bold text-lg tracking-widest text-indigo-700 dark:text-indigo-300 py-2">
+                SHARE10
+              </div>
+              <button
+                onClick={copyCode}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-4">Apply this code at checkout.</p>
           </div>
         )}
 

@@ -1,25 +1,5 @@
 import { NextResponse } from 'next/server';
-import { randomBytes } from 'node:crypto';
 // import { trackGrowthEvent } from '../../../lib/growth'; // REMOVED
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-}
-
-function inlineScriptValue(value: string): string {
-  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => ({
-    '<': '\\u003c',
-    '>': '\\u003e',
-    '&': '\\u0026',
-    '\u2028': '\\u2028',
-    '\u2029': '\\u2029',
-  })[character] ?? character);
-}
 
 export async function GET(request: Request) {
   try {
@@ -31,9 +11,6 @@ export async function GET(request: Request) {
     const showBranding = searchParams.get('branding') !== 'false';
 
     const encodedTenant = encodeURIComponent(tenant);
-    const eventNameHtml = escapeHtml(eventName);
-    const targetDateScriptValue = inlineScriptValue(targetDateStr);
-    const nonce = randomBytes(16).toString('base64url');
 
     const isDark = theme === 'dark';
     const bgColor = isDark ? '#111827' : '#ffffff';
@@ -137,7 +114,7 @@ export async function GET(request: Request) {
       </head>
       <body>
         <div class="widget-container">
-          <div class="event-title">${eventNameHtml}</div>
+          <div class="event-title">${eventName}</div>
           <div class="countdown-blocks" id="countdown">
             <div class="time-block">
               <span class="time-value" id="days">00</span>
@@ -164,9 +141,9 @@ export async function GET(request: Request) {
           ` : ''}
         </div>
 
-        <script nonce="${nonce}">
+        <script>
           function updateCountdown() {
-            const target = new Date(${targetDateScriptValue}).getTime();
+            const target = new Date('${targetDateStr}').getTime();
             const now = new Date().getTime();
             const distance = target - now;
 
@@ -198,9 +175,6 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'text/html',
         'Cache-Control': 'public, max-age=60', // Cache for 1 minute
-        'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-${nonce}'; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'`,
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'no-referrer',
       },
     });
   } catch (error) {

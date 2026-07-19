@@ -79,7 +79,7 @@ export default function ViralCouponUnlockPage() {
               <span className="text-xl">🚀</span> Share Your Link
             </h3>
             <p className="text-sm text-indigo-800 mb-4">
-              Preview only. Share counting and coupon unlocking are unavailable until a verification API is connected.
+              Post this link to your audience. They must share it with {sharesRequired} friends to unlock the coupon code!
             </p>
 
             <div className="flex items-center gap-2 bg-white min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">

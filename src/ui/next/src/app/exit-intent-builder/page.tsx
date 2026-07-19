@@ -2,15 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Head from "next/head";
-import { useProPlan } from '../components/useProPlan';
-
-function safeJavaScriptString(value: string): string {
-  return JSON.stringify(value)
-    .replace(/</g, "\\u003c")
-    .replace(/>/g, "\\u003e")
-    .replace(/\u2028/g, "\\u2028")
-    .replace(/\u2029/g, "\\u2029");
-}
 
 export default function ExitIntentBuilder() {
   const [headline, setHeadline] = useState("Wait! Before you go...");
@@ -22,64 +13,47 @@ export default function ExitIntentBuilder() {
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const { hasPro } = useProPlan();
 
   const previewRef = useRef<HTMLDivElement>(null);
 
   const handleBrandingToggle = () => {
     if (!removeBranding) {
-      if (hasPro) setRemoveBranding(true);
-      else setShowPaywall(true);
+      setShowPaywall(true);
     } else {
       setRemoveBranding(false);
     }
   };
 
   const handleUpgrade = () => {
+    setRemoveBranding(true);
     setShowPaywall(false);
-    window.location.href = '/pricing';
   };
 
   const generatedCode = `
 <!-- OHC Exit Intent Pop-up -->
 <script>
   (function() {
-    const headline = ${safeJavaScriptString(headline)};
-    const description = ${safeJavaScriptString(description)};
-    const buttonText = ${safeJavaScriptString(buttonText)};
-    const themeColor = ${safeJavaScriptString(themeColor)};
     let triggered = false;
     document.addEventListener("mouseleave", function(e) {
       if (e.clientY < 0 && !triggered) {
         triggered = true;
-        const overlay = document.createElement("div");
-        Object.assign(overlay.style, { position: "fixed", inset: "0", width: "100vw", height: "100vh", background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: "999999" });
         const popup = document.createElement("div");
-        Object.assign(popup.style, { background: "white", padding: "2rem", borderRadius: "8px", textAlign: "center", maxWidth: "400px", width: "100%", position: "relative" });
-        const close = document.createElement("button");
-        close.type = "button";
-        close.textContent = "×";
-        close.setAttribute("aria-label", "Close offer");
-        Object.assign(close.style, { position: "absolute", top: "10px", right: "10px", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer" });
-        close.addEventListener("click", function() { overlay.remove(); });
-        const heading = document.createElement("h2");
-        heading.textContent = headline;
-        Object.assign(heading.style, { marginTop: "0", color: "#1f2937" });
-        const copy = document.createElement("p");
-        copy.textContent = description;
-        Object.assign(copy.style, { color: "#4b5563", marginBottom: "1.5rem" });
-        const action = document.createElement("button");
-        action.type = "button";
-        action.textContent = buttonText;
-        Object.assign(action.style, { background: themeColor, color: "white", border: "none", padding: "0.75rem 1.5rem", borderRadius: "4px", fontWeight: "bold", cursor: "pointer", width: "100%" });
-        popup.append(close, heading, copy, action);
-        ${!removeBranding ? `const branding = document.createElement("a");
-        branding.href = "https://onehumancorp.com";
-        branding.textContent = "⚡ Powered by OHC";
-        Object.assign(branding.style, { display: "block", marginTop: "1rem", fontSize: "0.75rem", color: "#9ca3af", textDecoration: "none" });
-        popup.appendChild(branding);` : ""}
-        overlay.appendChild(popup);
-        document.body.appendChild(overlay);
+        popup.innerHTML = \`
+          <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999999;">
+            <div style="background: white; padding: 2rem; border-radius: 8px; text-align: center; max-width: 400px; width: 100%; position: relative;">
+              <button onclick="this.parentElement.parentElement.remove()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+              <h2 style="margin-top: 0; color: #1f2937;">\${"${headline}"}</h2>
+              <p style="color: #4b5563; margin-bottom: 1.5rem;">\${"${description}"}</p>
+              <button style="background: \${"${themeColor}"}; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">\${"${buttonText}"}</button>
+              ${
+                !removeBranding
+                  ? `<div style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;"><a href="https://onehumancorp.com" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a></div>`
+                  : ""
+              }
+            </div>
+          </div>
+        \`;
+        document.body.appendChild(popup);
       }
     });
   })();
@@ -116,12 +90,11 @@ export default function ExitIntentBuilder() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="exit-headline" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Headline
               </label>
               <input
                 type="text"
-                id="exit-headline"
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none"
@@ -130,11 +103,10 @@ export default function ExitIntentBuilder() {
             </div>
 
             <div>
-              <label htmlFor="exit-description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Offer Description
               </label>
               <textarea
-                id="exit-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
@@ -144,12 +116,11 @@ export default function ExitIntentBuilder() {
             </div>
 
             <div>
-              <label htmlFor="exit-button-text" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Button Text
               </label>
               <input
                 type="text"
-                id="exit-button-text"
                 value={buttonText}
                 onChange={(e) => setButtonText(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none"

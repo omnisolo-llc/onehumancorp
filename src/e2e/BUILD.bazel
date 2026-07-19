@@ -1,105 +1,150 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load("//bazel/rules/playwright:playwright_coverage_analysis_test.bzl", "playwright_coverage_analysis_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
-
-exports_files(["BUILD.bazel"])
 
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
+    "//src/ui/next:src/e2e/code-native.spec.ts",
 
+    "//src/ui/next:src/e2e/viral_tier_list_generator.spec.ts",
+    "//src/ui/next:src/e2e/viral_powered_by_ohc_widget.spec.ts",
+    "//src/ui/next:src/e2e/viral_goal_tracker.spec.ts",
     "//src/ui/next:src/e2e/calendar.spec.ts",
     "//src/ui/next:src/e2e/exit-intent-builder.spec.ts",
+    "//src/ui/next:src/e2e/cart-recovery.spec.ts",
+    "//src/ui/next:src/e2e/visual-workflow.spec.ts",
+    "//src/ui/next:src/e2e/pos-inventory-sync-optimistic.spec.ts",
+    "//src/ui/next:src/e2e/quoting-offline.spec.ts",
     "//src/ui/next:src/e2e/pricing.spec.ts",
     "//src/ui/next:src/e2e/growth_loops.spec.ts",
     "//src/ui/next:src/e2e/hyperlocal-lead-gen.spec.ts",
+    "//src/ui/next:src/e2e/real_estate_onboarding.spec.ts",
+    "//src/ui/next:src/e2e/viral-loop-dashboard.spec.ts",
+    "//src/ui/next:src/e2e/missed_lead_recovery.spec.ts",
 
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
     "//src/ui/next:src/e2e/work_intake_widget.spec.ts",
     "//src/ui/next:src/e2e/wizard_mobile_layout.spec.ts",
     "//src/ui/next:src/e2e/documentation_features.spec.ts",
     "//src/ui/next:src/e2e/help-center-regression.spec.ts",
+    "//src/ui/next:src/e2e/project-showcase.spec.ts",
+    "//src/ui/next:src/e2e/ambassador-auto-reply.spec.ts",
+    "//src/ui/next:src/e2e/kitchen-offline.spec.ts",
     "//src/ui/next:src/e2e/digital_business_card.spec.ts",
     "//src/ui/next:src/e2e/test_observation_masking.spec.ts",
     "//src/ui/next:src/e2e/test_git_checkpointing.spec.ts",
     "//src/ui/next:src/e2e/walkthrough.spec.ts",
+    "//src/ui/next:src/e2e/translucent_glass_ui.spec.ts",
     "//src/ui/next:src/e2e/ai-usage-limit-widget.spec.ts",
     "//src/ui/next:src/e2e/invoice.spec.ts",
+    "//src/ui/next:src/e2e/pos_terminal.spec.ts",
+    "//src/ui/next:src/e2e/returns.spec.ts",
     "//src/ui/next:src/e2e/subscription_replenishment_feed.spec.ts",
     "//src/ui/next:src/e2e/link_in_bio.spec.ts",
     "//src/ui/next:src/e2e/pydantic-validation.spec.ts",
+    "//src/ui/next:src/e2e/share-and-save-widget/page.spec.ts",
     "//src/ui/next:src/e2e/viral_pre_order_waitlist.spec.ts",
+    "//src/ui/next:src/e2e/whatsapp-link-generator.spec.ts",
+    "//src/ui/next:src/e2e/omni_inbox.spec.ts",
     "//src/ui/next:src/e2e/qr-code-generator.spec.ts",
+    "//src/ui/next:src/e2e/interactive-quote.spec.ts",
     "//src/ui/next:src/e2e/loyalty-program.spec.ts",
     "//src/ui/next:src/e2e/assistant.spec.ts",
     "//src/ui/next:src/e2e/tooltips.spec.ts",
+    "//src/ui/next:src/e2e/post-purchase-share.spec.ts",
     "//src/ui/next:src/e2e/tip-jar.spec.ts",
     "//src/ui/next:src/e2e/ralph-loop.spec.ts",
     "//src/ui/next:src/e2e/anthropic-guardrails.spec.ts",
     "//src/ui/next:src/e2e/dashboard-campaigns.spec.ts",
+    "//src/ui/next:src/e2e/trial_extension.spec.ts",
+    "//src/ui/next:src/e2e/receipt-campaign.spec.ts",
+    "//src/ui/next:src/e2e/voice_assistant.spec.ts",
+    "//src/ui/next:src/e2e/draft-quote-card.spec.ts",
+    "//src/ui/next:src/e2e/proposal_flow.spec.ts",
+    "//src/ui/next:src/e2e/lead-magnet-generator.spec.ts",
     "//src/ui/next:src/e2e/api-docs.spec.ts",
+    "//src/ui/next:src/e2e/client-intake-to-proposal.spec.ts",
+    "//src/ui/next:src/e2e/viral_affiliate_marketing.spec.ts",
+    "//src/ui/next:src/e2e/staff_manager.spec.ts",
+    "//src/ui/next:src/e2e/field-ops-offline.spec.ts",
+    "//src/ui/next:src/e2e/test_styled_pages.spec.ts",
     "//src/ui/next:src/e2e/approval_inbox.spec.ts",
+    "//src/ui/next:src/e2e/shift_reassignment.spec.ts",
     "//src/ui/next:src/e2e/viral-agent-paywall.spec.ts",
+    "//src/ui/next:src/e2e/triage-action-feed.spec.ts",
+    "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
     "//src/ui/next:src/e2e/plan.spec.ts",
     "//src/ui/next:src/e2e/zero-click-builder.spec.ts",
 
 
 
+    "//src/ui/next:src/e2e/interactive_demo_loop.spec.ts",
     "//src/ui/next:src/e2e/langgraph.spec.ts",
+    "//src/ui/next:src/e2e/client-side-image-optimization.spec.ts",
 
+    "//src/ui/next:src/e2e/auto_cart_recovery.spec.ts",
+    "//src/ui/next:src/e2e/ai-usage-paywall.spec.ts",
     "//src/ui/next:src/e2e/morning-briefing.spec.ts",
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
+        "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
+    "//src/ui/next:src/e2e/whatsapp-flow.spec.ts",
+    "//src/ui/next:src/e2e/whatsapp-twilio-flow.spec.ts",
 
+    "//src/ui/next:src/e2e/branding-loop.spec.ts",
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
     "//src/ui/next:src/e2e/changelog.spec.ts",
     "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
+    "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
     "//src/ui/next:src/e2e/help.spec.ts",
     "//src/ui/next:src/e2e/integrations.spec.ts",
+    "//src/ui/next:src/e2e/kds.spec.ts",
+    "//src/ui/next:src/e2e/link-in-bio.spec.ts",
+    "//src/ui/next:src/e2e/share_and_save_widget.spec.ts",
     "//src/ui/next:src/e2e/milestone-loop.spec.ts",
+    "//src/ui/next:src/e2e/cart-recovery-auth.spec.ts",
+    "//src/ui/next:src/e2e/milestones.spec.ts",
+    "//src/ui/next:src/e2e/onboarding.spec.ts",
+    "//src/ui/next:src/e2e/onboarding_error_banner.spec.ts",
     "//src/ui/next:src/e2e/review-campaign.spec.ts",
+    "//src/ui/next:src/e2e/staff-mesh.spec.ts",
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
+    "//src/ui/next:src/e2e/subscription_box.spec.ts",
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
+    "//src/ui/next:src/e2e/verify-ui.spec.ts",
+    "//src/ui/next:src/e2e/knowledge-documents.spec.ts",
 
     "//src/ui/next:src/e2e/videos.spec.ts",
+    "//src/ui/next:src/e2e/pos-inventory-sync.spec.ts",
 
+    "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
 
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
 
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
+    "//src/ui/next:src/e2e/regression_audit_fake_data_fixes.spec.ts",
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
+    "//src/ui/next:e2e/checkout.spec.ts",
+    "//src/ui/next:e2e/checkout-subscription.spec.ts",
+    "//src/ui/next:e2e/subscription-management.spec.ts",
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
+    "//src/ui/next:e2e/dashboard-feed.spec.ts",
     "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
+    "//src/ui/next:src/e2e/omnichannel_memory_graph.spec.ts",
 
     "//src/ui/next:src/e2e/help_components.spec.ts",
+    "//src/ui/next:e2e/localization_offline.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
 
 
 
+    "//src/ui/next:src/e2e/viral_share_to_unlock.spec.ts",
     "//src/ui/next:e2e/storefront_v2.spec.ts",
+    "//src/ui/next:src/e2e/viral_leaderboard_generator.spec.ts",
     "//src/ui/next:src/e2e/viral-post-generator.spec.ts",
 ]
-
-# The aggregate CI gate intentionally exercises only maintained, real-stack
-# journeys. The complete historical suite remains available as per-spec manual
-# targets, while this subset is forbidden from intercepting or fabricating API,
-# database, or upload behavior by playwright_spec_coverage.
-_CI_REAL_STACK_E2E_SPECS = [
-    "//src/e2e:login_auth.spec.ts",
-    "//src/e2e:real_data_contract.spec.ts",
-    "//src/ui/next:src/e2e/app-shell-style.spec.ts",
-]
-
-# Historical browser contracts that relied on response interception, injected
-# documents, fabricated mutations, or in-memory upload bytes. They are kept as
-# explicit migration debt, but are not executable Playwright E2E specs.
-filegroup(
-    name = "legacy_playwright_mock_contracts",
-    srcs = glob(["**/*.mock-contract.ts"]),
-    tags = ["manual"],
-)
 
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
@@ -123,35 +168,19 @@ sh_binary(
 # `//src/e2e:playwright` CI gate. A generated check ensures the CI subset only
 # references discovered specs.
 # Run suite: bazel test //src/e2e:playwright
-# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_4
+# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_1
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-    ci_specs = _CI_REAL_STACK_E2E_SPECS,
     ci_discovery_data = [
         "//src/ui/next:next_e2e_specs",
     ],
-    ci_shard_count = 4,
+    ci_shard_count = 1,
     data = [
         "//src/ui/next:next_app_e2e_data",
         "//src/ui/tauri/src/ui:all_files",
-    ] + glob(
-        ["**/*.ts"],
-        exclude = [
-            "**/*.spec.ts",
-            "**/*.mock-contract.ts",
-            "authenticate.ts",
-            "current_app_smoke.ts",
-            "fixtures.ts",
-            "global-setup.ts",
-        ],
-    ),
+    ],
     server = "//src/server:server",
     specs = glob(["**/*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
-)
-
-playwright_coverage_analysis_test(
-    name = "playwright_coverage_support_wiring_test",
-    target_under_test = ":playwright_spec_coverage",
 )
 
 sh_test(

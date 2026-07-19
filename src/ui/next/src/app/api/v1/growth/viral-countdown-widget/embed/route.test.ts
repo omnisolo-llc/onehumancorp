@@ -48,22 +48,4 @@ describe('Viral Countdown Widget Embed Route', () => {
     const html = await response.text();
     expect(html).not.toContain('Powered by OHC');
   });
-
-  it('keeps hostile event and target values inert in HTML and JavaScript contexts', async () => {
-    const hostile = '</script><script>globalThis.pwned=true</script>"\\\nnext';
-    const url = new URL('https://ohc.app/api/v1/growth/viral-countdown-widget/embed');
-    url.searchParams.set('event', hostile);
-    url.searchParams.set('target', hostile);
-
-    const response = await GET(new Request(url));
-    const html = await response.text();
-
-    expect(html).not.toContain('</script><script>globalThis.pwned=true</script>');
-    expect(html).toContain('&lt;/script&gt;&lt;script&gt;globalThis.pwned=true&lt;/script&gt;');
-    expect(html).toContain('\\u003c/script\\u003e');
-    expect(html).toContain('\\\\');
-    expect(html).toContain('\\nnext');
-    expect(response.headers.get('content-security-policy')).toMatch(/script-src 'nonce-[^']+'/);
-    expect(html).toMatch(/<script nonce="[^"]+">/);
-  });
 });

@@ -23,12 +23,10 @@ exports_files([
     "README.md",
     "Cargo.lock",
     "Cargo.toml",
-    "MODULE.bazel",
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
     "CHANGELOG.md",
-    ".github/workflows/ci.yml",
 ])
 
 config_setting(
@@ -93,7 +91,6 @@ sh_binary(
         "//deploy:docker-compose.yml",
         "//deploy:server_load",
         "//deploy:setup_k8s.sh",
-        "//deploy/scripts:prepare-compose-env.sh",
     ],
     tags = ["manual"],
     target_compatible_with = select({

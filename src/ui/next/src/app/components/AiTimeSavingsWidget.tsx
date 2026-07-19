@@ -1,16 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from './useProPlan';
 
 export default function AiTimeSavingsWidget() {
   const [hasClaimed, setHasClaimed] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
-  const { claimTrial } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [savingsData, setSavingsData] = useState<any>(null);
-  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const proStatus = localStorage.getItem('has_pro') === 'true';
+      setHasPro(proStatus);
+    }
+
     // Fetch real time savings data
     fetch('/api/v1/growth/time-savings')
       .then(res => {
@@ -22,7 +25,7 @@ export default function AiTimeSavingsWidget() {
           setSavingsData(data);
         }
       })
-      .catch(() => setError('Time-savings data is unavailable.'));
+      .catch(err => console.error("Error fetching time savings:", err));
   }, []);
 
   const handleShareAndClaim = async () => {
@@ -35,19 +38,33 @@ export default function AiTimeSavingsWidget() {
     window.open(shareUrl, '_blank');
 
     try {
-      if (await claimTrial()) {
+      const response = await fetch('/api/v1/growth/trial-extension/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
         setHasClaimed(true);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('has_pro', 'true');
+        }
       } else {
-        setError('Pro activation could not be confirmed.');
+        console.error('Failed to claim trial extension');
+        alert("Failed to claim trial extension. Please try again.");
       }
-    } catch {
-      setError('The Pro activation service is unavailable.');
+    } catch (error) {
+      console.error('Error claiming trial extension:', error);
+      alert("Error claiming trial extension. Please try again.");
     } finally {
       setIsClaiming(false);
     }
   };
 
-  if (!savingsData) return error ? <p className="text-sm text-red-600" role="alert">{error}</p> : <p className="text-sm text-gray-500">Loading time-savings data…</p>;
+  if (!savingsData) {
+    return null;
+  }
 
   if (hasClaimed) {
     return (
@@ -56,10 +73,10 @@ export default function AiTimeSavingsWidget() {
           🎉
         </div>
         <h2 className="text-2xl font-bold font-outfit text-green-900 dark:text-green-100 mb-2">
-          Pro Access Activated
+          Trial Extended!
         </h2>
         <p className="text-green-700 dark:text-green-300">
-          The backend confirmed Pro access for this account.
+          Your Pro trial has been successfully extended by 7 days. Enjoy the extra time!
         </p>
       </div>
     );
@@ -106,7 +123,7 @@ export default function AiTimeSavingsWidget() {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z" />
               </svg>
-              Share to activate Pro
+              Share to get 7 Days Pro
             </>
           )}
         </button>

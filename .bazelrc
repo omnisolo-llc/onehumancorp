@@ -2,9 +2,7 @@ try-import %workspace%/.bazelrc.local
 # Bazel configuration for MCP Any
 
 build --color=yes
-# Shared caching is opt-in so plain local builds do not require credentials.
-# CI enables --config=remote-cache in its generated bazelrc after installing the
-# NativeLink authentication header.
+build --config=remote-cache
 # Tests and builds execute on the local host. Remote storage is cache-only;
 # explicitly clear any executor inherited from a user or platform rc file.
 build --remote_executor=

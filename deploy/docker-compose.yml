@@ -10,14 +10,6 @@ services:
   # ─── Rust Core (settings · agent scheduler · meeting rooms · chat) ────────
   ohc-core:
     profiles: ["ohc-core"]
-    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
-    read_only: true
-    tmpfs:
-      - /tmp:mode=1777
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: "json-file"
       options:
@@ -37,24 +29,8 @@ services:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
       LISTEN_ADDR: "0.0.0.0:18789"
-      PORT: "18789"
-      OHC_PORT: "18789"
-      OHC_GRPC_PORT: "18790"
-      DATABASE_URL_FILE: /run/secrets/database-url
-      JWT_SECRET_FILE: /run/secrets/jwt-secret
-      OHC_STANDALONE_MODE: "false"
-      OHC_MULTITENANT: "true"
-      OHC_AUTH_RATE_LIMIT_DEPLOYMENT: single-instance
-      OHC_GRPC_TLS_CERT_PATH: /etc/ohc/grpc-tls/server.crt
-      OHC_GRPC_TLS_KEY_PATH: /etc/ohc/grpc-tls/server.key
-      OHC_GRPC_CLIENT_CA_PATH: /etc/ohc/grpc-tls/ca.crt
+      DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       REDIS_URL: redis://valkey:6379
-    volumes:
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/ohc/grpc-tls/server.crt:ro
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/ohc/grpc-tls/server.key:ro
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/ohc/grpc-tls/ca.crt:ro
-      - ${JWT_SECRET_FILE:?JWT_SECRET_FILE is required}:/run/secrets/jwt-secret:ro
-      - ${DATABASE_URL_FILE:?DATABASE_URL_FILE is required}:/run/secrets/database-url:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,14 +40,6 @@ services:
       - "18789:18789"
 
   server:
-    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
-    read_only: true
-    tmpfs:
-      - /tmp:mode=1777
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
     logging:
       driver: "json-file"
       options:
@@ -94,7 +62,7 @@ services:
       OHC_PORT: "8080"
       REDIS_ADDR: valkey:6379
       REDIS_URL: redis://valkey:6379
-      DATABASE_URL_FILE: /run/secrets/database-url
+      DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
       OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
       OHC_LLM_MODEL: ${OHC_LLM_MODEL:-MiniMax-M3}
@@ -102,23 +70,14 @@ services:
       OHC_AGENT_TASK_TIMEOUT_SECS: ${OHC_AGENT_TASK_TIMEOUT_SECS:-240}
       OHC_LLM_TIMEOUT_SECS: ${OHC_LLM_TIMEOUT_SECS:-180}
       OHC_BUILTIN_AGENT_BINARY: ${OHC_BUILTIN_AGENT_BINARY:-/usr/local/bin/ohc-builtin-agent}
-      OHC_STANDALONE_MODE: "false"
-      OHC_AUTH_RATE_LIMIT_DEPLOYMENT: single-instance
-      OHC_GRPC_TLS_CERT_PATH: /etc/ohc/grpc-tls/server.crt
-      OHC_GRPC_TLS_KEY_PATH: /etc/ohc/grpc-tls/server.key
-      OHC_GRPC_CLIENT_CA_PATH: /etc/ohc/grpc-tls/ca.crt
-      JWT_SECRET_FILE: /run/secrets/jwt-secret
-      OHC_SETUP_TOKEN_FILE: /run/secrets/setup-token
-      OHC_MULTITENANT: "true"
+      # Multi-tenant mode is disabled by default in single-docker deployment.
+      # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
+      OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
       # Set to "true" for API-only / remote-client deployments.
       OHC_HEADLESS: ${OHC_HEADLESS:-false}
-    volumes:
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/ohc/grpc-tls/server.crt:ro
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/ohc/grpc-tls/server.key:ro
-      - ${OHC_DOCKER_GRPC_TLS_DIR:?OHC_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/ohc/grpc-tls/ca.crt:ro
-      - ${JWT_SECRET_FILE:?JWT_SECRET_FILE is required}:/run/secrets/jwt-secret:ro
-      - ${OHC_SETUP_TOKEN_FILE:?OHC_SETUP_TOKEN_FILE is required}:/run/secrets/setup-token:ro
-      - ${DATABASE_URL_FILE:?DATABASE_URL_FILE is required}:/run/secrets/database-url:ro
+      # Initial admin credentials read by the one-time bootstrap script.
+      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
+      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
       valkey:
         condition: service_healthy
@@ -126,45 +85,31 @@ services:
         condition: service_healthy
     ports:
       - "${OHC_DOCKER_SERVER_PORT:-8080}:8080"
-      - "${OHC_DOCKER_GRPC_PORT:-127.0.0.1:8081}:8081"
 
   # ─── One-time admin bootstrap ─────────────────────────────────────────────
   # Runs once at install time: waits for `server` to be healthy, then creates
   # the initial admin account from SETUP_ADMIN_INIT_USERNAME / _PASSWORD.
-  # The setup endpoint is one-admin-only and returns 409 after success, so this
-  # helper safely verifies bootstrap state on every stack start.
+  # A marker file written to the `server-init-data` volume prevents it from
+  # repeating even if the container is restarted.
   server-init:
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    image: curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b
-    entrypoint: ["/bin/sh"]
-    command: ["/scripts/bootstrap-admin.sh"]
-    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
-    read_only: true
-    tmpfs:
-      - /tmp:mode=1777
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+    image: alpine:3.19
+    command: sh /scripts/bootstrap-admin.sh
     volumes:
       - ./docker/server-init/bootstrap-admin.sh:/scripts/bootstrap-admin.sh:ro
-      - ${OHC_SETUP_TOKEN_FILE:?OHC_SETUP_TOKEN_FILE is required}:/run/secrets/setup-token:ro
-      - ${SETUP_ADMIN_INIT_PASSWORD_FILE:?SETUP_ADMIN_INIT_PASSWORD_FILE is required}:/run/secrets/admin-password:ro
+      - server-init-data:/data
     environment:
       SERVER_URL: http://server:8080
-      OHC_SETUP_TOKEN_FILE: /run/secrets/setup-token
-      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:?SETUP_ADMIN_INIT_USERNAME is required}
-      SETUP_ADMIN_INIT_EMAIL: ${SETUP_ADMIN_INIT_EMAIL:?SETUP_ADMIN_INIT_EMAIL is required}
-      SETUP_ADMIN_INIT_PASSWORD_FILE: /run/secrets/admin-password
-      SETUP_ADMIN_INIT_ORGANIZATION_ID: ${SETUP_ADMIN_INIT_ORGANIZATION_ID:?SETUP_ADMIN_INIT_ORGANIZATION_ID is required}
+      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
+      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
       server:
         condition: service_started
-    restart: "no"
+    restart: on-failure
     deploy:
       resources:
         limits:
@@ -177,10 +122,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
+    image: redis:7
     pull_policy: missing
     ports:
-      - "${OHC_DOCKER_VALKEY_PORT:-127.0.0.1:6379}:6379"
+      - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -198,21 +143,19 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+    image: postgres:15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       LOG_LEVEL: "info"
       POSTGRES_USER: ohc
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      POSTGRES_PASSWORD: ohc
       POSTGRES_DB: ohc
       POSTGRES_MULTIPLE_DATABASES: ohc
     volumes:
       - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
-      - postgres-data:/var/lib/postgresql/data
-      - ${OHC_POSTGRES_PASSWORD_FILE:?OHC_POSTGRES_PASSWORD_FILE is required}:/run/secrets/postgres-password:ro
     ports:
-      - "${OHC_DOCKER_POSTGRES_PORT:-127.0.0.1:5432}:5432"
+      - "${OHC_DOCKER_POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ohc"]
       interval: 5s
@@ -233,10 +176,10 @@ services:
         max-file: "3"
     image: journeyapps/powersync-service:latest
     ports:
-      - "${OHC_DOCKER_POWERSYNC_PORT:-127.0.0.1:8082}:8080"
+      - "8081:8080"
     environment:
       LOG_LEVEL: "info"
-      PS_DATA_SOURCE_URI: ${OHC_POWERSYNC_DATABASE_URL:-}
+      PS_DATA_SOURCE_URI: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       PS_PORT: "8080"
     volumes:
       - ./docker/powersync/sync_rules.yaml:/config/sync_rules.yaml
@@ -361,6 +304,6 @@ services:
           memory: 256M
 
 volumes:
-  # Persist the real database across normal Compose restarts.
-  postgres-data:
+  # Persists the bootstrap marker so the admin-init script runs only once.
+  server-init-data:
   nginx-cache:

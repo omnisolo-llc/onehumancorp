@@ -162,3 +162,86 @@ BEGIN
     END IF;
 END
 $$;
+
+-- +goose Down
+-- Revert RLS
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'agent_jobs',
+            'agent_session_summaries',
+            'appointments',
+            'auto_reply_policies',
+            'booking_slots',
+            'cart_items',
+            'carts',
+            'context_snippets',
+            'crdt_deltas',
+            'customer_loyalty_accounts',
+            'delivery_tasks',
+            'embedding_cache',
+            'epics',
+            'escalations',
+            'incidents',
+            'interaction_event_jobs',
+            'interaction_events',
+            'inventory_transactions',
+            'job_templates',
+            'ledger_reserves',
+            'locations',
+            'loyalty_programs',
+            'loyalty_rewards',
+            'loyalty_transactions',
+            'mutation_queue',
+            'newsletter_drafts',
+            'payment_intents',
+            'price_history',
+            'pricing_rules',
+            'project_tasks',
+            'projects',
+            'quote_requests',
+            'role_assignments',
+            'route_stops',
+            'service_requests',
+            'shared_task_dependencies',
+            'shared_tasks_v4',
+            'shift_summaries',
+            'shifts',
+            'social_post_proposals',
+            'staff_availability',
+            'staff_tasks',
+            'sub_agent_queue',
+            'swarm_tasks',
+            'swarm_truth_embeddings',
+            'sync_conflict_queue',
+            'sync_events',
+            'task_dependencies',
+            'task_envelopes',
+            'telemetry_buffer',
+            'test_sync_entities',
+            'user_configs',
+            'work_intents',
+            'estimate_line_items',
+            'estimates',
+            'agent_session_data'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+        END IF;
+    END LOOP;
+END
+$$;
+
+DO $$
+BEGIN
+    IF to_regclass('shared_tasks_decomposition') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition;
+    END IF;
+END
+$$;

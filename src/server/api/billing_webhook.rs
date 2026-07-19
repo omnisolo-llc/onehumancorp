@@ -21,17 +21,6 @@ pub struct WebhookState {
     pub orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
-async fn begin_webhook_system_transaction(
-    pool: &sqlx::PgPool,
-) -> Result<sqlx::Transaction<'_, sqlx::Postgres>, String> {
-    let mut transaction = pool.begin().await.map_err(|e| e.to_string())?;
-    sqlx::query("SET LOCAL ROLE ohc_bypassrls")
-        .execute(&mut *transaction)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(transaction)
-}
-
 #[derive(Debug, Deserialize)]
 pub struct StripeEvent {
     pub id: String,
@@ -205,7 +194,6 @@ async fn find_subscriber_for_payment_failure(
             Ok(row.map(|(id,)| id))
         }
         DbStore::Postgres => {
-            let mut transaction = begin_webhook_system_transaction(&webhook_state.db.pool).await?;
             let row: Option<(String,)> = sqlx::query_as(
                 "SELECT id FROM subscribers \
                  WHERE ($1 != '' AND stripe_subscription_id = $1) \
@@ -214,10 +202,9 @@ async fn find_subscriber_for_payment_failure(
             )
             .bind(subscription_id)
             .bind(customer_id)
-            .fetch_optional(&mut *transaction)
+            .fetch_optional(&webhook_state.db.pool)
             .await
             .map_err(|e| format!("Failed to lookup failed-payment subscriber: {e}"))?;
-            transaction.commit().await.map_err(|e| e.to_string())?;
             Ok(row.map(|(id,)| id))
         }
     }
@@ -237,13 +224,12 @@ async fn mark_subscriber_past_due(
                 .map_err(|e| e.to_string())
         }
         DbStore::Postgres => {
-            let mut transaction = begin_webhook_system_transaction(&webhook_state.db.pool).await?;
             sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1")
                 .bind(subscriber_id)
-                .execute(&mut *transaction)
+                .execute(&webhook_state.db.pool)
                 .await
-                .map_err(|e| e.to_string())?;
-            transaction.commit().await.map_err(|e| e.to_string())
+                .map(|_| ())
+                .map_err(|e| e.to_string())
         }
     }
     .map_err(|e| format!("Failed to mark subscriber past due: {e}"))
@@ -702,40 +688,23 @@ pub async fn stripe_webhook_handler(
                 // If this is a product subscription
                 if let (Some(product_id), Some(customer_id)) = (product_id_opt, customer_id_opt) {
                     if payload.r#type == "checkout.session.completed" && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription") {
-                        let mut transaction = match webhook_state.db.pool.begin().await {
-                            Ok(transaction) => transaction,
-                            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-                        };
-                        if ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id)
-                            .await
-                            .is_err()
-                        {
-                            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                        }
                         // Check if a plan exists for this product
-                        let plan_id_res = sqlx::query_scalar::<_, String>("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
+                        let mut plan_id_res = sqlx::query_scalar::<_, String>("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
                             .bind(product_id)
                             .bind(tenant_id)
-                            .fetch_optional(&mut *transaction)
-                            .await;
-                        let mut plan_id_res = match plan_id_res {
-                            Ok(plan_id) => plan_id,
-                            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-                        };
+                            .fetch_optional(&webhook_state.db.pool)
+                            .await
+                            .unwrap_or(None);
 
                         if plan_id_res.is_none() {
                             let new_plan_id = uuid::Uuid::new_v4().to_string();
-                            if sqlx::query("INSERT INTO subscription_plans (id, tenant_id, product_id, interval) VALUES ($1, $2, $3, $4)")
+                            let _ = sqlx::query("INSERT INTO subscription_plans (id, tenant_id, product_id, interval) VALUES ($1, $2, $3, $4)")
                                 .bind(&new_plan_id)
                                 .bind(tenant_id)
                                 .bind(product_id)
                                 .bind("month") // fallback interval
-                                .execute(&mut *transaction)
-                                .await
-                                .is_err()
-                            {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
+                                .execute(&webhook_state.db.pool)
+                                .await;
                             plan_id_res = Some(new_plan_id);
                         }
 
@@ -743,7 +712,7 @@ pub async fn stripe_webhook_handler(
                             let subscription_id = uuid::Uuid::new_v4().to_string();
                             let stripe_subscription_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("");
 
-                            if sqlx::query(
+                            let _ = sqlx::query(
                                 "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_end)
                                  VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP + INTERVAL '1 month')"
                             )
@@ -751,14 +720,10 @@ pub async fn stripe_webhook_handler(
                             .bind(tenant_id)
                             .bind(customer_id)
                             .bind(&plan_id)
-                            .execute(&mut *transaction)
-                            .await
-                            .is_err()
-                            {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
+                            .execute(&webhook_state.db.pool)
+                            .await;
 
-                            if sqlx::query(
+                            let _ = sqlx::query(
                                 "INSERT INTO subscribers (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status)
                                  VALUES ($1, $2, $3, $4, $5, 'ACTIVE')"
                             )
@@ -767,33 +732,21 @@ pub async fn stripe_webhook_handler(
                             .bind(&plan_id)
                             .bind(customer_id)
                             .bind(stripe_subscription_id)
-                            .execute(&mut *transaction)
-                            .await
-                            .is_err()
-                            {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
+                            .execute(&webhook_state.db.pool)
+                            .await;
 
                             // Create an order for the Manager agent
                             let order_id = uuid::Uuid::new_v4().to_string();
                             let amount_total = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0);
-                            let total_amount = amount_total as f64 / 100.0;
-                            if sqlx::query(
-                                "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'paid')"
+                            let _ = sqlx::query(
+                                "INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, status) VALUES ($1, $2, $3, $4, 'paid')"
                             )
                             .bind(&order_id)
                             .bind(tenant_id)
                             .bind(customer_id)
-                            .bind(total_amount)
-                            .execute(&mut *transaction)
-                            .await
-                            .is_err()
-                            {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
-                            if transaction.commit().await.is_err() {
-                                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                            }
+                            .bind(amount_total)
+                            .execute(&webhook_state.db.pool)
+                            .await;
 
                             // Let the manager agent know
                             let orch = webhook_state.orchestrator.clone();

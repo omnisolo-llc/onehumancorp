@@ -22,27 +22,21 @@ const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;
 const FATAL_UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 const UTF8_ENCODER = new TextEncoder();
 const BROWSER_IDENTITY_FIELDS = new Set([
-  "accesstoken",
-  "authtoken",
+  "access_token",
+  "auth_token",
   "authorization",
   "cookie",
-  "orgid",
-  "organizationid",
-  "spiffeid",
+  "org_id",
+  "organization_id",
+  "role",
+  "roles",
+  "spiffe_id",
   "tenant",
-  "tenantid",
+  "tenant_id",
   "token",
   "user",
-  "userid",
-  "xroles",
-  "xtenantid",
-  "xuserid",
-  "xuserroles",
+  "user_id",
 ]);
-
-function normalizedIdentityField(key: string): string {
-  return key.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
 
 export type BackendTransportDependencies = ServerSessionDependencies &
   Readonly<{
@@ -80,16 +74,9 @@ export function stripBrowserIdentityJsonRequestBody(
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("expected a JSON object");
   }
-  const sanitize = (candidate: unknown): unknown => {
-    if (Array.isArray(candidate)) return candidate.map(sanitize);
-    if (candidate === null || typeof candidate !== "object") return candidate;
-    return Object.fromEntries(
-      Object.entries(candidate)
-        .filter(([key]) => !BROWSER_IDENTITY_FIELDS.has(normalizedIdentityField(key)))
-        .map(([key, nested]) => [key, sanitize(nested)]),
-    );
-  };
-  const sanitized = sanitize(value);
+  const sanitized = Object.fromEntries(
+    Object.entries(value).filter(([key]) => !BROWSER_IDENTITY_FIELDS.has(key)),
+  );
   return UTF8_ENCODER.encode(JSON.stringify(sanitized));
 }
 

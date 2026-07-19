@@ -82,7 +82,6 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -193,7 +192,6 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -570,7 +568,6 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -640,7 +637,6 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -837,8 +833,6 @@ jobs:
   push-docker:
     name: Push container images
     if: startsWith(github.ref, 'refs/tags/v')
-    needs:
-      - publish-release
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -867,7 +861,6 @@ jobs:
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            build --config=remote-cache
             common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
@@ -875,22 +868,14 @@ jobs:
 
       - name: Push server web image
         run: |
-          tags=(--tag "$GITHUB_REF_NAME")
-          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
-            tags+=(--tag latest)
-          fi
           bazelisk run --config=release //deploy:server_push_ghcr \
-            -- "${tags[@]}"
+            -- --tag "${{ github.ref_name }}"
           bazelisk run --config=release //deploy:server_push_dockerhub \
-            -- "${tags[@]}"
+            -- --tag "${{ github.ref_name }}"
 
       - name: Push agent image
         run: |
-          tags=(--tag "$GITHUB_REF_NAME")
-          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
-            tags+=(--tag latest)
-          fi
           bazelisk run --config=release //deploy:agent_push_ghcr \
-            -- "${tags[@]}"
+            -- --tag "${{ github.ref_name }}"
           bazelisk run --config=release //deploy:agent_push_dockerhub \
-            -- "${tags[@]}"
+            -- --tag "${{ github.ref_name }}"

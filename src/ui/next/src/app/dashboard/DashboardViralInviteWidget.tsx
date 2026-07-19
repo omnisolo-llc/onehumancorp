@@ -7,7 +7,6 @@ export function DashboardViralInviteWidget() {
   const [tenantId, setTenantId] = useState("default-team");
   const [referralLink, setReferralLink] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -20,7 +19,6 @@ export function DashboardViralInviteWidget() {
   const handleGenerate = async (e: React.MouseEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     try {
       const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
       if (w.__TAURI__ && w.__TAURI__.core) {
@@ -34,13 +32,12 @@ export function DashboardViralInviteWidget() {
           headers,
           body: JSON.stringify({ custom_message: "" })
         });
-        if (!res.ok) throw new Error('Referral service unavailable');
         const data = await res.json();
-        if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Invalid referral response');
-        setReferralLink(data.referral_link);
+        setReferralLink(data.referral_link || `https://ohc.app/ref/${tenantId}`);
       }
-    } catch {
-      setError('A referral link could not be generated.');
+    } catch (err) {
+      console.error(err);
+      setReferralLink(`https://ohc.app/ref/${tenantId}`);
     }
     setLoading(false);
   };
@@ -55,17 +52,19 @@ export function DashboardViralInviteWidget() {
 
   const handleShareX = (e: React.MouseEvent) => {
     e.preventDefault();
-    const text = `Start your business on OHC using my referral link: ${referralLink}`;
+    const text = `Start your business on OHC! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
+
+  const shareText = `Start your business on OHC! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
 
   return (
     <div className="mb-6 ohc-growth-card p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-xl" data-testid="dashboard-viral-invite-widget">
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite a Business Owner</h2>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Generate a referral link through the OHC referral service and share it.
+            Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.
           </p>
         </div>
         {!referralLink ? (
@@ -112,7 +111,6 @@ export function DashboardViralInviteWidget() {
             </div>
           </div>
         )}
-        {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
       </div>
     </div>
   );

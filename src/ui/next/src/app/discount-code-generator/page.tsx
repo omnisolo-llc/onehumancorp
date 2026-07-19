@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
-import { useProPlan } from '../components/useProPlan';
 
 export default function DiscountCodeGeneratorPage() {
   const router = useRouter();
@@ -12,12 +11,13 @@ export default function DiscountCodeGeneratorPage() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('DEFAULT');
-  const { hasPro, claimTrial, claimError } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setTenant(localStorage.getItem('business_display_name') || 'DEFAULT');
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
@@ -32,15 +32,17 @@ export default function DiscountCodeGeneratorPage() {
     }
   };
 
-  const claimTrialExtension = async () => {
-    const referralUrl = `${window.location.origin}/onboarding?ref=${encodeURIComponent(tenant)}`;
+  const claimTrialExtension = () => {
+    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
+    }
+    setHasPro(true);
     setShowSoftPaywall(false);
   };
 
-  const encodedTenant = encodeURIComponent(tenant);
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/discount-code/embed?tenant=${encodedTenant}&discount=${encodeURIComponent(discountValue)}&code=${encodeURIComponent(codeName)}${hasPro ? '&hideBranding=true' : ''}" width="100%" height="200" frameborder="0"></iframe>${hasPro ? '' : `\n<div style="text-align: center; font-family: sans-serif; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`}`;
+  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/discount-code/embed?tenant=${tenant}&discount=${discountValue}&code=${codeName}${hasPro ? '&hideBranding=true' : ''}" width="100%" height="200" frameborder="0"></iframe>${hasPro ? '' : `\n<div style="text-align: center; font-family: sans-serif; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -63,7 +65,6 @@ export default function DiscountCodeGeneratorPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col md:flex-row gap-8">
-        {claimError && <p className="text-sm text-red-600" role="status">{claimError}</p>}
         <div className="w-full md:w-1/2 flex flex-col gap-6">
             <div className="app-card p-6 shadow-sm border border-gray-100">
                 <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Configure Discount</h2>
@@ -127,7 +128,7 @@ export default function DiscountCodeGeneratorPage() {
 
                 {!hasPro && (
                     <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                             ⚡ Powered by OHC
                         </a>
                     </div>
@@ -214,7 +215,7 @@ export default function DiscountCodeGeneratorPage() {
               onClick={claimTrialExtension}
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
-              Share on X to activate Pro
+              Share on X to get 7 Days Free
             </button>
           </div>
         </div>

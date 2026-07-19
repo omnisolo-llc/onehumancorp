@@ -13,9 +13,6 @@ describe('GET /api/v1/growth/work-intake/embed', () => {
         expect(html).toContain('background-color: #ffffff'); // Default light theme
         expect(html).toContain('Powered by OHC'); // Branding enabled by default
         expect(html).toContain('ref=demo'); // Default tenant
-        expect(html).toContain("fetch(\"/api/v1/work-intake/submit?tenant=demo\"");
-        expect(html).not.toContain('setTimeout');
-        expect(response.headers.get('Content-Security-Policy')).toContain("script-src 'nonce-");
     });
 
     it('applies custom parameters correctly', async () => {

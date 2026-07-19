@@ -709,10 +709,12 @@ impl Hub {
 
         let pool3 = self.pool.clone();
         let sync_queue_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')")
-                .bind(false)
-                .fetch_one(&pool3)
-                .await
+            let dialect_query = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')"
+            } else {
+                "SELECT count(*) FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute'))"
+            };
+            sqlx::query_scalar::<_, i64>(dialect_query).bind(false).fetch_one(&pool3).await
         });
 
         let pool4 = self.pool.clone();

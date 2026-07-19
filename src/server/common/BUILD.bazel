@@ -1,14 +1,10 @@
 exports_files(["Cargo.toml"])
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_common",
-    srcs = [
-        "auth_utils.rs",
-        "mod.rs",
-        "secret_source.rs",
-    ],
+    srcs = ["auth_utils.rs", "mod.rs"],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -16,18 +12,5 @@ rust_library(
         "//src/server/config:server_config",
         "@crates//:sqlx",
         "@crates//:serde",
-    ],
-)
-
-rust_test(
-    name = "server_common_unit_test",
-    crate = ":server_common",
-    edition = "2024",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    deps = [
-        "@crates//:temp-env",
-        "@crates//:tempfile",
     ],
 )

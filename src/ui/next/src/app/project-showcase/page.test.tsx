@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ProjectShowcasePage from './page';
 
@@ -16,7 +16,6 @@ vi.mock('../components/PoweredByOHC', () => ({
 describe('ProjectShowcasePage', () => {
   beforeEach(() => {
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
   it('renders Powered by OHC branding in preview by default', () => {
@@ -28,6 +27,7 @@ describe('ProjectShowcasePage', () => {
   });
 
   it('shows paywall when free user tries to remove branding', () => {
+    localStorage.setItem('has_pro', 'false');
     render(<ProjectShowcasePage />);
 
     const toggle = screen.getByRole('checkbox');
@@ -39,13 +39,12 @@ describe('ProjectShowcasePage', () => {
     expect(brandingElements[0]).toBeInTheDocument();
   });
 
-  it('allows pro users to remove branding after the plan API confirms pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+  it('allows pro users to remove branding', () => {
+    localStorage.setItem('has_pro', 'true');
     render(<ProjectShowcasePage />);
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    // Checkbox should be checked by default for pro users (per useEffect)
     const toggle = screen.getByRole('checkbox');
-    fireEvent.click(toggle);
     expect(toggle).toBeChecked();
 
     // PoweredBy should not be rendered

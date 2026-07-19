@@ -100,3 +100,5 @@ BEGIN
         END IF;
     END IF;
 END $$;
+
+-- +goose Down

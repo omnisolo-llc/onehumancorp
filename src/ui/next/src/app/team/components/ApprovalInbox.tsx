@@ -645,7 +645,7 @@ export default function ApprovalInbox({
                         Abandoned Cart Detected
                       </div>
                       <div className="text-xs text-rose-700 font-medium">
-                        An abandoned-cart event returned by the backend requires review.
+                        Sarah left a $45 Vegan Chocolate Cake in her cart.
                       </div>
 
                       <div className="app-card p-3 rounded-lg border border-rose-100 relative">
@@ -653,10 +653,19 @@ export default function ApprovalInbox({
                           AI Draft
                         </div>
                         <p className="text-xs text-gray-700 italic">
-                          {typeof req.payload.generated_response === "string"
-                            ? req.payload.generated_response
-                            : "No recovery draft was returned."}
+                          "Hi Sarah, noticed you left the Vegan Chocolate Cake
+                          in your cart! Here's 10% off to sweeten the deal if
+                          you finish your order today."
                         </p>
+                      </div>
+
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-1 rounded font-medium">
+                          Margin Safe: 10% Discount
+                        </span>
+                        <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
+                          SMS
+                        </span>
                       </div>
                     </div>
                   )}

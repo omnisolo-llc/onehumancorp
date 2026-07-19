@@ -113,7 +113,7 @@ describe('BuilderPage V2', () => {
        expect(screen.getByText('Pick your draft')).toBeTruthy();
      });
 
-     fireEvent.click(screen.getByText('Draft 1'));
+     fireEvent.click(screen.getByText('Draft 2'));
      fireEvent.click(screen.getByText('Customize Selected Draft'));
 
      expect(screen.getByText('Mobile Editor')).toBeTruthy();

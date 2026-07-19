@@ -1,6 +1,15 @@
-function unavailable(): Response {
-  return Response.json({ error: "assistant model settings are not implemented" }, { status: 501 });
+import { NextResponse } from 'next/server';
+import { getModelSettings, mutateModelSettings } from '../store';
+
+export async function GET() {
+  return NextResponse.json(getModelSettings());
 }
 
-export function GET(): Response { return unavailable(); }
-export function PATCH(): Response { return unavailable(); }
+export async function PATCH(request: Request) {
+  const payload = await request.json().catch(() => null);
+  try {
+    return NextResponse.json(mutateModelSettings(payload || {}));
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'model settings could not be updated' }, { status: 400 });
+  }
+}

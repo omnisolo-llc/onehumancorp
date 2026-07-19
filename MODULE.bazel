@@ -40,18 +40,6 @@ gradle_distribution_repository(
 register_toolchains("@tauri_gradle//:gradle_toolchain")
 
 cargo_vendor_repository = use_repo_rule("//bazel/rules:cargo_vendor_repository.bzl", "cargo_vendor_repository")
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "playwright_chromium",
-    build_file = "//bazel/rules/playwright:chromium.BUILD.bazel",
-    sha256 = "410c9407d5de3fea80d9398666be06f2aa09154a3fa7b327dc254e336bb4c4b7",
-    strip_prefix = "chrome-headless-shell-linux64",
-    urls = [
-        "https://cdn.playwright.dev/builds/cft/149.0.7827.55/linux64/chrome-headless-shell-linux64.zip",
-        "https://storage.googleapis.com/chrome-for-testing-public/149.0.7827.55/linux64/chrome-headless-shell-linux64.zip",
-    ],
-)
 
 cargo_vendor_repository(
     name = "tauri_cargo_vendor",
@@ -255,6 +243,20 @@ bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.0.3")
+bazel_dep(name = "rules_playwright", version = "0.5.4")
+git_override(
+    module_name = "rules_playwright",
+    remote = "https://github.com/mrmeku/rules_playwright",
+    tag = "v0.5.4",
+)
+
+playwright = use_extension("@rules_playwright//playwright:extensions.bzl", "playwright")
+playwright.repo(
+    name = "playwright",
+    playwright_version = "1.50.1",
+)
+use_repo(playwright, "playwright")
+
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "23.6.0")
 use_repo(node, "nodejs")

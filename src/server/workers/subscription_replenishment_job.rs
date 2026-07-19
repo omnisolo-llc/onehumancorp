@@ -1,5 +1,5 @@
-use crate::db::DB;
 use std::sync::Arc;
+use crate::db::DB;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -22,12 +22,7 @@ impl SubscriptionReplenishmentJob {
                 // Find consumable orders nearing duration
                 match &db.store {
                     crate::db::DbStore::Postgres => {
-                        let result = async {
-                            let mut transaction = db.pool.begin().await?;
-                            sqlx::query("SET LOCAL ROLE ohc_bypassrls")
-                                .execute(&mut *transaction)
-                                .await?;
-                            let rows = sqlx::query(
+                        let rows = sqlx::query(
                             r#"
                             SELECT id, tenant_id, customer_id
                             FROM orders
@@ -36,39 +31,34 @@ impl SubscriptionReplenishmentJob {
                             AND created_at + (estimated_duration_days || ' days')::interval <= NOW() + INTERVAL '5 days'
                             "#
                         )
-                            .fetch_all(&mut *transaction)
-                            .await?;
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default();
 
-                            for row in rows {
-                                use sqlx::Row;
-                                let order_id: String = row.get("id");
-                                let tenant_id: String = row.get("tenant_id");
-                                let customer_id: String = row.get("customer_id");
+                        for row in rows {
+                            use sqlx::Row;
+                            let order_id: String = row.get("id");
+                            let tenant_id: String = row.get("tenant_id");
+                            let customer_id: String = row.get("customer_id");
 
-                                let payload = serde_json::json!({
-                                    "order_id": order_id,
-                                    "customer_id": customer_id,
-                                    "item_name": "your subscription item"
-                                });
+                            let payload = serde_json::json!({
+                                "order_id": order_id,
+                                "customer_id": customer_id,
+                                "item_name": "your subscription item"
+                            });
 
-                                sqlx::query(
-                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'subscription_replenishment', $3::jsonb, 'PENDING', NOW()) ON CONFLICT DO NOTHING",
-                                )
-                                .bind(Uuid::new_v4().to_string())
-                                .bind(tenant_id)
-                                .bind(payload.to_string())
-                                .execute(&mut *transaction)
-                                .await?;
-                            }
-                            transaction.commit().await
+                            let _ = sqlx::query(
+                                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'subscription_replenishment', $3, 'PENDING', NOW()) ON CONFLICT DO NOTHING"
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(tenant_id)
+                            .bind(payload.to_string())
+                            .execute(&db.pool)
+                            .await;
                         }
-                        .await;
-                        if let Err(error) = result {
-                            tracing::warn!("subscription replenishment job failed: {}", error);
-                        }
-                    }
+                    },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                        let rows = sqlx::query(
+                         let rows = sqlx::query(
                             r#"
                             SELECT id, tenant_id, customer_id
                             FROM orders

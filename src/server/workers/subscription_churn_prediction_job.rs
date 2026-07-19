@@ -1,5 +1,5 @@
-use crate::db::DB;
 use std::sync::Arc;
+use crate::db::DB;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -21,11 +21,6 @@ impl SubscriptionChurnPredictionJob {
 
                 match &db.store {
                     crate::db::DbStore::Postgres => {
-                        let result = async {
-                        let mut transaction = db.pool.begin().await?;
-                        sqlx::query("SET LOCAL ROLE ohc_bypassrls")
-                            .execute(&mut *transaction)
-                            .await?;
                         let rows = sqlx::query(
                             r#"
                             SELECT id, tenant_id, customer_id, health_score
@@ -34,8 +29,9 @@ impl SubscriptionChurnPredictionJob {
                             AND (health_score < 50 OR last_engagement_at <= NOW() - INTERVAL '30 days')
                             "#
                         )
-                        .fetch_all(&mut *transaction)
-                        .await?;
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default();
 
                         for row in rows {
                             use sqlx::Row;
@@ -52,22 +48,17 @@ impl SubscriptionChurnPredictionJob {
                             });
 
                             let _ = sqlx::query(
-                                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'subscription_churn_risk', $3::jsonb, 'PENDING', NOW()) ON CONFLICT DO NOTHING"
+                                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'subscription_churn_risk', $3, 'PENDING', NOW()) ON CONFLICT DO NOTHING"
                             )
                             .bind(Uuid::new_v4().to_string())
                             .bind(tenant_id)
                             .bind(payload.to_string())
-                            .execute(&mut *transaction)
-                            .await?;
+                            .execute(&db.pool)
+                            .await;
                         }
-                        transaction.commit().await
-                        }.await;
-                        if let Err(error) = result {
-                            tracing::warn!("subscription churn prediction job failed: {}", error);
-                        }
-                    }
+                    },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                        let rows = sqlx::query(
+                         let rows = sqlx::query(
                             r#"
                             SELECT id, tenant_id, customer_id, health_score
                             FROM subscribers

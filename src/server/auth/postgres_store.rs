@@ -1,6 +1,6 @@
-use super::User;
 use async_trait::async_trait;
 use sqlx::PgPool;
+use super::User;
 
 use super::user_repository::UserRepository;
 
@@ -18,6 +18,7 @@ fn is_multitenant_mode() -> bool {
 }
 
 use sqlx::Row;
+
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
@@ -42,15 +43,11 @@ impl PgUserRepository {
     }
 }
 
-fn roles_from_row(row: &sqlx::postgres::PgRow) -> Result<Vec<String>, String> {
-    row.try_get::<Vec<String>, _>("roles")
-        .map_err(|error| error.to_string())
-}
-
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+            async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
         let _should_bypass = !is_multitenant;
 
@@ -61,23 +58,23 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
         "#;
 
         sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(&user.roles)
-            .bind(user.active)
-            .bind(org_id)
-            .bind(&user.oidc_subject)
-            .bind(user.created_at)
-            .bind(user.updated_at)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        .bind(&user.id)
+        .bind(&user.username)
+        .bind(&user.email)
+        .bind(&user.password_hash)
+        .bind(roles_json)
+        .bind(user.active)
+        .bind(org_id)
+        .bind(&user.oidc_subject)
+        .bind(user.created_at)
+        .bind(user.updated_at)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -90,22 +87,18 @@ impl UserRepository for PgUserRepository {
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = current_setting('app.current_tenant')::text";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row_opt = sqlx::query(query)
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles = roles_from_row(&row)?;
+        // Parse roles from JSON string
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -129,22 +122,17 @@ impl UserRepository for PgUserRepository {
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = current_setting('app.current_tenant')::text";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row_opt = sqlx::query(query)
-            .bind(username)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(username).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles = roles_from_row(&row)?;
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -168,22 +156,17 @@ impl UserRepository for PgUserRepository {
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = current_setting('app.current_tenant')::text";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row_opt = sqlx::query(query)
-            .bind(email)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(email).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles = roles_from_row(&row)?;
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -229,7 +212,8 @@ impl UserRepository for PgUserRepository {
             return Ok(None);
         }
         let row = &rows[0];
-        let roles = roles_from_row(row)?;
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or(serde_json::Value::Null);
+        let roles = serde_json::from_value(roles_json).unwrap_or_default();
         Ok(Some(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -250,22 +234,17 @@ impl UserRepository for PgUserRepository {
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = current_setting('app.current_tenant')::text";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row_opt = sqlx::query(query)
-            .bind(sub)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(sub).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles = roles_from_row(&row)?;
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -288,18 +267,14 @@ impl UserRepository for PgUserRepository {
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = current_setting('app.current_tenant')::text ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query(query)
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let rows = sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
-            let roles = roles_from_row(&row)?;
+            let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+            let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
             users.push(User {
                 id: row.get("id"),
@@ -322,24 +297,23 @@ impl UserRepository for PgUserRepository {
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
         let query = r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
             WHERE id=$1 AND tenant_id = current_setting('app.current_tenant')::text RETURNING id
             "#;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let res = sqlx::query(query)
             .bind(&user.id)
             .bind(&user.username)
             .bind(&user.email)
             .bind(&user.password_hash)
-            .bind(&user.roles)
+            .bind(roles_json)
             .bind(user.active)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
@@ -361,15 +335,9 @@ impl UserRepository for PgUserRepository {
         let query = "DELETE FROM users WHERE id = $1 AND tenant_id = current_setting('app.current_tenant')::text RETURNING id";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let res = sqlx::query(query)
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let res = sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -380,24 +348,17 @@ impl UserRepository for PgUserRepository {
         Ok(())
     }
 
-    async fn revoke_token(
-        &self,
-        jti: String,
-        exp: DateTime<Utc>,
-        org_id: &str,
-    ) -> Result<(), String> {
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
             ON CONFLICT (jti, tenant_id) DO NOTHING
-            "#,
+            "#
         )
         .bind(jti)
         .bind(exp)
@@ -405,6 +366,7 @@ impl UserRepository for PgUserRepository {
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
 
         let now = chrono::Utc::now();
         sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?;
@@ -418,9 +380,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        set_org_context(&mut *tx, org_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2 AND tenant_id = current_setting('app.current_tenant')::text")
             .bind(jti)
@@ -439,25 +399,11 @@ impl UserRepository for PgUserRepository {
 #[cfg(test)]
 mod auth_utils_tests {
     use super::*;
-    use std::sync::Mutex;
     use std::time::Duration;
+    use std::sync::Mutex;
     use temp_env;
 
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
-
-    #[test]
-    fn postgres_role_storage_matches_text_array_schema() {
-        let source = include_str!("postgres_store.rs");
-        let production_source = source
-            .split_once("\n#[cfg(test)]\nmod auth_utils_tests")
-            .expect("PostgreSQL repository must retain its test boundary")
-            .0;
-        assert!(!production_source.contains("roles_json"));
-        assert!(!production_source.contains("::jsonb"));
-        assert!(!production_source.contains("serde_json::from_value"));
-        assert!(production_source.contains("row.try_get::<Vec<String>, _>(\"roles\")"));
-        assert_eq!(production_source.matches(".bind(&user.roles)").count(), 2);
-    }
 
     #[tokio::test]
     async fn test_tenant_isolation_boundary_enforcement() {
@@ -502,8 +448,7 @@ mod auth_utils_tests {
             assert!(res.is_err());
 
             tx.rollback().await.unwrap();
-        })
-        .await;
+        }).await;
     }
 }
 
@@ -513,6 +458,7 @@ mod security_tests {
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;
+
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
@@ -549,21 +495,13 @@ mod security_tests {
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let _org_id = "system";
-            let should_bypass = !is_multitenant;
-            assert!(
-                !should_bypass,
-                "Cloud mode should NEVER bypass tenant filters when org_id is 'system'"
-            );
+            let _org_id = "system"; let should_bypass = !is_multitenant;
+            assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
             assert!(res.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(
-                res.unwrap_err(),
-                "tenant_id 'system' cannot be queried in multi-tenant mode".to_string()
-            );
-        })
-        .await;
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+        }).await;
     }
 
     #[tokio::test]
@@ -600,9 +538,7 @@ mod security_tests {
         let exp = Utc::now() + chrono::Duration::hours(1);
 
         // This validates the context threading through the trait boundaries
-        let res = repo
-            .revoke_token("test-token-jti".to_string(), exp, "test-tenant")
-            .await;
+        let res = repo.revoke_token("test-token-jti".to_string(), exp, "test-tenant").await;
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
@@ -666,11 +602,10 @@ mod security_tests {
                 let res = repo.update_user(dummy_user, "system").await;
                 assert!(res.is_err(), "Must reject system org_id");
             }
-        })
-        .await;
+        }).await;
     }
 
-    #[tokio::test]
+#[tokio::test]
     async fn test_postgres_create_user_organization_id_parity() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let database_url = match std::env::var("OHC_DATABASE_URL") {

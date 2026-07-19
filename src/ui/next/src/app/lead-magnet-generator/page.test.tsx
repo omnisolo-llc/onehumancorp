@@ -16,7 +16,6 @@ describe('LeadMagnetGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
   it('renders the configurator with default values', () => {
@@ -68,14 +67,13 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('removes branding when Pro is active', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    localStorage.setItem('has_pro', 'true');
     render(
       <TooltipProvider>
         <LeadMagnetGeneratorPage />
       </TooltipProvider>
     );
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
     const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
     fireEvent.click(checkbox);
 

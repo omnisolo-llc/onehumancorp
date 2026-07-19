@@ -89,3 +89,7 @@ BEGIN
     END LOOP;
 END
 $$;
+
+-- +goose Down
+-- Reverting this specific global enforcement is unsafe as it might remove intentionally added policies.
+-- We leave it empty to prevent destructive rollbacks on shared schemas.

@@ -4,10 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 export default function HybridLandingPage() {
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const handleDownload = () => {
-    setDownloadError('The desktop installer is not available for download.');
+    setDownloading(true);
+    setTimeout(() => {
+      setDownloading(false);
+      alert("Desktop App Download Started! (Simulation)");
+    }, 1500);
   };
 
   return (
@@ -143,10 +147,35 @@ export default function HybridLandingPage() {
 
             <button
               onClick={handleDownload}
-              aria-describedby={downloadError ? 'desktop-download-status' : undefined}
+              disabled={downloading}
               className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <>
+              {downloading ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Downloading...
+                </>
+              ) : (
+                <>
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -161,9 +190,9 @@ export default function HybridLandingPage() {
                     />
                   </svg>
                   Download Desktop
-              </>
+                </>
+              )}
             </button>
-            {downloadError && <p id="desktop-download-status" className="mt-3 text-sm text-red-700" role="status">{downloadError}</p>}
             <p className="text-center text-sm text-gray-500 mt-4 font-medium">
               macOS, Windows, Linux
             </p>

@@ -20,11 +20,9 @@ const actionTimeout = process.env.PLAYWRIGHT_ACTION_TIMEOUT
   : 0;
 
 const video = process.env.PLAYWRIGHT_VIDEO || 'on';
-const screenshot = process.env.PLAYWRIGHT_SCREENSHOT || 'only-on-failure';
-const storageState = process.env.PLAYWRIGHT_STORAGE_STATE;
 
 export default defineConfig({
-  testDir: process.env.PLAYWRIGHT_TEST_DIR || './src/e2e',
+  testDir: './src/e2e',
   globalSetup: './src/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -35,22 +33,15 @@ export default defineConfig({
   timeout: Number.isFinite(timeout) ? timeout : 60000,
   use: {
     baseURL: process.env.BASE_URL || 'http://127.0.0.1:18789',
-    ...(storageState ? { storageState } : {}),
     actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
     trace: 'on-first-retry',
-    screenshot: screenshot as 'off' | 'on' | 'only-on-failure',
+    screenshot: 'on',
     video: video as 'on' | 'off' | 'retain-on-failure' | 'on-first-retry',
   },
   projects: [
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          args: ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"],
-          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-        },
-      },
+      use: { ...devices['Desktop Chrome'], launchOptions: { args: ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"] } },
     },
   ],
 });

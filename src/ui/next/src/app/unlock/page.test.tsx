@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import UnlockPage from './page';
 
@@ -20,7 +20,7 @@ describe('UnlockPage', () => {
     expect(screen.getByText('HALFPRICE')).toBeDefined();
   });
 
-  it('keeps the code locked when verification is unavailable', () => {
+  it('unlocks code when Share on X is clicked', async () => {
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     render(<UnlockPage />);
@@ -30,9 +30,11 @@ describe('UnlockPage', () => {
 
     expect(windowOpenSpy).toHaveBeenCalled();
 
-    expect(screen.getByText('Reward verification is unavailable. The code remains locked.')).toBeDefined();
-    expect(screen.getByText('Locked')).toBeDefined();
-    expect(screen.queryByText('Copy Code')).toBeNull();
+    // Wait for the simulated verification (1.5s)
+    await waitFor(() => {
+        expect(screen.getByText('Congratulations! Here is your reward:')).toBeDefined();
+        expect(screen.getByText('Copy Code')).toBeDefined();
+    }, { timeout: 2000 });
 
     windowOpenSpy.mockRestore();
   });

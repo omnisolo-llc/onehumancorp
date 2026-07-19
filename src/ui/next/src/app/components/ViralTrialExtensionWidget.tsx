@@ -5,11 +5,9 @@ import React, { useState } from 'react';
 export function ViralTrialExtensionWidget() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
-  const [error, setError] = useState("");
 
   const handleShareAndClaim = async () => {
     setIsClaiming(true);
-    setError("");
 
     const message = "I just set up my AI-powered storefront using OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OneHumanCorp #SmallBiz";
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
@@ -28,10 +26,12 @@ export function ViralTrialExtensionWidget() {
       if (response.ok) {
         setHasClaimed(true);
       } else {
-        setError("Pro activation could not be confirmed. Please try again.");
+        console.error('Failed to claim trial extension');
+        alert("Failed to claim trial extension. Please try again.");
       }
-    } catch {
-      setError("The Pro activation service is unavailable. Please try again later.");
+    } catch (error) {
+      console.error('Error claiming trial extension:', error);
+      alert("Error claiming trial extension. Please try again.");
     } finally {
       setIsClaiming(false);
     }
@@ -41,8 +41,8 @@ export function ViralTrialExtensionWidget() {
     return (
       <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-100 text-center animate-fade-in">
         <div className="text-green-600 text-2xl mb-2">🎉</div>
-        <h4 className="font-bold text-gray-900 text-sm mb-1 font-outfit">Pro Access Activated</h4>
-        <p className="text-xs text-gray-600">The backend confirmed Pro access for this account.</p>
+        <h4 className="font-bold text-gray-900 text-sm mb-1 font-outfit">Trial Extended!</h4>
+        <p className="text-xs text-gray-600">You've unlocked 7 days of Pro for free.</p>
       </div>
     );
   }
@@ -73,7 +73,6 @@ export function ViralTrialExtensionWidget() {
           "Share to Unlock"
         )}
       </button>
-      {error && <p className="mt-2 text-xs text-red-600" role="alert">{error}</p>}
     </div>
   );
 }

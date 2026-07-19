@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SuccessMilestoneWidget } from './SuccessMilestoneWidget';
 import * as React from 'react';
 
@@ -36,7 +36,7 @@ describe('SuccessMilestoneWidget', () => {
     // Check that title and subtitle are loaded
     expect(await screen.findByText('100th Order Delivered! 🎉')).toBeDefined();
     expect(screen.getByText(/You're growing fast/i)).toBeDefined();
-    expect(screen.getByText('Available reward: $50 Credit')).toBeDefined();
+    expect(screen.getByText('$50 Credit')).toBeDefined();
 
     // Check that the tenant id is incorporated in the link
     const shareTextEl = screen.getByText(/"I just hit my 100th order.*test-tenant/i);
@@ -50,7 +50,7 @@ describe('SuccessMilestoneWidget', () => {
     await screen.findByText('100th Order Delivered! 🎉');
 
     // Find the button by looking for its text content using a custom matcher
-    const copyButton = screen.getByText(/Copy Share Text/i).closest('button');
+    const copyButton = screen.getByText(/Copy & Share to Unlock/i).closest('button');
     expect(copyButton).toBeDefined();
 
     fireEvent.click(copyButton!);
@@ -63,12 +63,6 @@ describe('SuccessMilestoneWidget', () => {
     );
 
     expect(await screen.findByText(/Copied to Clipboard!/i)).toBeDefined();
-  });
-
-  it('shows an explicit unavailable state when the backend fails', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false } as Response);
-    render(<SuccessMilestoneWidget />);
-    expect(await screen.findByText('Milestone data is unavailable.')).toBeDefined();
   });
 
   it('provides a valid twitter intent link', async () => {

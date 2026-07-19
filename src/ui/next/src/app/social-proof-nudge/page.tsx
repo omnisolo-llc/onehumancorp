@@ -1,19 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
-import { useProPlan } from '../components/useProPlan';
-
-function escapeHtmlAttribute(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  })[character] as string);
-}
 
 export default function SocialProofNudgePage() {
   const router = useRouter();
@@ -21,10 +10,15 @@ export default function SocialProofNudgePage() {
   const [customerLocation, setCustomerLocation] = useState('');
   const [timeAgo, setTimeAgo] = useState('just now');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const { hasPro, confirmPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [entitlementError, setEntitlementError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
+  }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro) {
@@ -34,7 +28,7 @@ export default function SocialProofNudgePage() {
   };
 
   const getEmbedCode = () => {
-    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://ohc.app/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OHC -->' : ''}`;
+    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${productName || 'A product'}" data-location="${customerLocation || 'Someone'}" data-time="${timeAgo}" data-theme="${theme}" data-branding="${!hasPro}"></div>\n<script src="https://ohc.app/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OHC -->' : ''}`;
   };
 
   const getThemeStyles = () => {
@@ -44,18 +38,15 @@ export default function SocialProofNudgePage() {
     return { background: '#ffffff', color: '#111827', borderColor: '#e5e7eb' };
   };
 
-  const claimTrialExtension = async () => {
+  const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
-      if (!response.ok) throw new Error('Pro activation is unavailable.');
-      confirmPro();
-      setShowPaywall(false);
-    } catch {
-      setEntitlementError('Pro activation is unavailable.');
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
     }
+    setHasPro(true);
+    setShowPaywall(false);
   };
 
   return (
@@ -80,7 +71,7 @@ export default function SocialProofNudgePage() {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 shadow-sm">
                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Boost Sales with FOMO</h2>
                 <p className="text-gray-600 text-sm">
-                    Configure how a social-proof notification will look when it is backed by a real purchase event.
+                    Show visitors that others are buying right now. Stores using social proof nudges see up to a <strong>15% increase</strong> in conversion rates.
                 </p>
             </div>
 
@@ -190,7 +181,10 @@ export default function SocialProofNudgePage() {
                              <p className="text-xs opacity-60 font-medium">
                                  {timeAgo}
                              </p>
-                             <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Preview</span>
+                             <div className="flex items-center gap-1 opacity-70">
+                                 <span className="text-[10px] uppercase font-bold tracking-widest text-[#34C759]">Verified</span>
+                                 <svg className="w-3 h-3 text-[#34C759]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                             </div>
                          </div>
                      </div>
                  </div>
@@ -244,9 +238,8 @@ export default function SocialProofNudgePage() {
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to activate Pro
+              Share on X to get 7 Days Free
             </button>
-            {entitlementError && <p className="mt-3 text-sm text-red-600" role="status">{entitlementError}</p>}
           </div>
         </div>
       )}

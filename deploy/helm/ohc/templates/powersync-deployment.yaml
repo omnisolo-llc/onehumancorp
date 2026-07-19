@@ -1,8 +1,3 @@
-{{- $dataSource := default dict .Values.powersync.dataSource -}}
-{{- $dataSourceSecret := default "" $dataSource.existingSecret -}}
-{{- if and .Values.powersync.enabled (not .Values.cnpg.enabled) (empty $dataSourceSecret) -}}
-{{- fail "powersync.dataSource.existingSecret is required when PowerSync is enabled without CNPG" -}}
-{{- end -}}
 {{- if .Values.powersync.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -17,7 +12,6 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-powersync
-        {{- include "ohc.selectorLabels" . | nindent 8 }}
     spec:
       containers:
         - name: powersync
@@ -42,10 +36,7 @@ spec:
                   key: password
             {{- else }}
             - name: PS_DATA_SOURCE_URI
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $dataSourceSecret | quote }}
-                  key: uri
+              value: "postgres://ohc:ohc@postgres/ohc?sslmode=disable"
             {{- end }}
           resources:
             {{- toYaml .Values.powersync.resources | nindent 12 }}

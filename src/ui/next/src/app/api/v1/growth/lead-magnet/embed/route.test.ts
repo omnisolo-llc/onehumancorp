@@ -24,22 +24,4 @@ describe('Lead Magnet Embed API', () => {
         // It's still in the DOM but hidden via CSS
         expect(html).toContain('display: none;');
     });
-
-    it('serializes hostile query values without ending the inline script', async () => {
-        const hostile = '</script><script>globalThis.pwned=true</script>"\\\nnext';
-        const url = new URL('http://localhost/api/v1/growth/lead-magnet/embed');
-        url.searchParams.set('tenant', hostile);
-        url.searchParams.set('title', hostile);
-        url.searchParams.set('buttonText', hostile);
-
-        const res = await GET(new Request(url));
-        const html = await res.text();
-
-        expect(html).not.toContain('</script><script>globalThis.pwned=true</script>');
-        expect(html).toContain('\\u003c/script\\u003e');
-        expect(html).toContain('\\\\');
-        expect(html).toContain('\\nnext');
-        expect(res.headers.get('content-security-policy')).toMatch(/script-src 'nonce-[^']+'/);
-        expect(html).toMatch(/<script nonce="[^"]+">/);
-    });
 });

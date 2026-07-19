@@ -4,7 +4,7 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
 export async function POST(request: Request) {
-  const response = await proxyBackendRequest(request, "/api/v1/booking/available_slots/invalid", {
+  const response = await proxyBackendRequest(request, "", {
     backendMethod: "GET",
     suppressRequestBody: true,
     resolveBackendPath(body) {

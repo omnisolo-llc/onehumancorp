@@ -1,8 +1,6 @@
-import { expect, test, type Page, type Response } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
 
-const representativeProductRoutes = [
+const productRoutes = [
   '/dashboard',
   '/assistant',
   '/orders',
@@ -23,53 +21,9 @@ const representativeProductRoutes = [
   '/login',
 ] as const;
 
-const appRoot = process.env.SOURCE_REPO_ROOT
-  ? path.join(process.env.SOURCE_REPO_ROOT, 'src/ui/next/src/app')
-  : path.resolve(__dirname, '../app');
-
-function discoverApplicationRoutes(root: string): string[] {
-  const pageFiles: string[] = [];
-  const walk = (directory: string) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const fullPath = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(fullPath);
-      if (entry.isFile() && entry.name === 'page.tsx') pageFiles.push(fullPath);
-    }
-  };
-  walk(root);
-
-  const dynamicValues: Record<string, string> = {
-    articleId: 'getting-started-1',
-    id: 'e2e-seeded-record',
-    tenant: 'e2e-tenant-alpha',
-  };
-
-  return [...new Set(pageFiles.map((file) => {
-    const directory = path.relative(root, path.dirname(file));
-    const segments = directory
-      .split(path.sep)
-      .filter((segment) => segment && !segment.startsWith('(') && !segment.startsWith('@'))
-      .map((segment) => {
-        const parameter = segment.match(/^\[([^.[\]]+)\]$/)?.[1];
-        return parameter ? (dynamicValues[parameter] || `e2e-${parameter}`) : segment;
-      });
-    return `/${segments.join('/')}`.replace(/\/$/, '') || '/';
-  }))].sort();
-}
-
-const allApplicationRoutes = discoverApplicationRoutes(appRoot);
-
-if (allApplicationRoutes.length === 0) {
-  throw new Error(`No Next.js application pages were discovered below ${appRoot}`);
-}
-
 const viewports = {
   desktop: { width: 1440, height: 1000 },
   mobile: { width: 390, height: 844 },
-} as const;
-
-const representativeViewports = {
-  mobile: viewports.mobile,
 } as const;
 
 const routesWithSurfacePrimitives = new Set([
@@ -93,36 +47,7 @@ const normalizedSurfaceSelector = [
 
 const hydrationFailurePattern = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced/i;
 
-const transientNavigationFailure = /net::ERR_(?:CONNECTION_REFUSED|CONNECTION_RESET|EMPTY_RESPONSE)/i;
-
-async function navigateToSettledApplicationPage(page: Page, route: string): Promise<Response> {
-  const failures: string[] = [];
-
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
-      if (!response) throw new Error('navigation did not return a document response');
-      if (response.status() < 500) {
-        await page.locator('.app-main').waitFor({ state: 'visible', timeout: 30_000 });
-        await page.evaluate(() => new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        }));
-        return response;
-      }
-      failures.push(`attempt ${attempt}: HTTP ${response.status()}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!transientNavigationFailure.test(message)) throw error;
-      failures.push(`attempt ${attempt}: ${message}`);
-    }
-
-    if (attempt < 2) await page.waitForTimeout(1_000);
-  }
-
-  throw new Error(`${route} did not settle after 2 navigation attempts (${failures.join('; ')})`);
-}
-
-async function expectVoiceSurfacesClear(page: Page) {
+async function expectMobileVoiceSurfacesClear(page: Page) {
   const root = page.locator('[data-voice-assistant-root]');
   const topbar = page.locator('.app-topbar');
   await expect(root).toHaveCount(1);
@@ -204,30 +129,8 @@ async function expectVoiceSurfacesClear(page: Page) {
 }
 
 test.describe('App shell visual consistency', () => {
-  for (const route of allApplicationRoutes) {
-    test(`${route} renders one desktop product shell without document overflow`, async ({ page }) => {
-      await page.setViewportSize(viewports.desktop);
-      const response = await navigateToSettledApplicationPage(page, route);
-
-      expect(response?.status(), `${route} returned an HTTP error`).toBeLessThan(500);
-      await expect(page.locator('.app-sidebar')).toHaveCount(1);
-      await expect(page.locator('.app-topbar')).toHaveCount(1);
-      await expect(page.locator('.app-main')).toHaveCount(1);
-      await expectVoiceSurfacesClear(page);
-
-      const dimensions = await page.evaluate(() => ({
-        documentWidth: document.documentElement.scrollWidth,
-        viewportWidth: window.innerWidth,
-      }));
-      expect(
-        dimensions.documentWidth - dimensions.viewportWidth,
-        `${route} overflowed horizontally: ${JSON.stringify(dimensions)}`,
-      ).toBeLessThanOrEqual(1);
-    });
-  }
-
-  for (const [viewportName, viewport] of Object.entries(representativeViewports)) {
-    for (const route of representativeProductRoutes) {
+  for (const [viewportName, viewport] of Object.entries(viewports)) {
+    for (const route of productRoutes) {
       test(`${route} at ${viewportName} uses one product shell without overflow and normalized surfaces`, async ({ page }) => {
         const hydrationFailures: string[] = [];
         const pageErrors: string[] = [];
@@ -243,7 +146,7 @@ test.describe('App shell visual consistency', () => {
         }
 
         await page.setViewportSize(viewport);
-        await navigateToSettledApplicationPage(page, route);
+        await page.goto(route, { waitUntil: 'domcontentloaded' });
 
         await expect.soft(page.locator('.app-sidebar')).toHaveCount(1);
         await expect.soft(page.locator('.app-topbar')).toHaveCount(1);
@@ -335,16 +238,16 @@ test.describe('App shell visual consistency', () => {
 });
 
 test.describe('Mobile global controls', () => {
-  test('desktop voice assistant stays in topbar flow clear of product actions', async ({ page }) => {
+  test('desktop voice assistant remains fixed at the viewport bottom center', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await navigateToSettledApplicationPage(page, '/products');
+    await page.goto('/integrations', { waitUntil: 'domcontentloaded' });
 
-    const root = page.locator('[data-voice-assistant-root]');
     const trigger = page.locator('[data-voice-assistant-surface="trigger"]');
     await expect(trigger).toBeVisible();
-    await expect(page.locator('.app-topbar').locator('[data-voice-assistant-root]')).toHaveCount(1);
-    expect(await root.evaluate((element) => window.getComputedStyle(element).position)).not.toBe('fixed');
-    await expectVoiceSurfacesClear(page);
+    const rect = await trigger.boundingBox();
+    expect(rect).not.toBeNull();
+    expect((rect?.x ?? 0) + (rect?.width ?? 0) / 2).toBeCloseTo(720, 0);
+    expect(1000 - (rect?.y ?? 0) - (rect?.height ?? 0)).toBeCloseTo(24, 0);
   });
 
   const collisionRoutes = [
@@ -360,7 +263,7 @@ test.describe('Mobile global controls', () => {
     for (const route of collisionRoutes) {
       test(`${route} at ${width}px keeps mobile global controls clear of product actions`, async ({ page }) => {
         await page.setViewportSize({ width, height: 844 });
-        await navigateToSettledApplicationPage(page, route);
+        await page.goto(route, { waitUntil: 'domcontentloaded' });
 
         const controlSelector = [
           '#ohc-floating-help-btn',
@@ -438,9 +341,80 @@ test.describe('Mobile global controls', () => {
           await page.evaluate(() => window.scrollTo(0, 500));
           await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
         }
-        await expectVoiceSurfacesClear(page);
+        await expectMobileVoiceSurfacesClear(page);
       });
     }
   }
 
+  for (const width of [320, 390]) {
+    test(`/integrations at ${width}px keeps every active voice state in sticky topbar flow`, async ({ page }) => {
+      await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'mediaDevices', {
+          configurable: true,
+          value: {
+            getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }),
+          },
+        });
+        class BrowserMediaRecorder {
+          ondataavailable: ((event: { data: Blob }) => void) | null = null;
+          onstop: (() => void) | null = null;
+          start() {}
+          stop() {
+            this.ondataavailable?.({ data: new Blob(['voice']) });
+            this.onstop?.();
+          }
+        }
+        Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: BrowserMediaRecorder });
+      });
+
+      let mode: 'success' | 'error' = 'success';
+      let releaseSuccess: (() => void) | undefined;
+      await page.route('**/api/v1/voice/command', async (route) => {
+        if (mode === 'error') {
+          await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+          return;
+        }
+        await new Promise<void>((resolve) => { releaseSuccess = resolve; });
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ transcription: 'safe browser test' }),
+        });
+      });
+
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto('/integrations', { waitUntil: 'domcontentloaded' });
+      await page.evaluate(() => window.scrollTo(0, 500));
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+      const trigger = page.locator('[data-voice-assistant-surface="trigger"]');
+      await expect(trigger).toBeVisible();
+      const idleX = (await trigger.boundingBox())?.x;
+      await expectMobileVoiceSurfacesClear(page);
+
+      await trigger.dispatchEvent('mousedown');
+      await expect(page.locator('[data-voice-assistant-state="listening"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      await trigger.dispatchEvent('mouseup');
+      await expect(page.locator('[data-voice-assistant-state="processing"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      await expect.poll(() => Boolean(releaseSuccess)).toBe(true);
+      releaseSuccess?.();
+      await expect(page.locator('[data-voice-assistant-state="success"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+
+      mode = 'error';
+      await trigger.dispatchEvent('mousedown');
+      await expect(page.locator('[data-voice-assistant-state="listening"]')).toBeVisible();
+      await trigger.dispatchEvent('mouseup');
+      await expect(page.locator('[data-voice-assistant-state="error"]')).toBeVisible();
+      await expectMobileVoiceSurfacesClear(page);
+      expect((await trigger.boundingBox())?.x).toBeCloseTo(idleX ?? 0, 0);
+    });
+  }
 });

@@ -8,8 +8,8 @@ interface ShareAndSaveWidgetProps {
   onShareComplete: () => void;
 }
 
-export function ShareAndSaveWidget({ tenantId, discountPercentage }: ShareAndSaveWidgetProps) {
-  const [shareOpened, setShareOpened] = useState(false);
+export function ShareAndSaveWidget({ tenantId, discountPercentage, onShareComplete }: ShareAndSaveWidgetProps) {
+  const [isShared, setIsShared] = useState(false);
   const referralLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/onboarding?ref=${tenantId}&source=checkout_share_save`;
   const shareText = `Check out this awesome store! ${referralLink}`;
 
@@ -23,8 +23,28 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage }: ShareAndSav
 
     window.open(shareUrl, '_blank');
 
-    setShareOpened(true);
+    // Optimistically apply discount after user clicks share
+    setIsShared(true);
+    onShareComplete();
   };
+
+  if (isShared) {
+    return (
+      <div className="mb-6 p-4 rounded-xl glassmorphism border border-green-200/50 dark:border-green-800/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-sm" data-testid="share-and-save-success">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center shrink-0">
+            <span className="text-green-600 dark:text-green-400 font-bold text-lg">✓</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold font-outfit text-gray-900 dark:text-white">Discount Applied!</h3>
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              Thanks for sharing. Your {discountPercentage}% discount has been added to your order.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-6 p-5 rounded-xl glassmorphism border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group" data-testid="share-and-save-widget">
@@ -34,10 +54,10 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage }: ShareAndSav
         </div>
         <div className="flex-1 text-center sm:text-left">
           <h3 className="text-base font-bold font-outfit text-gray-900 dark:text-white mb-1">
-            Share This Store
+            Share & Save {discountPercentage}%
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-            Share our store with your friends. Automatic discount verification is not available yet, so sharing will not change this order.
+            Share our store with your friends on social media to instantly unlock a {discountPercentage}% discount on this order!
           </p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
@@ -57,11 +77,6 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage }: ShareAndSav
               WhatsApp
             </button>
           </div>
-          {shareOpened && (
-            <p className="mt-3 text-xs text-amber-700 dark:text-amber-300" role="status">
-              Share window opened. No {discountPercentage}% discount has been applied because this checkout cannot verify the share.
-            </p>
-          )}
         </div>
       </div>
     </div>

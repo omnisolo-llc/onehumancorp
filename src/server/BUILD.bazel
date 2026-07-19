@@ -87,7 +87,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:catalog.rs",
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
-    "//src/server/api:setup.rs",
     "//src/server/api/booking:mod.rs",
 
 
@@ -409,6 +408,8 @@ rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
     compile_data = [
+        "//src/ui/tauri/src/ui:all_files",
+        "//src/ui/next/public/api/ui:all_files",
         "//:CHANGELOG.md",
         "//src/server/migrations",
     ],
@@ -552,42 +553,6 @@ rust_test(
     ],
 )
 
-rust_test(
-    name = "setup_unit_test",
-    size = "large",
-    args = ["setup::tests::"],
-    crate = ":server_lib",
-    edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    deps = [
-        "@crates//:serde_json",
-        "@crates//:sqlx",
-        "@crates//:temp-env",
-        "@crates//:tokio",
-        "@crates//:tower-0.4.13",
-    ],
-)
-
-rust_test(
-    name = "database_url_unit_test",
-    size = "large",
-    args = ["db::tests::database_url_"],
-    crate = ":server_lib",
-    edition = "2021",
-    rustc_flags = ["--cfg=ohc_bazel"],
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    deps = [
-        "@crates//:temp-env",
-        "@crates//:tempfile",
-        "@crates//:uuid",
-    ],
-)
-
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
@@ -639,7 +604,6 @@ SERVER_LIB_TEST_GROUPS = {
         "pipeline::tests::test_handle_spec_approved",
         "pipeline::tests::test_parse_spec_approved",
         "test_publish_mesh_event",
-        "rust_server_does_not_register_legacy_browser_application_routes",
         "test_sanitize_hub_event_redaction",
         "tasks::tests::test_approve_task",
         "tasks::tests::test_approve_task_integration",

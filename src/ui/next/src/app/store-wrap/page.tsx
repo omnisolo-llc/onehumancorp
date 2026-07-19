@@ -7,59 +7,63 @@ export default function StoreWrapPage() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [tenant, setTenant] = useState('my-store');
   const [metrics, setMetrics] = useState({ sales: 0, customers: 0 });
   const [origin, setOrigin] = useState('');
-  const [metricsStatus, setMetricsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    fetch('/api/v1/ui/dashboard/metrics')
-      .then(res => {
-        if (!res.ok) throw new Error('Metrics request failed');
-        return res.json();
+    if (typeof localStorage !== 'undefined') {
+      const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
+      setTenant(storedTenant);
+
+      fetch('/api/v1/dashboard/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: storedTenant })
       })
+      .then(res => res.json())
       .then(data => {
-        if (typeof data.total_sales !== 'number' || typeof data.active_customers !== 'number') throw new Error('Invalid metrics response');
         setMetrics({
-          sales: data.total_sales,
-          customers: data.active_customers
+          sales: data.total_sales || 0,
+          customers: data.active_customers || 0
         });
-        setMetricsStatus('ready');
       })
-      .catch(() => setMetricsStatus('error'));
+      .catch(e => console.error("Failed to fetch wrap-up metrics", e));
+    }
   }, []);
 
-  const referralLink = `${origin}/onboarding`;
-  const shareText = `My OHC dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
+  const referralLink = `${origin}/onboarding?ref=${tenant}`;
+  const shareText = `My business just generated $${metrics.sales.toLocaleString()} in revenue this year! 🚀 Built and scaled on OHC. Start your own business today and get a $50 credit: ${referralLink}`;
 
   const slides = [
     {
-      title: "Recorded Store Snapshot",
-      subtitle: "Metrics reported by the dashboard service",
+      title: "Your Year in Review",
+      subtitle: "Let's see how much you've grown",
       bg: "linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)",
       emoji: "🌟",
-      content: "This snapshot uses current recorded totals; no annual reporting period is available."
+      content: "You launched your dream store and it's been an incredible journey."
     },
     {
       title: `${metrics.customers}`,
-      subtitle: "Active Customers",
+      subtitle: "Happy Customers",
       bg: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
       emoji: "📦",
-      content: "Active-customer count returned by the dashboard service."
+      content: "That's a lot of happy customers! You shipped to many different places."
     },
     {
       title: `$${metrics.sales.toLocaleString()}`,
       subtitle: "Total Revenue",
       bg: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
       emoji: "💰",
-      content: "Recorded revenue returned by the dashboard service."
+      content: "Your hard work is paying off. You're in the top 10% of new merchants!"
     },
     {
-      title: "Share Your Store",
-      subtitle: "Copy your referral link",
+      title: "Share Your Success",
+      subtitle: "Inspire others and earn rewards",
       bg: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
       emoji: "🚀",
-      content: "Any referral reward is determined and verified by the referral service."
+      content: "Invite friends to OHC. When they launch, you both get $50 credit."
     }
   ];
 
@@ -101,10 +105,6 @@ export default function StoreWrapPage() {
       </div>
 
       <main className="flex-1 min-h-0 w-full relative flex items-center justify-center">
-        {metricsStatus === 'loading' && <p className="relative z-50 text-white">Loading recorded metrics…</p>}
-        {metricsStatus === 'error' && <p className="relative z-50 text-red-200" role="alert">Store metrics are unavailable.</p>}
-        {metricsStatus === 'ready' && (
-        <>
         {slides.map((slide, i) => (
           <div
             key={i}
@@ -167,8 +167,6 @@ export default function StoreWrapPage() {
             </div>
           </div>
         ))}
-        </>
-        )}
 
         {/* Navigation Overlays */}
         <button

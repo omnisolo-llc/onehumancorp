@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
@@ -13,7 +12,7 @@ export default function ViralStreakWidgetPage() {
   const [goal, setGoal] = useState('7');
   const [reward, setReward] = useState('Free Coffee');
   const [copied, setCopied] = useState(false);
-  const { hasPro } = useProPlan();
+  const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -23,6 +22,7 @@ export default function ViralStreakWidgetPage() {
     if (typeof localStorage !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
+      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
     document.title = "Viral Streak Widget | OHC";
   }, []);

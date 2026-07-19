@@ -47,32 +47,28 @@ describe('ZeroClickBuilderPage', () => {
   });
 
   it('submits the form and displays the result', async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/v1/billing/my-plan') {
-        return Promise.resolve({ ok: true, json: async () => ({ current_plan: 'free' }) });
-      }
-      if (url === '/api/v1/onboarding/chat') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            reply: 'Got it. I will build a sneakers store.',
-            is_complete: true,
-            intake_data: {
-              business_name: 'Custom Sneakers Store',
-              business_type: 'Retail',
-              categories: ['physical'],
-              initial_products: [{ name: 'Sneakers', price: '100' }]
-            }
-          }),
-        });
-      }
-      if (url === '/api/v1/onboarding/start') {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ organization_id: 'org_123', user_id: 'user_123' }),
-        });
-      }
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+    // First fetch for chat
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        reply: 'Got it. I will build a sneakers store.',
+        is_complete: true,
+        intake_data: {
+            business_name: 'Custom Sneakers Store',
+            business_type: 'Retail',
+            categories: ['physical'],
+            initial_products: [{ name: 'Sneakers', price: '100' }]
+        }
+      }),
+    });
+
+    // Second fetch for start
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        organization_id: 'org_123',
+        user_id: 'user_123'
+      }),
     });
 
     render(<ZeroClickBuilderPage />);
@@ -92,8 +88,9 @@ describe('ZeroClickBuilderPage', () => {
     expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
     const launch = screen.getByRole('button', { name: /Launch My Store/i });
     expect(launch).toBeInTheDocument();
-    const startCall = vi.mocked(global.fetch).mock.calls.find(([url]) => url === '/api/v1/onboarding/start');
-    const startBody = JSON.parse(String(startCall?.[1]?.body));
+    const startBody = JSON.parse(
+      String(vi.mocked(global.fetch).mock.calls[1]?.[1]?.body),
+    );
     expect(startBody.admin_name).toBeUndefined();
     expect(startBody.admin_email).toBeUndefined();
     expect(startBody.admin_password).toBeUndefined();

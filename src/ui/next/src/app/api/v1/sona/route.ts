@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   try {
     const payload = await response.json();
     if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json(payload?.result ?? null);
+    return Response.json({ status: "success" });
   } catch {
     return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
   }

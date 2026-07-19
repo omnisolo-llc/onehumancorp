@@ -62,3 +62,21 @@ CREATE POLICY tenant_isolation_service_routes ON service_routes
 ALTER TABLE route_stops ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_route_stops ON route_stops
     USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+
+
+-- +goose Down
+DROP POLICY IF EXISTS tenant_isolation_route_stops ON route_stops;
+ALTER TABLE route_stops DISABLE ROW LEVEL SECURITY;
+DROP TABLE IF EXISTS route_stops CASCADE;
+
+DROP POLICY IF EXISTS tenant_isolation_service_routes ON service_routes;
+ALTER TABLE service_routes DISABLE ROW LEVEL SECURITY;
+DROP TABLE IF EXISTS service_routes CASCADE;
+
+DROP POLICY IF EXISTS tenant_isolation_appointments ON appointments;
+ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
+DROP TABLE IF EXISTS appointments CASCADE;
+
+DROP POLICY IF EXISTS tenant_isolation_job_templates ON job_templates;
+ALTER TABLE job_templates DISABLE ROW LEVEL SECURITY;
+DROP TABLE IF EXISTS job_templates CASCADE;

@@ -133,3 +133,44 @@ BEGIN
 END
 $$;
 CREATE INDEX IF NOT EXISTS ai_memories_embedding_hnsw_idx ON ai_memories USING hnsw (embedding vector_cosine_ops);
+
+
+-- +goose Down
+-- Reverse Migration 008
+
+DO $$
+DECLARE
+    t_name text;
+    pol_name text;
+BEGIN
+    FOR t_name IN
+        SELECT unnest(ARRAY[
+            'tenants',
+            'customers',
+            'products',
+            'services',
+            'orders',
+            'order_line_items',
+            'bookings',
+            'ai_memories'
+        ])
+    LOOP
+        IF to_regclass(t_name) IS NOT NULL THEN
+            pol_name := format('tenant_isolation_%s', t_name);
+            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
+            EXECUTE format('ALTER TABLE %I DISABLE ROW LEVEL SECURITY', t_name);
+        END IF;
+    END LOOP;
+END
+$$;
+
+-- We don't drop tables because other files like 001_initial might have dependencies.
+-- DROP INDEX IF EXISTS ai_memories_embedding_hnsw_idx;
+-- DROP TABLE IF EXISTS ai_memories CASCADE;
+-- DROP TABLE IF EXISTS bookings CASCADE;
+-- DROP TABLE IF EXISTS order_line_items CASCADE;
+-- DROP TABLE IF EXISTS orders CASCADE;
+-- DROP TABLE IF EXISTS services CASCADE;
+-- DROP TABLE IF EXISTS products CASCADE;
+-- DROP TABLE IF EXISTS customers CASCADE;
+-- DROP TABLE IF EXISTS tenants CASCADE;

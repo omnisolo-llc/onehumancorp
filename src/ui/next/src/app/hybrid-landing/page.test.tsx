@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HybridLandingPage from './page';
 
@@ -27,15 +27,30 @@ describe('HybridLandingPage', () => {
     expect(screen.getByText(/Fully Managed/i)).toBeDefined();
   });
 
-  it('fails closed when no desktop installer is available', () => {
+  it('downloads desktop app when CTA is clicked', async () => {
+    // The handleDownload function calls window.alert
+    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
     render(<HybridLandingPage />);
 
     const downloadButton = screen.getByText('Download Desktop');
     expect(downloadButton).toBeDefined();
 
     // Click the button
-    fireEvent.click(downloadButton);
-    expect(screen.getByText('The desktop installer is not available for download.')).toBeDefined();
+    await act(async () => { fireEvent.click(downloadButton); });
+
+    // Verify downloading state
+    expect(screen.getByText('Downloading...')).toBeDefined();
+
+    // Wait for async operations
+    await act(async () => {
+      await vi.waitFor(() => {
+          expect(mockAlert).toHaveBeenCalledWith("Desktop App Download Started! (Simulation)");
+      }, { timeout: 2000 });
+    });
+
+    // Cleanup mocks
+    mockAlert.mockRestore();
   });
 
   it('navigates to dashboard for cloud trial', () => {

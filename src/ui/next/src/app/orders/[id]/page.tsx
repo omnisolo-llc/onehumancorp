@@ -1,200 +1,306 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { AppShell } from "../../components/AppShell";
-
-type Order = { id: string; customer_name?: string; total_amount?: number; status?: string; created_at?: string };
-type ShippingRate = { id: string; carrier: string; service: string; amount: number; days?: number };
-type ShippingLabel = { url: string; trackingNumber: string; carrier: string };
-
-const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
-const nonEmptyString = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : undefined;
-
-function parseOrder(value: unknown): Order | null {
-  if (!isRecord(value)) return null;
-  const id = nonEmptyString(value.id);
-  if (!id) return null;
-  const total = typeof value.total_amount === "number" && Number.isFinite(value.total_amount) && value.total_amount >= 0
-    ? value.total_amount : undefined;
-  return {
-    id,
-    customer_name: nonEmptyString(value.customer_name),
-    total_amount: total,
-    status: nonEmptyString(value.status),
-    created_at: nonEmptyString(value.created_at),
-  };
-}
-
-function parseRates(value: unknown): ShippingRate[] | null {
-  if (!isRecord(value) || !Array.isArray(value.rates) || value.rates.length === 0) return null;
-  const rates: ShippingRate[] = [];
-  for (const candidate of value.rates) {
-    if (!isRecord(candidate)) return null;
-    const id = nonEmptyString(candidate.id);
-    const carrier = nonEmptyString(candidate.carrier);
-    const service = nonEmptyString(candidate.service);
-    const rawAmount = nonEmptyString(candidate.amount);
-    const amount = rawAmount && /^\d+(?:\.\d{1,2})?$/.test(rawAmount) ? Number(rawAmount) : Number.NaN;
-    const days = candidate.days;
-    if (!id || !carrier || !service || !Number.isFinite(amount) || amount < 0) return null;
-    if (days !== undefined && (typeof days !== "number" || !Number.isInteger(days) || days < 0)) return null;
-    rates.push({ id, carrier, service, amount, days: days as number | undefined });
-  }
-  return rates;
-}
-
-function parseLabel(value: unknown): ShippingLabel | null {
-  if (!isRecord(value) || value.success !== true) return null;
-  const rawUrl = nonEmptyString(value.labelUrl);
-  const trackingNumber = nonEmptyString(value.trackingNumber);
-  const carrier = nonEmptyString(value.carrier);
-  if (!rawUrl || !trackingNumber || !carrier) return null;
-  try {
-    const url = new URL(rawUrl);
-    const trustedShippoHost = url.hostname === "goshippo.com"
-      || url.hostname.endsWith(".goshippo.com")
-      || [
-        "shippo-delivery.s3.amazonaws.com",
-        "shippo-delivery-east.s3.amazonaws.com",
-        "shippo-delivery-west.s3.amazonaws.com",
-      ].includes(url.hostname);
-    if (url.protocol !== "https:" || !trustedShippoHost || url.username || url.password) return null;
-    return { url: url.toString(), trackingNumber, carrier };
-  } catch {
-    return null;
-  }
-}
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function OrderDetailsPage() {
   const params = useParams();
-  const orderId = String(params.id || "");
-  const [order, setOrder] = useState<Order | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
-  const [weight, setWeight] = useState("");
-  const [dimensions, setDimensions] = useState("");
-  const [rates, setRates] = useState<ShippingRate[]>([]);
-  const [selectedRate, setSelectedRate] = useState("");
-  const [shippingError, setShippingError] = useState("");
-  const [shippingPending, setShippingPending] = useState(false);
-  const [label, setLabel] = useState<ShippingLabel | null>(null);
+  const router = useRouter();
+  const orderId = params.id as string;
 
-  useEffect(() => {
-    fetch("/api/v1/ui/orders")
-      .then((response) => {
-        if (!response.ok) throw new Error("Order request failed");
-        return response.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error("Invalid order response");
-        const match = data.map(parseOrder).find((candidate) => candidate?.id === orderId) || null;
-        if (match) {
-          setOrder(match);
-          setStatus("ready");
-        } else {
-          setStatus("missing");
-        }
-      })
-      .catch(() => setStatus("error"));
-  }, [orderId]);
+  const [status, setStatus] = useState('unfulfilled');
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrier, setCarrier] = useState('');
+
+  // Shipping form state
+  const [weight, setWeight] = useState('16');
+  const [dimensions, setDimensions] = useState('10x8x6');
+  const [rates, setRates] = useState<any[]>([]);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [selectedRate, setSelectedRate] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [labelUrl, setLabelUrl] = useState<string | null>(null);
+  const [sendingReceipt, setSendingReceipt] = useState(false);
+  const [receiptSent, setReceiptSent] = useState(false);
 
   const fetchRates = async () => {
-    setShippingError("");
-    setRates([]);
-    setSelectedRate("");
-    setLabel(null);
-    const weightNumber = Number(weight);
-    if (!Number.isFinite(weightNumber) || weightNumber <= 0 || !/^\d+(?:\.\d+)?x\d+(?:\.\d+)?x\d+(?:\.\d+)?$/i.test(dimensions.trim())) {
-      setShippingError("Enter a valid positive weight and dimensions such as 10x8x6.");
-      return;
-    }
-    setShippingPending(true);
+    setLoadingRates(true);
     try {
-      const response = await fetch("/api/v1/shipping/rates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, weight: weight.trim(), dimensions: dimensions.trim().toLowerCase() }),
+      const res = await fetch('/api/v1/shipping/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, weight, dimensions })
       });
-      if (!response.ok) throw new Error();
-      const parsed = parseRates(await response.json());
-      if (!parsed) throw new Error();
-      setRates(parsed);
-    } catch {
-      setShippingError("Shipping rates are unavailable.");
+      const data = await res.json();
+      if (data.rates) {
+        setRates(data.rates);
+      }
+    } catch (e) {
+      console.error(e);
     } finally {
-      setShippingPending(false);
+      setLoadingRates(false);
     }
   };
 
   const buyLabel = async () => {
     if (!selectedRate) return;
-    setShippingError("");
-    setShippingPending(true);
+    setPurchasing(true);
     try {
-      const response = await fetch("/api/v1/shipping/label", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, rateId: selectedRate }),
+      const res = await fetch('/api/v1/shipping/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, rateId: selectedRate })
       });
-      if (!response.ok) throw new Error();
-      const parsed = parseLabel(await response.json());
-      if (!parsed) throw new Error();
-      setLabel(parsed);
-    } catch {
-      setShippingError("The shipping label could not be confirmed.");
+      const data = await res.json();
+      if (data.success) {
+        setLabelUrl(data.labelUrl);
+        setTrackingNumber(data.trackingNumber);
+        setCarrier(data.carrier);
+        setStatus('shipped');
+      }
+    } catch (e) {
+      console.error(e);
     } finally {
-      setShippingPending(false);
+      setPurchasing(false);
+    }
+  };
+
+  const sendReceipt = async () => {
+    setSendingReceipt(true);
+    try {
+      const tenantId = typeof window !== 'undefined' && localStorage.getItem('business_display_name') ? localStorage.getItem('business_display_name') : 'my-store';
+      const response = await fetch('/api/v1/growth/campaign/send-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_email: 'alice.j@example.com',
+          order_id: orderId,
+          amount: '$45.00',
+          tenant_id: tenantId
+        })
+      });
+      if (response.ok) {
+        setReceiptSent(true);
+      }
+    } catch (e) {
+      console.error('Failed to send receipt', e);
+    } finally {
+      setSendingReceipt(false);
     }
   };
 
   return (
-    <AppShell
-      title={order ? `Order ${order.id}` : "Order details"}
-      subtitle="Database-backed fulfillment and shipping details."
-      statusItems={[
-        { label: "Status", value: status === "ready" ? order?.status || "Unknown" : status },
-      ]}
-      actions={[{ label: "All orders", href: "/orders" }]}
-    >
-      <div className="mx-auto max-w-3xl space-y-6">
-        {status === "loading" && <p className="text-sm text-gray-500">Loading order…</p>}
-        {status === "error" && <p className="text-sm text-red-600" role="alert">Order data is unavailable.</p>}
-        {status === "missing" && <p className="text-sm text-gray-600">This order was not found.</p>}
-        {status === "ready" && order && (
-          <>
-            <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
-              <h2 className="text-xl font-bold font-outfit text-gray-900">Order Summary</h2>
-              <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-                <Field label="Order ID" value={order.id} />
-                <Field label="Status" value={order.status || "Unavailable"} />
-                <Field label="Customer" value={order.customer_name || "Unavailable"} />
-                <Field label="Created" value={order.created_at || "Unavailable"} />
-                <Field label="Recorded total" value={typeof order.total_amount === "number" ? order.total_amount.toLocaleString(undefined, { style: "currency", currency: "USD" }) : "Unavailable"} />
-              </dl>
-            </section>
-            <section className="app-card rounded-2xl border border-gray-200 bg-white/70 p-6 shadow-sm">
-              <h2 className="text-lg font-bold font-outfit text-gray-900">Shipping</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-                <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
-              </div>
-              <button onClick={fetchRates} disabled={shippingPending} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
-              {shippingError && <p className="mt-3 text-sm text-red-600" role="alert">{shippingError}</p>}
-              {rates.length > 0 && <div className="mt-4 space-y-2">{rates.map((rate) => (
-                <label key={rate.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <span><input type="radio" name="shipping-rate" value={rate.id} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /> <span>{rate.carrier} {rate.service}</span>{typeof rate.days === "number" ? ` · ${rate.days} days` : ""}</span>
-                  <span>${rate.amount.toFixed(2)}</span>
-                </label>
-              ))}<button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">Buy Label</button></div>}
-              {label && <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4"><p>{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p><a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline">Open Shipping Label</a></div>}
-            </section>
-          </>
-        )}
-      </div>
-    </AppShell>
-  );
-}
+    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div className="flex items-center gap-4">
+          <button aria-label="Back to Orders" onClick={() => router.push('/orders')} className="text-gray-500 hover:text-gray-900">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          </button>
+          <h1 className="text-2xl font-bold font-outfit text-gray-900">Order {orderId}</h1>
+          <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+            status === 'unfulfilled' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+          }`}>
+            {status === 'unfulfilled' ? 'Unfulfilled' : 'Shipped'}
+          </span>
+        </div>
+      </header>
 
-function Field({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-xs font-bold uppercase tracking-wide text-gray-500">{label}</dt><dd className="mt-1 text-sm font-medium text-gray-900">{value}</dd></div>;
+      <main className="p-6 max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          {/* Order Details Card */}
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-4">Items</h2>
+            <div className="flex items-center justify-between py-3 border-b border-gray-50">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-xl">🎂</div>
+                <div>
+                  <p className="font-medium text-gray-900">Vegan Chocolate Cake</p>
+                  <p className="text-sm text-gray-500">Size: 8 inch</p>
+                </div>
+              </div>
+              <p className="font-medium">$45.00</p>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center text-lg font-bold text-gray-900">
+              <span>Total</span>
+              <span>$45.00</span>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={sendReceipt}
+                disabled={sendingReceipt || receiptSent}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${receiptSent ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                {sendingReceipt ? 'Sending...' : receiptSent ? 'Receipt Sent' : 'Send Email Receipt'}
+              </button>
+            </div>
+          </div>
+
+          {/* Fulfillment Card */}
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
+              <div className="bg-blue-50 text-[#0071E3] px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Powered by Shippo
+              </div>
+            </div>
+
+            {status === 'shipped' ? (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-green-800 mb-1">Label Purchased Successfully</h3>
+                    <p className="text-sm text-green-700 mb-3">Carrier: {carrier}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600">Tracking:</span>
+                      <code className="bg-white px-2 py-1 rounded text-sm border border-green-200 font-mono text-gray-800">{trackingNumber}</code>
+                    </div>
+                  </div>
+                  <a
+                    href={labelUrl || ""}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 bg-white border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    Print Label
+                  </a>
+                </div>
+                <div className="mt-4 pt-3 border-t border-green-200/50 flex items-center gap-2 text-sm text-green-700">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  Customer automatically notified with tracking info by The Ambassador AI.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Weight (oz)</label>
+                    <input
+                      aria-label="Package weight in ounces"
+                      type="number"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Dimensions (LxWxH)</label>
+                    <input
+                      aria-label="Package dimensions"
+                      type="text"
+                      value={dimensions}
+                      onChange={(e) => setDimensions(e.target.value)}
+                      placeholder="e.g. 10x8x6"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={fetchRates}
+                  disabled={loadingRates}
+                  className="w-full py-2.5 bg-gray-100 text-gray-800 font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  {loadingRates ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin"></div>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  )}
+                  {loadingRates ? 'Fetching discounted rates...' : 'Get Shipping Rates'}
+                </button>
+
+                {rates.length > 0 && (
+                  <div className="mt-4 space-y-3 animate-fade-in">
+                    <h3 className="text-sm font-semibold text-gray-700">Select a Service</h3>
+                    <div className="space-y-2">
+                      {rates.map(rate => (
+                        <label
+                          key={rate.id}
+                          className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                            selectedRate === rate.id
+                              ? 'border-[#0066FF] bg-blue-50 ring-1 ring-[#0066FF]'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="shipping_rate"
+                              value={rate.id}
+                              checked={selectedRate === rate.id}
+                              onChange={() => setSelectedRate(rate.id)}
+                              className="w-4 h-4 text-[#0071E3] focus:ring-[#0066FF]"
+                            />
+                            <div>
+                              <p className="font-medium text-gray-900">{rate.carrier} {rate.service}</p>
+                              <p className="text-xs text-gray-500">Est. delivery in {rate.days} days</p>
+                            </div>
+                          </div>
+                          <span className="font-bold text-gray-900">${rate.amount}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={buyLabel}
+                      disabled={!selectedRate || purchasing}
+                      className={`w-full py-3 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 mt-4 ${
+                        !selectedRate || purchasing
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      }`}
+                    >
+                      {purchasing ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Purchasing Label...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                          Buy Label & Print
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500 mb-4">Customer</h2>
+            <p className="font-medium text-gray-900 mb-1">Alice Johnson</p>
+            <p className="text-sm text-[#0071E3] hover:underline cursor-pointer mb-4">alice.j@example.com</p>
+
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mt-4 mb-2">Shipping Address</h3>
+            <p className="text-sm text-gray-700">
+              123 Main St<br/>
+              Apt 4B<br/>
+              San Francisco, CA 94105<br/>
+              United States
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <div className="mt-8 text-center pb-8">
+        <a href="/onboarding?ref=my-store" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
+      </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+      `}} />
+    </div>
+  );
 }

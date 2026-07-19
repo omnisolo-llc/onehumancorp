@@ -33,8 +33,8 @@ describe('DashboardViralInviteWidget', () => {
   it('renders correctly', async () => {
     render(<DashboardViralInviteWidget />);
 
-    expect(screen.getByText('Invite a Business Owner')).toBeDefined();
-    expect(screen.getByText(/Generate a referral link through the OHC referral service/)).toBeDefined();
+    expect(screen.getByText('Invite & Earn')).toBeDefined();
+    expect(screen.getByText(/Invite a fellow business owner to OHC/)).toBeDefined();
 
     const generateBtn = screen.getByRole('button', { name: 'Get My Invite Link' });
     expect(generateBtn).toBeDefined();
@@ -43,7 +43,6 @@ describe('DashboardViralInviteWidget', () => {
   it('generates link, copies to clipboard, and shares to X', async () => {
     // Mock the fetch call for the generation
     const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
       json: async () => ({ referral_link: 'https://ohc.app/ref/test-tenant-123' }),
     });
     global.fetch = mockFetch;

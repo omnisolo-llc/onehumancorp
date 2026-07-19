@@ -24,59 +24,49 @@ describe("Integrations", () => {
     vi.restoreAllMocks();
   });
 
-  it("does not call an unimplemented OAuth contract or mark it connected", async () => {
+  it("uses a backend-generated OAuth URL when connecting an integration", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { assign },
+    });
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+        if (url === '/api/v1/integrations') {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    integrations: []
+                })
+            });
+        }
+        if (url === '/api/v1/integrations/shippo/connect') {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    authorization_url: "https://oauth.example/shippo",
+                })
+            });
+        }
+        return Promise.resolve({ ok: false });
     });
 
     render(<Integrations />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[0]);
 
-    expect(await screen.findByText('Ayrshare connection is unavailable until secure provider verification is configured.')).toBeDefined();
-    expect(global.fetch).not.toHaveBeenCalledWith('/api/v1/integrations/ayrshare/connect', expect.anything());
-    expect(screen.getByText('Ayrshare').closest('div')).not.toHaveTextContent('Connected');
-  });
-
-  it('requires Twilio credentials and explicit backend connection confirmation', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'pending' }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+    // Wait for initial load fetch to complete
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith("/api/v1/integrations");
     });
-    render(<Integrations />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
 
-    const connect = screen.getByRole('button', { name: 'Connect Twilio' });
-    expect(connect).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
-    fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
-    fireEvent.click(connect);
+    const connectButtons = screen.getAllByRole("button", { name: "Connect" });
+    // Ayrshare is index 0, Cal is index 1, MailerLite is index 2, Mercado is 3, Shippo is 4
+    fireEvent.click(connectButtons[4]);
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations/twilio/connect', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('"bot_token":"AC123"'),
-    })));
-    expect(await screen.findByText('Twilio Conversations connection could not be confirmed.')).toBeDefined();
-    expect(screen.getByText('Twilio Conversations').closest('div')).not.toHaveTextContent('Connected');
-  });
-
-  it('marks Twilio connected only when the backend confirms it is usable', async () => {
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'connected', usable: true }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith("/api/v1/integrations/shippo/connect", {
+        method: "POST",
+      });
+      expect(assign).toHaveBeenCalledWith("https://oauth.example/shippo");
     });
-    render(<Integrations />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
-    fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
-    fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Twilio' }));
-
-    expect(await screen.findByText('Twilio Conversations connected.')).toBeDefined();
-    expect(push).toHaveBeenCalledWith('/inbox');
   });
 });

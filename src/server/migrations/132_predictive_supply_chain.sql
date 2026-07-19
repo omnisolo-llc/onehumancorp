@@ -82,3 +82,28 @@ BEGIN
     END IF;
 END
 $$;
+
+
+-- +goose Down
+DO $$
+BEGIN
+    IF to_regclass('inventory_predictions') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_inventory_predictions ON inventory_predictions;
+        ALTER TABLE inventory_predictions DISABLE ROW LEVEL SECURITY;
+    END IF;
+
+    IF to_regclass('purchase_orders') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_purchase_orders ON purchase_orders;
+        ALTER TABLE purchase_orders DISABLE ROW LEVEL SECURITY;
+    END IF;
+
+    IF to_regclass('vendors') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_vendors ON vendors;
+        ALTER TABLE vendors DISABLE ROW LEVEL SECURITY;
+    END IF;
+END
+$$;
+
+DROP TABLE IF EXISTS inventory_predictions;
+DROP TABLE IF EXISTS purchase_orders;
+DROP TABLE IF EXISTS vendors;

@@ -1,20 +1,7 @@
-use crate::orchestration::departments::orchestrator::{
-    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
-};
-use crate::orchestration::departments::types::{
-    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
-};
+use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use crate::services::customer_memory_graph::service::CustomerMemoryGraphService;
 use std::collections::HashMap;
-
-async fn begin_tenant_transaction(
-    pool: &sqlx::PgPool,
-    tenant_id: &str,
-) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, sqlx::Error> {
-    let mut transaction = pool.begin().await?;
-    ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id).await?;
-    Ok(transaction)
-}
 
 pub struct CustomerSuccessAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -70,28 +57,14 @@ impl Department for CustomerSuccessAgent {
             ActionRisk::DraftForReview
         };
 
+
         if event.event_type == "loyalty.points_awarded" {
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Customer");
-            let points = event
-                .payload
-                .get("points")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
-            let total_points = event
-                .payload
-                .get("total_points")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let points = event.payload.get("points").and_then(|v| v.as_i64()).unwrap_or(0);
+            let total_points = event.payload.get("total_points").and_then(|v| v.as_i64()).unwrap_or(0);
 
             if total_points >= 50 && total_points - points < 50 {
-                let draft_copy = format!(
-                    "Hey {}! You just reached VIP status! Reply 'Claim' to use your 15% off reward on your next order.",
-                    customer_id
-                );
+                let draft_copy = format!("Hey {}! You just reached VIP status! Reply 'Claim' to use your 15% off reward on your next order.", customer_id);
 
                 let payload = serde_json::json!({
                     "feature_type": "loyalty_reward_notification",
@@ -101,35 +74,22 @@ impl Department for CustomerSuccessAgent {
                     "channel": "sms_or_dm"
                 });
 
-                let description =
-                    format!("Send VIP reward notification to customer {}", customer_id);
+                let description = format!("Send VIP reward notification to customer {}", customer_id);
 
-                return self
-                    .orchestrator
-                    .execute_action(
-                        DepartmentType::CustomerSuccess,
-                        description,
-                        event.tenant_id.clone(),
-                        ActionRisk::DraftForReview,
-                        payload,
-                    )
-                    .await
-                    .map(|_| ());
+                return self.orchestrator.execute_action(
+                    DepartmentType::CustomerSuccess,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    payload,
+                ).await.map(|_| ());
             }
             return Ok(());
         }
 
         if event.event_type == "job_status_updates" {
-            let job_id = event
-                .payload
-                .get("job_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let status = event
-                .payload
-                .get("status")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let job_id = event.payload.get("job_id").and_then(|v| v.as_str()).unwrap_or("");
+            let status = event.payload.get("status").and_then(|v| v.as_str()).unwrap_or("");
 
             if status == "en_route" && !job_id.is_empty() {
                 let pool = crate::db::get_pool();
@@ -148,18 +108,14 @@ impl Department for CustomerSuccessAgent {
                     WHERE jl.id = $1 AND jl.tenant_id = $2
                 "#;
 
-                let row: Result<(Option<String>, Option<String>, String), sqlx::Error> =
-                    sqlx::query_as(query)
-                        .bind(job_id)
-                        .bind(&event.tenant_id)
-                        .fetch_one(&pool)
-                        .await;
+                let row: Result<(Option<String>, Option<String>, String), sqlx::Error> = sqlx::query_as(query)
+                    .bind(job_id)
+                    .bind(&event.tenant_id)
+                    .fetch_one(&pool)
+                    .await;
 
                 if let Ok((Some(customer_phone), _, staff_name)) = row {
-                    let text = format!(
-                        "Hi! {} is on his way and should arrive in roughly 15 minutes.",
-                        staff_name
-                    );
+                    let text = format!("Hi! {} is on his way and should arrive in roughly 15 minutes.", staff_name);
 
                     tracing::info!("Drafting SMS for job {}: {}", job_id, text);
 
@@ -175,15 +131,11 @@ impl Department for CustomerSuccessAgent {
 
                     if let Ok((_sid, _token, from_phone)) = twilio_row {
                         if !from_phone.is_empty() {
-                            let _ = registry
-                                .send_sms("twilio", &customer_phone, &from_phone, &text)
-                                .await;
+                            let _ = registry.send_sms("twilio", &customer_phone, &from_phone, &text).await;
                         }
                     } else {
                         // Fallback or test mode
-                        let _ = registry
-                            .send_sms("twilio", &customer_phone, "+15550000000", &text)
-                            .await;
+                        let _ = registry.send_sms("twilio", &customer_phone, "+15550000000", &text).await;
                     }
                 }
             }
@@ -195,70 +147,36 @@ impl Department for CustomerSuccessAgent {
             let original = payload.get("original_payload");
 
             if let Some(orig) = original {
-                if orig.get("action_type").and_then(|v| v.as_str())
-                    == Some("Execute Subscription Update")
-                {
-                    let customer_id = orig
-                        .get("customer_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                if orig.get("action_type").and_then(|v| v.as_str()) == Some("Execute Subscription Update") {
+                    let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                     let action = orig.get("action").and_then(|v| v.as_str()).unwrap_or("");
-                    tracing::info!(
-                        "EXECUTING APPROVED DRAFT: Modifying subscription {} for customer: {}",
-                        action,
-                        customer_id
-                    );
+                    tracing::info!("EXECUTING APPROVED DRAFT: Modifying subscription {} for customer: {}", action, customer_id);
 
                     // The actual state mutation would happen here via API call to subscription.rs logic
                     // or direct db mutation if we had a direct service dependency. We mock it for now
                     // as part of the agent's side effect.
                     let pool = crate::db::get_pool();
-                    let update = async {
-                        let mut transaction = begin_tenant_transaction(&pool, &event.tenant_id).await?;
-                        match action {
-                            "pause" => { sqlx::query("UPDATE subscriptions SET status = 'paused' WHERE customer_id = $1 AND tenant_id = $2 AND status = 'active'").bind(customer_id).bind(&event.tenant_id).execute(&mut *transaction).await?; },
-                            "cancel" => { sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE customer_id = $1 AND tenant_id = $2 AND status != 'canceled'").bind(customer_id).bind(&event.tenant_id).execute(&mut *transaction).await?; },
-                            "skip" => { sqlx::query("UPDATE subscriptions SET current_period_end = current_period_end + interval '1 month' WHERE customer_id = $1 AND tenant_id = $2").bind(customer_id).bind(&event.tenant_id).execute(&mut *transaction).await?; },
-                            _ => {}
-                        }
-                        transaction.commit().await
-                    }.await;
+                    let update = match action {
+                        "pause" => sqlx::query("UPDATE subscriptions SET status = 'paused' WHERE customer_id = $1 AND tenant_id = $2 AND status = 'active'").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        "cancel" => sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE customer_id = $1 AND tenant_id = $2 AND status != 'canceled'").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        "skip" => sqlx::query("UPDATE subscriptions SET current_period_end = current_period_end + interval '1 month' WHERE customer_id = $1 AND tenant_id = $2").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        _ => Ok(sqlx::postgres::PgQueryResult::default()),
+                    };
 
                     if update.is_ok() {
-                        tracing::info!(
-                            "Successfully updated subscription for customer {}",
-                            customer_id
-                        );
+                        tracing::info!("Successfully updated subscription for customer {}", customer_id);
                     } else {
-                        tracing::error!(
-                            "Failed to update subscription for customer {}",
-                            customer_id
-                        );
+                        tracing::error!("Failed to update subscription for customer {}", customer_id);
                     }
 
                     return Ok(());
-                } else if orig.get("feature_type").and_then(|v| v.as_str())
-                    == Some("loyalty_reward_notification")
-                {
-                    let customer_id = orig
-                        .get("customer_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    tracing::info!(
-                        "EXECUTING APPROVED DRAFT: Applying VIP reward for customer: {}",
-                        customer_id
-                    );
+                } else if orig.get("feature_type").and_then(|v| v.as_str()) == Some("loyalty_reward_notification") {
+                    let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                    tracing::info!("EXECUTING APPROVED DRAFT: Applying VIP reward for customer: {}", customer_id);
 
                     let pool = crate::db::get_pool();
                     let reward_id = uuid::Uuid::new_v4().to_string();
-                    let discount_code = format!(
-                        "VIP-15-{}",
-                        uuid::Uuid::new_v4()
-                            .to_string()
-                            .chars()
-                            .take(6)
-                            .collect::<String>()
-                    );
+                    let discount_code = format!("VIP-15-{}", uuid::Uuid::new_v4().to_string().chars().take(6).collect::<String>());
                     let _ = sqlx::query("INSERT INTO reward_claims (id, tenant_id, customer_id, discount_code, status) VALUES ($1, $2, $3, $4, $5)")
                         .bind(reward_id)
                         .bind(&event.tenant_id)
@@ -266,13 +184,12 @@ impl Department for CustomerSuccessAgent {
                         .bind(discount_code)
                         .bind("active")
                         .execute(&pool).await;
+
                 }
             }
 
             let message = if let Some(orig) = original {
-                orig.get("generated_response")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown response")
+                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
             } else {
                 "Unknown response"
             };
@@ -280,42 +197,15 @@ impl Department for CustomerSuccessAgent {
 
             let content = format!("Sent response to customer: {}", message);
 
-            let source = original
-                .and_then(|orig| orig.get("source").and_then(|v| v.as_str()))
-                .unwrap_or("")
-                .to_string();
-            let sender_id = original
-                .and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str()))
-                .unwrap_or("")
-                .to_string();
+            let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
 
-            let target_language = original
-                .and_then(|orig| {
-                    orig.get("translated_from_language")
-                        .and_then(|v| v.as_str())
-                })
-                .unwrap_or("")
-                .to_string();
-            let text = if !target_language.is_empty()
-                && target_language.to_lowercase() != "en"
-                && target_language.to_lowercase() != "english"
-                && target_language.to_lowercase() != "unknown"
-            {
-                match crate::api::agents::translation::translate_inbox_message_with_llm(
-                    &event.tenant_id,
-                    &source,
-                    message,
-                    &target_language,
-                )
-                .await
-                {
+            let target_language = original.and_then(|orig| orig.get("translated_from_language").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let text = if !target_language.is_empty() && target_language.to_lowercase() != "en" && target_language.to_lowercase() != "english" && target_language.to_lowercase() != "unknown" {
+                match crate::api::agents::translation::translate_inbox_message_with_llm(&event.tenant_id, &source, message, &target_language).await {
                     Ok(t) => t.translated_content,
                     Err(e) => {
-                        tracing::error!(
-                            "Failed to translate outgoing message back to {}: {}",
-                            target_language,
-                            e
-                        );
+                        tracing::error!("Failed to translate outgoing message back to {}: {}", target_language, e);
                         message.to_string()
                     }
                 }
@@ -334,26 +224,15 @@ impl Department for CustomerSuccessAgent {
                         .fetch_one(&pool)
                         .await;
 
-                    if let Ok((integration_id, account_sid, auth_token, from_phone)) =
-                        integration_row
-                    {
+                    if let Ok((integration_id, account_sid, auth_token, from_phone)) = integration_row {
                         if integration_id == "whatsapp_cloud_api" {
                             use crate::integrations::meta::provider::MetaProvider;
                             let provider = MetaProvider::new(auth_token, Some(from_phone));
-                            let to = if sender_id.starts_with("whatsapp:") {
-                                sender_id.replace("whatsapp:", "")
-                            } else {
-                                sender_id.clone()
-                            };
+                            let to = if sender_id.starts_with("whatsapp:") { sender_id.replace("whatsapp:", "") } else { sender_id.clone() };
                             if let Err(e) = provider.send_message("whatsapp", &to, &text).await {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Meta integration: {}",
-                                    e
-                                );
+                                tracing::error!("Failed to send whatsapp message via Meta integration: {}", e);
                             } else {
-                                tracing::info!(
-                                    "Successfully sent whatsapp message via Meta integration"
-                                );
+                                tracing::info!("Successfully sent whatsapp message via Meta integration");
                             }
                             return;
                         } else if !account_sid.is_empty() && !auth_token.is_empty() {
@@ -361,29 +240,15 @@ impl Department for CustomerSuccessAgent {
                             let provider = TwilioProvider::new(account_sid, auth_token);
 
                             if from_phone.is_empty() {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials"
-                                );
+                                tracing::error!("Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials");
                                 return;
                             }
                             let twilio_from = from_phone;
-                            let twilio_to = if sender_id.starts_with("whatsapp:") {
-                                sender_id.clone()
+                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text).await {
+                                tracing::error!("Failed to send whatsapp message via Twilio integration: {}", e);
                             } else {
-                                format!("whatsapp:{}", sender_id)
-                            };
-                            if let Err(e) = provider
-                                .send_whatsapp(&twilio_to, &twilio_from, &text)
-                                .await
-                            {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Twilio integration: {}",
-                                    e
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Successfully sent whatsapp message via Twilio integration"
-                                );
+                                tracing::info!("Successfully sent whatsapp message via Twilio integration");
                             }
                             return;
                         }
@@ -399,68 +264,35 @@ impl Department for CustomerSuccessAgent {
                         .await;
 
                     match row {
-                        Ok((_found_id, api_token)) => {
-                            let registry =
-                                crate::integrations::registry::IntegrationsRegistry::new();
+                        Ok((_found_id, api_token,)) => {
+                            let registry = crate::integrations::registry::IntegrationsRegistry::new();
                             let integration_id = "meta";
 
-                            let meta_creds =
-                                ::server_ohc::orchestration::ConnectIntegrationRequest {
-                                    bot_token: api_token.clone(),
-                                    chat_id: "".to_string(),
-                                    webhook_url: "".to_string(),
-                                    api_token: api_token.clone(),
-                                    from_phone: "".to_string(),
-                                    ..Default::default()
-                                };
-                            if let Err(e) = registry.connect(
-                                integration_id,
-                                &tenant_id_for_meta,
-                                meta_creds.clone(),
-                            ) {
-                                tracing::warn!(
-                                    "Failed to connect {} integration: {}",
-                                    integration_id,
-                                    e
-                                );
+                            let meta_creds = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
+                            if let Err(e) = registry.connect(integration_id, &tenant_id_for_meta, meta_creds.clone()) {
+                                tracing::warn!("Failed to connect {} integration: {}", integration_id, e);
                             }
 
-                            let res = registry
-                                .send_message(integration_id, &source, &sender_id, &text)
-                                .await;
+                            let res = registry.send_message(integration_id, &source, &sender_id, &text).await;
                             if let Err(e) = res {
-                                tracing::error!(
-                                    "Failed to send {} message via Meta integration: {}",
-                                    source,
-                                    e
-                                );
+                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                             } else {
-                                tracing::info!(
-                                    "Successfully sent {} message via Meta integration",
-                                    source
-                                );
+                                tracing::info!("Successfully sent {} message via Meta integration", source);
                             }
                         }
                         Err(e) => {
-                            tracing::error!(
-                                "Failed to fetch Meta integration credentials from DB: {}",
-                                e
-                            ); // pii-safe
+                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e); // pii-safe
                         }
                     }
                 }
             });
 
-            if let Some(inbox_id) =
-                original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str()))
-            {
+            if let Some(inbox_id) = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())) {
                 let orchestrator_clone = self.orchestrator.clone();
                 let id_clone = inbox_id.to_string();
                 let tenant_id_clone = event.tenant_id.clone();
                 tokio::spawn(async move {
-                    let _ = orchestrator_clone
-                        .update_inbox_message_status(&id_clone, &tenant_id_clone, "sent")
-                        .await;
+                    let _ = orchestrator_clone.update_inbox_message_status(&id_clone, &tenant_id_clone, "sent").await;
                 });
             }
 
@@ -481,30 +313,16 @@ impl Department for CustomerSuccessAgent {
                 owner_override: false,
                 metadata: None,
             };
-            self.orchestrator
-                .write_long_term_memory(record)
-                .await
-                .map_err(|e| e.to_string())?;
+            self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
 
             return Ok(());
         }
 
+
         if event.event_type == "tenant.subscription.churn_risk" {
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let customer_name = event
-                .payload
-                .get("customer_name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let subscription_id = event
-                .payload
-                .get("subscription_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("");
+            let subscription_id = event.payload.get("subscription_id").and_then(|v| v.as_str()).unwrap_or("");
 
             if customer_id.is_empty() {
                 return Err("customer_id is required".to_string());
@@ -533,35 +351,24 @@ impl Department for CustomerSuccessAgent {
                 "subscription_id": subscription_id,
             });
 
-            let _ = self
-                .orchestrator
-                .execute_action(
-                    DepartmentType::CustomerSuccess,
-                    "Subscription Churn Risk Draft".to_string(),
-                    event.tenant_id.clone(),
-                    ActionRisk::DraftForReview,
-                    action_payload,
-                )
-                .await;
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Subscription Churn Risk Draft".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
 
             return Ok(());
         }
 
         if event.event_type == "tenant.subscription.check_predictive_restock" {
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
             if customer_id.is_empty() {
                 return Err("customer_id is required".to_string());
             }
 
-            if let Ok(Some(predicted_date)) = self
-                .orchestrator
-                .predict_replenishment(&event.tenant_id, customer_id)
-                .await
-            {
+            if let Ok(Some(predicted_date)) = self.orchestrator.predict_replenishment(&event.tenant_id, customer_id).await {
                 let prompt = format!(
                     "Draft a concise, warm restock message for the customer based on their predicted replenishment date of {}. Mention they might be running low and ask if they want a refill processed.",
                     predicted_date
@@ -570,23 +377,12 @@ impl Department for CustomerSuccessAgent {
 
                 let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
                     Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY")
-                            .unwrap_or_else(|_| "fake-key".to_string());
-                        crate::minimax::MinimaxClient::new(api_key)
-                            .reason(&compressed_prompt)
-                            .await
-                            .unwrap_or_else(|_| {
-                                "Hi, looks like you might be running low! Reply Yes to restock."
-                                    .to_string()
-                            })
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
                     }
-                    _ => crate::minimax::LocalLLMClient::new()
-                        .reason(&compressed_prompt)
-                        .await
-                        .unwrap_or_else(|_| {
-                            "Hi, looks like you might be running low! Reply Yes to restock."
-                                .to_string()
-                        }),
+                    _ => {
+                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
+                    }
                 };
 
                 let action_payload = serde_json::json!({
@@ -596,37 +392,22 @@ impl Department for CustomerSuccessAgent {
                     "predicted_date": predicted_date,
                 });
 
-                let _ = self
-                    .orchestrator
-                    .execute_action(
-                        DepartmentType::CustomerSuccess,
-                        "Predictive Restock Draft".to_string(),
-                        event.tenant_id.clone(),
-                        ActionRisk::DraftForReview,
-                        action_payload,
-                    )
-                    .await;
+                let _ = self.orchestrator.execute_action(
+                    DepartmentType::CustomerSuccess,
+                    "Predictive Restock Draft".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    action_payload,
+                ).await;
             }
 
             return Ok(());
         }
 
         if event.event_type == "tenant.subscription.action.requested" {
-            let action = event
-                .payload
-                .get("action")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            tracing::info!(
-                "Ambassador agent received subscription action: {} for customer: {}",
-                action,
-                customer_id
-            );
+            let action = event.payload.get("action").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            tracing::info!("Ambassador agent received subscription action: {} for customer: {}", action, customer_id);
 
             // Mock updating subscription action
             let proposed_action = serde_json::json!({
@@ -635,41 +416,24 @@ impl Department for CustomerSuccessAgent {
                 "action": action
             });
 
-            self.orchestrator
-                .execute_action(
-                    DepartmentType::CustomerSuccess,
-                    "Execute Subscription Update".to_string(),
-                    event.tenant_id.clone(),
-                    ActionRisk::AutoExecute,
-                    proposed_action,
-                )
-                .await
-                .map_err(|e| e.to_string())?;
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Execute Subscription Update".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                proposed_action,
+            ).await.map_err(|e| e.to_string())?;
 
             return Ok(());
         }
 
-        if event.event_type == "tenant.subscription.at_risk" {
-            let subscriber_id = event
-                .payload
-                .get("subscriber_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let health_score = event
-                .payload
-                .get("health_score")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
 
-            let prompt = format!(
-                "You are The Ambassador for tenant {}. A subscriber (Customer ID: {}) is at risk of churning due to a low health score of {}. Write a concise, personalized win-back message offering a free 15-minute consultation to get them back on track. Keep it warm and friendly.",
-                event.tenant_id, customer_id, health_score
-            );
+        if event.event_type == "tenant.subscription.at_risk" {
+            let subscriber_id = event.payload.get("subscriber_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let health_score = event.payload.get("health_score").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let prompt = format!("You are The Ambassador for tenant {}. A subscriber (Customer ID: {}) is at risk of churning due to a low health score of {}. Write a concise, personalized win-back message offering a free 15-minute consultation to get them back on track. Keep it warm and friendly.", event.tenant_id, customer_id, health_score);
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
             let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
@@ -677,64 +441,29 @@ impl Department for CustomerSuccessAgent {
                 _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) }
             };
 
-            let description = format!(
-                "The Ambassador identified subscriber {} as at-risk and drafted a win-back offer.",
-                subscriber_id
-            );
+            let description = format!("The Ambassador identified subscriber {} as at-risk and drafted a win-back offer.", subscriber_id);
             let action_payload = serde_json::json!({
                 "feature_type": "subscription_win_back", "subscriber_id": subscriber_id, "customer_id": customer_id, "health_score": health_score, "generated_response": generated_response, "draft_reply": generated_response,
             });
 
-            let _approval_req = self
-                .orchestrator
-                .execute_action(
-                    crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-                    description,
-                    event.tenant_id.clone(),
-                    crate::orchestration::departments::types::ActionRisk::DraftForReview,
-                    action_payload.clone(),
-                )
-                .await
-                .map_err(|e| e.to_string())?;
+            let _approval_req = self.orchestrator.execute_action(crate::orchestration::departments::types::DepartmentType::CustomerSuccess, description, event.tenant_id.clone(), crate::orchestration::departments::types::ActionRisk::DraftForReview, action_payload.clone()).await.map_err(|e| e.to_string())?;
 
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received"
-            || event.event_type == "tenant.omnichannel.message.received"
-        {
-            let message = event
-                .payload
-                .get("original_message")
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
+            let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .or_else(|| event.payload.get("content"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+                .and_then(|v| v.as_str()).unwrap_or("");
 
             // Check for subscription modification intents
             let msg_lower = message.to_lowercase();
-            if msg_lower.contains("skip")
-                || msg_lower.contains("pause")
-                || msg_lower.contains("cancel")
-            {
+            if msg_lower.contains("skip") || msg_lower.contains("pause") || msg_lower.contains("cancel") {
                 if msg_lower.contains("subscription") || msg_lower.contains("delivery") {
-                    let action = if msg_lower.contains("skip") {
-                        "skip"
-                    } else if msg_lower.contains("pause") {
-                        "pause"
-                    } else {
-                        "cancel"
-                    };
-                    tracing::info!(
-                        "Ambassador parsed subscription intent: {} from message: {}",
-                        action,
-                        message
-                    );
-                    let customer_id = event
-                        .payload
-                        .get("customer_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                    let action = if msg_lower.contains("skip") { "skip" } else if msg_lower.contains("pause") { "pause" } else { "cancel" };
+                    tracing::info!("Ambassador parsed subscription intent: {} from message: {}", action, message);
+                    let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
                     let proposed_action = serde_json::json!({
                         "action_type": "Execute Subscription Update",
@@ -742,68 +471,37 @@ impl Department for CustomerSuccessAgent {
                         "action": action
                     });
 
-                    let risk_level = if action == "cancel" {
-                        ActionRisk::DraftForReview
-                    } else {
-                        ActionRisk::AutoExecute
-                    };
+                    let risk_level = if action == "cancel" { ActionRisk::DraftForReview } else { ActionRisk::AutoExecute };
 
-                    self.orchestrator
-                        .execute_action(
-                            DepartmentType::CustomerSuccess,
-                            "Execute Subscription Update".to_string(),
-                            event.tenant_id.clone(),
-                            risk_level,
-                            proposed_action,
-                        )
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Execute Subscription Update".to_string(),
+                        event.tenant_id.clone(),
+                        risk_level,
+                        proposed_action,
+                    ).await.map_err(|e| e.to_string())?;
 
                     return Ok(());
                 }
             }
-            let source = event
-                .payload
-                .get("source")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let sender_id = event
-                .payload
-                .get("sender_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let payload_customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+            let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Identity Resolution: Use IdentityResolver to get unified customer graph identity
             let mut customer_id = "".to_string();
             let mut past_orders = "".to_string();
             let mut profile_summary_text = "".to_string();
             let pool = crate::db::get_pool();
-            let global_db = std::sync::Arc::new(crate::db::DB {
-                pool: pool.clone(),
-                store: crate::db::DbStore::Postgres,
-            });
+            let global_db = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
 
             if !payload_customer_id.is_empty() {
                 customer_id = payload_customer_id.to_string();
             } else if !sender_id.is_empty() && sender_id != "unknown" {
-                let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(
-                    global_db.clone(),
-                );
-                if let Ok(id) = resolver
-                    .resolve_or_create_customer(&event.tenant_id, sender_id, source)
-                    .await
-                {
+                let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(global_db.clone());
+                if let Ok(id) = resolver.resolve_or_create_customer(&event.tenant_id, sender_id, source).await {
                     customer_id = id.clone();
-                    tracing::info!(
-                        "Resolved sender {} to customer {} via Memory Graph Identity Resolver",
-                        sender_id,
-                        customer_id
-                    );
+                    tracing::info!("Resolved sender {} to customer {} via Memory Graph Identity Resolver", sender_id, customer_id);
                 }
             }
 
@@ -811,34 +509,20 @@ impl Department for CustomerSuccessAgent {
             if !customer_id.is_empty() {
                 // Query Unified Customer Memory Graph
                 let mem_service = crate::services::customer_memory_graph::service::CustomerMemoryGraphService::new(pool.clone());
-                let _ = mem_service
-                    .ingest_interaction(&event.tenant_id, &customer_id, source, message)
-                    .await;
+                let _ = mem_service.ingest_interaction(&event.tenant_id, &customer_id, source, message).await;
 
-                if let Ok(profile_summary) = mem_service
-                    .get_profile_summary(&event.tenant_id, &customer_id)
-                    .await
-                {
-                    if !profile_summary.summary.is_empty()
-                        && profile_summary.summary != "No summary available."
-                        && profile_summary.summary != "Customer not found."
-                    {
-                        profile_summary_text = format!(
-                            "Unified Customer Memory: {} | Preferences: {}",
-                            profile_summary.summary,
-                            profile_summary.preferences.join(", ")
-                        );
+                if let Ok(profile_summary) = mem_service.get_profile_summary(&event.tenant_id, &customer_id).await {
+                    if !profile_summary.summary.is_empty() && profile_summary.summary != "No summary available." && profile_summary.summary != "Customer not found." {
+                        profile_summary_text = format!("Unified Customer Memory: {} | Preferences: {}", profile_summary.summary, profile_summary.preferences.join(", "));
                     }
                 }
 
                 // Fetch past orders context
-                let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as(
-                    "SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2",
-                )
-                .bind(&event.tenant_id)
-                .bind(&customer_id)
-                .fetch_all(&pool)
-                .await;
+                let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(&event.tenant_id)
+                    .bind(&customer_id)
+                    .fetch_all(&pool)
+                    .await;
                 if let Ok(orders) = orders {
                     if !orders.is_empty() {
                         past_orders = format!("Returning Customer ({} past orders).", orders.len());
@@ -847,13 +531,8 @@ impl Department for CustomerSuccessAgent {
 
                 // Query Unified Customer Memory Graph
                 let memory_service = CustomerMemoryGraphService::new(pool.clone());
-                if let Ok(profile_summary) = memory_service
-                    .get_profile_summary(&event.tenant_id, &customer_id)
-                    .await
-                {
-                    if profile_summary.total_interactions > 0
-                        || !profile_summary.segments.is_empty()
-                    {
+                if let Ok(profile_summary) = memory_service.get_profile_summary(&event.tenant_id, &customer_id).await {
+                    if profile_summary.total_interactions > 0 || !profile_summary.segments.is_empty() {
                         memory_graph_summary = format!(
                             "Customer Profile: Interactions: {}. Segments: {}. Preferences: {}. Summary: {}",
                             profile_summary.total_interactions,
@@ -870,24 +549,15 @@ impl Department for CustomerSuccessAgent {
                 .as_deref()
             {
                 Ok("minimax") => {
-                    let api_key =
-                        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key)
-                        .generate_embedding(message)
-                        .await
-                        .unwrap_or_else(|_| vec![0.0; 1536])
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
                 }
-                _ => crate::minimax::LocalLLMClient::new()
-                    .generate_embedding(message)
-                    .await
-                    .unwrap_or_else(|_| vec![0.0; 1536]),
+                _ => {
+                    crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                }
             };
 
-            let memories = self
-                .orchestrator
-                .query_long_term_memory(&event.tenant_id, &query_embedding, 5)
-                .await
-                .unwrap_or_default();
+            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
             let mut context_summary = if !memories.is_empty() {
                 memories.join("\n")
@@ -909,11 +579,7 @@ impl Department for CustomerSuccessAgent {
                 context_summary.push_str(&memory_graph_summary);
             }
 
-            if let Ok(inventory_summary) = self
-                .orchestrator
-                .get_inventory_summary(&event.tenant_id)
-                .await
-            {
+            if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
                 context_summary.push_str("\n\n");
                 context_summary.push_str(&inventory_summary);
             }
@@ -929,49 +595,27 @@ impl Department for CustomerSuccessAgent {
                 .as_deref()
             {
                 Ok("minimax") => {
-                    let api_key =
-                        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key)
-                        .reason(&compressed_prompt)
-                        .await
-                        .unwrap_or_else(|_| {
-                            "Thank you for your message. We will get back to you shortly."
-                                .to_string()
-                        })
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
                 }
-                _ => crate::minimax::LocalLLMClient::new()
-                    .reason(&compressed_prompt)
-                    .await
-                    .unwrap_or_else(|_| {
-                        "Thank you for your message. We will get back to you shortly.".to_string()
-                    }),
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                }
             };
 
             let description = if risk == ActionRisk::AutoExecute {
-                format!(
-                    "Auto-replied to message: '{}' with '{}'",
-                    message, generated_response
-                )
+                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
                 "The Ambassador drafted a response for your review.".to_string()
             };
 
-            let inbox_id = event
-                .payload
-                .get("inbox_message_id")
+            let inbox_id = event.payload.get("inbox_message_id")
                 .or_else(|| event.payload.get("message_id"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+                .and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
-                let _ = self
-                    .orchestrator
-                    .update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response)
-                    .await;
+                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
                 if risk == ActionRisk::AutoExecute {
-                    let _ = self
-                        .orchestrator
-                        .update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied")
-                        .await;
+                    let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
                 }
             }
 
@@ -989,17 +633,13 @@ impl Department for CustomerSuccessAgent {
                 "profile_summary": profile_summary_text,
             });
 
-            let approval_req = self
-                .orchestrator
-                .execute_action(
-                    DepartmentType::CustomerSuccess,
-                    description,
-                    event.tenant_id.clone(),
-                    risk.clone(),
-                    action_payload.clone(),
-                )
-                .await
-                .map_err(|e| e.to_string())?;
+            let approval_req = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                risk.clone(),
+                action_payload.clone(),
+            ).await.map_err(|e| e.to_string())?;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
@@ -1021,17 +661,13 @@ impl Department for CustomerSuccessAgent {
             let description = "The Ambassador drafted a response for your review.".to_string();
             let action_payload = event.payload.clone();
 
-            let approval_req = self
-                .orchestrator
-                .execute_action(
-                    DepartmentType::CustomerSuccess,
-                    description,
-                    event.tenant_id.clone(),
-                    risk.clone(),
-                    action_payload.clone(),
-                )
-                .await
-                .map_err(|e| e.to_string())?;
+            let approval_req = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                risk.clone(),
+                action_payload.clone(),
+            ).await.map_err(|e| e.to_string())?;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
@@ -1049,16 +685,13 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        self.orchestrator
-            .execute_action(
-                DepartmentType::CustomerSuccess,
-                "Send personalized thank you & shipping ETA".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            )
-            .await
-            .map(|_| ())
+        self.orchestrator.execute_action(
+            DepartmentType::CustomerSuccess,
+            "Send personalized thank you & shipping ETA".to_string(),
+            event.tenant_id.clone(),
+            risk,
+            event.payload.clone(),
+        ).await.map(|_| ())
     }
 
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
@@ -1073,21 +706,8 @@ impl Department for CustomerSuccessAgent {
         Ok(vec![])
     }
 
-    async fn request_approval(
-        &self,
-        description: String,
-        tenant_id: String,
-        risk: ActionRisk,
-    ) -> Result<ApprovalRequest, String> {
-        self.orchestrator
-            .execute_action(
-                self.department_type(),
-                description.clone(),
-                tenant_id.clone(),
-                risk,
-                serde_json::json!({}),
-            )
-            .await
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
     }
 }
 
@@ -1100,14 +720,15 @@ impl BaseAgent for CustomerSuccessAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_customer_success_agent_subscribed_events() {

@@ -4,10 +4,23 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 
 export default function MultilingualOrderInterceptor() {
+    const [isListening, setIsListening] = useState(false);
     const [rawInput, setRawInput] = useState("");
     const [interceptedOrder, setInterceptedOrder] = useState<any>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const handleListen = () => {
+        setIsListening(true);
+        setError(null);
+        // Simulate listening and getting a transcript
+        setTimeout(() => {
+            const simulatedText = "Quiero 3 tacos de pollo";
+            setRawInput(simulatedText);
+            setIsListening(false);
+            processOrder(simulatedText);
+        }, 2000);
+    };
 
     const processOrder = async (input: string) => {
         setIsProcessing(true);
@@ -72,11 +85,11 @@ export default function MultilingualOrderInterceptor() {
                                 <textarea
                                     value={rawInput}
                                     onChange={(e) => setRawInput(e.target.value)}
-                                    placeholder="Type order here..."
+                                    placeholder="Type order here or tap mic..."
                                     className="w-full p-4 border border-gray-200 rounded-xl bg-gray-50 text-gray-800 resize-none h-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    disabled={isProcessing}
+                                    disabled={isListening || isProcessing}
                                 />
-                                {rawInput && !isProcessing && (
+                                {rawInput && !isListening && !isProcessing && (
                                      <button
                                          onClick={() => processOrder(rawInput)}
                                          className="mt-4 w-full py-4 bg-blue-600 text-white rounded-xl font-semibold shadow-md hover:bg-blue-700 transition-colors"
@@ -87,10 +100,14 @@ export default function MultilingualOrderInterceptor() {
                             </div>
 
                             <div className="relative">
+                                {isListening && (
+                                    <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
+                                )}
                                 <button
-                                    aria-label="Voice transcription unavailable"
-                                    disabled
-                                    className="relative z-10 w-24 h-24 rounded-full flex items-center justify-center shadow-lg bg-gray-100 text-gray-400 border-2 border-gray-200 cursor-not-allowed"
+                                    onClick={handleListen}
+                                    disabled={isListening || isProcessing}
+                                    className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg
+                                        ${isListening ? 'bg-blue-600 text-white scale-110' : 'bg-white text-blue-600 border-2 border-blue-100 hover:border-blue-300'}`}
                                 >
                                     {isProcessing ? (
                                         <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
@@ -102,7 +119,7 @@ export default function MultilingualOrderInterceptor() {
                                 </button>
                             </div>
                             <p className="mt-6 text-sm text-gray-500 font-medium">
-                                {isProcessing ? 'Translating & Structuring...' : 'Voice transcription is unavailable. Type the order instead.'}
+                                {isListening ? 'Listening...' : isProcessing ? 'Translating & Structuring...' : 'Tap to speak'}
                             </p>
                         </div>
                     ) : (

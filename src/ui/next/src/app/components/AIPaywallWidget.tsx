@@ -64,7 +64,7 @@ export function AIPaywallWidget({ remainingActions }: Props) {
                 onClick={() => router.push('/trial-extension')}
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 font-medium py-3 px-6 rounded-xl transition-colors"
             >
-                Activate Pro access through OHC
+                Need more time? Get a 7-day extension
             </button>
         </div>
       </div>

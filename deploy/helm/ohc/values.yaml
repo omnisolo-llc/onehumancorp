@@ -8,39 +8,10 @@ backend:
   vpa:
     enabled: true
   headless: false
-  grpcTls:
-    # Cloud mode mTLS Secret keys: tls.crt, tls.key, and ca.crt.
-    existingSecret: ''
-  grpc:
-    port: 8081
-    # Additional in-cluster gRPC callers. Each entry must explicitly select
-    # both namespace and pod labels; an empty list permits only built-in peers.
-    allowedClients: []
-  agentAuth:
-    # Required in standalone mode. The Secret must contain the fixed keys
-    # `agentToken` and `authKey`; inline agent credentials are rejected.
-    # `authKey` is the HMAC-SHA256 verification key and must contain at least
-    # 32 bytes, matching src/agents/builtin/auth.rs.
-    existingSecret: ''
-  auth:
-    # Required in cloud mode. The Secret must contain the fixed key
-    # `jwtSecret`; inline JWT secrets are intentionally rejected.
-    existingSecret: ''
-  setup:
-    # Optional one-time bootstrap Secret. It must contain the fixed key `token`.
-    # The key reference is optional/fail-closed so the Secret can be removed
-    # after the initial admin has been created and the setup route disappears.
-    existingSecret: ''
   image: onehumancorp/server:latest
   multiTenant: true
   networkPolicy:
     enabled: true
-  probes:
-    startup:
-      # Allow CPU-constrained first-run schema migrations up to five minutes.
-      failureThreshold: 60
-      periodSeconds: 5
-      timeoutSeconds: 2
   replicas: 2
   resources:
     limits:
@@ -135,10 +106,6 @@ powersync:
     enabled: true
   enabled: true
   image: journeyapps/powersync-service:latest
-  dataSource:
-    # Required when powersync.enabled=true and cnpg.enabled=false. The Secret
-    # must contain the fixed key `uri` with the complete PostgreSQL URI.
-    existingSecret: ''
   networkPolicy:
     enabled: true
   replicas: 2

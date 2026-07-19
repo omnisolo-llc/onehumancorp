@@ -1,73 +1,6 @@
-use tonic::{Request, Status};
+use tonic::Status;
 use x509_parser::extensions::GeneralName;
 use x509_parser::parse_x509_certificate;
-
-pub fn authenticated_spiffe_id(
-    standalone: bool,
-    claimed_identity: Option<&str>,
-    peer_certificate_der: Option<&[u8]>,
-) -> Result<String, Status> {
-    if standalone {
-        let identity = claimed_identity
-            .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?;
-        crate::parse_spiffe_id(identity)
-            .map_err(|_| Status::unauthenticated("invalid SPIFFE identity"))?;
-        return Ok(identity.to_string());
-    }
-
-    let certificate = peer_certificate_der
-        .ok_or_else(|| Status::unauthenticated("verified client certificate is required"))?;
-    spiffe_id_from_certificate_der(certificate)
-}
-
-pub fn authenticate_spiffe_request<T>(
-    request: &mut Request<T>,
-    standalone: bool,
-) -> Result<(), Status> {
-    request.extensions_mut().remove::<crate::AuthInfo>();
-    request
-        .extensions_mut()
-        .remove::<crate::orchestration::AuthInfo>();
-
-    let claimed_identity = request
-        .metadata()
-        .get("x-spiffe-id")
-        .map(|value| {
-            value
-                .to_str()
-                .map(str::to_string)
-                .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))
-        })
-        .transpose()?;
-    let peer_certificates = request.peer_certs();
-    let peer_certificate = peer_certificates
-        .as_deref()
-        .and_then(|certificates| certificates.first())
-        .map(AsRef::as_ref);
-    let identity =
-        authenticated_spiffe_id(standalone, claimed_identity.as_deref(), peer_certificate)?;
-    let (org_id, agent_id) = crate::parse_spiffe_id(&identity)?;
-    let metadata_identity = identity
-        .parse()
-        .map_err(|_| Status::internal("verified SPIFFE identity is not valid metadata"))?;
-
-    request
-        .metadata_mut()
-        .insert("x-spiffe-id", metadata_identity);
-    request.extensions_mut().insert(crate::AuthInfo {
-        spiffe_id: identity.clone(),
-        org_id: org_id.clone(),
-        agent_id: agent_id.clone(),
-    });
-    request
-        .extensions_mut()
-        .insert(crate::orchestration::AuthInfo {
-            spiffe_id: identity,
-            org_id,
-            agent_id,
-        });
-    Ok(())
-}
 
 pub fn spiffe_id_from_certificate_der(der: &[u8]) -> Result<String, Status> {
     let (_, certificate) = parse_x509_certificate(der)
@@ -93,14 +26,13 @@ pub fn spiffe_id_from_certificate_der(der: &[u8]) -> Result<String, Status> {
             "peer certificate must contain exactly one SPIFFE URI",
         ));
     };
-    crate::parse_spiffe_id(identity)
-        .map_err(|_| Status::unauthenticated("invalid SPIFFE identity"))?;
+    crate::parse_spiffe_id(identity)?;
     Ok((*identity).to_string())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{authenticated_spiffe_id, spiffe_id_from_certificate_der};
+    use super::spiffe_id_from_certificate_der;
     use rcgen::string::Ia5String;
     use rcgen::{CertificateParams, KeyPair, SanType};
 
@@ -139,21 +71,5 @@ mod tests {
 
         let untrusted = certificate_with_uris(&["spiffe://evil.example/org/acme/agent/worker-1"]);
         assert!(spiffe_id_from_certificate_der(&untrusted).is_err());
-    }
-
-    #[test]
-    fn cloud_authentication_uses_only_the_verified_certificate_identity() {
-        let verified = "spiffe://onehumancorp.io/org/acme/agent/worker-1";
-        let claimed = "spiffe://onehumancorp.io/org/other/agent/forged";
-        let certificate = certificate_with_uris(&[verified]);
-
-        assert_eq!(
-            authenticated_spiffe_id(false, Some(claimed), Some(&certificate)).unwrap(),
-            verified,
-        );
-        assert!(authenticated_spiffe_id(false, Some(verified), None).is_err());
-
-        let no_spiffe = certificate_with_uris(&[]);
-        assert!(authenticated_spiffe_id(false, None, Some(&no_spiffe)).is_err());
     }
 }

@@ -18,8 +18,7 @@ describe('ShareToUnlockGeneratorPage', () => {
     render(<ShareToUnlockGeneratorPage />);
     expect(screen.getByText('Share-to-Unlock Generator 🔓')).toBeDefined();
     expect(screen.getByText('Campaign Settings')).toBeDefined();
-    expect(screen.getByText('Preview only: Share-to-Unlock Page')).toBeDefined();
-    expect(screen.getByText(/Share verification and automatic coupon unlocking are unavailable/)).toBeDefined();
+    expect(screen.getByText('Preview: Your Share-to-Unlock Page')).toBeDefined();
   });
 
   it('updates preview when inputs change', () => {

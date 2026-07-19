@@ -51,7 +51,7 @@ const guardOwnedExactRoutes = new Set([
   "/services/new",
 ]);
 
-const pageOwnedDynamicPrefixes = ["/orders", "/proposals", "/quotes"] as const;
+const pageOwnedDynamicPrefixes = ["/proposals", "/quotes"] as const;
 
 const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/abandoned-cart": { title: "Abandoned Cart" },

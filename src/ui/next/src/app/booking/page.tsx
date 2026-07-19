@@ -3,64 +3,21 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { OneTapReferral } from "../components/OneTapReferral";
 
-type BookingSlot = { start_time: string; end_time: string };
-const SAFE_ID = /^[A-Za-z0-9._-]{1,128}$/;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseSlots(value: unknown): BookingSlot[] | null {
-  if (!isRecord(value) || !Array.isArray(value.available_slots)) return null;
-  const slots: BookingSlot[] = [];
-  for (const candidate of value.available_slots) {
-    if (!isRecord(candidate) || typeof candidate.start_time !== "string" || typeof candidate.end_time !== "string") return null;
-    const start = Date.parse(candidate.start_time);
-    const end = Date.parse(candidate.end_time);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-    slots.push({ start_time: candidate.start_time, end_time: candidate.end_time });
-  }
-  return slots;
-}
-
-function safeCheckoutUrl(value: unknown): string | null {
-  if (typeof value !== "string" || !value.trim()) return null;
-  try {
-    const url = new URL(value);
-    let decodedUrl = url.href;
-    try {
-      decodedUrl = decodeURIComponent(decodedUrl);
-    } catch {
-      return null;
-    }
-    if (/cs_test/i.test(decodedUrl)) return null;
-    const stripeCheckout = url.protocol === "https:" && url.hostname === "checkout.stripe.com";
-    return stripeCheckout && !url.username && !url.password ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function BookingForm() {
   const searchParams = useSearchParams();
-  const tenant = searchParams?.get("tenant")?.trim() ?? "";
-  const serviceId = searchParams?.get("service_id")?.trim() ?? "";
-  const hasBookingContext = SAFE_ID.test(tenant) && SAFE_ID.test(serviceId);
+  const tenant = searchParams?.get("tenant") || "default-store";
+  const serviceId = searchParams?.get("service_id") || "service-1";
 
   const [description, setDescription] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSlot, setSelectedSlot] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [availableSlots, setAvailableSlots] = useState<BookingSlot[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<{start_time: string, end_time: string}[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-  const [slotError, setSlotError] = useState("");
-  const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [submitted, setSubmitted] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [checkoutUnavailable, setCheckoutUnavailable] = useState(false);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -70,7 +27,6 @@ function BookingForm() {
 
     async function fetchSlots() {
       setIsLoadingSlots(true);
-      setSlotError("");
       try {
         const res = await fetch("/api/v1/booking/engine/availability", {
           method: "POST",
@@ -81,13 +37,15 @@ function BookingForm() {
             date: selectedDate
           })
         });
-        if (!res.ok) throw new Error("Availability request failed");
-        const slots = parseSlots(await res.json());
-        if (!slots) throw new Error("Invalid availability response");
-        setAvailableSlots(slots);
-      } catch {
+        const data = await res.json();
+        if (data.available_slots) {
+          setAvailableSlots(data.available_slots);
+        } else {
+          setAvailableSlots([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch slots", err);
         setAvailableSlots([]);
-        setSlotError("Available times could not be loaded. Please try another date or try again later.");
       } finally {
         setIsLoadingSlots(false);
       }
@@ -98,61 +56,39 @@ function BookingForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError("");
-    if (!customerEmail.trim()) {
-      setSubmitError("Enter an email address before booking.");
-      return;
-    }
     if (!selectedSlot) {
-      setSubmitError("Please select a time slot.");
+      alert("Please select a time slot.");
       return;
     }
 
     const slot = availableSlots.find(s => s.start_time === selectedSlot);
-    if (!slot) {
-      setSubmitError("The selected time is no longer available. Please choose another slot.");
-      return;
-    }
+    if (!slot) return;
 
-    setIsSubmitting(true);
     try {
       const res = await fetch("/api/v1/booking/engine/reserve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer_name: customerName.trim(),
-          customer_email: customerEmail.trim(),
+          tenant_id: tenant,
+          customer_id: customerEmail || "guest", // Use guest fallback for e2e
           product_id: serviceId,
           start_time: slot.start_time,
           end_time: slot.end_time,
+          requires_deposit: true, // Demo always requires deposit
+          timezone: "UTC"
         })
       });
 
-      if (!res.ok) throw new Error("Reservation request failed");
-      const data: unknown = await res.json();
-      if (!isRecord(data) || typeof data.booking_id !== "string" || !data.booking_id.trim()) {
-        throw new Error("Invalid reservation response");
+      const data = await res.json();
+      if (data.deposit_stripe_link) {
+        setCheckoutUrl(data.deposit_stripe_link);
       }
-      const checkout = safeCheckoutUrl(data.deposit_stripe_link);
-      setCheckoutUrl(checkout || "");
-      setCheckoutUnavailable(!checkout);
       setSubmitted(true);
-    } catch {
-      setSubmitError("The booking request could not be confirmed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create booking request.");
     }
   };
-
-  if (!hasBookingContext) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <p className="max-w-md rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
-          A valid booking link is required.
-        </p>
-      </div>
-    );
-  }
 
   if (submitted) {
     if (checkoutUrl) {
@@ -166,7 +102,7 @@ function BookingForm() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Almost there!</h2>
             <p className="text-gray-600 mb-8">Please complete your deposit to secure your time slot.</p>
-            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="w-full inline-block bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F]  font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
+            <a href={checkoutUrl} className="w-full inline-block bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F]  font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
               Pay Deposit
             </a>
           </div>
@@ -182,8 +118,8 @@ function BookingForm() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Booking request confirmed.</h2>
-          <p className="text-gray-600 mb-8">{checkoutUnavailable ? "Deposit checkout is unavailable because no real checkout session was returned." : "Your booking was confirmed."}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Request Sent!</h2>
+          <p className="text-gray-600 mb-8">We've received your request. We're currently generating a quote for you and will send it over shortly for your review!</p>
         </div>
       </div>
     );
@@ -266,7 +202,6 @@ function BookingForm() {
                     No slots available for this date.
                   </div>
                 )}
-                {slotError && <p className="mt-2 text-sm text-red-600" role="alert">{slotError}</p>}
               </div>
             )}
 
@@ -283,14 +218,11 @@ function BookingForm() {
             </div>
           </div>
 
-          {submitError && <p className="text-sm text-red-600" role="alert">{submitError}</p>}
-
           <button
             type="submit"
-            disabled={isSubmitting}
             className="w-full bg-gray-900 hover:bg-black  font-semibold py-3.5 px-6 rounded-xl transition-all transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
           >
-            <span>{isSubmitting ? "Confirming…" : "Confirm Booking"}</span>
+            <span>Confirm Booking</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>

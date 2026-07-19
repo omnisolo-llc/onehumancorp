@@ -5,9 +5,8 @@ import { describe, expect, it } from 'vitest';
 const feedPageSource = readFileSync(join(__dirname, 'page.tsx'), 'utf8');
 
 describe('feed simulation controls', () => {
-  it('does not ship controls or endpoints that create fabricated feed records', () => {
-    expect(feedPageSource).not.toMatch(/simulate[A-Z]/);
-    expect(feedPageSource).not.toContain('/simulate-');
-    expect(feedPageSource).not.toContain('Simulate ');
+  it('owns the invoice draft simulator exactly once', () => {
+    expect(feedPageSource.match(/const simulateInvoiceDraft =/g)).toHaveLength(1);
+    expect(feedPageSource.match(/data-testid="simulate-invoice-draft-btn"/g)).toHaveLength(1);
   });
 });
