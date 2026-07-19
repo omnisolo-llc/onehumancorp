@@ -70,6 +70,23 @@ pub async fn dispatch_action(
                 tracing::info!("Dispute Resolution Engine executed operational action: {}", ops);
             }
         }
+        "agentic_referral_generation" => {
+            tracing::info!("Approved agentic referral generation for tenant: {}", tenant_id); // pii-safe
+            if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {
+                let code = format!("REF-{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>().to_uppercase());
+                let _ = sqlx::query("INSERT INTO promotion_codes (code, tenant_id, discount_value, discount_type) VALUES ($1, $2, $3, $4)")
+                    .bind(&code)
+                    .bind(tenant_id)
+                    .bind(10.0) // 10% off
+                    .bind("percentage")
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tracing::info!("Created promotion code {} for customer {}", code, customer_id); // pii-safe
+
+                // Let's also dispatch it to outbox or log it, but standard action handling will see it completed.
+            }
+        }
         "loyalty_reward_notification" => {
             tracing::info!("Approved loyalty reward notification for tenant: {}", tenant_id); // pii-safe
             if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {

@@ -244,6 +244,7 @@ impl Department for MarketingAgent {
             "tenant.inventory.updated".to_string(),
             "tenant.website.updated".to_string(),
             "loyalty.points_awarded".to_string(),
+            "tenant.order.created".to_string(),
         ]
     }
 
@@ -416,6 +417,57 @@ impl Department for MarketingAgent {
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
             return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.order.created" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            if !customer_id.is_empty() {
+                if let Ok(orchestrator) = self.orchestrator() {
+                    let pool = orchestrator.db().pool.clone();
+                    let tenant_id_str = event.tenant_id.clone();
+                    let customer_id_str = customer_id.to_string();
+                    let order_id_str = order_id.to_string();
+
+                    let result: Result<(i64, f64), sqlx::Error> = sqlx::query_as(
+                        "SELECT COUNT(*), CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1 AND customer_id = $2"
+                    )
+                    .bind(&tenant_id_str)
+                    .bind(&customer_id_str)
+                    .fetch_one(&pool)
+                    .await;
+
+                    if let Ok((order_count, ltv)) = result {
+                        if order_count == 3 {
+                            let draft_copy = format!(
+                                "Hi! Thank you so much for your 3rd order! Your LTV is ${:.2}. Here is a special link to share 10% off with a friend, and you get $10 off your next order too!",
+                                ltv
+                            );
+
+                            let payload = serde_json::json!({
+                                "feature_type": "agentic_referral_generation",
+                                "customer_id": customer_id_str,
+                                "order_id": order_id_str,
+                                "ltv": ltv,
+                                "order_count": order_count,
+                                "draft_copy": draft_copy,
+                            });
+
+                            let description = format!("Growth Opportunity: Customer just placed their 3rd order! Send a 10% referral code to reward them?");
+
+                            let _ = orchestrator.execute_action(
+                                DepartmentType::Marketing,
+                                description,
+                                tenant_id_str,
+                                ActionRisk::DraftForReview,
+                                payload,
+                            ).await;
+                        }
+                    }
+                }
+            }
+            return Ok(());
         }
 
         if event.event_type == "loyalty.points_awarded" {
