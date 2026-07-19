@@ -8,6 +8,48 @@ pub struct InvalidationEvent {
     pub tags: Vec<String>,
 }
 
+#[derive(Clone)]
+pub struct EdgeCacheInvalidator {
+    pub edge_cache: std::sync::Arc<crate::utils::cache::HybridCache<String>>,
+    pub cdn_cache: std::sync::Arc<crate::utils::cache::HybridCache<crate::utils::edge_caching_middleware::CachedResponse>>,
+    pub client: reqwest::Client,
+}
+
+impl EdgeCacheInvalidator {
+    pub fn new() -> Self {
+        Self {
+            edge_cache: crate::builder::edge::get_edge_cache(),
+            cdn_cache: crate::utils::edge_caching_middleware::get_cdn_cache(),
+            client: reqwest::Client::new(),
+        }
+    }
+
+    pub async fn invalidate(&self, tags: Vec<String>) {
+        let futures = tags.into_iter().map(|tag| {
+            let edge_cache_clone = self.edge_cache.clone();
+            let cdn_cache_clone = self.cdn_cache.clone();
+            let client_clone = self.client.clone();
+            async move {
+                info!("Invalidating cache for tag: {}", tag);
+                edge_cache_clone.invalidate_by_tag(&tag).await;
+                cdn_cache_clone.invalidate_by_tag(&tag).await;
+
+                // Send purge request to NGINX Edge Cache
+                if let Err(e) = client_clone.post("http://edge-cache/purge")
+                    .body(tag.clone())
+                    .send()
+                    .await
+                {
+                    warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
+                } else {
+                    info!("Successfully sent purge request to NGINX for tag {}", tag);
+                }
+            }
+        });
+        futures::future::join_all(futures).await;
+    }
+}
+
 pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
     let redis_url = match std::env::var("REDIS_URL") {
         Ok(url) => url,
@@ -42,7 +84,8 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
 
     let mut stream = pubsub_conn.on_message();
 
-    let edge_cache = crate::builder::edge::get_edge_cache();
+    let invalidator = EdgeCacheInvalidator::new();
+    let edge_cache = invalidator.edge_cache.clone();
 
     while let Some(msg) = stream.next().await {
         let payload: String = match msg.get_payload() {
@@ -59,9 +102,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                 let mut tenant_id_str = None;
                 let mut product_id_str = None;
 
-                let client = reqwest::Client::new();
                 for tag in &event.tags {
-                    info!("Invalidating cache for tag: {}", tag);
                     if tag.starts_with("tenant-id:") {
                         tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
                     } else if tag.starts_with("entity:product:") {
@@ -69,30 +110,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     }
                 }
 
-                let edge_cache_ref = edge_cache.clone();
-                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                let futures = event.tags.iter().map(|tag| {
-                    let edge_cache_clone = edge_cache_ref.clone();
-                    let cdn_cache_clone = cdn_cache.clone();
-                    let client_clone = client.clone();
-                    let tag_clone = tag.clone();
-                    async move {
-                        edge_cache_clone.invalidate_by_tag(&tag_clone).await;
-                        cdn_cache_clone.invalidate_by_tag(&tag_clone).await;
-
-                        // Send purge request to NGINX Edge Cache
-                        if let Err(e) = client_clone.post("http://edge-cache/purge")
-                            .body(tag_clone.clone())
-                            .send()
-                            .await
-                        {
-                            warn!("Failed to send purge request to NGINX for tag {}: {}", tag_clone, e);
-                        } else {
-                            info!("Successfully sent purge request to NGINX for tag {}", tag_clone);
-                        }
-                    }
-                });
-                futures::future::join_all(futures).await;
+                invalidator.invalidate(event.tags).await;
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
                     if let (Ok(tenant_id), Ok(product_id)) = (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str)) {
@@ -138,7 +156,8 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidator_cache_invalidation() {
         // Here we test just the logic applied in the stream loop.
-        let edge_cache = crate::builder::edge::get_edge_cache();
+        let invalidator = EdgeCacheInvalidator::new();
+        let edge_cache = invalidator.edge_cache.clone();
 
         let tag = "test_tag_123";
         edge_cache.set_with_tags("test_key", "test_val".to_string(), vec![tag.to_string()], Duration::from_secs(60)).await;
@@ -150,16 +169,7 @@ mod tests {
             tags: vec![tag.to_string()],
         };
 
-        let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-        let futures = event.tags.into_iter().map(|tag| {
-            let edge_cache_clone = edge_cache.clone();
-            let cdn_cache_clone = cdn_cache.clone();
-            async move {
-                edge_cache_clone.invalidate_by_tag(&tag).await;
-                cdn_cache_clone.invalidate_by_tag(&tag).await;
-            }
-        });
-        futures::future::join_all(futures).await;
+        invalidator.invalidate(event.tags).await;
 
         assert_eq!(edge_cache.get("test_key").await, None);
     }

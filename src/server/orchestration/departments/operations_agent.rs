@@ -255,29 +255,6 @@ impl Department for OperationsAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
-            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-            cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
-            if !product_id.is_empty() {
-                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-
-                if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
-                    if let Ok(product_uuid) = uuid::Uuid::parse_str(product_id) {
-                        let pool = crate::db::get_pool();
-                        let cache_clone = cache.clone();
-                        tokio::spawn(async move {
-                            let product_cache_key = format!("storefront:product:{}:{}", tenant_uuid, product_uuid);
-                            let _ = crate::builder::edge::regenerate_product_cache(pool, tenant_uuid, product_uuid, product_cache_key, cache_clone).await;
-                        });
-                    }
-                }
-            }
-        }
 
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {

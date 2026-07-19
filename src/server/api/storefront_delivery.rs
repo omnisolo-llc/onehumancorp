@@ -9,8 +9,6 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 use sha2::{Digest, Sha256};
-use std::sync::Arc;
-use crate::utils::cache::HybridCache;
 use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
 
 #[derive(Clone)]
@@ -75,23 +73,6 @@ async fn resolve_domain(
     Err(StatusCode::NOT_FOUND)
 }
 
-pub struct CacheInvalidationService {
-    cache: Arc<HybridCache<String>>,
-}
-
-impl CacheInvalidationService {
-    pub fn new(cache: Arc<HybridCache<String>>) -> Self {
-        Self { cache }
-    }
-
-    pub async fn invalidate(&self, tags: Vec<String>) {
-        let futures = tags.into_iter().map(|tag| async move {
-            self.cache.invalidate_by_tag(&tag).await;
-        });
-        futures::future::join_all(futures).await;
-    }
-}
-
 #[derive(Deserialize)]
 pub struct InvalidateRequest {
     pub tags: Vec<String>,
@@ -101,38 +82,15 @@ async fn invalidate_cache_webhook(
     State(_state): State<DeliveryState>,
     Json(payload): Json<InvalidateRequest>,
 ) -> impl IntoResponse {
-    let cache = get_edge_cache();
-    let service = CacheInvalidationService::new(cache);
-    service.invalidate(payload.tags.clone()).await;
-
+    let service = crate::services::cache_invalidator::EdgeCacheInvalidator::new();
     let tags_to_invalidate = payload.tags;
-    tokio::spawn(async move {
-        let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-        let client = reqwest::Client::new();
-        let futures = tags_to_invalidate.into_iter().map(|tag| {
-            let cdn_clone = cdn.clone();
-            let client_clone = client.clone();
-            async move {
-                cdn_clone.invalidate_by_tag(&tag).await;
 
-                // Send purge request to NGINX Edge Cache
-                if let Err(e) = client_clone.post("http://edge-cache/purge")
-                    .body(tag.clone())
-                    .send()
-                    .await
-                {
-                    tracing::warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
-                } else {
-                    tracing::info!("Successfully sent purge request to NGINX for tag {}", tag);
-                }
-            }
-        });
-        futures::future::join_all(futures).await;
+    tokio::spawn(async move {
+        service.invalidate(tags_to_invalidate).await;
     });
 
     StatusCode::OK
 }
-
 
 async fn get_storefront_product(
     State(state): State<DeliveryState>,
@@ -211,8 +169,6 @@ async fn get_storefront_product(
     Ok(response)
 }
 
-
-
 fn set_storefront_headers(response: &mut axum::response::Response, html: &str, tenant_id: Uuid, custom_tags: Option<Vec<String>>) {
     let mut hasher = Sha256::new();
     hasher.update(html.as_bytes());
@@ -246,9 +202,7 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
 }
 
 #[cfg(test)]
-
 mod tests {
-
     #[test]
     fn test_storefront_headers_dummy() {
         assert!(true);
