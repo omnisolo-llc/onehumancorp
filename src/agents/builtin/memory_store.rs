@@ -886,7 +886,7 @@ impl VectorRepository {
                         FROM consolidated_memory b_inner
                         WHERE b_inner.tenant_id = a.tenant_id
                           AND b_inner.id > a.id
-                          AND b_inner.embedding <=> a.embedding < 0.05
+                          AND b_inner.embedding <=> a.embedding < 0.15
                         ORDER BY b_inner.embedding <=> a.embedding
                         LIMIT 1
                     ) b ON true
@@ -923,7 +923,7 @@ impl VectorRepository {
                             ORDER BY vec_distance_cosine(b_inner.embedding, a.embedding)
                             LIMIT 1
                         )
-                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.15
                         LIMIT 100
                     ";
                     let rows = sqlx::query(query)
@@ -1073,7 +1073,7 @@ impl VectorRepository {
                                     .sum();
                                 let distance = 1.0 - similarity;
 
-                                if distance < 0.05 {
+                                if distance < 0.15 {
                                     let (id_a, id_b) = if a.id < b.id {
                                         (a.id.clone(), b.id.clone())
                                     } else {
@@ -3603,7 +3603,7 @@ mod e2e_consolidation_tests {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
         let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99; // < 0.05 distance to trigger conflict
+        v2[0] = 0.5; // < 0.15 distance to trigger conflict
 
         let record_a = EmbeddingRecord {
             id: "conflict_a".to_string(),
@@ -3897,7 +3897,7 @@ mod e2e_consolidation_tests {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
         let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99; // Trigger conflict
+        v2[0] = 0.5; // Trigger conflict
 
         let timestamp = chrono::Utc::now() - chrono::Duration::days(2);
 
@@ -4048,7 +4048,7 @@ mod override_tests_resolve {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
         let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99;
+        v2[0] = 0.5;
 
         let timestamp = chrono::Utc::now();
 
@@ -4142,7 +4142,7 @@ mod additional_tests_fallback {
         // Insert two very similar embeddings
         let v1 = vec![1.0_f32; 10];
         let mut v2 = vec![1.0_f32; 10];
-        v2[0] = 0.99; // Very similar, should be < 0.05 distance
+        v2[0] = 0.5; // Very similar, should be < 0.15 distance
 
         let record_a = EmbeddingRecord {
             id: "rec_fallback_a".to_string(),

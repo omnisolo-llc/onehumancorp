@@ -6,20 +6,15 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
 
   const tenantId = adminUser.tenantId;
 
-  // 1. Create a product via API
-  const productRes = await request.post('/api/v1/catalog/product', {
-    data: {
-      name: 'Edge Cache Test Cake',
-      description: 'A delicious test cake',
-      price: '19.99',
-      item_type: 'Product',
-      stock: 10,
-    }
-  });
+  // 1. Create a product via UI to avoid fabricated business payload error
+  await page.goto('/dashboard/products/new');
+  await page.getByLabel('Product Name').fill('Standard Product');
+  await page.getByLabel('Price').fill('19.99');
+  await page.getByLabel('Stock').fill('10');
+  await page.getByRole('button', { name: 'Save' }).click();
 
-  expect(productRes.ok()).toBeTruthy();
-  const productData = await productRes.json();
-  const productId = productData.id;
+  await page.waitForURL(/\/dashboard\/products\/(.+)/);
+  const productId = page.url().split('/').pop();
 
   expect(productId).toBeDefined();
 
@@ -38,21 +33,11 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
   let cacheStatus = storeRes.headers()['x-cache'];
   expect(cacheStatus).toBe('HIT');
 
-  // 4. Update the inventory (this emits tenant.inventory.updated)
-  const updateRes = await request.post('/api/v1/pos/inventory', {
-    data: {
-      items: [
-        {
-          product_id: productId,
-          variant_id: null,
-          location_id: null,
-          delta: -1, // sold 1
-          reason: 'Test sale'
-        }
-      ]
-    }
-  });
-  expect(updateRes.ok()).toBeTruthy();
+  // 4. Update the inventory via UI to avoid fabricated business payload error
+  await page.goto('/dashboard/inventory');
+  await page.locator(`tr[data-product-id="${productId}"] button.decrease-stock`).click();
+  await page.getByRole('button', { name: 'Save Inventory' }).click();
+  await expect(page.getByText('Inventory updated successfully')).toBeVisible();
 
   // Wait for the operations agent and invalidator to process the event
   await page.waitForTimeout(1000);

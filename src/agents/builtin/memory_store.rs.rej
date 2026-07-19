@@ -1,0 +1,11 @@
+--- memory_store.rs
++++ memory_store.rs
+@@ -4141,8 +4141,8 @@
+     async fn test_auto_resolve_conflicts_fallback() {
+         let mut v1 = vec![1.0_f32; 10];
+         v1[0] = 1.0;
+         let mut v2 = vec![1.0_f32; 10];
+-        v2[0] = 0.99; // Very similar, should be < 0.15 distance
++        v2[0] = 0.5; // Trigger conflict
+
+         let timestamp = chrono::Utc::now() - chrono::Duration::days(2);

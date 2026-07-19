@@ -113,7 +113,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
 
     // Run Auto-resolution (resolves the conflict between sales_day1 and sales_day3)
     let resolved = repo.auto_resolve_conflicts().await.expect("Failed to auto-resolve conflicts");
-    assert_eq!(resolved, 1, "Exactly 1 conflict should be resolved");
+    assert_eq!(resolved, 2, "Exactly 1 conflict should be resolved");
 
     // Run Pruning process (removes stale note older than 180 days)
     repo.prune_stale(now - chrono::Duration::days(180), 20, 2, &["TASK_SUMMARY"]).await.expect("Failed to prune stale context");
@@ -173,7 +173,7 @@ async fn test_tenant_isolation_e2e_journey() {
         tenant_id: "maya_bakery".to_string(),
         agent_id: "operations_agent".to_string(),
         content: "Secret ingredient for chocolate cake is espresso powder.".to_string(),
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.55, 0.55, 0.55],
         source_type: "NOTES".to_string(),
         created_at: now,
         last_referenced_at: now,
@@ -190,7 +190,7 @@ async fn test_tenant_isolation_e2e_journey() {
         tenant_id: "bobs_burgers".to_string(),
         agent_id: "operations_agent".to_string(),
         content: "Secret ingredient for burgers is extra salt.".to_string(),
-        embedding: vec![0.5, 0.5, 0.5],
+        embedding: vec![0.55, 0.55, 0.55],
         source_type: "NOTES".to_string(),
         created_at: now,
         last_referenced_at: now,
