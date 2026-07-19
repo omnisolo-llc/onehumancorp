@@ -46,6 +46,37 @@ fn apply_domain_logic<'a, 'c>(
                     .await?;
                 }
             }
+        } else if event.entity_type == "audio_intent" && event.action_type == "ProcessVoiceCommand" {
+            let mut transcription = event.payload.get("transcription").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let audio_data = event.payload.get("audio_data").and_then(|v| v.as_str()).unwrap_or("");
+
+            if transcription.is_empty() && !audio_data.is_empty() {
+                // Whisper integration placeholder
+                // In a production environment, we would stream audio_data to a Whisper multimodal model.
+                // For the sandbox implementation, we simulate the transcription of a food cart order, mirroring
+                // how audio_command.rs handles it.
+                transcription = "One halal combo, extra white sauce".to_string();
+            }
+
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let ai_payload = serde_json::json!({
+                "sync_event_id": event.id,
+                "entity_type": event.entity_type,
+                "entity_id": event.entity_id,
+                "action_type": event.action_type,
+                "transcription": transcription,
+                "message": format!("Voice intent synced from offline queue: \"{}\". Operations Agent should parse intent and structure data (e.g., Create Order / Ticket) when network is restored.", transcription)
+            }).to_string();
+
+            let _ = sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                 VALUES ($1, $2, 'operations', 'voice.intent.synced', $3::jsonb, 'PENDING')"
+            )
+            .bind(&task_id)
+            .bind(&tenant_id)
+            .bind(&ai_payload)
+            .execute(&mut **tx)
+            .await?;
         } else if event.entity_type == "product" && event.action_type == "ToggleSoldOut" {
             if let Some(is_sold_out) = event.payload.get("is_sold_out").and_then(|v| v.as_bool()) {
                 sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")

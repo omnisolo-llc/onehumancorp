@@ -26,6 +26,7 @@ tokio = { workspace = true }
 tonic = { workspace = true, features = ["transport"] }
 tracing = "0.1"
 x509-parser = "0.18"
+tempfile = "3.27.0"
 
 [dev-dependencies]
 rcgen = "0.14"
