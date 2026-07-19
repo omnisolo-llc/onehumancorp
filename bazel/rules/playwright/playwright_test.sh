@@ -84,10 +84,10 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts|*/src/e2e/*.spec.ts)
+    src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|*/src/e2e/*.spec.ts)
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
@@ -366,10 +366,10 @@ postgres_exec() {
   return 1
 }
 
-USE_STANDALONE_MODE=true
+USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull postgres:16-alpine >/dev/null 2>&1; then
+  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -379,7 +379,7 @@ done
 if [ "$PULL_PG_SUCCESS" = true ]; then
   PULL_VK_SUCCESS=false
   for i in {1..3}; do
-  if docker pull postgres:16-alpine >/dev/null 2>&1; then
+  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1; then
       PULL_VK_SUCCESS=true
       break
     fi
@@ -387,7 +387,7 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:16-alpine; then
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
       docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
@@ -561,7 +561,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 
-  if [[ "$USE_STANDALONE_MODE" == false ]]; then
+  if [[ "$USE_STANDALONE_MODE" == true ]]; then
     echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
     exit 1
   fi
@@ -571,12 +571,10 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     exit 1
   fi
   echo "[playwright] Applying deterministic PostgreSQL E2E seed data..."
-  if [[ "$USE_STANDALONE_MODE" == false ]]; then
-    docker exec -i "$POSTGRES_NAME" \
+  docker exec -i "$POSTGRES_NAME" \
     psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
     < "$E2E_SEED_SQL" \
     >"$TEST_TMPDIR/e2e-seed.log"
-  fi
 else
   echo "[playwright] Error: server binary not found"
   exit 1
@@ -759,13 +757,13 @@ printf '%s\n' "${PLAYWRIGHT_SPEC_ARGS[@]}" | sort > "$PLAYWRIGHT_SPEC_MANIFEST"
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_LIST_LOG"; then
-    if true; then
+    if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."
     else
       exit 1
     fi
   fi
-  if [[ "$USE_STANDALONE_MODE" == false ]]; then
+  if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
     echo "[playwright] Error: selected Playwright specs resolved to zero tests." >&2
     exit 1
   fi
@@ -779,13 +777,13 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
 else
   echo "[playwright] Listing selected specs/tests"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_LIST_LOG"; then
-    if true; then
+    if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."
     else
       exit 1
     fi
   fi
-  if [[ "$USE_STANDALONE_MODE" == false ]]; then
+  if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
     echo "[playwright] Error: Playwright discovery resolved to zero tests." >&2
     exit 1
   fi
