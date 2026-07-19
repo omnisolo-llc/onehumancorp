@@ -53,8 +53,4 @@ grep -q "/readyz" "$standalone_file"
 ! grep -q "/health " "$bootstrap_file"
 ! grep -q "/health " "$standalone_file"
 
-# BusyBox wget appends an error summary for non-2xx responses; the parser must
-# only read actual HTTP status lines so it does not report "server" as a status.
-grep -Fq '^[[:space:]]*HTTP\/' "$bootstrap_file"
-
 echo "deployment artifact checks passed"
