@@ -365,7 +365,7 @@ export function HelpWidget() {
                 <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-3 border-t border-white/50">
                   <input
                     type="text"
-                    id="ohc-help-chat-input" id="ohc-help-chat-input" placeholder="Ask anything..."
+                    id="ohc-help-chat-input" placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_8px_32px_rgba(0,0,0,0.08)] min-h-[44px]"

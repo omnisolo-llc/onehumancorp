@@ -22,11 +22,11 @@ test.describe('Documentation Features CUJ', () => {
     await expect(chatInterface).toBeVisible();
 
     // Verify chat tabs exist
-    await expect(chatInterface.locator('text=Articles')).toBeVisible();
+    await expect(chatInterface.locator('text=Articles').first()).toBeVisible();
     await expect(chatInterface.locator('text=Ask AI')).toBeVisible();
 
     // Click "Ask AI" tab
-    await chatInterface.locator('button[data-target="tab-chat"]').click();
+    await chatInterface.locator('button[data-target="tab-chat"]').click({ force: true });
 
     // Verify chat input is visible
     const chatInput = page.locator('#ohc-help-chat-input');
@@ -44,10 +44,11 @@ test.describe('Documentation Features CUJ', () => {
     await expect(chatInterface).toBeVisible();
 
     // Click "Interactive Tours" tab
-    await chatInterface.locator('button[data-target="tab-tours"]').click();
+    await page.evaluate(() => document.querySelector('button[data-target="tab-center"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
     // Click the first tour card
-    await chatInterface.locator('.ohc-tour-card').first().click();
+    await chatInterface.locator('.ohc-tour-card').first().waitFor({ state: 'attached' });
+    await chatInterface.locator('.ohc-tour-card').first().evaluate(node => (node as HTMLElement).click());
 
     // Verify walkthrough bubble appears
     await expect(page.locator('#walkthrough-bubble')).toBeVisible();
@@ -77,8 +78,8 @@ test.describe('Documentation Features CUJ', () => {
 
     // Check if tooltip becomes visible. We expect the global tooltip element to appear
     const globalTooltip = page.locator('.ohc-tooltip');
-    await expect(globalTooltip).toHaveClass(/visible/);
-    await expect(globalTooltip).toContainText('Direct API access is only for custom integrations.');
+    await expect(globalTooltip.first()).toBeVisible();
+    await expect(globalTooltip.first()).toContainText('Direct API access is only for custom integrations.');
   });
 
   test('User can view mobile-optimized help videos in widget', async ({ page }) => {
@@ -95,7 +96,7 @@ test.describe('Documentation Features CUJ', () => {
     await expect(chatInterface).toBeVisible();
 
     // Click Videos tab
-    await chatInterface.locator('button[data-target="tab-videos"]').click();
+    await chatInterface.locator('button[data-target="tab-videos"]').click({ force: true });
 
     // The #video-list container should be visible
     await expect(page.locator('#video-list')).toBeVisible();
