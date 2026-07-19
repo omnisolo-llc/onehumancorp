@@ -23,14 +23,13 @@ server_oidc = { path = "../oidc" }
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }
-tonic = { workspace = true, features = ["transport", "tls"] }
+tonic = { workspace = true, features = ["transport"] }
 tracing = "0.1"
 x509-parser = "0.18"
 
 [dev-dependencies]
 rcgen = "0.14"
 tower = { version = "0.5", features = ["util"] }
-tempfile = "3"
 
 [lib]
 path = "mod.rs"
