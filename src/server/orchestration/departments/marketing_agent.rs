@@ -277,6 +277,29 @@ impl Department for MarketingAgent {
                                     .await;
 
                                 // Invalidate cache
+<<<<<<< HEAD
+                                let invalidation_event = serde_json::json!({
+                                    "event": "tenant.product.updated",
+                                    "tags": [
+                                        format!("tenant-id:{}", tenant_id_str),
+                                        format!("entity:product:{}", product_id_str)
+                                    ]
+                                });
+
+                                if let Some(redis_client) = crate::get_redis_client() {
+                                    if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                                        use redis::AsyncCommands;
+                                        let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
+                                    }
+                                } else {
+                                    let cache = crate::builder::edge::get_edge_cache();
+                                    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                    cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                }
+=======
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
@@ -287,10 +310,15 @@ impl Department for MarketingAgent {
                                 let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
                                 cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
                                 cdn.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
 
                                 // Proactively pre-render the product cache
                                 if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
                                     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_uuid);
+<<<<<<< HEAD
+                                    let cache = crate::builder::edge::get_edge_cache();
+=======
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
                                     let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_uuid, cache_key, cache.clone()).await;
                                 }
 

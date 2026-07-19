@@ -8,3 +8,10 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ohc_bypassrls;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO ohc_bypassrls;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO ohc_bypassrls;
 
+<<<<<<< HEAD
+-- +goose Down
+-- Revert the default privileges change
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL PRIVILEGES ON TABLES FROM ohc_bypassrls;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL PRIVILEGES ON SEQUENCES FROM ohc_bypassrls;
+=======
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)

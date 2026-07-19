@@ -39,7 +39,11 @@ impl LocalLLMProvider {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
+<<<<<<< HEAD
+        if let Some(cached) = self.cache.get(prompt).await {
+=======
         if let Some(cached) = self.cache.get(prompt) {
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
             tracing::info!(model = %self.model, "Local prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -103,7 +107,11 @@ impl LocalLLMProvider {
         let response = result["response"].as_str().ok_or_else(|| "missing response field".to_string())?;
         
         // 3. Update Cache
+<<<<<<< HEAD
+        self.cache.set(prompt, response, prompt.len() / 4).await;
+=======
         self.cache.set(prompt, response, prompt.len() / 4);
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
 
         Ok(response.to_string())
     }

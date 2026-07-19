@@ -310,6 +310,11 @@ static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_ERROR_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+<<<<<<< HEAD
+static SYNC_LATENCY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static SYNC_PAYLOAD_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+=======
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -348,6 +353,29 @@ pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
     })
 }
 
+<<<<<<< HEAD
+pub fn get_sync_latency_histogram() -> &'static Histogram<f64> {
+    SYNC_LATENCY_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .f64_histogram("sync_latency_ms")
+            .with_description("Sync daemon latency in ms by mode")
+            .build()
+    })
+}
+
+pub fn get_sync_payload_size_histogram() -> &'static Histogram<f64> {
+    SYNC_PAYLOAD_SIZE_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter
+            .f64_histogram("sync_payload_size_bytes")
+            .with_description("Sync daemon payload size in bytes by mode")
+            .build()
+    })
+}
+
+=======
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
 pub fn get_sync_daemon_error_total() -> &'static Counter<u64> {
     SYNC_DAEMON_ERROR_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.daemon");
@@ -794,10 +822,14 @@ pub async fn record_sync_latency(
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !::server_config::is_telemetry_enabled() { return Ok(()); }
 
+<<<<<<< HEAD
+    let histogram = get_sync_latency_histogram();
+=======
     let histogram = global::meter("ohc.daemon")
         .f64_histogram("sync_latency_ms")
         .with_description("Sync daemon latency in ms by mode")
         .build();
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
     histogram.record(latency_ms as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
 
     buffer_metric(
@@ -817,10 +849,14 @@ pub async fn record_sync_payload_size(
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !::server_config::is_telemetry_enabled() { return Ok(()); }
 
+<<<<<<< HEAD
+    let histogram = get_sync_payload_size_histogram();
+=======
     let histogram = global::meter("ohc.daemon")
         .f64_histogram("sync_payload_size_bytes")
         .with_description("Sync daemon payload size in bytes by mode")
         .build();
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
     histogram.record(size_bytes as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
 
     buffer_metric(

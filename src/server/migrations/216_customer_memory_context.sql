@@ -15,3 +15,8 @@ CREATE POLICY tenant_isolation_customer_memory_context ON customer_memory_contex
     USING (tenant_id = current_setting('app.current_tenant', true))
     WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
 
+<<<<<<< HEAD
+-- +goose Down
+DROP TABLE IF EXISTS customer_memory_context CASCADE;
+=======
+>>>>>>> 5b473f7d0 (feat: harden platform and real-data e2e)
