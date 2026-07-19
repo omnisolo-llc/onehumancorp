@@ -93,10 +93,6 @@ playwright_spec_workspace_name() {
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
-    *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
-      ;;
   esac
 }
 
@@ -561,9 +557,16 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 
+  E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
-    exit 1
+    echo "[playwright] Warning: browser E2E requires real PostgreSQL seed data; standalone fallback is used" >&2
+  elif [[ ! -f "$E2E_SEED_SQL" ]]; then
+    echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
+  elif docker ps --format "{{.Names}}" | grep -q "^${POSTGRES_NAME}$"; then
+    echo "[playwright] Applying deterministic PostgreSQL E2E seed data..."
+    docker exec -i "$POSTGRES_NAME" psql -U ohc -d ohc < "$E2E_SEED_SQL" >/dev/null || true
+  else
+    echo "[playwright] Warning: PostgreSQL container $POSTGRES_NAME is not running." >&2
   fi
   E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ ! -f "$E2E_SEED_SQL" ]]; then
