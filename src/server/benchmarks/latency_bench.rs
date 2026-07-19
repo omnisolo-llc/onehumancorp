@@ -1169,8 +1169,35 @@ async fn test_bench_ai_job_dispatch_latency() {
     bench_ai_job_dispatch_latency().await;
 }
 
+#[tokio::test]
+async fn test_run_hybrid_benchmarks() {
+    run_hybrid_benchmarks().await;
+}
+
+pub async fn run_hybrid_benchmarks() {
+    tracing::info!("=========================================");
+    tracing::info!("   HYBRID LATENCY BENCHMARK REPORT       ");
+    tracing::info!("=========================================");
+
+    tracing::info!("1. AI Job Dispatch Latency (PostgreSQL vs SQLite)");
+    bench_ai_job_dispatch_latency().await;
+
+    tracing::info!("2. Database Query Time (PostgreSQL vs SQLite)");
+    bench_db_query_time().await;
+
+    tracing::info!("3. API Response Time under load (PostgreSQL vs SQLite)");
+    bench_api_response_time().await;
+
+    tracing::info!("=========================================");
+    tracing::info!("   END OF REPORT                         ");
+    tracing::info!("=========================================");
+}
+
 pub async fn bench_hybrid_latency() {
     tracing::info!("--- Running Hybrid Latency Benchmark ---");
+
+    tracing::info!("0. Hybrid Latency Report");
+    run_hybrid_benchmarks().await;
 
     tracing::info!("1. Database Query Time");
     bench_db_query_time().await;
