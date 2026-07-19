@@ -966,7 +966,6 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-
             "/api/v1/tooltips/{id}": {
                 "delete": {
                     "summary": "Delete a Tooltip",
