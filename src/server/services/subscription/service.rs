@@ -7,6 +7,7 @@ use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
+use server_common::auth_utils;
 
 #[async_trait::async_trait]
 pub trait DunningNotifier: Send + Sync {
@@ -93,7 +94,7 @@ impl SubscriptionService {
         tenant_id: &str,
     ) -> Result<sqlx::Transaction<'a, sqlx::Postgres>, String> {
         let mut transaction = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id)
+        auth_utils::set_org_context(&mut *transaction, tenant_id)
             .await
             .map_err(|e| e.to_string())?;
         Ok(transaction)
