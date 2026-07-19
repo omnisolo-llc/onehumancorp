@@ -23,7 +23,7 @@ export async function authenticateRequest(
   credentials: E2ECredentials,
   origin: string,
 ): Promise<void> {
-  const response = await request.post('/api/v1/auth/login', {
+  const response = await request.post(new URL('/api/v1/auth/login', origin).toString(), {
     headers: {
       origin,
       'sec-fetch-site': 'same-origin',
