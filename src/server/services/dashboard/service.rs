@@ -436,216 +436,213 @@ impl DashboardService for MyDashboardService {
         let org_id = std::sync::Arc::new(req.organization_id);
         let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
         let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(Response::new(cached));
-            }
-        }
 
+        let self_clone = self.clone();
+        let org_id_clone = org_id.clone();
         let mobile_optimized = req.mobile_optimized;
+        let cache_key_clone = cache_key.clone();
 
-        let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
-            },
-            {
-                if mobile_optimized {
-                    tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
-                } else {
-                    let s = self.clone();
-                    let o = org_id.clone();
-                    tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
+        let fetch_fn = move || async move {
+            let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
+                },
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
+                },
+                {
+                    if mobile_optimized {
+                        tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
+                    } else {
+                        let s = self_clone.clone();
+                        let o = org_id_clone.clone();
+                        tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
+                    }
+                },
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
+                },
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
+                },
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
+                },
+                {
+                    let s = self_clone.clone();
+                    let o = org_id_clone.clone();
+                    tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
                 }
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
-            }
-        );
+            );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+            let agents = agents_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let _meetings = meetings_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let products = products_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let orders = orders_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let bookings = bookings_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
+            let org = org_res.map_err(|e| e.to_string()).and_then(|r| r).unwrap_or_default();
 
-        let final_meetings = _meetings.iter().map(|m| {
-            let transcript = if req.mobile_optimized {
-                Vec::new()
-            } else {
-                m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
-                    id: msg.id.clone(),
-                    from_agent_id: msg.from_agent.clone(),
-                    to_agent_id: msg.to_agent.clone(),
-                    message_type: msg.r#type.clone(),
-                    content: msg.content.clone(),
-                    meeting_id: m.id.clone(),
-                    occurred_at_unix: msg.occurred_at_unix,
-                }).collect()
-            };
-
-            ::server_ohc::app::MeetingRoom {
-                id: m.id.clone(),
-                participants: m.participants.clone(),
-                transcript,
-            }
-        }).collect::<Vec<_>>();
-        let mut final_cost_summary = None;
-        let mut final_statuses = Vec::new();
-        if req.mobile_optimized { final_statuses.clear(); }
-
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
-
-        let final_agents_payload = agents
-            .iter()
-            .map(|a| {
-                let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
+            let final_meetings = _meetings.iter().map(|m| {
+                let transcript = if mobile_optimized {
+                    Vec::new()
+                } else {
+                    m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
+                        id: msg.id.clone(),
+                        from_agent_id: msg.from_agent.clone(),
+                        to_agent_id: msg.to_agent.clone(),
+                        message_type: msg.r#type.clone(),
+                        content: msg.content.clone(),
+                        meeting_id: m.id.clone(),
+                        occurred_at_unix: msg.occurred_at_unix,
+                    }).collect()
                 };
 
-                let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
-                };
-
-                let orig_len = a.name.len();
-                if orig_len > 0 && !req.mobile_optimized {
-                    original_prompts_len += orig_len;
+                ::server_ohc::app::MeetingRoom {
+                    id: m.id.clone(),
+                    participants: m.participants.clone(),
+                    transcript,
                 }
+            }).collect::<Vec<_>>();
 
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    let compressed = a.name.clone();
+            let mut final_cost_summary = None;
+            let mut final_statuses = Vec::new();
+
+            let mut original_prompts_len = 0;
+            let mut compressed_prompts_len = 0;
+
+            let final_agents_payload = agents
+                .iter()
+                .map(|a| {
+                    let status_val = match a.status.to_uppercase().as_str() {
+                        "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                        "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                        "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                        "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                        _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                    };
+
+                    let role_val = match a.role.to_uppercase().as_str() {
+                        "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                        "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                        "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
+                        _ => ::server_ohc::common::Role::Unspecified as i32,
+                    };
+
+                    let orig_len = a.name.len();
+                    if orig_len > 0 && !mobile_optimized {
+                        original_prompts_len += orig_len;
+                    }
+
+                    let name = if mobile_optimized {
+                        String::new()
+                    } else {
+                        let compressed = a.name.clone();
+                        if orig_len > 0 {
+                            compressed_prompts_len += compressed.len();
+                        }
+                        compressed
+                    };
+
+                    ::server_ohc::agent::Agent {
+                        id: a.id.clone(),
+                        name,
+                        role: role_val,
+                        status: status_val,
+                        organization_id: if mobile_optimized { String::new() } else { a.organization_id.clone() },
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if !mobile_optimized {
+                let mut status_map = std::collections::HashMap::new();
+                for a in agents.iter() {
+                    *status_map.entry(a.status.clone()).or_insert(0) += 1;
+                }
+                final_statuses = status_map
+                    .into_iter()
+                    .map(|(status, count)| StatusCount { status, count })
+                    .collect();
+
+                if let Some(ref o) = org {
+                    let prompt = &o.name;
+                    let orig_len = prompt.len();
                     if orig_len > 0 {
+                        original_prompts_len += orig_len;
+                        let compressed = prompt.clone();
                         compressed_prompts_len += compressed.len();
                     }
-                    compressed
-                };
-
-                ::server_ohc::agent::Agent {
-                    id: a.id.clone(),
-                    name,
-                    role: role_val,
-                    status: status_val,
-                    organization_id: if req.mobile_optimized { String::new() } else { a.organization_id.clone() },
                 }
-            })
-            .collect::<Vec<_>>();
 
-        if !req.mobile_optimized {
-            let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
-                *status_map.entry(a.status.clone()).or_insert(0) += 1;
-            }
-            final_statuses = status_map
-                .into_iter()
-                .map(|(status, count)| StatusCount { status, count })
-                .collect();
-
-            if let Some(ref o) = org {
-                let prompt = &o.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-                    let compressed = prompt.clone();
-                    compressed_prompts_len += compressed.len();
+                let mut optimized_total_tokens = total_tokens;
+                if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
+                    let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
+                    optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
                 }
-            }
 
-            let mut optimized_total_tokens = total_tokens;
-            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
-                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
-                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
-            }
+                let mut agent_summaries = Vec::new();
+                for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
+                    agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                        agent_id,
+                        cost_usd,
+                        token_used: tokens_used,
+                        roi,
+                        efficiency,
+                        pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                        storage_usage_bytes: _storage,
+                    });
+                }
 
-            let mut agent_summaries = Vec::new();
-            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
-                    agent_id,
-                    cost_usd,
-                    token_used: tokens_used,
-                    roi,
-                    efficiency,
-                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
-                    storage_usage_bytes: _storage,
+                final_cost_summary = Some(::server_ohc::billing::CostSummary {
+                    organization_id: (*org_id_clone).clone(),
+                    total_cost_usd: total_cost,
+                    total_tokens: optimized_total_tokens,
+                    projected_monthly_usd: 0.0,
+                    agents: agent_summaries,
                 });
             }
 
-            final_cost_summary = Some(::server_ohc::billing::CostSummary {
-                organization_id: (*org_id).clone(),
-                total_cost_usd: total_cost,
-                total_tokens: optimized_total_tokens,
-                projected_monthly_usd: 0.0,
-                agents: agent_summaries,
-            });
+            let org = if mobile_optimized {
+                org.map(|mut o| {
+                    o.domain = String::new();
+                    o.members = vec![];
+                    o.role_profiles = vec![];
+                    o.ceo_id = String::new();
+                    o.created_at_unix = 0;
+                    o
+                })
+            } else {
+                org
+            };
 
-
-        }
-
-        let org = if req.mobile_optimized {
-            org.map(|mut o| {
-                o.domain = String::new();
-                o.members = vec![];
-                o.role_profiles = vec![];
-                o.ceo_id = String::new();
-                o.created_at_unix = 0;
-                o
+            Some(DashboardSnapshot {
+                organization: org,
+                agents: final_agents_payload,
+                meetings: final_meetings,
+                cost_summary: final_cost_summary,
+                statuses: final_statuses,
+                updated_at: chrono::Utc::now().to_rfc3339(),
+                products,
+                orders,
+                bookings,
             })
+        };
+
+        if let Some(result) = cache.get_or_fetch_with_swr(&cache_key_clone, std::time::Duration::from_secs(5), fetch_fn).await {
+            Ok(Response::new(result))
         } else {
-            org
-        };
-
-        let result = DashboardSnapshot {
-            organization: org,
-            agents: final_agents_payload,
-            meetings: final_meetings,
-            cost_summary: final_cost_summary,
-            statuses: final_statuses,
-            updated_at: chrono::Utc::now().to_rfc3339(),
-            products,
-            orders,
-            bookings,
-        };
-        if let Some(c) = DASHBOARD_SNAPSHOT_CACHE.get() {
-            let cache_key_set = cache_key.clone();
-            let result_set = result.clone();
-            tokio::spawn(async move { c.set(&cache_key_set, result_set, std::time::Duration::from_secs(5)).await; });
+            Err(Status::internal("Failed to fetch dashboard snapshot"))
         }
-
-        Ok(Response::new(result))
     }
 
     async fn get_onboarding_state(
