@@ -70,7 +70,7 @@ async fn test_hub() -> Arc<Hub> {
     });
 
     let dept_orchestrator = Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone()));
-    let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+    let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new(pg_pool.clone()));
 
     Arc::new(Hub::new(pg_pool, db, dept_orchestrator, tracker))
 }

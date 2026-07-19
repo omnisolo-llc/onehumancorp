@@ -21,6 +21,10 @@ test.describe('Exit-Intent Pop-up Builder', () => {
     await page.getByRole('button', { name: 'Copy to Clipboard' }).click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
+    const embedCode = await page.locator('pre code').textContent();
+    expect(embedCode).toContain('https://ohc.app/api/v1/growth/referrals/click?target=/setup.html&ref=');
+    expect(embedCode).toContain('⚡ Powered by OHC');
+
     // 6. Test Paywall logic
     // Ensure "Remove OHC Branding" toggle is present and clickable
     const brandingToggle = page.getByRole('switch');
