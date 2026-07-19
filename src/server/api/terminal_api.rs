@@ -368,6 +368,7 @@ pub async fn sync_offline_transactions_handler(
     let mut synced_count = 0;
     let mut failed_ids = Vec::new();
     let mut pending_reconciliation_items: Vec<serde_json::Value> = Vec::new();
+    let mut newly_inserted_ids = std::collections::HashSet::new();
 
     for tx in &req_data.transactions {
         if let Some(sig) = &tx.device_signature {
@@ -452,8 +453,18 @@ pub async fn sync_offline_transactions_handler(
 
         match query_builder.build().fetch_all(&mut *db_tx).await {
             Ok(rows) => {
+                for row in &rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    newly_inserted_ids.insert(id);
+                }
+
                 // Evaluate conflicts for pending reconciliation synchronously
                 for tx in &req_data.transactions {
+                    let tx_id = tx.id.clone().unwrap_or_default();
+                    if !newly_inserted_ids.contains(&tx_id) {
+                        continue;
+                    }
                     if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
                         if let Some(items) = payload_val.as_array() {
                             for item in items {
@@ -552,14 +563,20 @@ pub async fn sync_offline_transactions_handler(
                     if let Err(e) = job_query_builder.build().execute(&mut *db_tx).await {
                         tracing::error!("Failed to enqueue jobs: {}", e);
                         for tx in &req_data.transactions {
-                            failed_ids.push(tx.id.clone().unwrap_or_default());
+                            let tx_id = tx.id.clone().unwrap_or_default();
+                            if newly_inserted_ids.contains(&tx_id) {
+                                failed_ids.push(tx_id);
+                            }
                         }
                         let _ = db_tx.rollback().await;
                     } else {
                         if let Err(e) = db_tx.commit().await {
                             tracing::error!("Failed to commit transaction: {}", e);
                             for tx in &req_data.transactions {
-                                failed_ids.push(tx.id.clone().unwrap_or_default());
+                                let tx_id = tx.id.clone().unwrap_or_default();
+                                if newly_inserted_ids.contains(&tx_id) {
+                                    failed_ids.push(tx_id);
+                                }
                             }
                         } else {
                             // Update pos_terminal_sessions with conflicts_pending if needed
@@ -600,6 +617,10 @@ pub async fn sync_offline_transactions_handler(
 
     // Create an order out of each synced POS offline transaction if the type is cash_sale or tap_to_pay.
     for tx in &req_data.transactions {
+        let tx_id = tx.id.clone().unwrap_or_default();
+        if !newly_inserted_ids.contains(&tx_id) {
+            continue;
+        }
         if tx.mutation_type.as_deref() == Some("cash_sale") || tx.mutation_type.as_deref() == Some("tap_to_pay") {
             let pool = crate::db::get_pool();
             if let Ok(mut db_tx) = pool.begin().await {
@@ -628,6 +649,26 @@ pub async fn sync_offline_transactions_handler(
                                         .bind(quantity as i32)
                                         .bind(total_amount)
                                         .execute(&mut *db_tx).await;
+
+                                    // Universal Ledger Entry
+                                    let ledger_id = uuid::Uuid::new_v4().to_string();
+                                    let state_change = serde_json::json!({
+                                        "amount_cents": tx.amount_cents,
+                                        "currency": tx.currency,
+                                        "order_id": order_id,
+                                        "transaction_id": tx_id.clone(),
+                                        "product_id": product_id,
+                                        "quantity": quantity,
+                                        "event": "pos_offline_sync_reconciliation_success"
+                                    });
+                                    let _ = sqlx::query(
+                                        "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change, created_at)
+                                         VALUES ($1, $2, 'sales_and_revenue', 'pos_sale', $3, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(&ledger_id)
+                                    .bind(&tenant_id)
+                                    .bind(sqlx::types::Json(state_change))
+                                    .execute(&mut *db_tx).await;
                                 }
                             }
                         }
@@ -1121,6 +1162,27 @@ pub async fn capture_payment_intent_handler(
 
     info!(tenant_id = %tenant_id, payment_intent_id = %req_data.payment_intent_id, "Capturing Stripe Terminal Payment Intent");
 
+    // Idempotency: Check if the payment intent has already been captured
+    let pool = crate::db::get_pool();
+    let existing_status: Option<(String,)> = sqlx::query_as(
+        "SELECT status FROM payment_intents WHERE tenant_id = $1 AND stripe_payment_intent_id = $2"
+    )
+    .bind(&tenant_id)
+    .bind(&req_data.payment_intent_id)
+    .fetch_optional(&pool)
+    .await.unwrap_or(None);
+
+    if let Some((status,)) = existing_status {
+        if status == "completed" {
+            info!(payment_intent_id = %req_data.payment_intent_id, "Payment intent already captured (idempotent path)");
+            return Json(CapturePaymentIntentResponse {
+                success: true,
+                status: "succeeded".to_string(),
+                error_message: None,
+            });
+        }
+    }
+
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
@@ -1128,6 +1190,15 @@ pub async fn capture_payment_intent_handler(
         Ok(_) => {
             match client.capture_terminal_payment_intent(&req_data.payment_intent_id).await {
                 Ok(status) => {
+                    // Update state in payment_intents table
+                    let _ = sqlx::query(
+                        "UPDATE payment_intents SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND stripe_payment_intent_id = $2"
+                    )
+                    .bind(&tenant_id)
+                    .bind(&req_data.payment_intent_id)
+                    .execute(&pool)
+                    .await;
+
                     if let Some(product_id) = &req_data.product_id {
                         let quantity = req_data.quantity.unwrap_or(1);
                         let lock_id = req_data.lock_id.clone().unwrap_or_default();
@@ -1139,7 +1210,7 @@ pub async fn capture_payment_intent_handler(
                                 tracing::error!("Failed to commit inventory after successful capture: {}", res.error_message);
                             },
                             Ok(_) => {
-                                // Inventory commit successful, log an order if possible
+                                // Inventory commit successful, log an order and record in ledger atomically
                                 let pool = crate::db::get_pool();
                                 if let Ok(mut tx) = pool.begin().await {
                                     if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
@@ -1151,7 +1222,7 @@ pub async fn capture_payment_intent_handler(
                                             .bind(None::<String>)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
-                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                                             .bind(uuid::Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
                                             .bind(&order_id)
@@ -1159,6 +1230,28 @@ pub async fn capture_payment_intent_handler(
                                             .bind(quantity)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
+
+                                        // Universal Ledger Entry
+                                        let ledger_id = uuid::Uuid::new_v4().to_string();
+                                        let state_change = serde_json::json!({
+                                            "amount_cents": req_data.amount_cents.unwrap_or(0),
+                                            "currency": "USD",
+                                            "order_id": order_id,
+                                            "product_id": product_id,
+                                            "quantity": quantity,
+                                            "payment_intent_id": req_data.payment_intent_id,
+                                            "event": "pos_terminal_capture_success"
+                                        });
+                                        let _ = sqlx::query(
+                                            "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change, created_at)
+                                             VALUES ($1, $2, 'sales_and_revenue', 'pos_sale', $3, CURRENT_TIMESTAMP)"
+                                        )
+                                        .bind(&ledger_id)
+                                        .bind(&tenant_id)
+                                        .bind(sqlx::types::Json(state_change))
+                                        .execute(&mut *tx)
+                                        .await;
+
                                         let _ = tx.commit().await;
                                     }
                                 }
