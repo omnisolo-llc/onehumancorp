@@ -389,8 +389,8 @@ pub async fn regenerate_cache(
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: #1D1D1F; display: flex; flex-direction: column; align-items: center; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.4s ease-out forwards; }
-        @media (prefers-color-scheme: dark) { body { background: #000; color: #F5F5F7; } .glass-container { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); } }
+        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; box-shadow: 0 20px 40px -5px rgba(0,0,0,0.1), 0 10px 15px -5px rgba(0,0,0,0.05), inset 0 1px 0 0 rgba(255,255,255,0.8); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.4s ease-out forwards; }
+        @media (prefers-color-scheme: dark) { body { background: #000; color: #F5F5F7; } .glass-container { background: rgba(22, 22, 26, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 40px -5px rgba(0,0,0,0.3), 0 10px 15px -5px rgba(0,0,0,0.2), inset 0 1px 0 0 rgba(255,255,255,0.1); } }
         .block { padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); animation: fadeIn 0.5s ease-out both; opacity: 0; }
         .block:nth-child(1) { animation-delay: 0.1s; }
         .block:nth-child(2) { animation-delay: 0.2s; }
