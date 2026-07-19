@@ -3,7 +3,7 @@ import { taskBackendPathFromBody, withSuccessStatus } from "../assistantBackend"
 
 export function POST(request: Request): Promise<Response> {
   return withSuccessStatus(
-    proxyBackendRequest(request, "/unused", {
+    proxyBackendRequest(request, "/api/v1/assistant/tasks/invalid/file_changes", {
       resolveBackendPath: taskBackendPathFromBody("/file_changes"),
     }),
     202,

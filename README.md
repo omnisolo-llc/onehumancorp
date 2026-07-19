@@ -36,7 +36,8 @@ This premium onboarding flow eliminates friction and ensures maximum developer v
 If you encounter Docker Hub rate limits (`You have reached your unauthenticated pull rate limit`), you can bypass them by building and loading the OCI images locally using Bazel:
 ```bash
 bazel run //deploy:load_all_images
-cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+./deploy/scripts/prepare-compose-env.sh
+docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
 This flow utilizes local `server`, `agent`, and `ohc-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
 
@@ -128,10 +129,11 @@ Because we use local images built from source instead of pulling from Docker Hub
 
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash
-    # Note: If you encounter Docker Hub rate limits, run the Local Build & Launch flow first:
-    # npx @bazel/bazelisk run //deploy:load_all_images
-    # cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
-    cd deploy && docker compose -f docker-compose.yml up -d
+    ./deploy/scripts/prepare-compose-env.sh
+    docker compose --env-file .ohc-compose/compose.env \
+      -f deploy/docker-compose.yml \
+      -f deploy/docker-compose.override.yml \
+      up -d
     ```
 
 Or you can use the automated script:
@@ -141,15 +143,16 @@ bazelisk run //:deploy_dev
 
 > **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `onehumancorp/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
 > ```bash
-> cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+> ./deploy/scripts/prepare-compose-env.sh
+> docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 > ```
 
 Services:
 | Service | Port | Description |
 |---------|------|-------------|
 | `server` | 8080 | Rust API server, auth endpoints, and optional embedded UI |
-| `postgres` | 5432 | PostgreSQL |
-| `redis` | 6379 | Redis |
+| `postgres` | 5432 (loopback only) | PostgreSQL |
+| `valkey` | 6379 (loopback only) | Valkey cache |
 | `prometheus` | 9090 | Metrics |
 | `grafana` | 3000 | Dashboards |
 

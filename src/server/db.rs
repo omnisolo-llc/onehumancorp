@@ -54,6 +54,29 @@ const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
+fn database_url_from_environment(
+) -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
+    let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
+    let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
+    if canonical_direct && legacy_direct {
+        return Err(::server_common::secret_source::SecretSourceError);
+    }
+
+    let value_environment_variable = if legacy_direct {
+        "OHC_DATABASE_URL"
+    } else {
+        "DATABASE_URL"
+    };
+    ::server_common::secret_source::load_optional_secret(
+        value_environment_variable,
+        "DATABASE_URL_FILE",
+    )?
+    .map(|bytes| {
+        String::from_utf8(bytes).map_err(|_| ::server_common::secret_source::SecretSourceError)
+    })
+    .transpose()
+}
+
 pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
     sqlx::postgres::PgPoolOptions::new()
         .before_acquire(|conn, _meta| {
@@ -79,8 +102,9 @@ pub fn get_sqlite_pool_if_exists() -> Option<sqlx::SqlitePool> {
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL
         .get_or_init(|| {
-            let database_url = std::env::var("OHC_DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+            let database_url = database_url_from_environment()
+                .expect("invalid database configuration")
+                .unwrap_or_else(|| "postgres://postgres:postgres@localhost:5432/test".to_string());
             crate::db::secure_pg_pool_options()
                 .max_connections(100)
                 .acquire_timeout(std::time::Duration::from_millis(15000))
@@ -123,6 +147,42 @@ pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
     crate::db::secure_pg_pool_options()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .expect("Failed to connect to in-memory test database")
+}
+
+async fn ensure_sqlite_column(
+    pool: &SqlitePool,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), sqlx::Error> {
+    let valid_identifier = |identifier: &str| {
+        !identifier.is_empty()
+            && identifier
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    };
+    if !valid_identifier(table) || !valid_identifier(column) {
+        return Err(sqlx::Error::Configuration(
+            "invalid internal SQLite migration identifier".into(),
+        ));
+    }
+
+    let columns = sqlx::query(&format!("PRAGMA table_info(\"{table}\")"))
+        .fetch_all(pool)
+        .await?;
+    if columns
+        .iter()
+        .any(|row| row.get::<String, _>("name") == column)
+    {
+        return Ok(());
+    }
+
+    sqlx::query(&format!(
+        "ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {definition}"
+    ))
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 #[derive(serde::Serialize)]
@@ -221,12 +281,14 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
-            let cfg = crate::config::get();
-            cfg.database_url.clone().unwrap_or_else(|| {
-                let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
-                format!("sqlite://{}", default_path.to_string_lossy())
-            })
+        let database_url = database_url_from_environment()?.unwrap_or_else(|| {
+            crate::config::get()
+                .database_url
+                .clone()
+                .unwrap_or_else(|| {
+                    let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
+                    format!("sqlite://{}", default_path.to_string_lossy())
+                })
         });
 
         if database_url.starts_with("sqlite") {
@@ -1118,6 +1180,28 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS users (
+                        id TEXT PRIMARY KEY,
+                        username TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        password_hash TEXT NOT NULL DEFAULT '',
+                        roles TEXT NOT NULL DEFAULT '[]'
+                            CHECK (json_valid(roles) AND json_type(roles) = 'array'),
+                        active BOOLEAN NOT NULL DEFAULT TRUE,
+                        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                        oidc_subject TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (username, tenant_id),
+                        UNIQUE (email, tenant_id),
+                        UNIQUE (oidc_subject, tenant_id)
+                    );
+                    CREATE TABLE IF NOT EXISTS revoked_tokens (
+                        jti TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                        expires_at TIMESTAMP NOT NULL,
+                        PRIMARY KEY (jti, tenant_id)
+                    );
                     CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
                         tenant_id TEXT NOT NULL,
                         year_month TEXT NOT NULL,
@@ -1200,7 +1284,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        is_consumable BOOLEAN NOT NULL DEFAULT FALSE,
+                        estimated_duration_days INTEGER
                     );
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,
@@ -1492,6 +1578,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
+                        sender_id TEXT,
+                        customer_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
@@ -2579,6 +2667,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         subscription_plan_id TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, PAST_DUE, CANCELED
                         stripe_subscription_id TEXT,
+                        health_score INTEGER NOT NULL DEFAULT 100,
+                        last_engagement_at TIMESTAMP,
+                        predicted_restock_date INTEGER,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
@@ -2606,6 +2697,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         current_period_end TIMESTAMP NOT NULL,
                         cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
                         canceled_at TIMESTAMP,
+                        health_score REAL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
@@ -2763,6 +2855,57 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "orders",
+                    "is_consumable",
+                    "BOOLEAN NOT NULL DEFAULT FALSE",
+                )
+                .await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "orders",
+                    "estimated_duration_days",
+                    "INTEGER",
+                )
+                .await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "subscribers",
+                    "health_score",
+                    "INTEGER NOT NULL DEFAULT 100",
+                )
+                .await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "subscribers",
+                    "last_engagement_at",
+                    "TIMESTAMP",
+                )
+                .await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "subscribers",
+                    "predicted_restock_date",
+                    "INTEGER",
+                )
+                .await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "subscriptions",
+                    "health_score",
+                    "REAL",
+                )
+                .await?;
+                ensure_sqlite_column(sqlite_pool, "inbox_messages", "sender_id", "TEXT").await?;
+                ensure_sqlite_column(sqlite_pool, "inbox_messages", "customer_id", "TEXT").await?;
+                sqlx::query(
+                    "CREATE INDEX IF NOT EXISTS idx_orders_consumable_restock ON orders(is_consumable, estimated_duration_days, created_at);
+                     CREATE INDEX IF NOT EXISTS idx_subscribers_tenant_plan_status ON subscribers(tenant_id, subscription_plan_id, status);
+                     CREATE INDEX IF NOT EXISTS idx_subscriptions_tenant_status_period ON subscriptions(tenant_id, status, current_period_end)",
+                )
+                .execute(sqlite_pool)
+                .await?;
             }
         }
 
@@ -3164,6 +3307,171 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn sqlite_subscription_runtime_columns_are_upgraded_idempotently() {
+        let pool = create_sqlite_pool_for_test().await;
+        let db = DB {
+            pool: create_dummy_pg_pool().await,
+            store: DbStore::Sqlite(pool.clone()),
+        };
+
+        db.run_migrations().await.unwrap();
+        db.run_migrations().await.unwrap();
+
+        for (table, columns) in [
+            (
+                "orders",
+                &["is_consumable", "estimated_duration_days"][..],
+            ),
+            (
+                "subscribers",
+                &[
+                    "health_score",
+                    "last_engagement_at",
+                    "predicted_restock_date",
+                ][..],
+            ),
+            ("subscriptions", &["health_score"][..]),
+            ("inbox_messages", &["sender_id", "customer_id"][..]),
+        ] {
+            let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+            let actual: std::collections::HashSet<String> = rows
+                .into_iter()
+                .map(|row| row.get::<String, _>("name"))
+                .collect();
+            for column in columns {
+                assert!(actual.contains(*column), "{table}.{column} is missing");
+            }
+        }
+    }
+
+    fn write_database_url(contents: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
+        let directory = tempfile::tempdir().expect("create private database URL directory");
+        let path = directory.path().join("database-url");
+        std::fs::write(&path, contents).expect("write database URL file");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+                .expect("secure database URL file permissions");
+        }
+        (directory, path)
+    }
+
+    #[test]
+    fn database_url_direct_source_remains_supported() {
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", Some("postgres://direct.example/ohc")),
+                ("DATABASE_URL_FILE", None),
+                ("OHC_DATABASE_URL", None),
+            ],
+            || {
+                assert_eq!(
+                    database_url_from_environment().unwrap(),
+                    Some("postgres://direct.example/ohc".to_string())
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn database_url_private_file_source_is_loaded() {
+        let (_directory, path) = write_database_url(b"postgres://file.example/ohc\n");
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", None),
+                ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
+            ],
+            || {
+                assert_eq!(
+                    database_url_from_environment().unwrap(),
+                    Some("postgres://file.example/ohc".to_string())
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn database_url_direct_and_file_sources_are_rejected_as_ambiguous() {
+        let (_directory, path) = write_database_url(b"postgres://file.example/ohc");
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", Some("postgres://direct.example/ohc")),
+                ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
+            ],
+            || {
+                let error = database_url_from_environment().unwrap_err();
+                assert_eq!(error.to_string(), "invalid secret configuration");
+            },
+        );
+    }
+
+    #[test]
+    fn database_url_legacy_direct_conflicts_with_the_file_source() {
+        let (_directory, path) = write_database_url(b"postgres://file.example/ohc");
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", None),
+                ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+            ],
+            || {
+                let error = database_url_from_environment().unwrap_err();
+                assert_eq!(error.to_string(), "invalid secret configuration");
+            },
+        );
+    }
+
+    #[test]
+    fn database_url_invalid_file_fails_generically() {
+        let missing =
+            std::env::temp_dir().join(format!("ohc-missing-database-url-{}", uuid::Uuid::new_v4()));
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", None),
+                ("DATABASE_URL_FILE", Some(missing.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
+            ],
+            || {
+                let error = database_url_from_environment().unwrap_err();
+                let message = error.to_string();
+                assert_eq!(message, "invalid secret configuration");
+                assert!(!message.contains(missing.to_str().unwrap()));
+            },
+        );
+    }
+
+    #[test]
+    fn database_url_legacy_direct_and_no_source_behavior_are_preserved() {
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", None),
+                ("DATABASE_URL_FILE", None),
+                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+            ],
+            || {
+                assert_eq!(
+                    database_url_from_environment().unwrap(),
+                    Some("postgres://legacy.example/ohc".to_string())
+                );
+            },
+        );
+        temp_env::with_vars(
+            [
+                ("DATABASE_URL", None::<&str>),
+                ("DATABASE_URL_FILE", None::<&str>),
+                ("OHC_DATABASE_URL", None::<&str>),
+            ],
+            || assert_eq!(database_url_from_environment().unwrap(), None),
+        );
+    }
 
     #[test]
     fn test_parse_sqlite_datetime() {

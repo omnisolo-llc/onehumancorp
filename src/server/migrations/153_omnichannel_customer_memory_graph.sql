@@ -50,10 +50,3 @@ ALTER TABLE interaction_event_jobs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_interaction_event_jobs ON interaction_event_jobs
     USING (tenant_id = current_setting('app.current_tenant', true))
     WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
-
--- +goose Down
-DROP TABLE IF EXISTS interaction_event_jobs CASCADE;
-DROP TABLE IF EXISTS context_snippets CASCADE;
-DROP TABLE IF EXISTS interaction_events CASCADE;
-ALTER TABLE customers DROP COLUMN IF EXISTS embedding;
-ALTER TABLE customers DROP COLUMN IF EXISTS profile_summary;

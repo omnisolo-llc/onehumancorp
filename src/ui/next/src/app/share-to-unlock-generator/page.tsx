@@ -124,7 +124,7 @@ export default function ShareToUnlockGeneratorPage() {
                     <span className="text-xl">🚀</span> Share Your Link
                 </h3>
                 <p className="text-sm text-indigo-800 mb-4">
-                    Post this link on social media. When customers click it, they'll have to share your business to unlock the discount!
+                    Preview-only link. Share verification and automatic coupon unlocking are unavailable until a verification API is connected.
                 </p>
 
                 <div className="flex items-center gap-2 bg-white min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">
@@ -152,7 +152,7 @@ export default function ShareToUnlockGeneratorPage() {
                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
                     </div>
                     <div className="mx-auto bg-white/60 text-xs text-gray-500 px-4 py-1 rounded-full w-1/2 text-center truncate">
-                        Preview: Your Share-to-Unlock Page
+                        Preview only: Share-to-Unlock Page
                     </div>
                 </div>
 

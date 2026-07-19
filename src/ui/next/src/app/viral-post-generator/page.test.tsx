@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralPostGeneratorPage from './page';
 
@@ -21,8 +21,6 @@ describe('ViralPostGeneratorPage', () => {
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === 'tenant') return 'test-tenant';
-        if (key === 'has_pro') return 'false';
-        if (key === 'ohc_post_gen_shared') return 'false';
         return null;
       }),
       setItem: vi.fn(),
@@ -37,6 +35,12 @@ describe('ViralPostGeneratorPage', () => {
     Object.defineProperty(window, 'open', {
         value: vi.fn(),
         writable: true
+    });
+    global.fetch = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/v1/growth/trial-extension/claim' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ current_plan: 'free' }) });
     });
   });
 
@@ -90,7 +94,7 @@ describe('ViralPostGeneratorPage', () => {
     expect(screen.getByRole('button', { name: 'Share on X to Unlock for Free' })).toBeDefined();
   });
 
-  it('claims trial extension', () => {
+  it('claims trial extension through the backend', async () => {
     render(<ViralPostGeneratorPage />);
     const checkbox = screen.getByRole('checkbox');
     fireEvent.click(checkbox);
@@ -99,7 +103,8 @@ describe('ViralPostGeneratorPage', () => {
     fireEvent.click(shareBtn);
 
     expect(window.open).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
-    expect(window.localStorage.setItem).toHaveBeenCalledWith('ohc_post_gen_shared', 'true');
-    expect(screen.queryByText('Upgrade to Pro')).toBeNull(); // Paywall closed
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/trial-extension/claim', { method: 'POST' }));
+    await waitFor(() => expect(screen.queryByText('Upgrade to Pro')).toBeNull());
+    expect(window.localStorage.setItem).not.toHaveBeenCalled();
   });
 });

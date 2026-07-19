@@ -14,15 +14,13 @@ function GiveawayEnterContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEntered, setIsEntered] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsEntered(true);
-    }, 1000);
+    setSubmitError('Giveaway entry is unavailable because no entry service is connected.');
+    setIsSubmitting(false);
   };
 
   const shareLink = typeof window !== 'undefined' ? `${window.location.origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title)}&ref=user123` : '';
@@ -47,6 +45,7 @@ function GiveawayEnterContent() {
                         {description}
                     </p>
                     <form onSubmit={handleSubmit} className="w-full space-y-4">
+                        {submitError && <p className="text-sm text-red-600" role="status">{submitError}</p>}
                         <input
                           type="email"
                           required

@@ -8,14 +8,14 @@ export default function EdgeStorefrontSetupPage() {
   const router = useRouter();
   const [step, setStep] = useState<'initial' | 'setup' | 'success'>('initial');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleStartSetup = () => {
     setStep('setup');
   };
 
   const handleGenerate = async () => {
-    // Simulate generation process
-    setStep('success');
+    setError('Storefront publishing is unavailable because no edge-publishing API is connected.');
   };
 
   return (
@@ -90,6 +90,7 @@ export default function EdgeStorefrontSetupPage() {
             >
               Generate & Publish
             </button>
+            {error && <p className="mt-3 text-sm text-red-600" role="status">{error}</p>}
           </div>
         )}
 

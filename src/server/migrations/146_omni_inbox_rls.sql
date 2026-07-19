@@ -18,14 +18,3 @@ BEGIN
 END
 $$;
 -- +goose StatementEnd
-
--- +goose Down
--- +goose StatementBegin
-DO $$
-BEGIN
-    IF to_regclass('omni_inbox_messages') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_omni_inbox_messages ON omni_inbox_messages;
-    END IF;
-END
-$$;
--- +goose StatementEnd

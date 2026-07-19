@@ -2,6 +2,7 @@ pub use ::server_config as config;
 use serde::{Deserialize, Serialize};
 
 pub mod auth_utils;
+pub mod secret_source;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
