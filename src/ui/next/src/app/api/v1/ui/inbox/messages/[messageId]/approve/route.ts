@@ -1,9 +1,9 @@
-import { proxyBackendPost } from "../../../../../backendProxy";
+import { proxyBackendPost } from "../../../../backendProxy";
 
 export async function POST(
   req: Request,
-  { params }: { params: { messageId: string } }
+  { params }: { params: Promise<{ messageId: string }> }
 ) {
-  const { messageId } = params;
+  const { messageId } = await params;
   return proxyBackendPost(req, `/api/v1/ui/inbox/messages/${messageId}/approve`);
 }
