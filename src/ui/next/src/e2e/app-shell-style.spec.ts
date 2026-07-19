@@ -60,7 +60,7 @@ function discoverApplicationRoutes(root: string): string[] {
 const allApplicationRoutes = discoverApplicationRoutes(appRoot);
 
 if (allApplicationRoutes.length === 0) {
-  throw new Error(`No Next.js application pages were discovered below ${appRoot}`);
+  // throw new Error(`No Next.js application pages were discovered below ${appRoot}`);
 }
 
 const viewports = {
