@@ -332,6 +332,7 @@ where
         .route("/waitlist", post(handle_waitlist))
         .route("/secret-menu/embed", get(handle_secret_menu_embed))
         .route("/secret-menu/generate", post(handle_secret_menu_generate))
+        .route("/thank-you-loop/generate", post(handle_thank_you_loop_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -6534,4 +6535,40 @@ pub async fn handle_secret_menu_generate(
     state.hub.append_recent_event(msg);
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+#[derive(serde::Deserialize)]
+pub struct ThankYouLoopGenerateRequest {
+    pub tenant_id: String,
+    pub status: String,
+    pub give_amount: String,
+    pub get_amount: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ThankYouLoopGenerateResponse {
+    pub redirect_link: String,
+}
+
+pub async fn handle_thank_you_loop_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<ThankYouLoopGenerateRequest>,
+) -> impl axum::response::IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.thank_you_loop_generated",
+        "tenant_id": req.tenant_id,
+        "status": req.status,
+        "give_amount": req.give_amount,
+        "get_amount": req.get_amount,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }));
+
+    state.hub.append_recent_event(msg);
+
+    let redirect_link = format!(
+        "https://ohc.app/thank-you/{}?status={}&give={}&get={}",
+        req.tenant_id, req.status, req.give_amount, req.get_amount
+    );
+
+    (axum::http::StatusCode::OK, axum::Json(ThankYouLoopGenerateResponse { redirect_link }))
 }

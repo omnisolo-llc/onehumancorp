@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Thank You Page Generator | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #0052cc;
+      --bg-color: #f9fafb;
+      --card-bg: rgba(255, 255, 255, 0.6);
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border-color: rgba(255, 255, 255, 0.4);
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #111827;
+    }
+    .btn-back {
+      text-decoration: none;
+      color: #4b5563;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .main-content {
+      flex: 1;
+      padding: 32px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      gap: 32px;
+    }
+    .settings-panel {
+      flex: 1;
+      max-width: 450px;
+    }
+    .preview-panel {
+      flex: 1.5;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(40px) saturate(200%);
+      -webkit-backdrop-filter: blur(40px) saturate(200%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      box-sizing: border-box;
+      min-height: 44px;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+      min-height: 44px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .promo-preview-container {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      margin-top: 24px;
+    }
+
+    .promo-header {
+      background: linear-gradient(135deg, #4ade80, #16a34a);
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .promo-header h2 {
+      margin: 0 0 10px 0;
+      font-size: 32px;
+    }
+    .promo-header p {
+      margin: 0;
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .promo-body {
+      padding: 30px;
+      text-align: center;
+    }
+
+    .discount-badge {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 10px 20px;
+      border-radius: 50px;
+      margin-bottom: 20px;
+    }
+
+    .share-btn-preview {
+      background: #000;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      margin-top: 20px;
+    }
+
+    .result-container {
+      display: none;
+      margin-top: 24px;
+      padding: 16px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+    }
+
+    .share-link-input {
+      width: 100%;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: monospace;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="dashboard.html" class="btn-back">← Back</a>
+    <h1 class="font-outfit">Viral Thank You Page Generator</h1>
+    <div style="width: 80px;"></div>
+  </header>
+
+  <div class="main-content">
+    <div class="settings-panel">
+      <div class="card">
+        <h2 class="font-outfit" style="margin-top: 0; margin-bottom: 20px;">Page Settings</h2>
+
+        <div class="form-group">
+          <label for="promo-theme">Order Status</label>
+          <select id="promo-theme" class="form-control">
+            <option value="success">Order Confirmed</option>
+            <option value="shipped">Order Shipped</option>
+            <option value="delivered">Order Delivered</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="promo-give-amount">Give Amount ($)</label>
+          <input type="number" id="promo-give-amount" class="form-control" value="10" min="5" max="100">
+        </div>
+
+        <div class="form-group">
+          <label for="promo-get-amount">Get Amount ($)</label>
+          <input type="number" id="promo-get-amount" class="form-control" value="10" min="5" max="100">
+        </div>
+
+        <button id="generate-btn" class="btn-primary" data-testid="generate-promo-btn">
+          Generate Post-Purchase Loop
+        </button>
+
+        <div id="result-container" class="result-container">
+          <h3 style="margin-top: 0; color: #166534;">Loop Generated!</h3>
+          <p style="color: #15803d; font-size: 14px;">Set this as your post-purchase redirect link:</p>
+          <input type="text" id="share-link" class="share-link-input" readonly>
+          <button id="copy-btn" class="btn-primary" style="margin-top: 10px; padding: 8px;">Copy Link</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="card">
+        <h2 class="font-outfit" style="margin-top: 0;">Live Preview</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 0;">This is what your customers will see after they pay.</p>
+
+        <div class="promo-preview-container">
+          <div id="preview-header" class="promo-header">
+            <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+            <h2 id="preview-title" class="font-outfit">Order Confirmed!</h2>
+            <p id="preview-subtitle">Thank you for your purchase.</p>
+          </div>
+          <div class="promo-body">
+            <div id="preview-badge" class="discount-badge">Give $<span id="preview-give">10</span>, Get $<span id="preview-get">10</span></div>
+            <h3 style="font-size: 20px; margin-bottom: 10px;">Share the love!</h3>
+            <p style="color: #6b7280; max-width: 400px; margin: 0 auto;">
+              Give your friends $<span id="preview-give-text">10</span> off their first order, and you'll get $<span id="preview-get-text">10</span> when they buy.
+            </p>
+            <div class="share-btn-preview">
+              <span>Share Referral Link</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const themeSelect = document.getElementById('promo-theme');
+    const giveInput = document.getElementById('promo-give-amount');
+    const getInput = document.getElementById('promo-get-amount');
+
+    const previewHeader = document.getElementById('preview-header');
+    const previewTitle = document.getElementById('preview-title');
+    const previewSubtitle = document.getElementById('preview-subtitle');
+    const previewGive = document.getElementById('preview-give');
+    const previewGet = document.getElementById('preview-get');
+    const previewGiveText = document.getElementById('preview-give-text');
+    const previewGetText = document.getElementById('preview-get-text');
+
+    const themes = {
+      'success': { title: 'Order Confirmed!', subtitle: 'Thank you for your purchase.', bg: 'linear-gradient(135deg, #4ade80, #16a34a)' },
+      'shipped': { title: 'Order Shipped!', subtitle: 'Your items are on the way.', bg: 'linear-gradient(135deg, #60a5fa, #2563eb)' },
+      'delivered': { title: 'Order Delivered!', subtitle: 'We hope you love it.', bg: 'linear-gradient(135deg, #c084fc, #7e22ce)' },
+    };
+
+    function updatePreview() {
+      const theme = themes[themeSelect.value];
+      const giveAmount = giveInput.value;
+      const getAmount = getInput.value;
+
+      previewHeader.style.background = theme.bg;
+      previewTitle.textContent = theme.title;
+      previewSubtitle.textContent = theme.subtitle;
+
+      previewGive.textContent = giveAmount;
+      previewGet.textContent = getAmount;
+      previewGiveText.textContent = giveAmount;
+      previewGetText.textContent = getAmount;
+    }
+
+    themeSelect.addEventListener('change', updatePreview);
+    giveInput.addEventListener('input', updatePreview);
+    getInput.addEventListener('input', updatePreview);
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.textContent = 'Generating...';
+      btn.disabled = true;
+
+      try {
+        const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+        const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+
+        const res = await fetch('/api/v1/growth/thank-you-loop/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify({
+            tenant_id: tenant,
+            status: themeSelect.value,
+            give_amount: giveInput.value,
+            get_amount: getInput.value
+          })
+        });
+
+        let link = `https://ohc.app/thank-you/${tenant}?status=${themeSelect.value}&give=${giveInput.value}&get=${getInput.value}`;
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.redirect_link) {
+            link = data.redirect_link;
+          }
+        } else {
+           throw new Error('Backend API generation failed. Did not receive HTTP 200 OK.');
+        }
+
+        document.getElementById('share-link').value = link;
+        document.getElementById('result-container').style.display = 'block';
+
+      } catch (e) {
+        console.error('Error generating thank you page.', e);
+        // Do not render mocked share links. Throw an error so the UI fails truthfully as per instructions.
+        alert('Failed to generate campaign. Backend returned an error.');
+      } finally {
+        btn.textContent = 'Generate Post-Purchase Loop';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const input = document.getElementById('share-link');
+      input.select();
+      document.execCommand('copy');
+
+      const btn = document.getElementById('copy-btn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    });
+
+    // Initialize preview
+    updatePreview();
+  </script>
+</body>
+</html>
