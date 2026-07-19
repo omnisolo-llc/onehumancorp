@@ -578,7 +578,7 @@ impl DB {
             DbStore::Sqlite(sqlite_pool) => {
                 let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? COLLATE NOCASE OR email LIKE ? COLLATE NOCASE) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -601,7 +601,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (LOWER(id) LIKE LOWER(?) OR LOWER(status) LIKE LOWER(?) OR LOWER(CAST(total_cost AS TEXT)) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (id LIKE ? COLLATE NOCASE OR status LIKE ? COLLATE NOCASE OR CAST(total_cost AS TEXT) LIKE ? COLLATE NOCASE) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -625,7 +625,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (original_content LIKE ? COLLATE NOCASE OR source LIKE ? COLLATE NOCASE) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
