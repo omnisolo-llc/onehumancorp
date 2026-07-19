@@ -14,8 +14,8 @@ type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 
 const helpTabs = [
-  { id: "center", label: "Help" },
-  { id: "chat", label: "Ask anything" },
+  { id: "center", label: "Interactive Tours" },
+  { id: "chat", label: "Ask AI" },
   { id: "videos", label: "Videos" },
   { id: "whatsnew", label: "New" }
 ] as const;
@@ -239,11 +239,11 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="ai-chat-interface" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
-                key={t.id}
+                key={t.id} data-target={`tab-${t.id}`}
                 onClick={() => setTab(t.id)}
                 className={`flex-1 min-w-[80px] min-h-[44px] px-3 py-3 text-sm font-bold transition-all whitespace-nowrap ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-white/20 dark:hover:bg-[#16161a]/20"
@@ -365,7 +365,7 @@ export function HelpWidget() {
                 <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-3 border-t border-white/50">
                   <input
                     type="text"
-                    placeholder="Ask anything..."
+                    id="ohc-help-chat-input" placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_8px_32px_rgba(0,0,0,0.08)] min-h-[44px]"

@@ -141,7 +141,7 @@ describe('HelpWidget', () => {
     const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
-    const chatTab = screen.getByText('Ask anything');
+    const chatTab = screen.getByText('Ask AI');
     await user.click(chatTab);
 
     expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('HelpWidget', () => {
     const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
-    const chatTab = screen.getByText('Ask anything');
+    const chatTab = screen.getByText('Ask AI');
     await user.click(chatTab);
 
     const sendBtn = screen.getByRole('button', { name: 'Send message' });
@@ -343,7 +343,7 @@ describe('HelpWidget', () => {
     const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
-    const chatTab = screen.getByText('Ask anything');
+    const chatTab = screen.getByText('Ask AI');
     await user.click(chatTab);
 
     const input = screen.getByPlaceholderText('Ask anything...');
@@ -472,7 +472,7 @@ describe('HelpWidget', () => {
     render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
 
     await user.click(screen.getByRole('button', { name: 'Open help chat' }));
-    await user.click(screen.getByText('Ask anything'));
+    await user.click(screen.getByText('Ask AI'));
 
     const input = screen.getByPlaceholderText('Ask anything...');
     await user.type(input, 'Hello');
@@ -491,7 +491,7 @@ describe('HelpWidget', () => {
     render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
 
     await user.click(screen.getByRole('button', { name: 'Open help chat' }));
-    await user.click(screen.getByText('Ask anything'));
+    await user.click(screen.getByText('Ask AI'));
 
     const input = screen.getByPlaceholderText('Ask anything...');
     await user.type(input, '{Escape}');
@@ -517,7 +517,7 @@ describe('HelpWidget', () => {
     render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
 
     await user.click(screen.getByRole('button', { name: 'Open help chat' }));
-    await user.click(screen.getByText('Ask anything'));
+    await user.click(screen.getByText('Ask AI'));
     await user.type(screen.getByPlaceholderText('Ask anything...'), 'Show me a link');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
