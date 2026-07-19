@@ -55,14 +55,13 @@ type BrandToolbox = {
   export_formats: string[];
 };
 
-const defaultDescription =
-  "I run a local bakery that sells custom cakes and weekend dessert boxes.";
+const defaultDescription = "";
 
 export default function BrandStudioPage() {
   const [description, setDescription] = useState(defaultDescription);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [productUrl, setProductUrl] = useState("");
-  const [campaignPrompt, setCampaignPrompt] = useState("launch a weekend offer");
+  const [campaignPrompt, setCampaignPrompt] = useState("");
   const [toolbox, setToolbox] = useState<BrandToolbox | null>(null);
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
   const [publishStatus, setPublishStatus] = useState("");

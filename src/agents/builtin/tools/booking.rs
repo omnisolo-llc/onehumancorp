@@ -48,7 +48,7 @@ impl PydanticToolExecutor<BookingGetServicesArgs> for BookingGetServicesExecutor
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&tenant_id)
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -56,7 +56,7 @@ impl PydanticToolExecutor<BookingGetServicesArgs> for BookingGetServicesExecutor
         let rows = sqlx::query(
             "SELECT id, title as name, description, price_cents FROM services WHERE tenant_id = $1",
         )
-        .bind(&tenant_id)
+        .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await
         .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -186,13 +186,13 @@ impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmen
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&tenant_id)
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let rows = sqlx::query("SELECT id, customer_id, service_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC")
-            .bind(&tenant_id)
+            .bind(tenant_id)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
