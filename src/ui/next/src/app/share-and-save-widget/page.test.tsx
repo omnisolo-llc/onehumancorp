@@ -8,6 +8,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+vi.mock('../components/useProPlan', () => ({
+  useProPlan: vi.fn(() => ({ hasPro: false }))
+}));
+
+import { useProPlan } from '../components/useProPlan';
+
 describe('ShareAndSaveWidgetPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,7 +26,6 @@ describe('ShareAndSaveWidgetPage', () => {
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === 'business_display_name') return 'test-tenant';
-        if (key === 'has_pro') return 'false';
         return null;
       }),
       setItem: vi.fn(),

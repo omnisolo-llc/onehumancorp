@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 
 export default function ShareAndSaveWidgetPage() {
   const router = useRouter();
   const [tenantId, setTenantId] = useState('DEFAULT');
   const [shareOpened, setShareOpened] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -17,7 +18,6 @@ export default function ShareAndSaveWidgetPage() {
     if (typeof window !== 'undefined') {
       const tid = localStorage.getItem('business_display_name') || 'DEFAULT';
       setTenantId(tid);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 

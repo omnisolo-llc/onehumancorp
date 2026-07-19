@@ -12,6 +12,10 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
+vi.mock('../components/useProPlan', () => ({
+  useProPlan: vi.fn(() => ({ hasPro: false }))
+}));
+
 describe('ViralJobBoardGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,6 +65,15 @@ describe('ViralJobBoardGeneratorPage', () => {
 
     const descDisplays = screen.getAllByText('We are looking for misfits.');
     expect(descDisplays.length).toBeGreaterThan(0);
+  });
+
+  it('shows paywall when removing branding without pro', () => {
+    render(<ViralJobBoardGeneratorPage />);
+
+    const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/);
+    fireEvent.click(checkbox);
+
+    expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
   });
 
   it('copies link to clipboard', async () => {

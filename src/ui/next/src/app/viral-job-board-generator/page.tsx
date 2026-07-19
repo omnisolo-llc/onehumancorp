@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 import '../globals.css';
 
 import { PoweredByOHC } from "../components/PoweredByOHC";
@@ -12,6 +13,18 @@ export default function ViralJobBoardGeneratorPage() {
   const [description, setDescription] = useState('Join our team and help us build the future.');
   const [theme, setTheme] = useState('light');
   const [copied, setCopied] = useState(false);
+  const { hasPro } = useProPlan();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+
+  const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+      e.preventDefault();
+      setShowPaywall(true);
+      return;
+    }
+    setRemoveBranding(e.target.checked);
+  };
 
   const getThemeStyles = () => {
     if (theme === 'dark') {
@@ -69,7 +82,7 @@ export default function ViralJobBoardGeneratorPage() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-              <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
+              <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200 mb-6">
                 <button
                   onClick={() => setTheme('light')}
                   className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
@@ -83,6 +96,19 @@ export default function ViralJobBoardGeneratorPage() {
                   Dark
                 </button>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={removeBranding}
+                        onChange={handleBrandingToggle}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    Remove "Powered by OHC" Badge
+                    {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ml-1">PRO</span>}
+                </label>
             </div>
           </div>
 
@@ -156,14 +182,54 @@ export default function ViralJobBoardGeneratorPage() {
                   </button>
                 </div>
 
-                <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                  <PoweredByOHC tenantId="growth" />
-                </div>
+                {!removeBranding && (
+                  <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
+                    <PoweredByOHC tenantId="growth" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Soft Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+             <div className="flex justify-end mb-2">
+               <button
+                 aria-label="Close paywall"
+                 onClick={() => setShowPaywall(false)}
+                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+               >
+                 <span className="text-xl leading-none">&times;</span>
+               </button>
+             </div>
+             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+               PRO
+             </div>
+             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+               Make the Job Board 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+             </p>
+             <button
+               onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+               className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+             >
+               Upgrade to Pro
+             </button>
+             <button
+               onClick={() => setShowPaywall(false)}
+               className="mt-2 text-gray-500 hover:text-gray-700 font-medium text-sm w-full"
+             >
+               Cancel
+             </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

@@ -8,6 +8,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+vi.mock('../components/useProPlan', () => ({
+  useProPlan: vi.fn(() => ({ hasPro: false }))
+}));
+
+import { useProPlan } from '../components/useProPlan';
+
 describe('ViralGiveGetWidgetPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,7 +32,6 @@ describe('ViralGiveGetWidgetPage', () => {
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === 'tenant_id' || key === 'tenant') return 'test-tenant';
-        if (key === 'has_pro') return 'false';
         return null;
       }),
       setItem: vi.fn(),

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useProPlan } from '../components/useProPlan';
 import '../globals.css';
 
 export default function ViralGiveGetWidgetPage() {
@@ -15,7 +16,7 @@ export default function ViralGiveGetWidgetPage() {
   const [showResult, setShowResult] = useState(false);
   const [boxesActive, setBoxesActive] = useState(false);
 
-  const [hasPro, setHasPro] = useState(false);
+  const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -25,7 +26,6 @@ export default function ViralGiveGetWidgetPage() {
     if (typeof window !== 'undefined') {
       const storedTenant = localStorage.getItem('business_display_name') || 'My Business';
       setTenantId(storedTenant);
-      setHasPro(localStorage.getItem('has_pro') === 'true');
     }
   }, []);
 
