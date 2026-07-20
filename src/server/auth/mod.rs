@@ -2090,8 +2090,9 @@ mod store_tests {
             || assert_eq!(Store::new().secret, direct.as_bytes()),
         );
 
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("jwt-secret");
+        let directory = std::env::temp_dir().join(format!("jwt-secret-test-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("jwt-secret");
         std::fs::write(&path, b"file-jwt-secret\n").unwrap();
         #[cfg(unix)]
         {
