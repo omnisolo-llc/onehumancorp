@@ -107,15 +107,9 @@ impl Department for OperationsAgent {
             let transcription = event.payload.get("transcription").and_then(|v| v.as_str()).unwrap_or("Unknown transcription");
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
-            // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
-
             // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
+            let pool = crate::db::get_pool();
+            {
                 let action_payload = serde_json::json!({
                     "action_type": "Draft Voice Order",
                     "transcription": transcription,
