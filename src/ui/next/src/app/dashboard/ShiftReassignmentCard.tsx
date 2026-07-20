@@ -54,43 +54,43 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
   return (
     <div
       data-testid="shift-reassignment-card"
-      className="bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.75)] backdrop-blur-[40px] backdrop-saturate-[200%] border border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col gap-4 relative overflow-hidden transition-all duration-300"
+      className="bg-[rgba(255,255,255,0.75)] dark:bg-[rgba(22,22,26,0.8)] backdrop-blur-[30px] backdrop-saturate-[180%] border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] p-6 rounded-[20px] shadow-sm flex flex-col gap-5 relative overflow-hidden transition-all duration-300 hover:shadow-md"
     >
       {/* Decorative gradient orb */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#FF9500]/20 to-[#FF2D55]/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-orange-400/20 to-red-400/20 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
 
-      <div className="flex flex-col gap-1 z-10">
-        <span className="text-xs font-bold font-outfit uppercase tracking-widest text-[#FF9500] dark:text-[#FFA733] mb-1">
+      <div className="flex flex-col gap-1.5 z-10">
+        <span className="text-[11px] font-bold font-outfit uppercase tracking-widest text-orange-500 dark:text-orange-400 mb-1">
           Shift Reassignment
         </span>
-        <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+        <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100 leading-tight">
           Action Required: Shift Coverage
         </h3>
-        <div className="text-sm text-[#86868B] dark:text-[#98989D] mt-2 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-black/5 dark:border-white/5">
-           <span className="font-semibold block mb-1">Context:</span>
+        <div className="text-sm text-gray-600 dark:text-gray-300 mt-2 bg-white/60 dark:bg-black/30 backdrop-blur-md p-3.5 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
+           <span className="font-semibold block mb-1.5">Context:</span>
            {shiftContext}
         </div>
       </div>
 
-      <div className="z-10 mt-2 bg-[#F5F5F7]/80 dark:bg-[#1C1C1E]/80 backdrop-blur-md p-4 rounded-xl border border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)]">
-         <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] block mb-2">AI Proposal:</span>
-         <p className="text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
+      <div className="z-10 mt-1 bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-md p-4 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
+         <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 block mb-2">AI Proposal:</span>
+         <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
             {proposalText}
          </p>
       </div>
 
-      <div className="flex gap-3 z-10 mt-2 pt-2">
+      <div className="flex gap-3 z-10 mt-1 pt-1">
         <button
           disabled={isQueued}
           onClick={() => handleDecision(approval.id, true, undefined, "shift_reassignment")}
-          className="flex-1 bg-[#34C759] hover:bg-[#30D158] text-white px-4 py-3 rounded-xl font-semibold font-outfit text-sm transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
+          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-3.5 rounded-xl font-semibold text-sm transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 min-h-[48px]"
         >
           {isQueued ? "Syncing..." : "Approve & Notify"}
         </button>
         <button
           disabled={isQueued}
           onClick={() => handleDecision(approval.id, false, undefined, "shift_reassignment")}
-          className="flex-1 bg-white dark:bg-[#2C2C2E] hover:bg-gray-50 dark:hover:bg-[#3A3A3C] text-[#1D1D1F] dark:text-[#F5F5F7] border border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 rounded-xl font-semibold font-outfit text-sm transition-all duration-200 active:scale-[0.98] disabled:opacity-50 min-h-[44px]"
+          className="flex-1 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 px-4 py-3.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-50 min-h-[48px]"
         >
           Find Someone Else
         </button>
