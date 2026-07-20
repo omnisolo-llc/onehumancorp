@@ -42,7 +42,7 @@ pub fn authenticate_spiffe_request<T>(
     let peer_certificates = request.extensions().get::<std::sync::Arc<Vec<tonic::transport::Certificate>>>().cloned();
     let peer_certificate = peer_certificates
         .as_deref()
-        .and_then(|certificates| certificates.first())
+        .and_then(|certificates: &Vec<tonic::transport::Certificate>| certificates.first())
         .map(|c| c.get_ref());
     let identity =
         authenticated_spiffe_id(standalone, claimed_identity.as_deref(), peer_certificate)?;
