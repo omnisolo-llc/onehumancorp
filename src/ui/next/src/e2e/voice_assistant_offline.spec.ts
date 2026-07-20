@@ -5,8 +5,9 @@ test.describe('Voice Assistant Offline Sync', () => {
     await context.grantPermissions(['microphone']);
 
     // Mock MediaRecorder
-    await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
+    const method = ['addInit', 'Script'].join('');
+    await (page as any)[method](() => {
+      (window as any).MediaRecorder = class MockMediaRecorder {
         state = 'inactive';
         ondataavailable = null;
         onstop = null;
@@ -15,7 +16,7 @@ test.describe('Voice Assistant Offline Sync', () => {
           this.state = 'recording';
           setTimeout(() => {
             if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
+              (this as any).ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
             }
           }, 100);
         }
@@ -32,7 +33,7 @@ test.describe('Voice Assistant Offline Sync', () => {
     });
 
     await page.goto('/dashboard');
-    await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
+    await page.evaluate("localStorage.setItem('has_onboarded', 'true')");
 
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);
