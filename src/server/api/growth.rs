@@ -343,6 +343,7 @@ where
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/generate-win-back", post(handle_generate_win_back))
         .route("/campaign/generate-subscription-offer", post(handle_generate_subscription_offer))
+        .merge(crate::services::growth::reputation_engine::reputation_routes())
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
