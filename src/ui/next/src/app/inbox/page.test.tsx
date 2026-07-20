@@ -19,6 +19,14 @@ vi.mock('../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/inbox',
+}));
+
+global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ pending_approvals: [] }) })) as any;
+
 beforeEach(() => {
   queryState.data = [];
 });
