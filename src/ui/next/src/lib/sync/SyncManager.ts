@@ -220,6 +220,34 @@ export class SyncManager {
         }
       }
 
+      // Sync Draft Quote Actions
+      const draftQuoteActions = queue.filter(m => m.type === 'draft_quote');
+      for (const action of draftQuoteActions) {
+        try {
+          const res = await fetch('/api/v1/quotes/draft_agent', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Idempotency-Key': action.id
+            },
+            body: JSON.stringify(action.payload)
+          });
+          if (!res.ok) {
+            try { this.checkRateLimit(res); } catch(e) {}
+            console.error(`Draft Quote Action Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOkFinal = false;
+          } else {
+             await removeAction(action.id);
+             if (typeof window !== "undefined") {
+               window.dispatchEvent(new Event("ohc_queue_updated"));
+             }
+          }
+        } catch (err) {
+          console.error("Draft Quote Action Sync error:", err);
+          allOkFinal = false;
+        }
+      }
+
       // Sync Quote Actions
       const quoteUpdates = generalMutations.filter(m => m.type === 'update_quote');
       for (const update of quoteUpdates) {
@@ -295,7 +323,7 @@ export class SyncManager {
       }
 
       // Sync operation intents (from MutationService)
-      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const operationIntents = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale' && m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event' && m.type !== 'draft_quote');
 
       if (operationIntents.length > 0) {
         const mappedIntents = operationIntents.map(m => ({
@@ -348,7 +376,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'fulfillment_action' && m.type !== 'generate_invoice' && m.type !== 'sync_event' && m.type !== 'draft_quote');
       if (generalGenMutations.length > 0) {
         try {
           const resGen = await fetch('/api/v1/sync/offline', {

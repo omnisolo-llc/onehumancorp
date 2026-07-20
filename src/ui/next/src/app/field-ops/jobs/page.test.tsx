@@ -20,8 +20,35 @@ vi.mock('../../../lib/powersync/db', () => ({
   }))
 }));
 
+const mockJobs = [
+  {
+    id: 'job-1',
+    customer_id: 'cust-1',
+    customer_name: 'Alice Smith',
+    job_template_id: 'job-plumbing',
+    job_name: 'Plumbing Repair',
+    status: 'Scheduled',
+    scheduled_start_time: new Date().toISOString(),
+    scheduled_end_time: new Date(Date.now() + 3600000).toISOString(),
+    location_address: '123 Main St',
+    notes: ''
+  },
+  {
+    id: 'job-2',
+    customer_id: 'cust-2',
+    customer_name: 'Bob Jones',
+    job_template_id: 'job-elec',
+    job_name: 'Electrical Inspection',
+    status: 'Requested',
+    scheduled_start_time: new Date(Date.now() + 7200000).toISOString(),
+    scheduled_end_time: new Date(Date.now() + 10800000).toISOString(),
+    location_address: '456 Oak Ave',
+    notes: ''
+  }
+];
+
 vi.mock('@powersync/react', () => ({
-  useQuery: vi.fn(() => ({ data: [] })),
+  useQuery: vi.fn(() => ({ data: mockJobs })),
   PowerSyncContext: { Provider: ({ children }: any) => <div>{children}</div> }
 }));
 
@@ -33,32 +60,7 @@ describe('FieldOpsJobsPage', () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         json: () => Promise.resolve({
-          appointments: [
-            {
-              id: 'job-1',
-              customer_id: 'cust-1',
-              customer_name: 'Alice Smith',
-              job_template_id: 'job-plumbing',
-              job_name: 'Plumbing Repair',
-              status: 'Scheduled',
-              scheduled_start_time: new Date().toISOString(),
-              scheduled_end_time: new Date(Date.now() + 3600000).toISOString(),
-              location_address: '123 Main St',
-              notes: ''
-            },
-            {
-              id: 'job-2',
-              customer_id: 'cust-2',
-              customer_name: 'Bob Jones',
-              job_template_id: 'job-elec',
-              job_name: 'Electrical Inspection',
-              status: 'Requested',
-              scheduled_start_time: new Date(Date.now() + 7200000).toISOString(),
-              scheduled_end_time: new Date(Date.now() + 10800000).toISOString(),
-              location_address: '456 Oak Ave',
-              notes: ''
-            }
-          ]
+          appointments: mockJobs
         }),
       })
     ) as any;
@@ -102,5 +104,27 @@ describe('FieldOpsJobsPage', () => {
 
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();
     expect(screen.getByText(/"Needs new piping"/)).toBeInTheDocument();
+  });
+
+  it('allows offline quote drafting and enqueues it', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false });
+    render(<FieldOpsJobsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    });
+
+    const voiceQuoteBtn = screen.getByTestId('voice-quote-btn-job-1');
+    fireEvent.click(voiceQuoteBtn);
+
+    const transcriptInput = screen.getByTestId('voice-transcript-input');
+    fireEvent.change(transcriptInput, { target: { value: 'Testing offline quote' } });
+
+    const generateBtn = screen.getByTestId('generate-quote-btn');
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Draft Deferred')).toBeInTheDocument();
+    });
   });
 });
