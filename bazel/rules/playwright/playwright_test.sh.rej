@@ -1,0 +1,15 @@
+--- playwright_test.sh
++++ playwright_test.sh
+@@ -86,7 +86,10 @@
+   done
+   rel="${rel#./}"
+   case "$rel" in
+-    app/src/e2e/*.spec.ts|src/e2e/*.spec.ts|app/app/src/e2e/*.spec.ts|src/e2e/*.spec.ts)
++    app/src/e2e/*.spec.ts)
++      printf '%s\n' "${rel#app/}"
++      ;;
++    src/e2e/*.spec.ts)
+       printf '%s\n' "$rel"
+       ;;
+-    src/ui/next/e2e/*.spec.ts|src/ui/next/app/src/e2e/*.spec.ts|src/e2e/*.spec.ts|app/app/src/e2e/*.spec.ts|src/e2e/*.spec.ts)
++    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|app/src/ui/next/e2e/*.spec.ts|app/src/ui/next/src/e2e/*.spec.ts)
