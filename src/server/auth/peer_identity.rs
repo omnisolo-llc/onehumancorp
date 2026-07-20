@@ -39,6 +39,7 @@ pub fn authenticate_spiffe_request<T>(
                 .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))
         })
         .transpose()?;
+    // use tonic peer certs extension
     let peer_certificates = request.peer_certs();
     let peer_certificate = peer_certificates
         .as_deref()
