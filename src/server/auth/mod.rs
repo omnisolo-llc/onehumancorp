@@ -2126,7 +2126,8 @@ mod store_tests {
             },
         );
 
-        let missing_path = std::env::temp_dir().join("missing-jwt-secret");
+        let directory = tempfile::tempdir().unwrap();
+        let missing_path = directory.path().join("missing-jwt-secret");
         temp_env::with_vars(
             [
                 ("JWT_SECRET", None),
