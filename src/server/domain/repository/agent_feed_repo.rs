@@ -276,20 +276,39 @@ impl AgentFeedRepository {
 
                      if order_rows_affected == 0 {
                          let invoice_status = if new_state == "APPROVED" { "sent" } else { "cancelled" };
-                         if is_pg {
+                         let invoice_rows_affected = if is_pg {
                              sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                                  .bind(invoice_status)
                                  .bind(tenant_id)
                                  .bind(id)
                                  .execute(&self.db.pool)
-                                 .await?;
+                                 .await?.rows_affected()
                          } else {
                              sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                                  .bind(invoice_status)
                                  .bind(tenant_id)
                                  .bind(id)
                                  .execute(&self.db.pool)
-                                 .await?;
+                                 .await?.rows_affected()
+                         };
+
+                         if invoice_rows_affected == 0 {
+                             let quote_status = if new_state == "APPROVED" { "SENT" } else { "REJECTED" };
+                             if is_pg {
+                                 sqlx::query("UPDATE quotes SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id::text = $3")
+                                     .bind(quote_status)
+                                     .bind(tenant_id)
+                                     .bind(id)
+                                     .execute(&self.db.pool)
+                                     .await?;
+                             } else {
+                                 sqlx::query("UPDATE quotes SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND CAST(id AS TEXT) = ?")
+                                     .bind(quote_status)
+                                     .bind(tenant_id)
+                                     .bind(id)
+                                     .execute(&self.db.pool)
+                                     .await?;
+                             }
                          }
                      }
                  }

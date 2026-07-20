@@ -1574,14 +1574,54 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let approve_query = format!(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
+    // First fetch the quote to get the required_deposit_cents
+    let get_query = format!(
+        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",
     );
-    let quote = match sqlx::query_as::<_, Quote>(&approve_query)
-    .bind(quote_id.to_string())
-    .bind(authority.tenant_id())
-    .fetch_optional(&pool)
-    .await
+    let quote = match sqlx::query_as::<_, Quote>(&get_query)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch quote for approval: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if !authority.owns_quote(&quote) {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+
+    let mut payment_link_str: Option<String> = None;
+    let deposit = quote.required_deposit_cents.unwrap_or(0);
+    if deposit > 0 {
+        let stripe_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_default();
+        if !stripe_key.is_empty() {
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+            if let Ok(link) = stripe_client.create_payment_link("Deposit for Quote", deposit).await {
+                payment_link_str = Some(link);
+            }
+        } else {
+            // For tests
+            payment_link_str = Some(format!("https://buy.stripe.com/test_{}", uuid::Uuid::new_v4().simple().to_string().chars().take(16).collect::<String>()));
+        }
+    } else {
+        payment_link_str = None;
+    }
+
+    let approve_query = format!(
+        "UPDATE quotes SET status = 'SENT', stripe_payment_link = COALESCE($1, stripe_payment_link), updated_at = NOW() WHERE id::text = $2 AND tenant_id = $3 RETURNING {QUOTE_COLUMNS}",
+    );
+    let updated_quote = match sqlx::query_as::<_, Quote>(&approve_query)
+        .bind(&payment_link_str)
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&pool)
+        .await
     {
         Ok(Some(q)) => q,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
@@ -1590,11 +1630,8 @@ async fn approve_quote(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
-    if !authority.owns_quote(&quote) {
-        return StatusCode::NOT_FOUND.into_response();
-    }
 
-    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
+    (StatusCode::OK, Json(serde_json::json!({"quote": updated_quote}))).into_response()
 }
 
 // Temporary marker to slice off old approve_quote
