@@ -83,6 +83,14 @@ playwright_spec_workspace_name() {
     fi
   done
   rel="${rel#./}"
+  # Remove absolute /app prefix if present
+  if [[ "$rel" == "/app/"* ]]; then
+    rel="${rel#/app/}"
+  fi
+  # Remove relative app/ prefix if present
+  if [[ "$rel" == "app/"* ]]; then
+    rel="${rel#app/}"
+  fi
   case "$rel" in
     src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
