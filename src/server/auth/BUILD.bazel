@@ -24,7 +24,7 @@ rust_library(
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
-        "@crates//:tempfile",
+
         "@crates//:temp-env",
         "//src/server/config:server_config",
         "//src/server/common:server_common",
@@ -62,7 +62,7 @@ rust_test(
     },
     deps = [
         "@crates//:rcgen",
-        "@crates//:tempfile",
+
         "@crates//:tower-0.5.3",
     ],
     edition = "2024",

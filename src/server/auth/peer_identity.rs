@@ -39,7 +39,13 @@ pub fn authenticate_spiffe_request<T>(
                 .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))
         })
         .transpose()?;
-    let peer_certificates = request.extensions().get::<tonic::transport::server::TlsConnectInfo<tonic::transport::server::TcpConnectInfo>>().and_then(|info| info.peer_certs());
+
+#[cfg(feature = "tls")]
+let peer_certificates = request.extensions().get::<tonic::transport::server::TlsConnectInfo<tonic::transport::server::TcpConnectInfo>>().and_then(|info| info.peer_certs());
+
+#[cfg(not(feature = "tls"))]
+let peer_certificates: Option<std::sync::Arc<Vec<tonic::transport::Certificate>>> = None;
+
     let peer_certificate = peer_certificates
         .as_deref()
         .and_then(|certificates| certificates.first())

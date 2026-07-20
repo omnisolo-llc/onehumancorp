@@ -2090,8 +2090,11 @@ mod store_tests {
             || assert_eq!(Store::new().secret, direct.as_bytes()),
         );
 
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("jwt-secret");
+
+        let directory = std::env::temp_dir().join(format!("ohc-test-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+
+        let path = directory.join("jwt-secret");
         std::fs::write(&path, b"file-jwt-secret\n").unwrap();
         #[cfg(unix)]
         {
@@ -2127,7 +2130,7 @@ mod store_tests {
             },
         );
 
-        let missing_path = directory.path().join("missing-jwt-secret");
+        let missing_path = directory.join("missing-jwt-secret");
         temp_env::with_vars(
             [
                 ("JWT_SECRET", None),
