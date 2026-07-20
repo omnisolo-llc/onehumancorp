@@ -14,7 +14,7 @@ function HomeContent() {
 
     const hasOnboarded = localStorage.getItem('has_onboarded');
     if (hasOnboarded) {
-      router.push('/unified-feed');
+      router.push('/today');
     } else {
       router.push('/onboarding');
     }
