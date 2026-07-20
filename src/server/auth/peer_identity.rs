@@ -39,10 +39,10 @@ pub fn authenticate_spiffe_request<T>(
                 .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))
         })
         .transpose()?;
-    let peer_certificates = request.peer_certs().clone();
+    let peer_certificates = request.extensions().get::<std::sync::Arc<Vec<tonic::transport::Certificate>>>().cloned();
     let peer_certificate = peer_certificates
         .as_deref()
-        .and_then(|certificates| certificates.first())
+        .and_then(|certificates: &[std::sync::Arc<tonic::transport::Certificate>]| certificates.first())
         .map(AsRef::as_ref);
     let identity =
         authenticated_spiffe_id(standalone, claimed_identity.as_deref(), peer_certificate)?;
