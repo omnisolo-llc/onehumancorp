@@ -49,7 +49,7 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
      }
   }
 
-  const proposalText = `Reassign shift to ${newStaffName}?`;
+  const proposalText = \`Reassign shift to \${newStaffName}?\`;
 
   return (
     <div
