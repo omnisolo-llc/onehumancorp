@@ -919,12 +919,12 @@ impl Department for CustomerSuccessAgent {
             }
 
             let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Determine if this is a general inquiry or a request for a custom order/booking. If it is a custom order request (e.g. asking for a custom cake, booking a service), prefix your response with [CUSTOM_ORDER]. Tenant: {}. Customer message: {}\n\nContext:\n{}",
                 event.tenant_id, message, context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+            let draft_reply = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
                 .as_deref()
             {
@@ -946,6 +946,9 @@ impl Department for CustomerSuccessAgent {
                         "Thank you for your message. We will get back to you shortly.".to_string()
                     }),
             };
+
+            let is_custom_order = draft_reply.starts_with("[CUSTOM_ORDER]");
+            let generated_response = draft_reply.replace("[CUSTOM_ORDER]", "").trim().to_string();
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!(
@@ -1018,7 +1021,27 @@ impl Department for CustomerSuccessAgent {
         }
 
         if event.payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-            let description = "The Ambassador drafted a response for your review.".to_string();
+            let requires_deposit = event.payload.get("requires_deposit").and_then(|v| v.as_bool()).unwrap_or(false);
+
+            if requires_deposit {
+                // If it requires a deposit, we also want to emit an event for the Finance agent
+                // to draft a custom order deposit
+                let finance_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "tenant.omnichannel.custom_order_requested".to_string(),
+                    payload: event.payload.clone(),
+                };
+                let _ = self.orchestrator.dispatch_event(finance_event).await;
+
+                // We still let the CS agent draft its reply
+            }
+
+            let description = if requires_deposit {
+                "The Ambassador drafted a response and deposit request for your review.".to_string()
+            } else {
+                "The Ambassador drafted a response for your review.".to_string()
+            };
             let action_payload = event.payload.clone();
 
             let approval_req = self

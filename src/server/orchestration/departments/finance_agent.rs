@@ -23,11 +23,25 @@ impl Department for FinanceAgent {
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
             "invoice.overdue".to_string(),
-            "project_milestone_completed".to_string()
+            "project_milestone_completed".to_string(),
+            "tenant.omnichannel.custom_order_requested".to_string()
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.omnichannel.custom_order_requested" {
+            let action_payload = event.payload.clone();
+
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::Finance,
+                "Draft deposit request for custom order".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
