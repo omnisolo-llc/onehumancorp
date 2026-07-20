@@ -137,6 +137,7 @@ pub struct DepartmentOrchestrator {
 }
 
 impl DepartmentOrchestrator {
+    pub fn memory_repo(&self) -> Arc<VectorRepository> { self.memory_repo.clone() }
     pub fn db(&self) -> Arc<crate::db::DB> {
         self.db.clone()
     }
