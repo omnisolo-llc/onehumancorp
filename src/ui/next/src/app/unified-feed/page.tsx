@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { SwipeableCard } from "../../components/ui/SwipeableCard";
+import { AnimatePresence } from "framer-motion";
 
 interface FeedItemRaw {
   id: string;
@@ -231,9 +233,16 @@ export default function UnifiedFeed() {
             </h3>
           </div>
         ) : (
-          feedItems.map((item) => (
-            <div
+          <AnimatePresence mode="popLayout">
+          {feedItems.map((item) => (
+            <SwipeableCard
               key={item.workItem.id}
+              id={item.workItem.id}
+              onSwipeRight={() => handleApprove(item.workItem.id)}
+              onSwipeLeft={() => handleReject(item.workItem.id)}
+              isProcessing={processingId === item.workItem.id}
+            >
+            <div
               className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
               data-testid="agent-feed-card"
             >
@@ -384,7 +393,9 @@ export default function UnifiedFeed() {
                   </div>
                 )}
             </div>
-          ))
+            </SwipeableCard>
+          ))}
+          </AnimatePresence>
         )}
       </main>
     </div>
