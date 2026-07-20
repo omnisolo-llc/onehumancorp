@@ -2,37 +2,14 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Voice Assistant Offline Sync', () => {
   test('should queue voice command when offline and display sync status', async ({ page, context }) => {
-    await context.grantPermissions(['microphone']);
-
-    // Mock MediaRecorder
-    await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
-        state = 'inactive';
-        ondataavailable = null;
-        onstop = null;
-        constructor() {}
-        start() {
-          this.state = 'recording';
-          setTimeout(() => {
-            if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
-            }
-          }, 100);
-        }
-        stop() {
-          this.state = 'inactive';
-          if (this.onstop) {
-            this.onstop(new Event('stop'));
-          }
-        }
-      } as any;
-      (navigator as any).mediaDevices = {
-        getUserMedia: () => Promise.resolve(new MediaStream()),
-      };
-    });
+            // Navigate and login through real UI
+    await page.goto('/login');
+    await page.getByPlaceholder('Email').fill('carlos@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.locator('text=Dashboard')).toBeVisible();
 
     await page.goto('/dashboard');
-    await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
 
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);
