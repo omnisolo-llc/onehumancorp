@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS integration_credentials (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE integration_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS integration_credentials ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
