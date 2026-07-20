@@ -532,3 +532,4 @@ export class SyncManager {
     }
   }
 }
+export const syncManager = SyncManager.getInstance();

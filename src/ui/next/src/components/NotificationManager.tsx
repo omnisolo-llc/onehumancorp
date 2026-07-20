@@ -55,7 +55,7 @@ export function NotificationManager() {
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] p-4 shadow-lg text-sm text-[#1D1D1F] dark:text-[#F5F5F7] animate-in slide-in-from-top-2 fade-in duration-300 pointer-events-auto"
+          className="bg-[rgba(255,255,255,0.03)] backdrop-blur-[20px] backdrop-saturate-[200%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] p-4 shadow-lg text-sm text-[#1D1D1F] dark:text-[#F5F5F7] animate-in slide-in-from-top-2 fade-in duration-300 pointer-events-auto"
           data-testid="notification-toast"
         >
           {notification.message}
