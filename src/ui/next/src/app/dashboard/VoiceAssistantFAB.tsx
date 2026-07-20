@@ -60,9 +60,11 @@ export function VoiceAssistantFAB() {
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
-          import('../../lib/sync/SyncManager').then(({ syncManager }) => {
-            syncManager.enqueueMutation({
+          import('../utils/offlineQueue').then(({ enqueueAction }) => {
+            enqueueAction({
+              id: crypto.randomUUID(),
               type: 'sync_event',
+              timestamp: Date.now(),
               payload: {
                 entity_type: 'audio_intent',
                 entity_id: crypto.randomUUID(),
