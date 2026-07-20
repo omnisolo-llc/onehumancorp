@@ -108,14 +108,26 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
+            if let Err(e) = self.orchestrator.write_long_term_memory(ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                content: format!("Parsed offline voice intent: {}", transcription),
+                metadata: Some(serde_json::json!({"context": "Operations"}).to_string()),
+                created_at: chrono::Utc::now(),
+                agent_id: self.agent_id(),
+                embedding: vec![],
+                last_referenced_at: chrono::Utc::now(),
+                owner_override: false,
+                reference_count: 0,
+                reliability_score: 1,
+                source_type: "user".to_string(),
+            }).await {
+                tracing::error!("Failed to write long term memory: {}", e);
+            }
 
             // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
+            let pool = crate::db::get_pool().clone();
+            {
                 let action_payload = serde_json::json!({
                     "action_type": "Draft Voice Order",
                     "transcription": transcription,
