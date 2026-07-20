@@ -15,7 +15,7 @@ test.describe('Lens Audit Visual Checks', () => {
 
   test('should display dashboard correctly', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.locator("h1.app-title", { hasText: "Dashboard" })).toBeVisible();
     await expect(page.getByRole('navigation').first()).toBeVisible();
   });
 
@@ -27,8 +27,8 @@ test.describe('Lens Audit Visual Checks', () => {
 
   test('should display login fields', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByPlaceholder('Email or Username').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Email or username" }).filter({ visible: true }).first()).toBeVisible();
     await expect(page.locator('input[type="password"]').filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Log In' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
   });
 });
