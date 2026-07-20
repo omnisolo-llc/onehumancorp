@@ -85,7 +85,7 @@ function FieldOpsJobsPageContent() {
         setLoading(false);
     }
 
-    return () => {
+  return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -289,6 +289,8 @@ function FieldOpsJobsPageContent() {
     );
   }
 
+  const nextJob = jobs.find(j => j.status !== "Completed" && j.status !== "Cancelled");
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -302,7 +304,9 @@ function FieldOpsJobsPageContent() {
         )}
       </div>
 
+
       {delayAction && (
+
         <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm relative">
           <button
             onClick={() => setDelayAction(null)}
@@ -334,6 +338,30 @@ function FieldOpsJobsPageContent() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {nextJob && (
+        <div className="mb-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-lg border border-white/40 overflow-hidden rounded-[16px]">
+          <div className="p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-gray-900 font-bold text-lg">
+              <span>🧭</span> Next Stop
+            </div>
+            <p className="text-gray-700 font-medium">
+              {nextJob.customer_name} - {nextJob.job_name}
+            </p>
+            <p className="text-gray-500 text-sm">
+              📍 {nextJob.location_address}
+            </p>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${nextJob.location_lat},${nextJob.location_lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 w-full bg-[#000000] text-white text-center font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] flex items-center justify-center gap-2 shadow-md"
+            >
+              <span>🗺️</span> Navigate to Next Job
+            </a>
           </div>
         </div>
       )}

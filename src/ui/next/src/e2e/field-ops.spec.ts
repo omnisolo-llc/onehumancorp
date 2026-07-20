@@ -40,6 +40,10 @@ test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
 
     // Verify online state
     await expect(page.locator("text=Today's Route")).toBeVisible();
+    await expect(page.locator("text=Next Stop")).toBeVisible();
+    await expect(page.locator("text=Navigate to Next Job")).toBeVisible();
+    const navigateBtn = page.locator("a", { hasText: "Navigate to Next Job" });
+    await expect(navigateBtn).toHaveAttribute("href", /maps\.google\.com/);
     await expect(page.locator("text=Sink Repair").first()).toBeVisible();
 
     // Look for heading to job
