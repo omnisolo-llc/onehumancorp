@@ -893,7 +893,7 @@ impl AppServer {
                 .runner
                 .core
                 .agent
-                .run(&cfg, &initial_message, &mut on_event)
+                .run_actor_model_message_passing(&cfg, &initial_message, vec![], &mut on_event)
                 .await
             {
                 Ok(result) => {
