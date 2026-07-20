@@ -108,29 +108,28 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
+            tracing::info!(
+                "Operations Agent: Parsed offline voice intent for tenant {}: {}",
+                event.tenant_id,
+                transcription
+            );
 
             // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
-                let action_payload = serde_json::json!({
-                    "action_type": "Draft Voice Order",
-                    "transcription": transcription,
-                    "status": "pending_approval"
-                });
-                let _ = sqlx::query(
-                    "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
-                     VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
-                )
-                .bind(&event.tenant_id)
-                .bind(format!("Voice Command: \"{}\"", transcription))
-                .bind(action_payload)
-                .execute(&pool)
-                .await;
-            }
+            let pool = crate::db::get_pool();
+            let action_payload = serde_json::json!({
+                "action_type": "Draft Voice Order",
+                "transcription": transcription,
+                "status": "pending_approval"
+            });
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
+                 VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
+            )
+            .bind(&event.tenant_id)
+            .bind(format!("Voice Command: \"{}\"", transcription))
+            .bind(action_payload)
+            .execute(&pool)
+            .await;
             return Ok(());
         }
 

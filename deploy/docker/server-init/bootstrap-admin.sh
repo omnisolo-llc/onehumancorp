@@ -165,3 +165,7 @@ case "$HTTP_STATUS" in
 esac
 
 echo "[bootstrap] Bootstrap verification complete."
+
+if [ -n "${BOOTSTRAP_CONTRACT_MARKER:-}" ]; then
+    touch "${BOOTSTRAP_CONTRACT_MARKER}"
+fi
