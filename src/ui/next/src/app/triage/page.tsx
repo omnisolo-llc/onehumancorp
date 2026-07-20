@@ -168,8 +168,8 @@ export default function TriagePage() {
 
   return (
     <AppShell
-      title="Work Triage"
-      subtitle="AI-prioritized inbox and action center."
+      title="Today"
+      subtitle="AI-prioritized inbox and action center. (Work Triage)"
       statusItems={[
         {
           label: "Active",
