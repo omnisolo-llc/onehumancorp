@@ -4,6 +4,7 @@ filegroup(
         "identity.rs",
         "mod.rs",
         "webhook.rs",
+        "agent.rs",
         "customer_memory.rs",
         "action_required.rs",
         "action_required_test.rs",
