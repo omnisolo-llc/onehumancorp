@@ -76,7 +76,7 @@ done
 playwright_spec_workspace_name() {
   local spec_file="$1"
   local rel="$spec_file"
-  for root in "$SOURCE_REPO_ROOT" "$workspace_root" "$RUNFILES_ROOT"; do
+  for root in "$SOURCE_REPO_ROOT" "$workspace_root" "$RUNFILES_ROOT" "/app" "/github/workspace" "/home/runner/work/mono/mono"; do
     if [[ -n "$root" && "$rel" == "$root/"* ]]; then
       rel="${rel#$root/}"
       break
