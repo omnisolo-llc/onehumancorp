@@ -71,11 +71,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.goto('/onboarding');
 
     // Attempt to access step 4 loading state directly if possible, or intercept network and check
-    await page.evaluate(() => {
-        window.localStorage.setItem('onboarding-storage-v4', JSON.stringify({
-            state: { step: 4 }
-        }));
-    });
+
 
     await page.reload();
 

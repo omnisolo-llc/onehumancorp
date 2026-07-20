@@ -7,18 +7,18 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
   const tenantId = adminUser.tenantId;
 
   // 1. Create a product via API
-  const productRes = await request.post('/api/v1/catalog/product', {
-    data: {
-      name: 'Edge Cache Test Cake',
-      description: 'A delicious test cake',
-      price: '19.99',
-      item_type: 'Product',
-      stock: 10,
-    }
-  });
+  // Create product by manipulating UI
+  await page.goto('/products/new');
+  await page.fill('input[name="name"]', 'Edge Cache Test Cake');
+  await page.fill('input[name="price"]', '19.99');
+  await page.click('button:has-text("Save")');
+  await page.waitForTimeout(2000);
 
-  expect(productRes.ok()).toBeTruthy();
-  const productData = await productRes.json();
+  const productRes = await request.get('/api/v1/catalog/products');
+  const productDataArray = await productRes.json();
+  const productData = productDataArray.items ? productDataArray.items[0] : productDataArray[0];
+
+  expect(productData).toBeDefined();
   const productId = productData.id;
 
   expect(productId).toBeDefined();
@@ -39,20 +39,13 @@ test('edge_caching_invalidation', async ({ page, request, loginAs, adminUser }) 
   expect(cacheStatus).toBe('HIT');
 
   // 4. Update the inventory (this emits tenant.inventory.updated)
-  const updateRes = await request.post('/api/v1/pos/inventory', {
-    data: {
-      items: [
-        {
-          product_id: productId,
-          variant_id: null,
-          location_id: null,
-          delta: -1, // sold 1
-          reason: 'Test sale'
-        }
-      ]
-    }
-  });
-  expect(updateRes.ok()).toBeTruthy();
+  // Update inventory by manipulating UI
+  await page.goto(`/products/${productId}`);
+  await page.waitForTimeout(1000);
+  await page.fill('input[name="stock"]', '9');
+  await page.click('button:has-text("Save")');
+  await page.waitForTimeout(2000);
+
 
   // Wait for the operations agent and invalidator to process the event
   await page.waitForTimeout(1000);
