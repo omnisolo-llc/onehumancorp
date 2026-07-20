@@ -108,14 +108,10 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
+            self.orchestrator.append_to_timeline(crate::orchestration::departments::types::TimelineEvent { id: uuid::Uuid::new_v4().to_string(), tenant_id: event.tenant_id.clone(), customer_id: "unknown".to_string(), event_type: "Operations".to_string(), source: "voice".to_string(), content: format!("Parsed offline voice intent: {}", transcription), metadata: None, created_at: None }).await.map_err(|e| tonic::Status::internal(e))?; //(
 
             // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
+            if let Some(pool) = Some(crate::db::get_pool()) {
                 let action_payload = serde_json::json!({
                     "action_type": "Draft Voice Order",
                     "transcription": transcription,
