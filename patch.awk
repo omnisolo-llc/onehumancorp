@@ -1,65 +1,22 @@
-/mod strict_output_tests \{/ {
-  in_mod = 1
-}
-in_mod == 1 && /^\}/ {
-  print
-  print ""
-  print "#[cfg(test)]"
-  print "mod generate_feedback_tests {"
-  print "    use super::*;"
-  print "    use crate::types::{ChatRequest, Message, ToolCall, Role, ToolDefinition};"
-  print ""
-  print "    #[test]"
-  print "    fn test_generate_feedback_message_isolates_error() {"
-  print "        let mut req = ChatRequest {"
-  print "            model: \"test\".to_string(),"
-  print "            system: \"\".to_string(),"
-  print "            messages: vec![],"
-  print "            tools: vec![],"
-  print "            max_tokens: 100,"
-  print "            temperature: 0.0,"
-  print "        };"
-  print ""
-  print "        let msg = Message {"
-  print "            role: Role::Assistant,"
-  print "            content: \"\".to_string(),"
-  print "            tool_calls: vec!["
-  print "                ToolCall {"
-  print "                    id: \"tool_1\".to_string(),"
-  print "                    name: \"good_tool\".to_string(),"
-  print "                    arguments: serde_json::json!({}),"
-  print "                },"
-  print "                ToolCall {"
-  print "                    id: \"tool_2\".to_string(),"
-  print "                    name: \"bad_tool\".to_string(),"
-  print "                    arguments: serde_json::json!({}),"
-  print "                },"
-  print "            ],"
-  print "            tool_results: vec![],"
-  print "            response_id: None,"
-  print "            previous_response_id: None,"
-  print "        };"
-  print ""
-  print "        let parse_error_msg = \"[TOOL_ID:tool_2] Validation Error\";"
-  print ""
-  print "        RetryWithErrorOutputParser::<()>::generate_feedback_message(&mut req, &msg, parse_error_msg);"
-  print ""
-  print "        // req.messages should have the original msg + the new tool msg"
-  print "        assert_eq!(req.messages.len(), 2);"
-  print "        let feedback_msg = &req.messages[1];"
-  print "        assert_eq!(feedback_msg.role, Role::Tool);"
-  print "        assert_eq!(feedback_msg.tool_results.len(), 2);"
-  print ""
-  print "        let tr1 = &feedback_msg.tool_results[0];"
-  print "        assert_eq!(tr1.tool_call_id, \"tool_1\");"
-  print "        assert!(tr1.error.contains(\"Execution skipped because another tool in this request failed validation.\"));"
-  print ""
-  print "        let tr2 = &feedback_msg.tool_results[1];"
-  print "        assert_eq!(tr2.tool_call_id, \"tool_2\");"
-  print "        assert!(tr2.error.contains(\"Validation Error\"));"
-  print "    }"
-  print "}"
-  in_mod = 0
+/self\.memory\.store\(/ {
+  print "            /* self.memory.store("
+  print "                &event.tenant_id,"
+  print "                \"Operations\","
+  print "                &format!(\"Parsed offline voice intent: {}\", transcription)"
+  print "            ).await?; */"
+  in_skip = 1
   next
 }
+in_skip == 1 && /^\s*\)\.await\?;/ {
+  in_skip = 0
+  next
+}
+in_skip == 1 { next }
+
+/if let Some\(pool\) = crate::db::get_pool_opt\(\)/ {
+  print "            let pool = crate::db::get_pool();"
+  print "            {"
+  next
+}
+
 { print }
