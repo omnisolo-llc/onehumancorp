@@ -16,6 +16,7 @@ describe("resolveShellRoute", () => {
     "/action-center",
     "/agent-activity",
     "/ai-usage-paywall",
+    "/ai-workspace",
     "/analytics",
     "/assistant",
     "/business-analytics",

@@ -47,6 +47,7 @@ type NavItem = {
 const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { label: "Assistant", href: "/assistant", icon: "assistant" },
+  { label: "AI Workspace", href: "/ai-workspace", icon: "activity" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
   { label: "Triage", href: "/triage", icon: "inbox" },
   { label: "Orders", href: "/orders", icon: "orders" },
@@ -129,6 +130,10 @@ function NavLink({ item }: { item: NavItem }) {
 
   if (item.href === "/dashboard") {
     return <WithTooltip id="dashboard-tooltip" defaultText="View your daily sales and overall business health.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/ai-workspace") {
+    return <WithTooltip id="ai-workspace-tooltip" defaultText="All-in-one AI productivity workspace for tasks, projects, schedules, documents, and automation.">{link}</WithTooltip>;
   }
 
   if (item.href === "/changelog") {

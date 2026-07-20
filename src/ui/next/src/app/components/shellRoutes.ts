@@ -10,6 +10,7 @@ const pageOwnedExactRoutes = new Set([
   "/action-center",
   "/agent-activity",
   "/ai-usage-paywall",
+  "/ai-workspace",
   "/analytics",
   "/assistant",
   "/business-analytics",
@@ -65,6 +66,10 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/agents": {
     title: "Agents",
     subtitle: "Manage expert teams, workflows, and assistant capabilities.",
+  },
+  "/ai-workspace": {
+    title: "AI Productivity Workspace",
+    subtitle: "AI-Assisted Task, Project & Productivity Platform.",
   },
   "/analytics": { title: "Analytics" },
   "/anthropic-guardrails": { title: "Anthropic Guardrails" },
