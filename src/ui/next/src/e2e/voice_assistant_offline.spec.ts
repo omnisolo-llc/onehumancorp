@@ -9,8 +9,8 @@ test.describe('Voice Assistant Offline Sync', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('text=Dashboard')).toBeVisible();
 
-    await page.goto('/dashboard');
-
+// We cannot mock MediaRecorder in e2e as it trips coverage checks for mocked UI data
+    // We'll click the button and rely on browser permission fallback logic to end the recording
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);
 
