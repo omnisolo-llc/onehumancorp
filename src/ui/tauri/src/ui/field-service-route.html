@@ -318,6 +318,7 @@
         if (queue.length === 0) return;
 
         let allOk = true;
+        let draftQuoteMutations = [];
 
         for (const m of queue) {
             if (m.type === "job_status") {
@@ -333,6 +334,36 @@
                 } catch (e) {
                     allOk = false;
                 }
+            } else if (m.type === "draft_quote") {
+                draftQuoteMutations.push({
+                    transaction_id: crypto.randomUUID(),
+                    product_id: "field_service_quote",
+                    quantity_deducted: 0,
+                    mutation_type: "draft_quote",
+                    payload: m.payload,
+                    client_mutation_id: crypto.randomUUID()
+                });
+            }
+        }
+
+        if (draftQuoteMutations.length > 0) {
+            try {
+                // Get token from auth cookies, or maybe local storage.
+                // The backend API might not need Bearer token if session cookie exists, but let's safely send it if it's there.
+                let headers = { "Content-Type": "application/json" };
+                const accessToken = localStorage.getItem('access_token');
+                if (accessToken) headers["Authorization"] = "Bearer " + accessToken;
+
+                const res = await fetch('/api/v1/sync/offline', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ mutations: draftQuoteMutations })
+                });
+                if (!res.ok) {
+                    allOk = false;
+                }
+            } catch (e) {
+                allOk = false;
             }
         }
 
@@ -392,6 +423,37 @@
     }
     }
 
+
+    async function generateDraftQuote(jobId) {
+      const btn = document.getElementById(`btn-quote-${jobId}`);
+      if (btn) {
+          btn.innerText = "Quote Requested";
+          btn.disabled = true;
+      }
+
+      let jobTitle = "Service Job";
+      let customerId = "";
+      if (currentRoutesData) {
+          for (const route of currentRoutesData) {
+              for (const job of (route.jobs || [])) {
+                  if (job.id === jobId) {
+                      jobTitle = job.job_title;
+                      customerId = job.customer_id || "";
+                      break;
+                  }
+              }
+          }
+      }
+
+      enqueueOfflineMutation({
+          type: "draft_quote",
+          jobId: jobId,
+          payload: JSON.stringify({
+              message: "Please generate a quote for: " + jobTitle,
+              customer_id: customerId
+          })
+      });
+    }
 
     async function updateJobStatus(jobId, newStatus) {
       // Optimistic UI update
@@ -489,7 +551,7 @@
           `;
         } else if (job.status === 'on_site') {
           actionButtons = `
-            <button class="btn btn-secondary">Generate Quote</button>
+            <button class="btn btn-secondary" data-testid="btn-generate-quote-${job.id}" onclick="generateDraftQuote('${job.id}')" id="btn-quote-${job.id}">Generate Quote</button>
             <button class="btn btn-primary" data-testid="btn-job-done-${job.id}" onclick="updateJobStatus('${job.id}', 'done')">Job Done</button>
           `;
         } else if (job.status === 'done') {
