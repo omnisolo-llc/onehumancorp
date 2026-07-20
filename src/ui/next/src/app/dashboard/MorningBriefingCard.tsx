@@ -11,6 +11,7 @@ type TriageItem = {
   priority?: string;
   context?: string;
   action_type?: string;
+  draft_action?: string;
   action_payload?: string;
   status?: string;
   created_at: string;
@@ -143,7 +144,12 @@ try {
                     data-testid={`action-card-approve-${item.id}`}
                   >
                     {item.action_type || "Execute Action"}
-                  </button>
+</button>
+                  {item.draft_action && (
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                      <span className="font-semibold">Draft:</span> {item.draft_action}
+                    </div>
+                  )}
                   <button
                     onClick={() => handleTriageDecision(item.id, false)}
                     className="min-h-[44px] min-w-[44px] px-3 rounded-[8px] border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors flex items-center justify-center"

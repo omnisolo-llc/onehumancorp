@@ -8,6 +8,7 @@ type TriageItem = {
   priority?: string;
   context?: string;
   action_type?: string;
+  draft_action?: string;
   action_payload?: string;
   status?: string;
   created_at: string;
@@ -115,6 +116,16 @@ export function WorkTriageFeed({
               </span>
             </div>
 
+            {item.draft_action && (
+              <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-indigo-200 dark:border-indigo-900/50">
+                <div className="text-xs uppercase tracking-wider font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+                  Drafted Reply
+                </div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                  {item.draft_action}
+                </div>
+              </div>
+            )}
             {item.action_type && (
               <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
                 <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">
@@ -169,6 +180,16 @@ export function WorkTriageFeed({
               {item.context}
             </div>
 
+            {item.draft_action && (
+              <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-indigo-200 dark:border-indigo-900/50">
+                <div className="text-xs uppercase tracking-wider font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+                  Drafted Reply
+                </div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                  {item.draft_action}
+                </div>
+              </div>
+            )}
             {item.action_type && (
               <div className="p-4 rounded-xl bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2 border border-[#0066FF]/20 dark:border-[#0066FF]/30">
                 <div className="text-xs uppercase tracking-wider font-semibold text-[#0066FF] dark:text-[#3388FF]">

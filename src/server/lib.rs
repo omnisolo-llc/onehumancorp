@@ -5398,6 +5398,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "draft_action": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     "source": row.try_get::<String, _>("source").unwrap_or_default(),
                                     "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                 });
@@ -5420,6 +5421,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                     "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                                    "draft_action": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                 });
                                 legacy_rows_json.push(item);
                             }
@@ -5437,6 +5439,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "draft_action": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                     "source": row.try_get::<String, _>("source").unwrap_or_default(),
                                     "context": row.try_get::<String, _>("context").unwrap_or_default(),
                                 });
@@ -5459,6 +5462,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                     "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
                                     "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                                    "draft_action": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                                 });
                                 legacy_rows_json.push(item);
                             }
