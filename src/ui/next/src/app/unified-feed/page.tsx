@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { AppShell } from "../components/AppShell";
 
 interface FeedItemRaw {
   id: string;
@@ -204,17 +205,13 @@ export default function UnifiedFeed() {
     return <div className="p-4 text-center text-red-500">Error: {error}</div>;
 
   return (
-    <div className="w-full max-w-[375px] mx-auto min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] flex flex-col text-[#1D1D1F] dark:text-[#F5F5F7]">
-      <a
-        href="/promoter"
-        className="block w-full text-center bg-purple-500 text-white py-2 rounded mt-4"
-        data-testid="promoter-link"
-      >
-        Go to Promoter Agent
-      </a>
-      <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 p-4 sticky top-0 z-10 flex justify-between items-center">
-        <h1 className="text-xl font-bold tracking-tight">Today</h1>
-      </header>
+    <AppShell
+      title="Today"
+      subtitle="Your unified work triage center."
+      statusItems={[
+        { label: "Pending", value: String(feedItems.length), tone: feedItems.length > 0 ? "warn" : "good" }
+      ]}
+    >
 
       <main
         className="flex-1 overflow-y-auto p-4 space-y-4"
@@ -387,6 +384,6 @@ export default function UnifiedFeed() {
           ))
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }
