@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const sensitivePages = [
-  "src/app/knowledge/page.tsx",
-  "src/app/memory/cross-session/page.tsx",
-  "src/app/inbox/page.tsx",
+  "src/ui/next/src/app/knowledge/page.tsx",
+  "src/ui/next/src/app/memory/cross-session/page.tsx",
+  "src/ui/next/src/app/inbox/page.tsx",
 ];
 
 describe("memory page authority source contract", () => {
