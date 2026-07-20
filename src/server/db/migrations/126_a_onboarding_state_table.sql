@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS onboarding_state (
     PRIMARY KEY (tenant_id, user_id)
 );
 
-ALTER TABLE IF EXISTS onboarding_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
