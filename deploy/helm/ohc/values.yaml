@@ -6,7 +6,7 @@ backend:
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   vpa:
-    enabled: true
+    enabled: false
   headless: false
   grpcTls:
     # Cloud mode mTLS Secret keys: tls.crt, tls.key, and ca.crt.
@@ -109,7 +109,7 @@ ohcCore:
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   vpa:
-    enabled: true
+    enabled: false
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
@@ -132,7 +132,7 @@ powersync:
     targetCPUUtilizationPercentage: 85
     targetMemoryUtilizationPercentage: 85
   vpa:
-    enabled: true
+    enabled: false
   enabled: true
   image: journeyapps/powersync-service:latest
   dataSource:
