@@ -152,9 +152,11 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
 function InboxWorkspace({
   messages,
   sourceLabel,
+  refreshMessages,
 }: {
   messages: Message[];
   sourceLabel: string;
+  refreshMessages?: () => void;
 }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -170,19 +172,73 @@ function InboxWorkspace({
 
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
+  const fetchApprovals = async () => {
+    try {
+      const res = await fetch(`/api/v1/agents/approvals?limit=50`);
+      if (res.ok) {
+        const data = await res.json();
+        setPendingApprovals(data.pending_approvals || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
-    async function fetchApprovals() {
+    fetchApprovals();
+  }, []);
+
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const wsUrl = isLocalhost
+      ? `ws://127.0.0.1:18789/api/v1/feed/ws`
+      : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+
+    if (
+      typeof process.env.VITEST !== "undefined" ||
+      process.env.NODE_ENV === "test"
+    ) {
+      return;
+    }
+
+    const ws = new WebSocket(wsUrl);
+
+    ws.onmessage = (event) => {
       try {
-        const res = await fetch(`/api/v1/agents/approvals?limit=50`);
-        if (res.ok) {
-          const data = await res.json();
-          setPendingApprovals(data.pending_approvals || []);
+        const data = JSON.parse(event.data);
+        if (data.error) {
+          console.error("Inbox feed WS error:", data.error);
+          return;
+        }
+
+        const item = data;
+        if (!item?.id) return;
+
+        // If a new approval is pending, refresh our list
+        if (String(item.lifecycle_state || "").toUpperCase() === "PENDING_APPROVAL") {
+          fetchApprovals();
+          if (refreshMessages) refreshMessages();
+        } else if (
+          String(item.lifecycle_state || "").toUpperCase() === "APPROVED" ||
+          String(item.lifecycle_state || "").toUpperCase() === "DISMISSED"
+        ) {
+          fetchApprovals();
+          if (refreshMessages) refreshMessages();
+        } else if (String(item.event_type || "").startsWith("tenant.omnichannel.message")) {
+          // If we receive a raw omnichannel event we could also refresh messages
+          if (refreshMessages) refreshMessages();
         }
       } catch (e) {
-        console.error(e);
+        console.error("Failed to parse websocket message", e);
       }
-    }
-    fetchApprovals();
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
 
   const activeApproval = useMemo(() => {
@@ -515,21 +571,22 @@ function ApiInboxFallback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadMessages() {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/v1/ui/omni_inbox`);
-        if (!res.ok) throw new Error("Failed to load inbox messages");
-        const data = await res.json();
-        setMessages(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load inbox messages");
-      } finally {
-        setLoading(false);
-      }
+  async function loadMessages() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/v1/ui/omni_inbox`);
+      if (!res.ok) throw new Error("Failed to load inbox messages");
+      const data = await res.json();
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load inbox messages");
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadMessages();
   }, []);
 
@@ -543,11 +600,11 @@ function ApiInboxFallback() {
     );
   }
 
-  if (loading) {
+  if (loading && messages.length === 0) {
     return <InboxLoadingState />;
   }
 
-  return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
+  return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." refreshMessages={loadMessages} />;
 }
 
 export default function InboxPage() {
