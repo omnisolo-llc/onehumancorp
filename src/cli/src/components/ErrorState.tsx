@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Text } from 'ink';
 
 export interface ErrorStateProps {
@@ -6,6 +6,10 @@ export interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({ error }) => {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
   return (
     <Box paddingY={1} flexDirection="column">
       <Text bold color="red">ERROR:</Text>
