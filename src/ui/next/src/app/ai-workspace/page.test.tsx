@@ -159,4 +159,133 @@ describe('AIWorkspacePage', () => {
     expect(screen.getByText('Connected & Synced')).toBeDefined();
     expect(screen.getByText('Disconnect')).toBeDefined();
   });
+
+  it('performs global natural language search across items', async () => {
+    render(<AIWorkspacePage />);
+    
+    const searchInput = screen.getByPlaceholderText(/Natural language search/i);
+    
+    // Switch to tasks tab first
+    const tasksTabBtn = screen.getByRole('button', { name: 'tasks' });
+    await act(async () => {
+      fireEvent.click(tasksTabBtn);
+    });
+
+    expect(screen.getByText('Integrate deep learning models into backend pipelines')).toBeDefined();
+    expect(screen.getByText('Schedule weekly client feedback sessions')).toBeDefined();
+
+    // Type search query
+    await act(async () => {
+      fireEvent.change(searchInput, { target: { value: 'deep learning' } });
+    });
+
+    expect(screen.getByText('Integrate deep learning models into backend pipelines')).toBeDefined();
+    expect(screen.queryByText('Schedule weekly client feedback sessions')).toBeNull();
+  });
+
+  it('runs notes creation and notepad editing', async () => {
+    render(<AIWorkspacePage />);
+    
+    // Switch to notes tab
+    const notesTabBtn = screen.getByRole('button', { name: 'Notes & Knowledge' });
+    await act(async () => {
+      fireEvent.click(notesTabBtn);
+    });
+
+    const docLibraryHeader = screen.getByText('Document Library');
+    expect(docLibraryHeader).toBeDefined();
+
+    // Edit the existing note content
+    const textarea = screen.getByPlaceholderText(/Start typing note details here.../i);
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Updated note technical design specification.' } });
+    });
+    expect(textarea.value).toBe('Updated note technical design specification.');
+
+    // Add a new note
+    const noteNameInput = screen.getByPlaceholderText('New document name...');
+    const folderInput = screen.getByPlaceholderText(/Folder/i);
+    const createNoteBtn = screen.getByRole('button', { name: 'Create Note' });
+
+    await act(async () => {
+      fireEvent.change(noteNameInput, { target: { value: 'Product Roadmap Draft' } });
+      fireEvent.change(folderInput, { target: { value: 'Strategy' } });
+      fireEvent.click(createNoteBtn);
+    });
+
+    expect(screen.getByText('Product Roadmap Draft')).toBeDefined();
+  });
+
+  it('runs AI backlog prioritization and generates action items', async () => {
+    render(<AIWorkspacePage />);
+    
+    const prioritizeBtn = screen.getByRole('button', { name: /AI Prioritize Backlog/i });
+    
+    await act(async () => {
+      fireEvent.click(prioritizeBtn);
+    });
+
+    // Advance mock timers to bypass the simulation delay
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // Switch to tasks tab to check if the generated task appears
+    const tasksTabBtn = screen.getByRole('button', { name: 'tasks' });
+    await act(async () => {
+      fireEvent.click(tasksTabBtn);
+    });
+
+    expect(screen.getByText(/OPTIMIZED: Deploy security patches/i)).toBeDefined();
+  });
+
+  it('runs AI Planner Assistant chat interaction', async () => {
+    render(<AIWorkspacePage />);
+    
+    // Switch to assistant tab
+    const assistantTabBtn = screen.getByRole('button', { name: 'AI Planner Assistant' });
+    await act(async () => {
+      fireEvent.click(assistantTabBtn);
+    });
+
+    const chatInput = screen.getByPlaceholderText(/Ask about project health/i);
+    const sendBtn = screen.getByRole('button', { name: 'Send' });
+
+    await act(async () => {
+      fireEvent.change(chatInput, { target: { value: 'How is the project status?' } });
+      fireEvent.click(sendBtn);
+    });
+
+    // Verify user message appears
+    expect(screen.getByText('How is the project status?')).toBeDefined();
+
+    // Advance timers for typing simulation delay
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // Verify assistant responds with status details
+    expect(screen.getByText(/Your current portfolio shows 3 active projects/i)).toBeDefined();
+  });
+
+  it('supports creating and completing reminders', async () => {
+    render(<AIWorkspacePage />);
+    
+    const reminderInput = screen.getByPlaceholderText('Add quick reminder...');
+    const addReminderBtn = screen.getByRole('button', { name: 'Add Reminder' });
+
+    // Add reminder
+    await act(async () => {
+      fireEvent.change(reminderInput, { target: { value: 'Check network proxy bounds' } });
+      fireEvent.click(addReminderBtn);
+    });
+
+    const newReminder = screen.getByText('Check network proxy bounds');
+    expect(newReminder).toBeDefined();
+
+    // Toggle reminder active status (strikes out)
+    await act(async () => {
+      fireEvent.click(newReminder);
+    });
+  });
 });
