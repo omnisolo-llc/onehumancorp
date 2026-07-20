@@ -108,11 +108,6 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.orchestrator.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
 
             // Create a triage item or feed item to show the drafted order based on the intent
             {
