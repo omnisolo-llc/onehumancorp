@@ -52,10 +52,10 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutp
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
             if let Some(data) = call.arguments.get("data") {
-                return self.validate_schema(data);
+                return self.validate_schema(data).map_err(|e| format!("[TOOL_ID:{}] {}", call.id, e));
             } else {
                 return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        format!("[TOOL_ID:{}] Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.", call.id)
                     );
             }
         }
@@ -94,10 +94,10 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputPars
                 .find(|t| t.name == "structured_output")
         {
             if let Some(data) = call.arguments.get("data") {
-                return self.validate_schema(data);
+                return self.validate_schema(data).map_err(|e| format!("[TOOL_ID:{}] {}", call.id, e));
             } else {
                 return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        format!("[TOOL_ID:{}] Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.", call.id)
                     );
             }
         }
@@ -218,8 +218,30 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         if !msg.tool_calls.is_empty() {
             current_req.messages.push(msg.clone());
 
+            // Extract the tool call ID if it was embedded in the error string
+            let mut target_tool_id = None;
+            let mut clean_error_msg = parse_error_msg;
+            if parse_error_msg.starts_with("[TOOL_ID:") {
+                if let Some(end_idx) = parse_error_msg.find("] ") {
+                    target_tool_id = Some(&parse_error_msg[9..end_idx]);
+                    clean_error_msg = &parse_error_msg[end_idx + 2..];
+                }
+            }
+
             let mut tool_results = vec![];
             for tc in &msg.tool_calls {
+                // If the parse error is bound to a specific tool, only apply the full error to that tool.
+                if let Some(target_id) = target_tool_id {
+                    if target_id != tc.id.as_str() {
+                        tool_results.push(crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: "Execution skipped because another tool in this request failed validation.".to_string(),
+                        });
+                        continue;
+                    }
+                }
+
                 // Find the schema for this tool
                 let schema_str = current_req
                     .tools
@@ -228,23 +250,20 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     .map(|t| serde_json::to_string_pretty(&t.parameters).unwrap_or_default())
                     .unwrap_or_default();
 
-                let mut detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
-                    parse_error_msg.to_string()
+                let mut detailed_error = if clean_error_msg.contains("Validation Error") || clean_error_msg.contains("Semantic validation failed") {
+                    clean_error_msg.to_string()
                 } else {
                     // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
                     let args_str = match serde_json::to_string(&tc.arguments) { Ok(s) => s, Err(_) => "<unprintable>".to_string(), }; let args_snippet = Some(args_str);
                     crate::types::format_pydantic_error_string(
-                        parse_error_msg,
+                        clean_error_msg,
                         args_snippet.as_deref(),
                         Some("Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.")
                     )
                 };
 
                 if !schema_str.is_empty() {
-                    detailed_error = format!("{}
-
-Expected Schema:
-{}", detailed_error, schema_str);
+                    detailed_error = format!("{}\n\nExpected Schema:\n{}", detailed_error, schema_str);
                 }
 
                 tool_results.push(crate::types::ToolResult::new_llm_recoverable(
@@ -260,36 +279,8 @@ Expected Schema:
                 tool_calls: vec![],
                 tool_results,
                 response_id: None,
-                previous_response_id: msg.response_id.clone(),
-            });
-        } else {
-            current_req.messages.push(msg.clone());
-            let error_context = if parse_error_msg.contains("Expected native tool_calls") {
-                format!(
-                    "Validation Error: You returned plain text instead of using a tool call. You MUST use the `structured_output` tool call. Do not return raw JSON text.\nFailed completion: {}",
-                    msg.content
-                )
-            } else if parse_error_msg.contains("Validation Error") {
-                format!(
-                    "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
-                    parse_error_msg, msg.content
-                )
-            } else {
-                format!(
-                    "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type. Check the Pydantic JSON schema constraints.",
-                    msg.content, parse_error_msg
-                )
-            };
-            let mut error_msg = Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
-                tool_calls: vec![],
-                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("call_1".to_string(), "structured_output", &error_context)],
-                response_id: None,
                 previous_response_id: None,
-            };
-            error_msg.previous_response_id = msg.response_id.clone();
-            current_req.messages.push(error_msg);
+            });
         }
     }
 
@@ -1281,5 +1272,121 @@ mod strict_output_tests {
             }
         );
         assert_eq!(*client.call_count.lock().await, 2);
+    }
+}
+
+#[cfg(test)]
+mod generate_feedback_tests {
+    use super::*;
+    use crate::types::{ChatRequest, Message, ToolCall, Role, ToolDefinition};
+
+    #[test]
+    fn test_generate_feedback_message_isolates_error() {
+        let mut req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        let msg = Message {
+            role: Role::Assistant,
+            content: "".to_string(),
+            tool_calls: vec![
+                ToolCall {
+                    id: "tool_1".to_string(),
+                    name: "good_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                },
+                ToolCall {
+                    id: "tool_2".to_string(),
+                    name: "bad_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                },
+            ],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        };
+
+        let parse_error_msg = "[TOOL_ID:tool_2] Validation Error";
+
+        RetryWithErrorOutputParser::<()>::generate_feedback_message(&mut req, &msg, parse_error_msg);
+
+        // req.messages should have the original msg + the new tool msg
+        assert_eq!(req.messages.len(), 2);
+        let feedback_msg = &req.messages[1];
+        assert_eq!(feedback_msg.role, Role::Tool);
+        assert_eq!(feedback_msg.tool_results.len(), 2);
+
+        let tr1 = &feedback_msg.tool_results[0];
+        assert_eq!(tr1.tool_call_id, "tool_1");
+        assert!(tr1.error.contains("Execution skipped because another tool in this request failed validation."));
+
+        let tr2 = &feedback_msg.tool_results[1];
+        assert_eq!(tr2.tool_call_id, "tool_2");
+        assert!(tr2.error.contains("Validation Error"));
+    }
+}
+
+#[cfg(test)]
+mod generate_feedback_tests {
+    use super::*;
+    use crate::types::{ChatRequest, Message, ToolCall, Role, ToolDefinition};
+
+    #[test]
+    fn test_generate_feedback_message_isolates_error() {
+        let mut req = ChatRequest {
+            model: "test".to_string(),
+            system: "".to_string(),
+            messages: vec![],
+            tools: vec![],
+            max_tokens: 100,
+            temperature: 0.0,
+        };
+
+        let msg = Message {
+            role: Role::Assistant,
+            content: "".to_string(),
+            tool_calls: vec![
+                ToolCall {
+                    id: "tool_1".to_string(),
+                    name: "good_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                },
+                ToolCall {
+                    id: "tool_2".to_string(),
+                    name: "bad_tool".to_string(),
+                    arguments: serde_json::json!({}),
+                },
+            ],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        };
+
+        let parse_error = ParseError {
+            message: "Validation Error".to_string(),
+            tool_call_id: Some("tool_2".to_string()),
+            tool_name: Some("bad_tool".to_string()),
+        };
+
+        RetryWithErrorOutputParser::<()>::generate_feedback_message(&mut req, &msg, &parse_error);
+
+        // req.messages should have the original msg + the new tool msg
+        assert_eq!(req.messages.len(), 2);
+        let feedback_msg = &req.messages[1];
+        assert_eq!(feedback_msg.role, Role::Tool);
+        assert_eq!(feedback_msg.tool_results.len(), 2);
+
+        let tr1 = &feedback_msg.tool_results[0];
+        assert_eq!(tr1.tool_call_id, "tool_1");
+        assert!(tr1.error.contains("Execution skipped because another tool in this request failed validation."));
+
+        let tr2 = &feedback_msg.tool_results[1];
+        assert_eq!(tr2.tool_call_id, "tool_2");
+        assert!(tr2.error.contains("Validation Error"));
     }
 }
