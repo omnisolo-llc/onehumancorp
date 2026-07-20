@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion, PanInfo, AnimatePresence } from "framer-motion";
 
 interface FeedItemRaw {
   id: string;
@@ -231,11 +232,38 @@ export default function UnifiedFeed() {
             </h3>
           </div>
         ) : (
-          feedItems.map((item) => (
-            <div
-              key={item.workItem.id}
-              className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
+          <AnimatePresence>
+            {feedItems.map((item) => (
+              <motion.div
+                key={item.workItem.id}
+                initial={{ opacity: 1, height: "auto", marginBottom: "1rem" }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full rounded-2xl overflow-hidden bg-gray-100/50 dark:bg-gray-800/50"
+                data-testid={`agent-feed-card-container-${item.workItem.id}`}
+              >
+              <div className="absolute inset-0 flex items-center justify-between px-6 rounded-2xl">
+                <div className="text-green-600 dark:text-green-400 font-bold flex items-center gap-2">
+                   <span className="text-2xl">✨</span> Approve
+                </div>
+                <div className="text-red-600 dark:text-red-400 font-bold flex items-center gap-2">
+                   Dismiss <span className="text-2xl">🗑️</span>
+                </div>
+              </div>
+            <motion.div
               data-testid="agent-feed-card"
+              className="relative z-10 w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.8}
+              onDragEnd={(e, info: PanInfo) => {
+                const threshold = 100;
+                if (info.offset.x > threshold) {
+                  handleApprove(item.workItem.id);
+                } else if (info.offset.x < -threshold) {
+                  handleReject(item.workItem.id);
+                }
+              }}
             >
               <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -383,8 +411,10 @@ export default function UnifiedFeed() {
                     )}
                   </div>
                 )}
-            </div>
-          ))
+            </motion.div>
+            </motion.div>
+          ))}
+          </AnimatePresence>
         )}
       </main>
     </div>

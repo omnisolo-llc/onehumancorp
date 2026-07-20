@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, PanInfo, AnimatePresence } from "framer-motion";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { getActions } from "../utils/offlineQueue";
@@ -217,15 +218,42 @@ export default function TriagePage() {
             </div>
           </div>
         ) : (
-          items.map((item) => {
-            const isProcessing = processingId === item.id;
-            const isSelected = selectedItemId === item.id;
+          <AnimatePresence>
+            {items.map((item) => {
+              const isProcessing = processingId === item.id;
+              const isSelected = selectedItemId === item.id;
 
-            return (
-              <div
-                key={item.id}
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 1, height: "auto", marginBottom: "1rem" }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative w-full rounded-[24px] overflow-hidden bg-gray-100/50 dark:bg-gray-800/50"
+                  data-testid={`triage-card-container-${item.id}`}
+                >
+                <div className="absolute inset-0 flex items-center justify-between px-6 rounded-[24px]">
+                  <div className="text-green-600 dark:text-green-400 font-bold flex items-center gap-2">
+                     <span className="text-2xl">✨</span> Approve
+                  </div>
+                  <div className="text-red-600 dark:text-red-400 font-bold flex items-center gap-2">
+                     Dismiss <span className="text-2xl">🗑️</span>
+                  </div>
+                </div>
+              <motion.div
                 data-testid={`triage-card-${item.id}`}
-                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="ohc-card relative z-10 w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col overflow-hidden transition-colors duration-300"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.8}
+                onDragEnd={(e, info: PanInfo) => {
+                  const threshold = 100;
+                  if (info.offset.x > threshold) {
+                    handleDecision(item.id, true);
+                  } else if (info.offset.x < -threshold) {
+                    handleDecision(item.id, false);
+                  }
+                }}
               >
                 {/* Header Context */}
                 <div
@@ -360,9 +388,11 @@ export default function TriagePage() {
                     )}
                   </div>
                 )}
-              </div>
+              </motion.div>
+              </motion.div>
             );
-          })
+          })}
+          </AnimatePresence>
         )}
       </div>
     </AppShell>
