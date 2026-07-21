@@ -239,8 +239,8 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
-          <div className="flex border-b border-white/30 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
+        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] glass-panel rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] transition-all font-inter">
+          <div className="flex border-b border-white/30 glass-panel overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
@@ -267,7 +267,7 @@ export function HelpWidget() {
             {tab === "center" && (
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
-                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] min-h-[44px]" />
+                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 glass-panel rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(
                     filteredArticles.reduce((acc, article) => {
@@ -281,7 +281,7 @@ export function HelpWidget() {
                       <h4 className="font-bold font-outfit text-gray-800 mb-3 text-lg">{category}</h4>
                       <div className="space-y-3">
                         {articles.map((a, aIdx) => (
-                          <div key={aIdx} className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-5 rounded-2xl shadow-sm border border-white/60 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                          <div key={aIdx} className="glass-panel p-5 rounded-2xl shadow-sm cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
                             {a.link ? (
                               <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
                             ) : (
@@ -298,20 +298,20 @@ export function HelpWidget() {
                                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left glass-panel p-4 rounded-2xl shadow-sm border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/pos").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "pos-keypad", title: "Enter Amount", content: "Type in the total sale amount using the keypad." }, { targetId: "charge-btn", title: "Charge Customer", content: "Tap here to process the payment. It's that easy!" }])); }} className="w-full text-left bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/pos").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "pos-keypad", title: "Enter Amount", content: "Type in the total sale amount using the keypad." }, { targetId: "charge-btn", title: "Charge Customer", content: "Tap here to process the payment. It's that easy!" }])); }} className="w-full text-left glass-panel p-4 rounded-2xl shadow-sm border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "ohc-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "ohc-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left glass-panel p-4 rounded-2xl shadow-sm border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left glass-panel p-4 rounded-2xl shadow-sm border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Set up your store", content: "Customize your offers, design, and settings to start accepting customers." }, { targetId: "help-widget-container", title: "Accept your first payment", content: "Connect your bank to receive funds securely." }, { targetId: "help-widget-container", title: "Activate your AI Support Agent", content: "Let our agents handle common questions and triage messages for you." }]); }} className="w-full text-left bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Set up your store", content: "Customize your offers, design, and settings to start accepting customers." }, { targetId: "help-widget-container", title: "Accept your first payment", content: "Connect your bank to receive funds securely." }, { targetId: "help-widget-container", title: "Activate your AI Support Agent", content: "Let our agents handle common questions and triage messages for you." }]); }} className="w-full text-left glass-panel p-4 rounded-2xl shadow-sm border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Store Setup</span>
                   </button>
                   <button
@@ -329,7 +329,7 @@ export function HelpWidget() {
             )}
 
             {tab === "chat" && (
-              <div className="flex flex-col h-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-xl p-2">
+              <div className="flex flex-col h-full glass-panel rounded-xl p-2">
                 <div className="flex justify-end p-2 border-b border-white/30">
                   {chatMessages.length > 1 && (
                     <button
@@ -345,8 +345,8 @@ export function HelpWidget() {
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/60 dark:border-white/10 shadow-sm text-blue-900 rounded-tl-none"
-                        : "backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/60 dark:border-white/10 shadow-sm text-gray-800 rounded-tr-none ml-auto"
+                        ? "glass-panel shadow-sm text-blue-900 rounded-tl-none"
+                        : "glass-panel shadow-sm text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
@@ -368,7 +368,7 @@ export function HelpWidget() {
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_8px_32px_rgba(0,0,0,0.08)] min-h-[44px]"
+                    className="flex-1 p-3 glass-panel rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.08)] min-h-[44px]"
                   />
                   <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>

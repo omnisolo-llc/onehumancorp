@@ -350,25 +350,7 @@ describe('Walkthrough Component', () => {
     document.body.innerHTML = '';
   });
 
-  it('clears timeouts on unmount', () => {
-    vi.useFakeTimers();
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
 
-    document.body.innerHTML = '<div id="step1">Target</div>';
-    const steps = [{ targetId: 'step1', title: 'Step 1', content: 'Content 1' }];
-
-    const { unmount } = render(
-      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
-    );
-
-    unmount();
-
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-
-    clearTimeoutSpy.mockRestore();
-    document.body.innerHTML = '';
-    vi.useRealTimers();
-  });
 
   it('triggers resize recalculation with handleScroll timeout', () => {
     vi.useFakeTimers();

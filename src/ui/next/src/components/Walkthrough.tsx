@@ -31,25 +31,30 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       // Scroll into view gently if needed
       targetElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 
-      // We need a slight delay to let scrolling settle before measuring
-      const timeoutId = setTimeout(() => {
-        setTargetRect(targetElement.getBoundingClientRect());
-      }, 300);
+      setTargetRect(targetElement.getBoundingClientRect());
 
-      // Also attach resize/scroll listeners for recalculation with debounce
-      let resizeTimeoutId: NodeJS.Timeout;
+      const ObserverClass = typeof ResizeObserver !== "undefined" ? ResizeObserver : class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+      const ro = new ObserverClass(() => {
+        if (document.getElementById(currentStep.targetId)) {
+           setTargetRect(document.getElementById(currentStep.targetId)!.getBoundingClientRect());
+        }
+      });
+      ro.observe(targetElement);
+
       const handleScroll = () => {
-          clearTimeout(resizeTimeoutId);
-          resizeTimeoutId = setTimeout(() => {
-              setTargetRect(targetElement.getBoundingClientRect());
-          }, 50);
+          window.requestAnimationFrame(() => {
+             setTargetRect(targetElement.getBoundingClientRect());
+          });
       };
       window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('resize', handleScroll);
 
       return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(resizeTimeoutId);
+        ro.disconnect();
         window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('resize', handleScroll);
       };
@@ -144,7 +149,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.2)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="ohc-walkthrough-bubble glass-panel fixed z-[10000] shadow-[0_12px_40px_rgba(0,0,0,0.2)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
