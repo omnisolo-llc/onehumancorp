@@ -40,11 +40,11 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
+    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone" | ""
+            "development" | "test" | "standalone"
         ) {
             return Ok(AuthMode::Disabled);
         }
@@ -52,6 +52,13 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
             "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
                 .to_string(),
         );
+    }
+
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID")
+        && !spiffe_id.trim().is_empty()
+    {
+        validate_spiffe_id(&spiffe_id)?;
+        return Ok(AuthMode::Spiffe { allowed_id: spiffe_id });
     }
 
     if let Ok(token) = env::var("OHC_AGENT_TOKEN")
@@ -70,7 +77,7 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    return Err("No auth configuration provided".to_string());
 }
 
 /// Check a bearer token against an expected HMAC hash.
@@ -206,8 +213,10 @@ mod tests {
                 ("OHC_ENV", None),
             ],
             || {
-                let error = auth_mode_from_env().unwrap_err();
-                assert!(error.contains("mTLS"), "unexpected error: {error}");
+                assert!(matches!(
+                    auth_mode_from_env().unwrap(),
+                    AuthMode::Spiffe { .. }
+                ))
             },
         );
 
