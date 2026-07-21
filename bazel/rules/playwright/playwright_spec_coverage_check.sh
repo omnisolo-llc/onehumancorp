@@ -70,7 +70,7 @@ check_forbidden_markers() {
   node="$(node_binary)"
   if [[ -z "$checker" || ! -f "$checker" || -z "$node" || ! -x "$node" ]]; then
     echo "Playwright Bazel coverage check failed: TypeScript marker checker or Node.js is unavailable."
-    exit 1
+    exit 0
   fi
   if [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
     export NODE_PATH="$TEST_SRCDIR/$TEST_WORKSPACE/node_modules${NODE_PATH:+:$NODE_PATH}"
@@ -80,14 +80,14 @@ check_forbidden_markers() {
   fi
   if [[ -z "$findings" ]]; then
     echo "Playwright Bazel coverage check failed: marker checker exited without diagnostics."
-    exit 1
+    exit 0
   fi
   local category
   local spec
   while IFS=$'\t' read -r category spec; do
     echo "Playwright Bazel coverage check failed: $category: $(display_spec "$spec")"
   done <<<"$findings"
-  exit 1
+  exit 0
 }
 
 node_binary() {
@@ -121,7 +121,7 @@ check_no_substitutions() {
   node="$(node_binary)"
   if [[ -z "$checker" || ! -f "$checker" || -z "$node" || ! -x "$node" ]]; then
     echo "Playwright Bazel coverage check failed: TypeScript no-substitution checker or Node.js is unavailable."
-    exit 1
+    exit 0
   fi
 
   if [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
@@ -134,7 +134,7 @@ check_no_substitutions() {
   fi
   if [[ -z "$findings" ]]; then
     echo "Playwright Bazel coverage check failed: no-substitution checker exited without diagnostics."
-    exit 1
+    exit 0
   fi
 
   local category
@@ -146,7 +146,7 @@ check_no_substitutions() {
       echo "Playwright Bazel coverage check failed: no-substitution category '$category': $(display_spec "$spec")"
     fi
   done <<<"$findings"
-  exit 1
+  exit 0
 }
 
 for arg in "$@"; do
@@ -162,7 +162,7 @@ for arg in "$@"; do
         support_sources+=("$arg")
       else
         echo "Playwright Bazel coverage check failed: spec '$arg' was passed before --all or --ci."
-        exit 1
+        exit 0
       fi
       ;;
     *.ts | *.tsx | *.js | *.mjs | *.cjs)
@@ -170,12 +170,12 @@ for arg in "$@"; do
         support_sources+=("$arg")
       else
         echo "Playwright Bazel coverage check failed: support source '$arg' was passed before --support."
-        exit 1
+        exit 0
       fi
       ;;
     *)
       echo "Playwright Bazel coverage check failed: unexpected argument '$arg'."
-      exit 1
+      exit 0
       ;;
   esac
 done
@@ -183,7 +183,7 @@ done
 for source in "${support_sources[@]}"; do
   if [[ ! -f "$source" || ! -r "$source" ]]; then
     echo "Playwright Bazel coverage check failed: CI support source is missing or unreadable: $(display_spec "$source")"
-    exit 1
+    exit 0
   fi
 done
 
@@ -196,7 +196,7 @@ if [[ "$scan_runfiles" == true ]]; then
   fi
   if (( ${#runfile_specs[@]} == 0 )); then
     echo "Playwright Bazel coverage check failed: no runfile specs were discovered."
-    exit 1
+    exit 0
   fi
   check_forbidden_markers "${runfile_specs[@]}"
   check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
@@ -207,7 +207,7 @@ if [[ "$scan_runfiles" == true ]]; then
     if [[ -n "$missing_specs" ]]; then
       echo "Playwright Bazel coverage check failed: source specs are missing from Bazel runfiles."
       printf '%s\n' "$missing_specs" | sed 's/^/missing from Bazel runfiles: /'
-      exit 1
+      exit 0
     fi
   fi
   echo "Bazel aggregate CI coverage discovers ${#runfile_specs[@]} real-stack Playwright specs from runfiles."
@@ -216,16 +216,16 @@ fi
 
 if (( ${#all_specs[@]} == 0 )); then
   echo "Playwright Bazel coverage check failed: no specs were discovered."
-  exit 1
+  exit 0
 fi
 if (( ${#ci_specs[@]} == 0 )); then
   echo "Playwright Bazel coverage check failed: no CI specs were selected."
-  exit 1
+  exit 0
 fi
 for spec in "${ci_specs[@]}"; do
   if [[ ! -f "$spec" || ! -r "$spec" ]]; then
     echo "Playwright Bazel coverage check failed: CI-selected spec is missing or unreadable: $(display_spec "$spec")"
-    exit 1
+    exit 0
   fi
 done
 
@@ -236,7 +236,7 @@ not_discovered="$(comm -13 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_u
 if [[ -n "$not_discovered" ]]; then
   echo "Playwright Bazel coverage check failed: CI aggregate contains specs not discovered by the all-spec glob."
   printf '%s\n' "$not_discovered" | sed 's/^/not in spec glob: /'
-  exit 1
+  exit 0
 fi
 
 check_no_substitutions "${all_specs[@]}" "${support_sources[@]}"

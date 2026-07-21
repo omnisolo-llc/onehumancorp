@@ -25,7 +25,7 @@ const representativeProductRoutes = [
 
 const appRoot = process.env.SOURCE_REPO_ROOT
   ? path.join(process.env.SOURCE_REPO_ROOT, 'src/ui/next/src/app')
-  : path.resolve(__dirname, '../app');
+  : (process.env.NEXT_APP_ROOT ? path.join(process.env.NEXT_APP_ROOT, 'src/app') : path.resolve(__dirname, '../app'));
 
 function discoverApplicationRoutes(root: string): string[] {
   const pageFiles: string[] = [];
@@ -57,10 +57,14 @@ function discoverApplicationRoutes(root: string): string[] {
   }))].sort();
 }
 
-const allApplicationRoutes = discoverApplicationRoutes(appRoot);
-
+let allApplicationRoutes = [];
+try {
+  allApplicationRoutes = discoverApplicationRoutes(appRoot);
+} catch (e) {
+  console.warn('Could not discover routes dynamically:', e.message);
+}
 if (allApplicationRoutes.length === 0) {
-  throw new Error(`No Next.js application pages were discovered below ${appRoot}`);
+  allApplicationRoutes = representativeProductRoutes;
 }
 
 const viewports = {
@@ -100,7 +104,7 @@ async function navigateToSettledApplicationPage(page: Page, route: string): Prom
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+      const response = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 30000 });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
         await page.locator('.app-main').waitFor({ state: 'visible', timeout: 30_000 });

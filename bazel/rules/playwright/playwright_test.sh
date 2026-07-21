@@ -84,8 +84,13 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts)
-      printf '%s\n' "$rel"
+    src/e2e/*.spec.ts|src/e2e/*/*.spec.ts|src/e2e/*/*/*.spec.ts|*/src/e2e/*.spec.ts|*/src/e2e/*/*.spec.ts|*/src/e2e/*/*/*.spec.ts)
+      if [[ "$rel" == */src/e2e/* ]]; then
+        rel="${rel#*src/e2e/}"
+        printf 'src/e2e/%s\n' "$rel"
+      else
+        printf '%s\n' "$rel"
+      fi
       ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
@@ -369,7 +374,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull postgres:15-alpine >/dev/null 2>&1 || docker pull pgvector/pgvector:pg15 >/dev/null 2>&1 || docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || docker image inspect pgvector/pgvector:pg15 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -379,7 +384,7 @@ done
 if [ "$PULL_PG_SUCCESS" = true ]; then
   PULL_VK_SUCCESS=false
   for i in {1..3}; do
-  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1; then
+  if docker pull valkey/valkey:8-alpine >/dev/null 2>&1 || docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1 || docker image inspect valkey/valkey:8-alpine >/dev/null 2>&1; then
       PULL_VK_SUCCESS=true
       break
     fi
@@ -681,6 +686,7 @@ echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
   OHC_WEB_SESSION_KEY_ID=e2e-v1 \
   OHC_WEB_SESSION_SECRET="$OHC_WEB_SESSION_SECRET" \
   NEXT_PUBLIC_E2E=true \
+  NEXT_APP_ROOT="$NEXT_APP_ROOT" \
   node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT"
 ) >"$TEST_TMPDIR/next.log" 2>&1 &
 NEXT_PID=$!
