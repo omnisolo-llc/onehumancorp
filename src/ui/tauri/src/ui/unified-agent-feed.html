@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Unified Agent Feed</title>
+    <style>
+      :root {
+        --color-bg-light: #f5f5f7;
+        --color-bg-dark: #000000;
+        --color-text-light: #1d1d1f;
+        --color-text-dark: #f5f5f7;
+        --color-primary: #0066ff;
+        --color-success: #34c759;
+        --color-warning: #ff9500;
+        --color-critical: #ff3b30;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--color-bg-light);
+        color: var(--color-text-light);
+        -webkit-font-smoothing: antialiased;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: var(--color-bg-dark);
+          color: var(--color-text-dark);
+        }
+      }
+      .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      /* Ensure maximum 375px width */
+      .feed-container {
+        width: 100%;
+        max-width: 375px;
+        margin: 0 auto;
+        padding: 16px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+      header {
+        margin-bottom: 24px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+      }
+      .action-card {
+        margin-bottom: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .card-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      }
+      .icon-ops { background-color: var(--color-critical); }
+      .icon-mkt { background-color: var(--color-primary); }
+      .icon-adv { background-color: var(--color-success); }
+      .card-body {
+        font-size: 16px;
+        line-height: 1.4;
+      }
+      .card-details {
+        display: none;
+        font-size: 14px;
+        background: rgba(0,0,0,0.05);
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 8px;
+        font-style: italic;
+      }
+      @media (prefers-color-scheme: dark) {
+        .card-details { background: rgba(255,255,255,0.05); }
+      }
+      .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      button {
+        flex: 1;
+        min-height: 44px; /* Minimum touch target */
+        border-radius: 8px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button.primary {
+        background-color: var(--color-primary);
+        color: white;
+      }
+      button.secondary {
+        background-color: rgba(0,0,0,0.1);
+        color: var(--color-text-light);
+      }
+      @media (prefers-color-scheme: dark) {
+        button.secondary {
+          background-color: rgba(255,255,255,0.15);
+          color: var(--color-text-dark);
+        }
+      }
+      /* Loader */
+      .loader {
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top: 3px solid white;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .success-state {
+        display: none;
+        color: var(--color-success);
+        font-weight: 600;
+        text-align: center;
+        padding: 12px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="feed-container">
+      <header>
+        <h1>Agent Feed</h1>
+        <div style="font-size: 14px; opacity: 0.7;">Your business at a glance</div>
+      </header>
+
+      <div id="feed-list">
+        <!-- Feed list will be populated here -->
+      </div>
+    </div>
+
+    <script>
+      // Simulate real backend data fetching
+      const MOCK_DATA = [
+        {
+          id: 'card-ops-1',
+          type: 'operations',
+          title: 'Operations Task',
+          icon: '⚙️',
+          body: '3 new orders need fulfillment.',
+          primaryAction: 'Fulfill Now'
+        },
+        {
+          id: 'card-mkt-1',
+          type: 'marketing',
+          title: 'Marketing Proposal',
+          icon: '✨',
+          body: 'Drafted an Instagram post for the new vegan cake.',
+          details: '"We heard you! Our new vegan chocolate cake is finally here. 🌱🍫 Pre-order yours today! #VeganCake #Bakery"',
+          primaryAction: 'Approve & Post'
+        },
+        {
+          id: 'card-adv-1',
+          type: 'advisory',
+          title: 'Business Insight',
+          icon: '📈',
+          body: 'Revenue is up 15% this week. Consider running a weekend promo.',
+          primaryAction: 'Generate Promo'
+        }
+      ];
+
+      async function fetchFeed() {
+        try {
+          // Attempt to fetch from real API if available, else fallback
+          const response = await fetch('/api/v1/work/feed');
+          if (response.ok) {
+            return await response.json();
+          }
+          throw new Error('API not available, using mock data');
+        } catch (error) {
+          console.log('Falling back to seed data:', error.message);
+          return MOCK_DATA;
+        }
+      }
+
+      function createCardHTML(card) {
+        let iconClass = 'icon-ops';
+        let colorClass = 'var(--color-critical)';
+
+        if (card.type === 'marketing') {
+          iconClass = 'icon-mkt';
+          colorClass = 'var(--color-primary)';
+        } else if (card.type === 'advisory') {
+          iconClass = 'icon-adv';
+          colorClass = 'var(--color-success)';
+        }
+
+        const isMarketing = card.type === 'marketing';
+
+        return `
+          <div class="glassmorphism action-card" data-testid="card-${card.type}" id="${card.id}">
+            <div class="card-header">
+              <div class="card-icon ${iconClass}">${card.icon}</div>
+              <span style="color: ${colorClass}">${card.title}</span>
+            </div>
+            <div class="card-body">
+              ${card.body}
+            </div>
+            ${card.details ? `
+              <div class="card-details" id="${card.id}-details" data-testid="marketing-details">
+                ${card.details}
+              </div>
+            ` : ''}
+            <div class="card-actions" id="${card.id}-actions">
+              ${isMarketing ? `
+                <button class="secondary" id="${card.id}-review" data-testid="btn-mkt-review">Review</button>
+                <button class="primary" id="${card.id}-approve" data-testid="btn-mkt-approve" style="display:none;">
+                  <span class="btn-text">${card.primaryAction}</span>
+                  <div class="loader"></div>
+                </button>
+              ` : `
+                <button class="primary" data-testid="btn-${card.type}-action">${card.primaryAction}</button>
+              `}
+            </div>
+            ${isMarketing ? `
+              <div class="success-state" id="${card.id}-success" data-testid="marketing-success">
+                ✅ Post Scheduled
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      async function initFeed() {
+        const feedList = document.getElementById('feed-list');
+        const data = await fetchFeed();
+
+        feedList.innerHTML = data.map(createCardHTML).join('');
+
+        // Attach event listeners for marketing cards
+        data.filter(c => c.type === 'marketing').forEach(card => {
+          const btnReview = document.getElementById(`${card.id}-review`);
+          const btnApprove = document.getElementById(`${card.id}-approve`);
+          const details = document.getElementById(`${card.id}-details`);
+          const actions = document.getElementById(`${card.id}-actions`);
+          const success = document.getElementById(`${card.id}-success`);
+          const loader = btnApprove.querySelector('.loader');
+          const btnText = btnApprove.querySelector('.btn-text');
+
+          btnReview.addEventListener('click', () => {
+            details.style.display = 'block';
+            btnReview.style.display = 'none';
+            btnApprove.style.display = 'flex';
+          });
+
+          btnApprove.addEventListener('click', async () => {
+            // Show loading state
+            btnText.style.display = 'none';
+            loader.style.display = 'block';
+            btnApprove.disabled = true;
+
+            // Simulate execution
+            setTimeout(() => {
+              details.style.display = 'none';
+              actions.style.display = 'none';
+              success.style.display = 'block';
+            }, 1000);
+          });
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', initFeed);
+    </script>
+  </body>
+</html>
