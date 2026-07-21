@@ -1,8 +1,10 @@
 use chrono::{DateTime, Utc};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::mysql::MySqlPoolOptions;
 use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
+use sqlx::MySqlPool;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -50,6 +52,7 @@ macro_rules! validate_tenant_id_sqlx {
 
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
+static GLOBAL_MYSQL_POOL: OnceLock<MySqlPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
@@ -99,6 +102,10 @@ pub fn get_sqlite_pool_if_exists() -> Option<sqlx::SqlitePool> {
     None
 }
 
+pub fn get_mysql_pool_if_exists() -> Option<sqlx::MySqlPool> {
+    GLOBAL_MYSQL_POOL.get().cloned()
+}
+
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL
         .get_or_init(|| {
@@ -112,6 +119,10 @@ pub fn get_pool() -> PgPool {
                 .expect("Failed to connect to DB pool lazily")
         })
         .clone()
+}
+
+pub fn get_pool_opt() -> Option<PgPool> {
+    GLOBAL_POOL.get().cloned()
 }
 
 #[derive(Clone)]
@@ -210,65 +221,110 @@ impl DB {
     ) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         validate_tenant_id_sqlx!(tenant_id);
 
-        match &self.store {
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                    .await
-                    .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                let rows = sqlx::query(
-                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
-                )
-                .bind(tenant_id)
-                .bind(service_id)
-                .fetch_all(&mut *tx)
-                .await?;
-                tx.commit().await?;
+        if let Some(pool) = GLOBAL_MYSQL_POOL.get() {
+            let rows = sqlx::query(
+                "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
+            )
+            .bind(tenant_id)
+            .bind(service_id)
+            .fetch_all(pool)
+            .await?;
 
-                let slots = rows
-                    .into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        AvailableSlot {
-                            id: row.get("id"),
-                            start_time: row.get("start_time"),
-                            end_time: row.get("end_time"),
+            let mut slots = Vec::new();
+            for row in rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+
+                let start_time = match row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time") {
+                    Ok(dt) => dt,
+                    Err(_) => {
+                        if let Ok(s) = row.try_get::<String, _>("start_time") {
+                            parse_sqlite_datetime(&s)?
+                        } else {
+                            chrono::Utc::now()
                         }
-                    })
-                    .collect();
-                Ok(slots)
+                    }
+                };
+
+                let end_time = match row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time") {
+                    Ok(dt) => dt,
+                    Err(_) => {
+                        if let Ok(s) = row.try_get::<String, _>("end_time") {
+                            parse_sqlite_datetime(&s)?
+                        } else {
+                            chrono::Utc::now()
+                        }
+                    }
+                };
+
+                slots.push(AvailableSlot {
+                    id,
+                    start_time,
+                    end_time,
+                });
             }
-            DbStore::Sqlite(pool) => {
-                let rows = sqlx::query(
-                    "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
-                )
-                .bind(tenant_id)
-                .bind(service_id)
-                .fetch_all(pool)
-                .await?;
+            Ok(slots)
+        } else {
+            match &self.store {
+                DbStore::Postgres => {
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+                        .await
+                        .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                    let rows = sqlx::query(
+                        "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
+                    )
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                    tx.commit().await?;
 
-                let mut slots = Vec::new();
-                for row in rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-
-                    let start_time = match row.try_get::<String, _>("start_time") {
-                        Ok(s) => parse_sqlite_datetime(&s)?,
-                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
-                    };
-
-                    let end_time = match row.try_get::<String, _>("end_time") {
-                        Ok(s) => parse_sqlite_datetime(&s)?,
-                        Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
-                    };
-
-                    slots.push(AvailableSlot {
-                        id,
-                        start_time,
-                        end_time,
-                    });
+                    let slots = rows
+                        .into_iter()
+                        .map(|row| {
+                            use sqlx::Row;
+                            AvailableSlot {
+                                id: row.get("id"),
+                                start_time: row.get("start_time"),
+                                end_time: row.get("end_time"),
+                            }
+                        })
+                        .collect();
+                    Ok(slots)
                 }
-                Ok(slots)
+                DbStore::Sqlite(pool) => {
+                    let rows = sqlx::query(
+                        "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = ? AND service_id = ? AND is_available = true ORDER BY start_time ASC"
+                    )
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .fetch_all(pool)
+                    .await?;
+
+                    let mut slots = Vec::new();
+                    for row in rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+
+                        let start_time = match row.try_get::<String, _>("start_time") {
+                            Ok(s) => parse_sqlite_datetime(&s)?,
+                            Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
+                        };
+
+                        let end_time = match row.try_get::<String, _>("end_time") {
+                            Ok(s) => parse_sqlite_datetime(&s)?,
+                            Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
+                        };
+
+                        slots.push(AvailableSlot {
+                            id,
+                            start_time,
+                            end_time,
+                        });
+                    }
+                    Ok(slots)
+                }
             }
         }
     }
@@ -276,8 +332,12 @@ impl DB {
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
             DbStore::Sqlite(_) => true,
-            DbStore::Postgres => false,
+            _ => false,
         }
+    }
+
+    pub fn is_mysql(&self) -> bool {
+        GLOBAL_MYSQL_POOL.get().is_some() && matches!(self.store, DbStore::Postgres)
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
@@ -580,6 +640,35 @@ impl DB {
                 pool: dummy_pool,
                 store: DbStore::Sqlite(sqlite_pool),
             })
+        } else if database_url.starts_with("mysql") {
+            let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+                .before_acquire(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("SET app.current_tenant = ''").await?;
+                        Ok(true)
+                    })
+                })
+                .after_release(|conn, _meta| {
+                    Box::pin(async move {
+                        use sqlx::Executor;
+                        conn.execute("DISCARD ALL").await?;
+                        Ok(true)
+                    })
+                })
+                .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+
+            let mysql_pool = MySqlPoolOptions::new()
+                .max_connections(50)
+                .connect(&database_url)
+                .await?;
+
+            let _ = GLOBAL_MYSQL_POOL.set(mysql_pool);
+
+            Ok(DB {
+                pool: dummy_pool,
+                store: DbStore::Postgres,
+            })
         } else {
             let mut pg_url = database_url.clone();
             if !pg_url.contains("statement-cache-capacity=0") {
@@ -608,7 +697,7 @@ impl DB {
                             return Err(e.into());
                         }
                         tracing::debug!(
-                            "Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...",
+                             "Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...",
                             attempt,
                             max_attempts,
                             e
@@ -636,164 +725,243 @@ impl DB {
         let query_lower = format!("%{}%", query.to_lowercase());
         let mut results = Vec::new();
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
-                // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            let mut tx = mysql_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+            // Search Customers
+            let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                .bind(tenant_id)
+                .bind(&query_lower)
+                .bind(&query_lower)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| format!("DB Error: {}", e))?;
 
-                for row in customer_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
-                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "customer".to_string(),
-                        title: name,
-                        subtitle: email,
-                        route: format!("/customers/{}", id),
-                    });
-                }
-
-                // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (LOWER(id) LIKE LOWER(?) OR LOWER(status) LIKE LOWER(?) OR LOWER(CAST(total_cost AS TEXT)) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .bind(&query_lower)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-
-                for row in order_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
-                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "order".to_string(),
-                        title: format!("Order {}", id),
-                        subtitle: format!("{} - ${:.2}", status, amount),
-                        route: format!("/orders/{}", id),
-                    });
-                }
-
-                // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
-
-                for row in message_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
-                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
-                    let snippet = if content.len() > 50 {
-                        format!("{}...", &content[0..47])
-                    } else {
-                        content
-                    };
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "message".to_string(),
-                        title: format!("Message via {}", source),
-                        subtitle: snippet,
-                        route: format!("/inbox/{}", id),
-                    });
-                }
+            for row in customer_rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                results.push(SearchResult {
+                    id: id.clone(),
+                    entity_type: "customer".to_string(),
+                    title: name,
+                    subtitle: email,
+                    route: format!("/customers/{}", id),
+                });
             }
-            DbStore::Postgres => {
-                let mut tx = self
-                    .pool
-                    .begin()
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-                // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
 
-                for row in customer_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
-                    let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "customer".to_string(),
-                        title: name,
-                        subtitle: email,
-                        route: format!("/customers/{}", id),
-                    });
+            // Search Orders
+            let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DECIMAL(10,2)) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (LOWER(id) LIKE LOWER(?) OR LOWER(status) LIKE LOWER(?) OR LOWER(CAST(total_cost AS CHAR)) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                .bind(tenant_id)
+                .bind(&query_lower)
+                .bind(&query_lower)
+                .bind(&query_lower)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| format!("DB Error: {}", e))?;
+
+            for row in order_rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                results.push(SearchResult {
+                    id: id.clone(),
+                    entity_type: "order".to_string(),
+                    title: format!("Order {}", id),
+                    subtitle: format!("{} - ${:.2}", status, amount),
+                    route: format!("/orders/{}", id),
+                });
+            }
+
+            // Search Messages
+            let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                .bind(tenant_id)
+                .bind(&query_lower)
+                .bind(&query_lower)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| format!("DB Error: {}", e))?;
+            tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
+
+            for row in message_rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                let snippet = if content.len() > 50 {
+                    format!("{}...", &content[0..47])
+                } else {
+                    content
+                };
+                results.push(SearchResult {
+                    id: id.clone(),
+                    entity_type: "message".to_string(),
+                    title: format!("Message via {}", source),
+                    subtitle: snippet,
+                    route: format!("/inbox/{}", id),
+                });
+            }
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                    // Search Customers
+                    let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+
+                    for row in customer_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                        let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "customer".to_string(),
+                            title: name,
+                            subtitle: email,
+                            route: format!("/customers/{}", id),
+                        });
+                    }
+
+                    // Search Orders
+                    let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = ? AND (LOWER(id) LIKE LOWER(?) OR LOWER(status) LIKE LOWER(?) OR LOWER(CAST(total_cost AS TEXT)) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .bind(&query_lower)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+
+                    for row in order_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                        let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "order".to_string(),
+                            title: format!("Order {}", id),
+                            subtitle: format!("{} - ${:.2}", status, amount),
+                            route: format!("/orders/{}", id),
+                        });
+                    }
+
+                    // Search Messages
+                    let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+                    tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
+
+                    for row in message_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                        let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                        let snippet = if content.len() > 50 {
+                            format!("{}...", &content[0..47])
+                        } else {
+                            content
+                        };
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "message".to_string(),
+                            title: format!("Message via {}", source),
+                            subtitle: snippet,
+                            route: format!("/inbox/{}", id),
+                        });
+                    }
                 }
+                DbStore::Postgres => {
+                    let mut tx = self
+                        .pool
+                        .begin()
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+                    // Search Customers
+                    let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
 
-                // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
+                    for row in customer_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
+                        let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "customer".to_string(),
+                            title: name,
+                            subtitle: email,
+                            route: format!("/customers/{}", id),
+                        });
+                    }
 
-                for row in order_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
-                    let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "order".to_string(),
-                        title: format!("Order {}", id),
-                        subtitle: format!("{} - ${:.2}", status, amount),
-                        route: format!("/orders/{}", id),
-                    });
-                }
+                    // Search Orders
+                    let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
 
-                // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
-                    .bind(tenant_id)
-                    .bind(&query_lower)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
+                    for row in order_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
+                        let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "order".to_string(),
+                            title: format!("Order {}", id),
+                            subtitle: format!("{} - ${:.2}", status, amount),
+                            route: format!("/orders/{}", id),
+                        });
+                    }
 
-                for row in message_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
-                    let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
-                    let snippet = if content.len() > 50 {
-                        format!("{}...", &content[0..47])
-                    } else {
-                        content
-                    };
-                    results.push(SearchResult {
-                        id: id.clone(),
-                        entity_type: "message".to_string(),
-                        title: format!("Message via {}", source),
-                        subtitle: snippet,
-                        route: format!("/inbox/{}", id),
-                    });
+                    // Search Messages
+                    let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
+                        .bind(tenant_id)
+                        .bind(&query_lower)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
+                    tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
+
+                    for row in message_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
+                        let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                        let snippet = if content.len() > 50 {
+                            format!("{}...", &content[0..47])
+                        } else {
+                            content
+                        };
+                        results.push(SearchResult {
+                            id: id.clone(),
+                            entity_type: "message".to_string(),
+                            title: format!("Message via {}", source),
+                            subtitle: snippet,
+                            route: format!("/inbox/{}", id),
+                        });
+                    }
                 }
             }
         }
@@ -901,8 +1069,8 @@ impl DB {
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Running migrations...");
 
-        match &self.store {
-            DbStore::Postgres => {
+        match (&self.store, GLOBAL_MYSQL_POOL.get()) {
+            (DbStore::Postgres, None) => {
                 let mut migration_conn = self.pool.acquire().await?;
 
                 sqlx::query("SELECT pg_advisory_lock($1);")
@@ -926,7 +1094,7 @@ impl DB {
                 migration_result?;
                 unlock_result?;
             }
-            DbStore::Sqlite(sqlite_pool) => {
+            (DbStore::Sqlite(sqlite_pool), None) => {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
@@ -2987,6 +3155,249 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 .execute(sqlite_pool)
                 .await?;
             }
+            (_, Some(mysql_pool)) => {
+                let schema = r#"
+                    CREATE TABLE IF NOT EXISTS agent_session_data (
+                        session_id VARCHAR(255) PRIMARY KEY,
+                        agent_id VARCHAR(255) NOT NULL,
+                        context_data TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1,
+                        device_signature VARCHAR(255)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        agent_id VARCHAR(255),
+                        task_id VARCHAR(255),
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        source_type VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                        agent_id VARCHAR(255),
+                        priority VARCHAR(10) NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        parent_plan_id VARCHAR(255),
+                        dependencies TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1,
+                        auto_dreamed BOOLEAN DEFAULT 0
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                        id VARCHAR(255) PRIMARY KEY,
+                        organization_id VARCHAR(255) NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id VARCHAR(255),
+                        priority VARCHAR(10) NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        parent_plan_id VARCHAR(255),
+                        dependencies TEXT NOT NULL,
+                        locked_until TIMESTAMP NULL,
+                        ultraplan_phase VARCHAR(255),
+                        deliberation_log TEXT,
+                        depth INT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        action_risk VARCHAR(50),
+                        approval_status VARCHAR(50),
+                        proposed_content TEXT,
+                        mission_id VARCHAR(255) NOT NULL,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1,
+                        tokens_consumed INT DEFAULT 0,
+                        agent_role VARCHAR(255),
+                        model VARCHAR(255)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS task_dependencies (
+                        task_id VARCHAR(255) NOT NULL,
+                        depends_on_task_id VARCHAR(255) NOT NULL,
+                        tenant_id VARCHAR(255),
+                        PRIMARY KEY (task_id, depends_on_task_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                        task_id VARCHAR(255) NOT NULL,
+                        depends_on_task_id VARCHAR(255) NOT NULL,
+                        organization_id VARCHAR(255),
+                        PRIMARY KEY (task_id, depends_on_task_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shared_tasks (
+                        id VARCHAR(255) PRIMARY KEY,
+                        organization_id VARCHAR(255) NOT NULL,
+                        parent_plan_id VARCHAR(255),
+                        title VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id VARCHAR(255),
+                        dependencies TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1,
+                        auto_dreamed BOOLEAN DEFAULT 0
+                    );
+
+                    CREATE TABLE IF NOT EXISTS incidents (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        description TEXT NOT NULL,
+                        status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
+                        affected_orders JSON,
+                        affected_inventory JSON,
+                        resolution_plan JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customer_timeline (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        customer_id VARCHAR(255) NOT NULL,
+                        event_type VARCHAR(255) NOT NULL,
+                        source VARCHAR(255) NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata TEXT,
+                        embedding BLOB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_subscribable BOOLEAN DEFAULT FALSE,
+                        subscription_frequency VARCHAR(50),
+                        subscription_discount_percent INT DEFAULT 0,
+                        _sync_status VARCHAR(50) DEFAULT 'pending',
+                        version INT DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS triage_items (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        customer_id VARCHAR(255),
+                        source VARCHAR(255),
+                        priority VARCHAR(50),
+                        context TEXT,
+                        status VARCHAR(50) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS triage_proposed_actions (
+                        id VARCHAR(255) PRIMARY KEY,
+                        triage_item_id VARCHAR(255) NOT NULL,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        action_type VARCHAR(255),
+                        payload TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (triage_item_id) REFERENCES triage_items(id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS auto_reply_policies (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        enabled BOOLEAN NOT NULL DEFAULT 1,
+                        delay_minutes INT NOT NULL DEFAULT 5,
+                        tone_instructions TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS availability_blocks (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        service_id VARCHAR(255) NOT NULL,
+                        start_time TIMESTAMP NOT NULL,
+                        end_time TIMESTAMP NOT NULL,
+                        is_available BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customers (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255),
+                        email VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS purchase_orders (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        status VARCHAR(255),
+                        total_cost DOUBLE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        source VARCHAR(255),
+                        original_content TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS users (
+                        id VARCHAR(255) PRIMARY KEY,
+                        username VARCHAR(255) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        password_hash VARCHAR(255) NOT NULL,
+                        roles JSON NOT NULL,
+                        active BOOLEAN NOT NULL DEFAULT 1,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        oidc_subject VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS revoked_tokens (
+                        jti VARCHAR(255) NOT NULL,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        expires_at TIMESTAMP NOT NULL,
+                        PRIMARY KEY (jti, tenant_id)
+                    );
+                "#;
+
+                for query in schema.split(';') {
+                    let trimmed = query.trim();
+                    if !trimmed.is_empty() {
+                        sqlx::query(trimmed).execute(mysql_pool).await?;
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -2998,59 +3409,75 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, context_data")
-                    .bind(threshold)
-                    .fetch_all(sqlite_pool)
-                    .await?;
-                for row in rows {
-                    let id: String = row.get("session_id");
-                    let data: String = row.get("context_data");
-                    result.push((id, data));
-                }
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?")
+                .bind(threshold)
+                .fetch_all(mysql_pool)
+                .await?;
+            for row in &rows {
+                let id: String = row.get("session_id");
+                let data: String = row.get("context_data");
+                result.push((id, data));
             }
-            DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants")
-                    .fetch_all(&self.pool)
-                    .await?;
-
-                let futures = tenants.into_iter().map(|tenant_row| {
-                    use sqlx::Row;
-                    let tenant_id: String = tenant_row.get("id");
-                    let pool = self.pool.clone();
-                    let t_id = tenant_id.clone();
-                    let thresh = threshold;
-
-                    async move {
-                        let mut tx = pool.begin().await?;
-                        ::server_common::auth_utils::set_org_context(&mut *tx, &t_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                        let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, context_data")
-                            .bind(thresh)
-                            .bind(&t_id)
-                            .fetch_all(&mut *tx)
-                            .await?;
-                        tx.commit().await?;
-
-                        let mut res = Vec::new();
-                        for row in rows {
-                            let id: String = row.get("session_id");
-                            let data: String = row.get("context_data");
-                            res.push((id, data));
-                        }
-                        Ok::<_, sqlx::Error>(res)
+            sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ?")
+                .bind(threshold)
+                .execute(mysql_pool)
+                .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, context_data")
+                        .bind(threshold)
+                        .fetch_all(sqlite_pool)
+                        .await?;
+                    for row in rows {
+                        let id: String = row.get("session_id");
+                        let data: String = row.get("context_data");
+                        result.push((id, data));
                     }
-                });
+                }
+                DbStore::Postgres => {
+                    let tenants = sqlx::query("SELECT id FROM tenants")
+                        .fetch_all(&self.pool)
+                        .await?;
 
-                use futures::stream::StreamExt;
-                let results = futures::stream::iter(futures)
-                    .buffer_unordered(10)
-                    .collect::<Vec<_>>()
-                    .await;
+                    let futures = tenants.into_iter().map(|tenant_row| {
+                        use sqlx::Row;
+                        let tenant_id: String = tenant_row.get("id");
+                        let pool = self.pool.clone();
+                        let t_id = tenant_id.clone();
+                        let thresh = threshold;
 
-                for res in results {
-                    let items = res.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                    result.extend(items);
+                        async move {
+                            let mut tx = pool.begin().await?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &t_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                            let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, context_data")
+                                .bind(thresh)
+                                .bind(&t_id)
+                                .fetch_all(&mut *tx)
+                                .await?;
+                            tx.commit().await?;
+
+                            let mut res = Vec::new();
+                            for row in rows {
+                                let id: String = row.get("session_id");
+                                let data: String = row.get("context_data");
+                                res.push((id, data));
+                            }
+                            Ok::<_, sqlx::Error>(res)
+                        }
+                    });
+
+                    use futures::stream::StreamExt;
+                    let results = futures::stream::iter(futures)
+                        .buffer_unordered(10)
+                        .collect::<Vec<_>>()
+                        .await;
+
+                    for res in results {
+                        let items = res.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                        result.extend(items);
+                    }
                 }
             }
         };
@@ -3064,111 +3491,144 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
         let mut result = Vec::new();
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let pool1 = sqlite_pool.clone();
-                let pool2 = sqlite_pool.clone();
-                let (shared_res, swarm_res) = tokio::join!(
-                    tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool1).await
-                    }),
-                    tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool2).await
-                    })
-                );
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            let pool1 = mysql_pool.clone();
+            let pool2 = mysql_pool.clone();
+            let (shared_res, swarm_res) = tokio::join!(
+                tokio::spawn(async move {
+                    sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool1).await
+                }),
+                tokio::spawn(async move {
+                    sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool2).await
+                })
+            );
 
-                let shared_rows =
-                    shared_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
-                for row in shared_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "shared_tasks".to_string()));
-                }
-
-                let swarm_rows =
-                    swarm_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
-                for row in swarm_rows {
-                    use sqlx::Row;
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "swarm_tasks".to_string()));
-                }
+            let shared_rows =
+                shared_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+            for row in shared_rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let org_id: String = row.get("tenant_id");
+                let payload: String = row.try_get("payload").unwrap_or_default();
+                result.push((id, org_id, payload, "shared_tasks".to_string()));
             }
-            DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants")
-                    .fetch_all(&self.pool)
-                    .await?;
 
-                let futures = tenants.into_iter().map(|tenant_row| {
-                    use sqlx::Row;
-                    let tenant_id: String = tenant_row.get("id");
+            let swarm_rows =
+                swarm_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+            for row in swarm_rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let org_id: String = row.get("tenant_id");
+                let payload: String = row.try_get("payload").unwrap_or_default();
+                result.push((id, org_id, payload, "swarm_tasks".to_string()));
+            }
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    let pool1 = sqlite_pool.clone();
+                    let pool2 = sqlite_pool.clone();
+                    let (shared_res, swarm_res) = tokio::join!(
+                        tokio::spawn(async move {
+                            sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool1).await
+                        }),
+                        tokio::spawn(async move {
+                            sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool2).await
+                        })
+                    );
 
-                    let pool1 = self.pool.clone();
-                    let pool2 = self.pool.clone();
-                    let t_id1 = tenant_id.clone();
-                    let t_id2 = tenant_id.clone();
-
-                    async move {
-                        let shared_task = tokio::spawn(async move {
-                            let mut tx = pool1.begin().await?;
-                            ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                            tx.commit().await?;
-                            Ok::<_, sqlx::Error>(rows)
-                        });
-
-                        let swarm_task = tokio::spawn(async move {
-                            let mut tx = pool2.begin().await?;
-                            ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                            let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                            tx.commit().await?;
-                            Ok::<_, sqlx::Error>(rows)
-                        });
-
-                        let (shared_res, swarm_res) = tokio::join!(shared_task, swarm_task);
-
-                        let mut res = Vec::new();
-
-                        let shared_rows = match shared_res {
-                            Ok(Ok(rows)) => rows,
-                            Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                            Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                        };
-                        for row in shared_rows {
-                            let id: String = row.get("id");
-                            let org_id: String = row.get("tenant_id");
-                            let payload: String = row.try_get("payload").unwrap_or_default();
-                            res.push((id, org_id, payload, "shared_tasks".to_string()));
-                        }
-
-                        let swarm_rows = match swarm_res {
-                            Ok(Ok(rows)) => rows,
-                            Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                            Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                        };
-                        for row in swarm_rows {
-                            let id: String = row.get("id");
-                            let org_id: String = row.get("tenant_id");
-                            let payload: String = row.try_get("payload").unwrap_or_default();
-                            res.push((id, org_id, payload, "swarm_tasks".to_string()));
-                        }
-
-                        Ok::<_, sqlx::Error>(res)
+                    let shared_rows =
+                        shared_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                    for row in shared_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "shared_tasks".to_string()));
                     }
-                });
 
-                use futures::stream::StreamExt;
-                let results = futures::stream::iter(futures)
-                    .buffer_unordered(10)
-                    .collect::<Vec<_>>()
-                    .await;
+                    let swarm_rows =
+                        swarm_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                    for row in swarm_rows {
+                        use sqlx::Row;
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                    }
+                }
+                DbStore::Postgres => {
+                    let tenants = sqlx::query("SELECT id FROM tenants")
+                        .fetch_all(&self.pool)
+                        .await?;
 
-                for res in results {
-                    let items = res.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                    result.extend(items);
+                    let futures = tenants.into_iter().map(|tenant_row| {
+                        use sqlx::Row;
+                        let tenant_id: String = tenant_row.get("id");
+
+                        let pool1 = self.pool.clone();
+                        let pool2 = self.pool.clone();
+                        let t_id1 = tenant_id.clone();
+                        let t_id2 = tenant_id.clone();
+
+                        async move {
+                            let shared_task = tokio::spawn(async move {
+                                let mut tx = pool1.begin().await?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                                tx.commit().await?;
+                                Ok::<_, sqlx::Error>(rows)
+                            });
+
+                            let swarm_task = tokio::spawn(async move {
+                                let mut tx = pool2.begin().await?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                                tx.commit().await?;
+                                Ok::<_, sqlx::Error>(rows)
+                            });
+
+                            let (shared_res, swarm_res) = tokio::join!(shared_task, swarm_task);
+
+                            let mut res = Vec::new();
+
+                            let shared_rows = match shared_res {
+                                Ok(Ok(rows)) => rows,
+                                Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
+                                Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
+                            };
+                            for row in shared_rows {
+                                let id: String = row.get("id");
+                                let org_id: String = row.get("tenant_id");
+                                let payload: String = row.try_get("payload").unwrap_or_default();
+                                res.push((id, org_id, payload, "shared_tasks".to_string()));
+                            }
+
+                            let swarm_rows = match swarm_res {
+                                Ok(Ok(rows)) => rows,
+                                Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
+                                Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
+                            };
+                            for row in swarm_rows {
+                                let id: String = row.get("id");
+                                let org_id: String = row.get("tenant_id");
+                                let payload: String = row.try_get("payload").unwrap_or_default();
+                                res.push((id, org_id, payload, "swarm_tasks".to_string()));
+                            }
+
+                            Ok::<_, sqlx::Error>(res)
+                        }
+                    });
+
+                    use futures::stream::StreamExt;
+                    let results = futures::stream::iter(futures)
+                        .buffer_unordered(10)
+                        .collect::<Vec<_>>()
+                        .await;
+
+                    for res in results {
+                        let items = res.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+                        result.extend(items);
+                    }
                 }
             }
         };
@@ -3186,22 +3646,33 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<(), Box<dyn std::error::Error>> {
         validate_tenant_id_box!(org_id);
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
-            }
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
-                sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
-                .bind(id)
-                .bind(org_id)
-                .bind(task_id)
-                .bind(content)
-                .bind(embedding)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)")
+            .bind(id)
+            .bind(org_id)
+            .bind(task_id)
+            .bind(content)
+            .bind(embedding)
+            .execute(mysql_pool)
+            .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
+                    sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .execute(&mut *tx)
+                    .await?;
+                    tx.commit().await?;
+                }
             }
         };
 
@@ -3220,33 +3691,46 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<(), Box<dyn std::error::Error>> {
         validate_tenant_id_box!(org_id);
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(sqlite_pool)
-                    .await?;
-            }
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                    .bind(id)
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(&mut *tx)
-                    .await?;
-                tx.commit().await?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                .bind(id)
+                .bind(org_id)
+                .bind(agent_id)
+                .bind(task_id)
+                .bind(content)
+                .bind(embedding)
+                .bind(source_type)
+                .execute(mysql_pool)
+                .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .bind(id)
+                        .bind(org_id)
+                        .bind(agent_id)
+                        .bind(task_id)
+                        .bind(content)
+                        .bind(embedding)
+                        .bind(source_type)
+                        .execute(sqlite_pool)
+                        .await?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
+                    sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                        .bind(id)
+                        .bind(org_id)
+                        .bind(agent_id)
+                        .bind(task_id)
+                        .bind(content)
+                        .bind(embedding)
+                        .bind(source_type)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
+                }
             }
         }
         Ok(())
@@ -3264,33 +3748,46 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<(), Box<dyn std::error::Error>> {
         validate_tenant_id_box!(org_id);
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()).to_string())
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(sqlite_pool)
-                    .await?;
-            }
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
-                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                    .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
-                    .bind(org_id)
-                    .bind(agent_id)
-                    .bind(task_id)
-                    .bind(content)
-                    .bind(embedding)
-                    .bind(source_type)
-                    .execute(&mut *tx)
-                    .await?;
-                tx.commit().await?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()).to_string())
+                .bind(org_id)
+                .bind(agent_id)
+                .bind(task_id)
+                .bind(content)
+                .bind(embedding)
+                .bind(source_type)
+                .execute(mysql_pool)
+                .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()).to_string())
+                        .bind(org_id)
+                        .bind(agent_id)
+                        .bind(task_id)
+                        .bind(content)
+                        .bind(embedding)
+                        .bind(source_type)
+                        .execute(sqlite_pool)
+                        .await?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
+                    sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                        .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+                        .bind(org_id)
+                        .bind(agent_id)
+                        .bind(task_id)
+                        .bind(content)
+                        .bind(embedding)
+                        .bind(source_type)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
+                }
             }
         }
         Ok(())
@@ -3304,36 +3801,52 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<(), Box<dyn std::error::Error>> {
         validate_tenant_id_box!(tenant_id);
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2 AND tenant_id = $3"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .bind(tenant_id)
-                .execute(sqlite_pool)
-                .await?;
-            }
-            DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            sqlx::query(
+                "UPDATE agent_missions
+                 SET status = 'blocked',
+                     mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN ? ELSE CONCAT(mission_log, '\n', ?) END,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ? AND tenant_id = ?"
+            )
+            .bind(blockers)
+            .bind(blockers)
+            .bind(mission_id)
+            .bind(tenant_id)
+            .execute(mysql_pool)
+            .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query(
+                        "UPDATE agent_missions
+                         SET status = 'blocked',
+                             mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE id = $2 AND tenant_id = $3"
+                    )
+                    .bind(blockers)
+                    .bind(mission_id)
+                    .bind(tenant_id)
+                    .execute(sqlite_pool)
+                    .await?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                    sqlx::query(
+                        "UPDATE agent_missions
+                         SET status = 'blocked',
+                             mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE id = $2"
+                    )
+                    .bind(blockers)
+                    .bind(mission_id)
+                    .execute(&mut *tx)
+                    .await?;
+                    tx.commit().await?;
+                }
             }
         }
         Ok(())
@@ -3347,30 +3860,43 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     ) -> Result<(), Box<dyn std::error::Error>> {
         validate_tenant_id_box!(tenant_id);
 
-        match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
-                let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
-                } else {
-                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
-                };
-                sqlx::query(query)
-                    .bind(task_id)
-                    .bind(tenant_id)
-                    .execute(sqlite_pool)
-                    .await?;
-            }
-            DbStore::Postgres => {
-                let query = if table == "swarm_tasks" {
-                    // swarm_tasks uses UUID primary key
-                    "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
-                } else {
-                    "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
-                };
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
-                tx.commit().await?;
+        if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
+            let query = if table == "swarm_tasks" {
+                "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
+            } else {
+                "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
+            };
+            sqlx::query(query)
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(mysql_pool)
+                .await?;
+        } else {
+            match &self.store {
+                DbStore::Sqlite(sqlite_pool) => {
+                    let query = if table == "swarm_tasks" {
+                        "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
+                    } else {
+                        "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
+                    };
+                    sqlx::query(query)
+                        .bind(task_id)
+                        .bind(tenant_id)
+                        .execute(sqlite_pool)
+                        .await?;
+                }
+                DbStore::Postgres => {
+                    let query = if table == "swarm_tasks" {
+                        // swarm_tasks uses UUID primary key
+                        "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+                    } else {
+                        "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
+                    };
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                    sqlx::query(query).bind(task_id).execute(&mut *tx).await?;
+                    tx.commit().await?;
+                }
             }
         };
 

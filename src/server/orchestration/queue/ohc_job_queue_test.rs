@@ -5,11 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 
 #[tokio::test]
 async fn test_ohc_job_queue_e2e() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = OHCJobQueue::new(Arc::new(pool.clone()));
@@ -46,11 +42,7 @@ async fn test_ohc_job_queue_e2e() {
 
 #[tokio::test]
 async fn test_ohc_job_queue_fail_backoff() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = OHCJobQueue::new(Arc::new(pool.clone()));
@@ -123,11 +115,7 @@ impl JobHandler for TestHandler {
 
 #[tokio::test]
 async fn test_worker_pool_and_ledger() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
     let pool_arc = Arc::new(pool.clone());
 
@@ -171,11 +159,7 @@ impl JobHandler for TimeoutTestHandler {
 
 #[tokio::test]
 async fn test_worker_pool_chaos_timeout() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
     let pool_arc = Arc::new(pool.clone());
 
@@ -206,11 +190,7 @@ async fn test_worker_pool_chaos_timeout() {
 
 #[tokio::test]
 async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = OHCJobQueue::new(Arc::new(pool.clone()));
@@ -340,11 +320,7 @@ async fn test_chaos_redis_mailbox_corruption() {
 
 #[tokio::test]
 async fn test_cleanup_stagnant_pending_jobs() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://ohc:ohc@localhost:5432/ohc"); }
-    }
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
     let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
     let queue = OHCJobQueue::new(Arc::new(pool.clone()));
 
