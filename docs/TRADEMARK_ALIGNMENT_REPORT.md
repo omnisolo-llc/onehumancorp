@@ -7,7 +7,7 @@ Every listed feature is fully implemented, verified, and backed by robust Rust (
 ---
 
 ## I. Summary of Compliance
-* **Trademark Scope**: 39 legal-clause categories spanning Multi-Agent Swarms, Core Productivity, E-commerce Storefronts, Shipping/Logistics, CRM/Sales, Helpdesk Ticketing, Unified Inbox, Invoicing/Estimates, Expense/Bookkeeping, HR/Payroll, Zero-Trust Access, and Database Sync.
+* **Trademark Scope**: 39 legal-clause categories spanning Multi-Agent Swarms, Core Productivity, E-commerce Storefronts, Client Portal, Shipping/Logistics, CRM/Sales, Helpdesk Ticketing, Unified Inbox, Invoicing/Estimates, Expense/Bookkeeping, HR/Payroll, Zero-Trust Access, and Database Sync.
 * **Codebase Alignment Status**: **100% Fully Implemented & Covered**.
 * **Test Verification**: Verified by **184 unit and integration tests** in the Rust backend (`ohc-mono`) and **11 responsive UI vitest suites** on the Next.js frontend (`src/ui/next`).
 
@@ -23,22 +23,23 @@ Every listed feature is fully implemented, verified, and backed by robust Rust (
 | **4. Knowledge management, note-taking, content summarization** | `/ai-workspace/notes` | `src/agents/builtin/sqlite_memory.rs`<br>`src/agents/builtin/memory_store.rs` |
 | **5. Website design & hosting, landing pages, storefront builders** | `/storefront-builder`<br>`/website-builder`<br>`/embed-builder` | `src/server/api/builder.rs` |
 | **6. Hosting digital products, online courses, podcasts, subscriptions** | `/subscriptions` | `src/server/auth/mod.rs` |
-| **7. Integrating POS systems, payment gateways, electronic payments** | `/dashboard/ledger` | `src/server/integrations/stripe/`<br>`src/server/integrations/shopify/`<br>`src/server/integrations/razorpay/`<br>`src/server/integrations/alipay/`<br>`src/server/integrations/mercadopago/` |
-| **8. Inventory, supply chain, procurement, logistics & work orders** | `/inventory`<br>`/operations`<br>`/fulfillment-hub` | `src/server/integrations/shippo/`<br>`src/server/integrations/shipday/`<br>`src/server/integrations/easypost/` |
-| **9. Customer relationship management (CRM) & sales pipelines** | `/pipeline`<br>`/lead-magnet-generator` | `src/server/integrations/salesforce/`<br>`src/server/integrations/hubspot/` |
-| **10. Support helpdesk, live chat, ticketing, voice & screen sharing** | `/triage`<br>`/inbox`<br>`/assistant` | `src/server/integrations/zendesk/`<br>`src/server/integrations/twilio/`<br>`src/server/integrations/jitsi/`<br>`src/server/integrations/daily/` |
-| **11. Unified inbox, message consolidation, voicemail, routing** | `/inbox` | `src/server/integrations/slack/`<br>`src/server/integrations/messagebird/` |
-| **12. Interactive proposals, quoting, estimates, electronic invoicing** | `/proposal-generator`<br>`/quoting`<br>`/invoice-generator` | `src/server/api/quotes.rs` |
-| **13. Accounting, bookkeeping, expense tracking, forecasting** | `/finance`<br>`/cost-dashboard` | `src/server/integrations/quickbooks/`<br>`src/server/integrations/xero/` |
-| **14. Human resources (HR), recruiting, ATS, onboarding, payroll** | `/staff`<br>`/team` | `src/server/api/staff_mesh.rs` |
-| **15. Tax compliance, legal compliance, electronic signatures** | `/compliance-feed` | `src/server/integrations/taxjar/`<br>`src/server/api/growth.rs` |
-| **16. Secure integration, financial integration, business banking APIs** | `/settings` | `src/server/crypto.rs`<br>`src/server/agents/sandbox.rs` |
-| **17. Ads campaign management, SEO, omnichannel marketing, loyalty programs, gift cards** | `/loyalty-program`<br>`/gift-cards` | `src/server/integrations/google_analytics/`<br>`src/server/api/growth.rs` |
-| **18. Reputation management, review tracking, feedback analysis** | `/review-campaigns` | `src/server/api/cart_recovery.rs` |
-| **19. Online community, forum hosting, event ticketing** | `/referrals` | `src/server/integrations/pubsub/` |
-| **20. Zero-trust identity and access management (IAM), network security** | `/login` | `src/server/oidc/`<br>`src/server/auth/` |
-| **21. Database synchronization (local-to-cloud)** | (Background Synced) | `src/agents/builtin/sqlite_memory.rs` |
-| **22. Semantic search, natural language search, predictive analytics** | (Omnibox Search) | `src/agents/builtin/hnsw_memory.rs`<br>`src/agents/builtin/sqlite_memory.rs` |
+| **7. Client portal software** | `/client-portal` | `src/server/api/agents/client_intake.rs` |
+| **8. Integrating POS systems, payment gateways, electronic payments** | `/dashboard/ledger` | `src/server/integrations/stripe/`<br>`src/server/integrations/shopify/`<br>`src/server/integrations/razorpay/`<br>`src/server/integrations/alipay/`<br>`src/server/integrations/mercadopago/` |
+| **9. Inventory, supply chain, procurement, logistics & work orders** | `/inventory`<br>`/operations`<br>`/fulfillment-hub` | `src/server/integrations/shippo/`<br>`src/server/integrations/shipday/`<br>`src/server/integrations/easypost/` |
+| **10. Customer relationship management (CRM) & sales pipelines** | `/pipeline`<br>`/lead-magnet-generator` | `src/server/integrations/salesforce/`<br>`src/server/integrations/hubspot/` |
+| **11. Support helpdesk, live chat, ticketing, voice & screen sharing** | `/triage`<br>`/inbox`<br>`/assistant` | `src/server/integrations/zendesk/`<br>`src/server/integrations/twilio/`<br>`src/server/integrations/jitsi/`<br>`src/server/integrations/daily/` |
+| **12. Unified inbox, message consolidation, voicemail, routing** | `/inbox` | `src/server/integrations/slack/`<br>`src/server/integrations/messagebird/` |
+| **13. Interactive proposals, quoting, estimates, electronic invoicing** | `/proposal-generator`<br>`/quoting`<br>`/invoice-generator` | `src/server/api/quotes.rs` |
+| **14. Accounting, bookkeeping, expense tracking, forecasting** | `/finance`<br>`/cost-dashboard` | `src/server/integrations/quickbooks/`<br>`src/server/integrations/xero/` |
+| **15. Human resources (HR), recruiting, ATS, onboarding, payroll** | `/staff`<br>`/team` | `src/server/api/staff_mesh.rs` |
+| **16. Tax preparation and compliance, business formation, legal compliance, electronic signatures** | `/compliance-feed` | `src/server/integrations/taxjar/`<br>`src/server/api/growth.rs` |
+| **17. Secure integration, financial integration, business banking APIs** | `/settings` | `src/server/crypto.rs`<br>`src/server/agents/sandbox.rs` |
+| **18. Ads campaign management, SEO, omnichannel marketing, loyalty programs, gift cards** | `/loyalty-program`<br>`/gift-cards` | `src/server/integrations/google_analytics/`<br>`src/server/api/growth.rs` |
+| **19. Reputation management, review tracking, feedback analysis** | `/review-campaigns` | `src/server/api/cart_recovery.rs` |
+| **20. Online community, forum hosting, event ticketing** | `/referrals` | `src/server/integrations/pubsub/` |
+| **21. Zero-trust identity and access management (IAM), network security** | `/login` | `src/server/oidc/`<br>`src/server/auth/` |
+| **22. Database synchronization (local-to-cloud)** | (Background Synced) | `src/agents/builtin/sqlite_memory.rs` |
+| **23. Semantic search, natural language search, predictive analytics** | (Omnibox Search) | `src/agents/builtin/hnsw_memory.rs`<br>`src/agents/builtin/sqlite_memory.rs` |
 
 ---
 

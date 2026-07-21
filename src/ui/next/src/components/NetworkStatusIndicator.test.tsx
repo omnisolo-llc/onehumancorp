@@ -60,9 +60,9 @@ describe('NetworkStatusIndicator', () => {
 
     // Verify the div contains the specific Translucent Glass classes
     const container = screen.getByText('Offline - Changes saved locally').closest('div');
-    expect(container).toHaveClass('bg-white/65');
+    expect(container).toHaveClass('bg-[rgba(255,255,255,0.65)]');
     expect(container).toHaveClass('backdrop-blur-[30px]');
     expect(container).toHaveClass('saturate-[210%]');
-    expect(container).toHaveClass('border-white/40');
+    expect(container).toHaveClass('border-[rgba(255,255,255,0.4)]');
   });
 });

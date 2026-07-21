@@ -71,6 +71,7 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+  { label: "Client Portal", href: "/client-portal", icon: "team" },
   { label: "Help", href: "/help", icon: "activity" },
 ];
 
