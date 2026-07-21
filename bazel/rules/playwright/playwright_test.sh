@@ -27,6 +27,7 @@ SOURCE_REPO_ROOT_CANDIDATES=(
   "${SOURCE_REPO_ROOT:-}"
   "${GITHUB_WORKSPACE:-}"
   "$(pwd)"
+  "/app"
   "/home/kevin/mono"
   "/home/runner/work/mono/mono"
   "$workspace_root"
