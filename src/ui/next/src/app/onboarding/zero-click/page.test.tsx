@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import ZeroClickBuilderPage from './page';
@@ -27,8 +27,8 @@ describe('ZeroClickBuilderPage', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders the initial form', () => {
-    render(<ZeroClickBuilderPage />);
+  it('renders the initial form', async () => {
+    await act(async () => { render(<ZeroClickBuilderPage />); });
     expect(screen.getByText('Tell us about your business')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
@@ -36,8 +36,8 @@ describe('ZeroClickBuilderPage', () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it('enables the button when prompt is entered', () => {
-    render(<ZeroClickBuilderPage />);
+  it('enables the button when prompt is entered', async () => {
+    await act(async () => { render(<ZeroClickBuilderPage />); });
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
 
@@ -75,7 +75,7 @@ describe('ZeroClickBuilderPage', () => {
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
 
-    render(<ZeroClickBuilderPage />);
+    await act(async () => { render(<ZeroClickBuilderPage />); });
 
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
@@ -104,14 +104,14 @@ describe('ZeroClickBuilderPage', () => {
     expect(localStorage.getItem('user_display_name')).toBeNull();
   });
 
-  it('renders Powered by OHC branding', () => {
-    render(<ZeroClickBuilderPage />);
+  it('renders Powered by OHC branding', async () => {
+    await act(async () => { render(<ZeroClickBuilderPage />); });
     const texts = screen.getAllByText(/Powered by OHC/i);
     expect(texts.length).toBeGreaterThan(0);
   });
 
-  it('renders the PoweredByOHC component', () => {
-    render(<ZeroClickBuilderPage />);
+  it('renders the PoweredByOHC component', async () => {
+    await act(async () => { render(<ZeroClickBuilderPage />); });
     const components = screen.getAllByTestId('powered-by-ohc');
     expect(components.length).toBeGreaterThan(0);
   });
