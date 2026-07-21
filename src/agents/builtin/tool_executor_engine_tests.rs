@@ -278,16 +278,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         }
     }
 
-    #[tokio::test]
-    async fn test_llm_recoverable() {
+    fn create_dummy_tool_and_call(result: Result<String, ToolError>) -> (Tool, ToolCall) {
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
             parameters: json!({}),
             is_read_only: false,
-            execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::LlmRecoverable("parse error".to_string())),
-            }),
+            execute: Arc::new(DummyToolExecutor { result }),
         };
 
         let tc = ToolCall {
@@ -296,6 +293,12 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
+        (tool, tc)
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable() {
+        let (tool, tc) = create_dummy_tool_and_call(Err(ToolError::LlmRecoverable("parse error".to_string())));
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -306,22 +309,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
     #[tokio::test]
     async fn test_user_fixable() {
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::UserFixable("ask user".to_string())),
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
+        let (tool, tc) = create_dummy_tool_and_call(Err(ToolError::UserFixable("ask user".to_string())));
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -332,22 +320,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
     #[tokio::test]
     async fn test_fatal() {
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::Fatal("fatal error".to_string())),
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
+        let (tool, tc) = create_dummy_tool_and_call(Err(ToolError::Fatal("fatal error".to_string())));
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -358,22 +331,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
     #[tokio::test]
     async fn test_unexpected() {
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::Unexpected("unexpected error".to_string())),
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
+        let (tool, tc) = create_dummy_tool_and_call(Err(ToolError::Unexpected("unexpected error".to_string())));
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -384,22 +342,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
     #[tokio::test]
     async fn test_handoff_requested() {
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::HandoffRequested("agent_2".to_string())),
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
+        let (tool, tc) = create_dummy_tool_and_call(Err(ToolError::HandoffRequested("agent_2".to_string())));
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -537,3 +480,4 @@ use ohc_builtin_agent::agent::AgentRunConfig;
     }
 }
 // Adding a comment to trigger a commit
+// A small comment to trigger a code change for codebase optimization
