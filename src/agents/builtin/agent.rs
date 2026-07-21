@@ -11745,3 +11745,123 @@ mod additional_tests {
         assert_eq!(agent_task_timeout().as_secs(), 60);
     }
 }
+
+#[cfg(test)]
+mod tests_llm_recoverable_tool_message_feedback {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::tools::{Tool, ToolExecutor};
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolCall, Usage, ToolError};
+    use async_trait::async_trait;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    struct MockSelfCorrectingLlm {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait]
+    impl LlmClient for MockSelfCorrectingLlm {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                // First call: returns a tool call
+                let mut msg = Message::assistant("Calling tool");
+                msg.tool_calls.push(ToolCall {
+                    id: "call_1".to_string(),
+                    name: "dummy_fail".to_string(),
+                    arguments: serde_json::json!({}),
+                });
+                Ok(ChatResponse {
+                    message: msg,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else if *count == 2 {
+                // Second call: we verify the prompt contains the ToolResult with the error
+                let last_msg = req.messages.last().unwrap();
+                assert_eq!(last_msg.role, crate::types::Role::Tool);
+                assert!(last_msg.tool_results[0].error.contains("LLM-Recoverable Tool Error"));
+                assert!(last_msg.tool_results[0].error.contains("missing fixed field"));
+
+                // It fixes it
+                let mut msg = Message::assistant("Fixing arguments");
+                msg.tool_calls.push(ToolCall {
+                    id: "call_2".to_string(),
+                    name: "dummy_success".to_string(),
+                    arguments: serde_json::json!({"fixed": true}),
+                });
+                Ok(ChatResponse {
+                    message: msg,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            } else {
+                // Third call: final answer
+                Ok(ChatResponse {
+                    message: Message::assistant("Done task"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id3".to_string()),
+                })
+            }
+        }
+    }
+
+    struct DummyFailExecutor;
+    #[async_trait]
+    impl ToolExecutor for DummyFailExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::LlmRecoverable(
+                "Validation Error (Pydantic-first tool schema): missing fixed field".to_string(),
+            ))
+        }
+    }
+
+    struct DummySuccessExecutor;
+    #[async_trait]
+    impl ToolExecutor for DummySuccessExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Ok("Success".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_tool_message_feedback() {
+        let llm: Arc<dyn LlmClient> = Arc::new(MockSelfCorrectingLlm {
+            call_count: Mutex::new(0),
+        });
+        let tool_fail = Tool {
+            name: "dummy_fail".to_string(),
+            description: "fails".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: true,
+            execute: Arc::new(DummyFailExecutor),
+        };
+        let tool_success = Tool {
+            name: "dummy_success".to_string(),
+            description: "succeeds".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: true,
+            execute: Arc::new(DummySuccessExecutor),
+        };
+
+        let agent = Agent::new(llm, vec![tool_fail, tool_success]);
+        let cfg = AgentRunConfig {
+            max_retries: 3,
+            ..Default::default()
+        };
+
+        let mut on_event = |_| {};
+        let final_resp = agent.run_anthropic_dumb_loop(&cfg, "Do the task", &agent.tools, &mut on_event).await.unwrap();
+
+        assert_eq!(final_resp, "Done task");
+    }
+}
