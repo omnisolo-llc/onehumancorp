@@ -9,8 +9,12 @@ use server_proto::growth::{
 
 pub async fn list_funding_opportunities(
     State(hub): State<Arc<Hub>>,
-    Json(req): Json<ListFundingOpportunitiesRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut req): Json<ListFundingOpportunitiesRequest>,
 ) -> Json<ListFundingOpportunitiesResponse> {
+    if !auth_info.spiffe_id.is_empty() {
+        req.tenant_id = auth_info.spiffe_id;
+    }
     let tenant_id = req.tenant_id;
     let pool = &hub.pool;
 
@@ -49,8 +53,12 @@ pub async fn list_funding_opportunities(
 
 pub async fn submit_funding_opportunity(
     State(hub): State<Arc<Hub>>,
-    Json(req): Json<SubmitFundingOpportunityRequest>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(mut req): Json<SubmitFundingOpportunityRequest>,
 ) -> Json<SubmitFundingOpportunityResponse> {
+    if !auth_info.spiffe_id.is_empty() {
+        req.tenant_id = auth_info.spiffe_id;
+    }
     let tenant_id = req.tenant_id;
     let opportunity_id = match uuid::Uuid::parse_str(&req.id) {
         Ok(id) => id,
