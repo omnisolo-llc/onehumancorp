@@ -6,7 +6,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
   test('Completes a Tap-to-Pay transaction and triggers low stock alert on dashboard', async ({ page }) => {
 
     // Mock network request to return the dashboard data including AI alert
-    await page.route('**/api/v1/dashboard', async (route) => {
+    await page.route('**/api/v1/ui/dashboard/unified-feed*', async (route) => {
       const response = await route.fetch();
       let body: any = {};
       try {

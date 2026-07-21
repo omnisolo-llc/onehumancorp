@@ -1159,6 +1159,37 @@ pub async fn capture_payment_intent_handler(
                                             .bind(quantity)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
+
+                                        // Unified Ledger Integration
+                                        let tx_id = uuid::Uuid::new_v4().to_string();
+                                        let entry_id_credit = uuid::Uuid::new_v4().to_string();
+
+                                        // 1. Record the transaction
+                                        let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, 'USD')")
+                                            .bind(&tenant_id)
+                                            .bind(&tx_id)
+                                            .bind(total_amount)
+                                            .execute(&mut *tx).await;
+
+                                        // 2. Ensure account exists (default_revenue)
+                                        let _ = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, 'default_revenue', 'USD', 0.0) ON CONFLICT DO NOTHING")
+                                            .bind(&tenant_id)
+                                            .execute(&mut *tx).await;
+
+                                        // 3. Record credit entry
+                                        let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, 'default_revenue', 'CREDIT', $4)")
+                                            .bind(&tenant_id)
+                                            .bind(&entry_id_credit)
+                                            .bind(&tx_id)
+                                            .bind(total_amount)
+                                            .execute(&mut *tx).await;
+
+                                        // 4. Update account balance
+                                        let _ = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = 'default_revenue'")
+                                            .bind(total_amount)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *tx).await;
+
                                         let _ = tx.commit().await;
                                     }
                                 }
