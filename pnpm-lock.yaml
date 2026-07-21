@@ -6,14 +6,12 @@ settings:
 
 overrides:
   '@modelcontextprotocol/sdk': 1.29.0
-  axios: 1.18.0
   brace-expansion: 5.0.7
-  esbuild@>=0.27.3 <0.28.1: 0.28.1
+  esbuild@0.28.0: 0.28.1
   form-data: 4.0.6
   js-yaml: 4.3.0
-  postcss: 8.5.19
+  postcss: 8.5.15
   undici: 7.28.0
-  ws: 6.2.4
   ws@>=6.0.0 <6.2.4: 6.2.4
 
 importers:
@@ -143,7 +141,7 @@ importers:
         version: 4.1.9(vitest@4.1.10)
       autoprefixer:
         specifier: ^10.5.0
-        version: 10.5.0(postcss@8.5.19)
+        version: 10.5.0(postcss@8.5.15)
       c8:
         specifier: ^11.0.0
         version: 11.0.0
@@ -169,8 +167,8 @@ importers:
         specifier: ^1.61.1
         version: 1.61.1
       postcss:
-        specifier: 8.5.19
-        version: 8.5.19
+        specifier: 8.5.15
+        version: 8.5.15
       react-dom:
         specifier: ^19.2.5
         version: 19.2.7(react@19.2.7)
@@ -306,7 +304,7 @@ importers:
         version: 8.21.0
       postcss-loader:
         specifier: ^8.2.1
-        version: 8.2.1(postcss@8.5.19)(typescript@5.9.3)
+        version: 8.2.1(postcss@8.5.15)(typescript@5.9.3)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -361,7 +359,7 @@ importers:
         version: 4.1.9(vitest@4.1.10)
       autoprefixer:
         specifier: ^10.5.0
-        version: 10.5.0(postcss@8.5.19)
+        version: 10.5.0(postcss@8.5.15)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -369,8 +367,8 @@ importers:
         specifier: ^15.5.16
         version: 15.5.20(@babel/core@7.29.7)(@playwright/test@1.61.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       postcss:
-        specifier: 8.5.19
-        version: 8.5.19
+        specifier: 8.5.15
+        version: 8.5.15
       tailwindcss:
         specifier: ^3.4.19
         version: 3.4.19(tsx@4.22.4)
@@ -2072,7 +2070,7 @@ packages:
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
     peerDependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
 
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
@@ -3364,20 +3362,20 @@ packages:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
 
   postcss-js@4.1.0:
     resolution: {integrity: sha512-oIAOTqgIo7q2EOwbhb8UalYePMvYoIeRY2YKntdpFQXNosSu3vLrniGgmH9OKs/qAkfoj5oB3le/7mINW1LCfw==}
     engines: {node: ^12 || ^14 || >= 16}
     peerDependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
 
   postcss-load-config@6.0.1:
     resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
     engines: {node: '>= 18'}
     peerDependencies:
       jiti: '>=1.21.0'
-      postcss: 8.5.19
+      postcss: 8.5.15
       tsx: ^4.8.1
       yaml: ^2.4.2
     peerDependenciesMeta:
@@ -3395,7 +3393,7 @@ packages:
     engines: {node: '>= 18.12.0'}
     peerDependencies:
       '@rspack/core': 0.x || ^1.0.0 || ^2.0.0-0
-      postcss: 8.5.19
+      postcss: 8.5.15
       webpack: ^5.0.0
     peerDependenciesMeta:
       '@rspack/core':
@@ -3407,7 +3405,7 @@ packages:
     resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
     engines: {node: '>=12.0'}
     peerDependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
 
   postcss-selector-parser@6.1.4:
     resolution: {integrity: sha512-bIoJLOmjCO1S9XdY/DcnR5hJxvrDir1PbGChrzXG3vw0/FOliy/fA3dmdhQ441kah4gKv+TwckGzex6wNS5cnQ==}
@@ -3416,8 +3414,8 @@ packages:
   postcss-value-parser@4.2.0:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
 
-  postcss@8.5.19:
-    resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
+  postcss@8.5.15:
+    resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres-array@2.0.0:
@@ -4288,6 +4286,18 @@ packages:
     peerDependencies:
       bufferutil: ^4.0.1
       utf-8-validate: ^5.0.2
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
+  ws@8.21.1:
+    resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
     peerDependenciesMeta:
       bufferutil:
         optional: true
@@ -5647,7 +5657,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.3.0
       '@tailwindcss/oxide': 4.3.0
-      postcss: 8.5.19
+      postcss: 8.5.15
       tailwindcss: 4.3.0
 
   '@testing-library/dom@10.4.1':
@@ -6099,13 +6109,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  autoprefixer@10.5.0(postcss@8.5.19):
+  autoprefixer@10.5.0(postcss@8.5.15):
     dependencies:
       browserslist: 4.28.2
       caniuse-lite: 1.0.30001793
       fraction.js: 5.3.4
       picocolors: 1.1.1
-      postcss: 8.5.19
+      postcss: 8.5.15
       postcss-value-parser: 4.2.0
 
   available-typed-arrays@1.0.7:
@@ -6848,7 +6858,7 @@ snapshots:
       type-fest: 5.7.0
       widest-line: 6.0.0
       wrap-ansi: 10.0.0
-      ws: 6.2.4
+      ws: 8.21.1
       yoga-layout: 3.2.1
     optionalDependencies:
       '@types/react': 19.2.14
@@ -6882,7 +6892,7 @@ snapshots:
       type-fest: 5.7.0
       widest-line: 6.0.0
       wrap-ansi: 10.0.0
-      ws: 6.2.4
+      ws: 8.21.1
       yoga-layout: 3.2.1
     optionalDependencies:
       '@types/react': 19.2.16
@@ -7191,7 +7201,7 @@ snapshots:
       '@next/env': 15.5.20
       '@swc/helpers': 0.5.15
       caniuse-lite: 1.0.30001793
-      postcss: 8.5.19
+      postcss: 8.5.15
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       styled-jsx: 5.1.6(@babel/core@7.29.7)(react@18.3.1)
@@ -7216,7 +7226,7 @@ snapshots:
       '@swc/helpers': 0.5.15
       baseline-browser-mapping: 2.10.33
       caniuse-lite: 1.0.30001793
-      postcss: 8.5.19
+      postcss: 8.5.15
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
       styled-jsx: 5.1.6(react@19.2.7)
@@ -7392,38 +7402,38 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  postcss-import@15.1.0(postcss@8.5.19):
+  postcss-import@15.1.0(postcss@8.5.15):
     dependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
       postcss-value-parser: 4.2.0
       read-cache: 1.0.0
       resolve: 1.22.12
 
-  postcss-js@4.1.0(postcss@8.5.19):
+  postcss-js@4.1.0(postcss@8.5.15):
     dependencies:
       camelcase-css: 2.0.1
-      postcss: 8.5.19
+      postcss: 8.5.15
 
-  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.19)(tsx@4.22.4):
+  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.15)(tsx@4.22.4):
     dependencies:
       lilconfig: 3.1.3
     optionalDependencies:
       jiti: 1.21.7
-      postcss: 8.5.19
+      postcss: 8.5.15
       tsx: 4.22.4
 
-  postcss-loader@8.2.1(postcss@8.5.19)(typescript@5.9.3):
+  postcss-loader@8.2.1(postcss@8.5.15)(typescript@5.9.3):
     dependencies:
       cosmiconfig: 9.0.2(typescript@5.9.3)
       jiti: 2.7.0
-      postcss: 8.5.19
+      postcss: 8.5.15
       semver: 7.8.2
     transitivePeerDependencies:
       - typescript
 
-  postcss-nested@6.2.0(postcss@8.5.19):
+  postcss-nested@6.2.0(postcss@8.5.15):
     dependencies:
-      postcss: 8.5.19
+      postcss: 8.5.15
       postcss-selector-parser: 6.1.4
 
   postcss-selector-parser@6.1.4:
@@ -7433,7 +7443,7 @@ snapshots:
 
   postcss-value-parser@4.2.0: {}
 
-  postcss@8.5.19:
+  postcss@8.5.15:
     dependencies:
       nanoid: 3.3.12
       picocolors: 1.1.1
@@ -8101,11 +8111,11 @@ snapshots:
       normalize-path: 3.0.0
       object-hash: 3.0.0
       picocolors: 1.1.1
-      postcss: 8.5.19
-      postcss-import: 15.1.0(postcss@8.5.19)
-      postcss-js: 4.1.0(postcss@8.5.19)
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.19)(tsx@4.22.4)
-      postcss-nested: 6.2.0(postcss@8.5.19)
+      postcss: 8.5.15
+      postcss-import: 15.1.0(postcss@8.5.15)
+      postcss-js: 4.1.0(postcss@8.5.15)
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.15)(tsx@4.22.4)
+      postcss-nested: 6.2.0(postcss@8.5.15)
       postcss-selector-parser: 6.1.4
       resolve: 1.22.12
       sucrase: 3.35.1
@@ -8317,7 +8327,7 @@ snapshots:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.19
+      postcss: 8.5.15
       rollup: 4.62.0
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -8331,7 +8341,7 @@ snapshots:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.19
+      postcss: 8.5.15
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -8489,6 +8499,8 @@ snapshots:
   ws@6.2.4:
     dependencies:
       async-limiter: 1.0.1
+
+  ws@8.21.1: {}
 
   xml-but-prettier@1.0.1:
     dependencies:
