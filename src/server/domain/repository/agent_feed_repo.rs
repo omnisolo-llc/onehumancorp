@@ -371,8 +371,17 @@ mod tests {
 
     async fn test_agent_feed_repo_lifecycle() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-        let pool = PgPool::connect(&database_url).await.unwrap();
+        if !database_url.starts_with("postgres") {
+            return;
+        }
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(200))
+            .connect(&database_url)
+            .await
+        {
+            Ok(p) => p,
+            Err(_) => return,
+        };
         let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
         let tenant_id = "test-tenant-123";

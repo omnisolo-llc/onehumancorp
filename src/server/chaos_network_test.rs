@@ -5,7 +5,7 @@ mod chaos_network_tests {
     use tokio::net::TcpListener;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_network_packet_drops_with_retry() {
         // Start a mock local echo server that drops some connections
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

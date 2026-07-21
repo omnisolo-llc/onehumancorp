@@ -7,6 +7,7 @@ pub mod orchestration;
 pub mod peer_identity;
 pub mod postgres_store;
 pub mod sqlite_store;
+pub mod mysql_store;
 pub mod user_repository;
 pub mod grpc;
 pub mod http;

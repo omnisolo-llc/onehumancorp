@@ -115,7 +115,7 @@ features = ["bundled-sqlcipher"]
 
 [dependencies.sqlx]
 version = "0.8"
-features = [ "postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros",]
+features = [ "postgres", "sqlite", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros",]
 
 [dependencies.opentelemetry]
 version = "0.32"

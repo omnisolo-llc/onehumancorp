@@ -17,6 +17,7 @@ rust_library(
         "postgres_store.rs",
         "postgres_test_support.rs",
         "sqlite_store.rs",
+        "mysql_store.rs",
         "user_repository.rs",
         "multitenancy_isolation.rs",
     ],
