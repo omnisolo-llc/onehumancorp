@@ -559,7 +559,7 @@ mod tests {
         assert!(APPROVE_PROPOSAL_SQL.contains("tenant_id = $2"));
 
         let forged_body = serde_json::from_str::<DraftAgentRequest>(
-            r#"{"inquiry":"quote","customer_id":"customer-a","tenant_id":"tenant-b"}"#,
+            r#"{"inquiry":"quote","customer_id":"customer-a","tenant_id":"tenant-b","current_payload":null}"#,
         );
         assert!(
             forged_body.is_err(),
