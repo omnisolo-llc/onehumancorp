@@ -81,10 +81,3 @@ CREATE POLICY tenant_isolation_supplier_invoices ON supplier_invoices
 CREATE POLICY tenant_isolation_factoring_discounts ON factoring_discounts
     USING (tenant_id = current_setting('app.current_tenant', true))
     WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
-
--- Grant permissions for RLS roles (if roles exist)
-GRANT SELECT, INSERT, UPDATE, DELETE ON credit_facilities TO ohc_user, ohc_bypassrls;
-GRANT SELECT, INSERT, UPDATE, DELETE ON vendor_relations TO ohc_user, ohc_bypassrls;
-GRANT SELECT, INSERT, UPDATE, DELETE ON supplier_invoices TO ohc_user, ohc_bypassrls;
-GRANT SELECT, INSERT, UPDATE, DELETE ON factoring_discounts TO ohc_user, ohc_bypassrls;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ledger_sweep_configs TO ohc_user, ohc_bypassrls;

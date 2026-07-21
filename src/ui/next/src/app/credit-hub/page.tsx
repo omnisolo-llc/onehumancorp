@@ -76,23 +76,11 @@ export default function CreditHubPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Auth headers helper
-  const getAuthHeaders = () => {
-    if (typeof window === 'undefined') return {};
-    const token = localStorage.getItem('token') || '';
-    const tenantId = localStorage.getItem('tenant_id') || 'default_tenant';
-    return {
-      'Authorization': `Bearer ${token}`,
-      'x-tenant-id': tenantId,
-      'Content-Type': 'application/json'
-    };
-  };
-
   // Fetch initial data
   const fetchData = async () => {
     try {
       setLoading(true);
-      const headers = getAuthHeaders();
+      const headers = { 'Content-Type': 'application/json' };
 
       // Fetch capacity
       const capRes = await fetch('/api/v1/ui/credit/capacity', { headers });
@@ -128,7 +116,7 @@ export default function CreditHubPage() {
     try {
       const response = await fetch('/api/v1/ui/credit/negotiate', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vendor_relation_id: selectedVendorId })
       });
       if (response.ok) {
@@ -150,7 +138,7 @@ export default function CreditHubPage() {
     try {
       const response = await fetch('/api/v1/ui/credit/sweep', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           supplier_invoice_id: sweepInvoiceId,
           sales_amount: sweepSalesAmount
@@ -174,7 +162,7 @@ export default function CreditHubPage() {
     try {
       const response = await fetch('/api/v1/ui/credit/factor', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_invoice_id: clientInvoiceId,
           invoice_amount: invoiceAmount
