@@ -111,7 +111,12 @@ async fn test_setup_health_check_endpoint() {
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body.get("status").unwrap(), "ready");
 
-    // Test cloud (should fail since we didn't provision it)
+    // Create a dummy file to block directory creation, simulating provisioning failure for cloud mode
+    let _ = std::fs::remove_dir_all(".ohc-cloud-data");
+    let _ = std::fs::remove_file(".ohc-cloud-data");
+    std::fs::write(".ohc-cloud-data", "dummy file").unwrap();
+
+    // Test cloud (should fail since it cannot write directories)
     let response = app.clone()
         .oneshot(Request::builder().uri("/setup-health?mode=cloud").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
         .await
@@ -123,5 +128,6 @@ async fn test_setup_health_check_endpoint() {
     assert_eq!(body.get("status").unwrap(), "error");
 
     // Clean up
+    let _ = std::fs::remove_file(".ohc-cloud-data");
     std::fs::remove_dir_all(".ohc-local-data").unwrap();
 }

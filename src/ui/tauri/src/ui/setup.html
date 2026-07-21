@@ -288,11 +288,13 @@
           try {
             if (window.__TAURI__) {
               const res = await window.__TAURI__.core.invoke('process_intake', { input: prompt });
-              // Fill out the state with the real backend response
-              state.name = res.business_name || '';
-              state.bio = prompt;
-              state.type = res.business_type || '';
-              saveState();
+              // Process real backend response
+              if (res) {
+                 state.name = res.business_name || '';
+                 state.bio = prompt;
+                 state.type = res.business_type || '';
+                 saveState();
+              }
             } else {
               // Real backend call
               const res = await fetch('/api/v1/onboarding/start_zero_click', {

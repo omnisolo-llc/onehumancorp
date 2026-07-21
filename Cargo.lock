@@ -8475,10 +8475,12 @@ dependencies = [
  "sha2",
  "sqlx",
  "temp-env",
+ "tempfile",
  "tokio",
  "tonic 0.12.3",
  "tower 0.5.3",
  "tracing",
+ "uuid",
  "x509-parser",
 ]
 
