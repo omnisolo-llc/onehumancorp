@@ -130,16 +130,23 @@ struct GHError {
 
 pub struct GitHubClient {
     access_token: String,
+    base_url: String,
 }
 
 impl GitHubClient {
     pub fn new(access_token: String) -> Self {
-        Self { access_token }
+        Self {
+            access_token,
+            base_url: BASE_URL.to_string(),
+        }
     }
 
     #[cfg(test)]
-    fn with_base_url_for_test(access_token: String, _base_url: String) -> Self {
-        Self { access_token }
+    fn with_base_url_for_test(access_token: String, base_url: String) -> Self {
+        Self {
+            access_token,
+            base_url,
+        }
     }
 
     #[allow(dead_code)]
@@ -158,7 +165,7 @@ impl GitHubClient {
 
     #[allow(dead_code)]
     fn url(&self, path: &str) -> String {
-        format!("{}{}", BASE_URL, path)
+        format!("{}{}", self.base_url, path)
     }
 
     pub async fn get_repositories(
@@ -169,7 +176,7 @@ impl GitHubClient {
         let token = self.validated_access_token()?;
         let url = format!(
             "{}/user/repos?sort={}&per_page={}",
-            BASE_URL, sort, per_page
+            self.base_url, sort, per_page
         );
 
         let client = get_client();
@@ -199,7 +206,7 @@ impl GitHubClient {
         private: bool,
     ) -> Result<GitHubRepo, String> {
         let token = self.validated_access_token()?;
-        let url = format!("{}/user/repos", BASE_URL);
+        let url = format!("{}/user/repos", self.base_url);
 
         let payload = serde_json::json!({
             "name": name,
@@ -238,7 +245,7 @@ impl GitHubClient {
         let token = self.validated_access_token()?;
         let url = format!(
             "{}/repos/{}/{}/pulls?state={}",
-            BASE_URL, owner, repo, state
+            self.base_url, owner, repo, state
         );
 
         let client = get_client();
@@ -271,7 +278,7 @@ impl GitHubClient {
         body: &str,
     ) -> Result<GHPullRequest, String> {
         let token = self.validated_access_token()?;
-        let url = format!("{}/repos/{}/{}/pulls", BASE_URL, owner, repo);
+        let url = format!("{}/repos/{}/{}/pulls", self.base_url, owner, repo);
 
         let payload = serde_json::json!({
             "title": title,
@@ -312,7 +319,7 @@ impl GitHubClient {
         let token = self.validated_access_token()?;
         let url = format!(
             "{}/repos/{}/{}/issues?state={}&per_page={}",
-            BASE_URL, owner, repo, state, per_page
+            self.base_url, owner, repo, state, per_page
         );
 
         let client = get_client();
@@ -344,7 +351,7 @@ impl GitHubClient {
         labels: &[String],
     ) -> Result<GHIssue, String> {
         let token = self.validated_access_token()?;
-        let url = format!("{}/repos/{}/{}/issues", BASE_URL, owner, repo);
+        let url = format!("{}/repos/{}/{}/issues", self.base_url, owner, repo);
 
         let payload = serde_json::json!({
             "title": title,
@@ -381,7 +388,7 @@ impl GitHubClient {
         path: &str,
     ) -> Result<String, String> {
         let token = self.validated_access_token()?;
-        let url = format!("{}/repos/{}/{}/contents/{}", BASE_URL, owner, repo, path);
+        let url = format!("{}/repos/{}/{}/contents/{}", self.base_url, owner, repo, path);
 
         let client = get_client();
         let res = client

@@ -20,6 +20,7 @@ pub struct SalesforceRecord {
 #[derive(Debug, Deserialize)]
 struct SalesforceQueryResponse {
     #[allow(dead_code)]
+    #[serde(rename = "totalSize")]
     total_size: u32,
     #[allow(dead_code)]
     done: bool,

@@ -24,6 +24,7 @@ pub struct TrelloList {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TrelloCard {
     pub id: String,
     pub name: String,

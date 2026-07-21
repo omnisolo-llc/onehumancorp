@@ -16,6 +16,7 @@ pub struct GAMetricValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GAMetric {
     #[serde(default)]
     pub metric_name: String,
@@ -30,6 +31,7 @@ pub struct GADimensionValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GADimensionHeader {
     #[serde(default)]
     pub dimension_name: String,
@@ -38,12 +40,14 @@ pub struct GADimensionHeader {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GADimensionMetadata {
     #[serde(default)]
     pub api_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GAMetricMetadata {
     #[serde(default)]
     pub api_name: String,
@@ -58,6 +62,7 @@ pub struct GAReportRow {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GAReport {
     #[serde(default)]
     pub dimension_headers: Vec<GADimensionHeader>,
@@ -70,6 +75,7 @@ pub struct GAReport {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GAReportMetadata {
     #[serde(default)]
     pub currency_code: Option<String>,
@@ -110,6 +116,7 @@ pub struct GADimensionRequest {
 pub struct GoogleAnalyticsClient {
     access_token: String,
     property_id: String,
+    base_url: String,
 }
 
 impl GoogleAnalyticsClient {
@@ -117,21 +124,23 @@ impl GoogleAnalyticsClient {
         Self {
             access_token,
             property_id,
+            base_url: BASE_URL.to_string(),
         }
     }
 
     #[cfg(test)]
-    fn with_base_url_for_test(access_token: String, property_id: String, _base_url: String) -> Self {
+    fn with_base_url_for_test(access_token: String, property_id: String, base_url: String) -> Self {
         Self {
             access_token,
             property_id,
+            base_url,
         }
     }
 
     fn property_url(&self, method: &str) -> String {
         format!(
             "{}/properties/{}:{}",
-            BASE_URL,
+            self.base_url,
             self.property_id.trim(),
             method
         )
@@ -466,7 +475,7 @@ mod tests {
             .unwrap();
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with("POST /v1beta/properties/properties/123456:runRealtimeReport HTTP/1.1"));
+        assert!(request.starts_with("POST /properties/properties/123456:runRealtimeReport HTTP/1.1"));
         assert!(
             request.contains("authorization: Bearer test-token")
                 || request.contains("Authorization: Bearer test-token")
