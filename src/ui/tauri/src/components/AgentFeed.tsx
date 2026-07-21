@@ -142,11 +142,11 @@ export const AgentFeed: React.FC = () => {
                     return (
                         <div key={draft.draft_id} className="w-full mb-4">
                             <ReviewDraftQuoteCard
-                                customerName={parsedPayload.customer_name || draft.customer_name || 'Customer'}
-                                projectDescription={parsedPayload.project_description || 'Project'}
+                                customerName={parsedPayload.customer_name || draft.customer_name || ''}
+                                projectDescription={parsedPayload.project_description || ''}
                                 totalCost={parsedPayload.total_cost || 0}
                                 onApprove={() => handleApprove(draft.draft_id)}
-                                onEdit={() => handleEdit(draft.draft_id, "Edited quote placeholder")}
+                                onEdit={() => handleEdit(draft.draft_id, draft.response || "")}
                             />
                         </div>
                     );
