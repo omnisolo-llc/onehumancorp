@@ -9,3 +9,4 @@ pub mod dayone;
 pub mod cli;
 pub mod diagnostics;
 pub mod env_verifier;
+pub mod zero_click_agent;

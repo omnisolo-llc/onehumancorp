@@ -14,6 +14,7 @@ exports_files(
         "provisioner.rs",
         "validation.rs",
         "wizard.rs",
+        "zero_click_agent.rs",
     ],
     visibility = ["//visibility:public"],
 )
