@@ -47,7 +47,7 @@ export default function VerificationLoopsPage() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div className="glassmorphism bg-blue-50/60 backdrop-blur-[40px] saturate-[200%] border border-blue-100 p-6 shadow-sm rounded-3xl">
+        <div className="glassmorphism bg-blue-50/60 backdrop-blur-[40px] saturate-[210%] border border-blue-100 p-6 shadow-sm rounded-3xl">
           <h2 className="text-xl font-semibold text-blue-900 mb-3 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             Guides (Feedforward)
@@ -58,7 +58,7 @@ export default function VerificationLoopsPage() {
           </ul>
         </div>
 
-        <div className="glassmorphism bg-purple-50/60 backdrop-blur-[40px] saturate-[200%] border border-purple-100 p-6 shadow-sm rounded-3xl">
+        <div className="glassmorphism bg-purple-50/60 backdrop-blur-[40px] saturate-[210%] border border-purple-100 p-6 shadow-sm rounded-3xl">
           <h2 className="text-xl font-semibold text-purple-900 mb-3 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Sensors (Feedback)
@@ -71,7 +71,7 @@ export default function VerificationLoopsPage() {
         </div>
       </div>
 
-      <div className="glassmorphism bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/50 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-3xl space-y-6">
+      <div className="glassmorphism bg-white/60 backdrop-blur-[40px] saturate-[210%] border border-white/50 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-3xl space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Task Context (Task definition for LLM Judge)

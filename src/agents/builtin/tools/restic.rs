@@ -23,7 +23,13 @@ impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
         let action = args.action.as_str();
 
         let repo = std::env::var("RESTIC_REPOSITORY").unwrap_or_else(|_| "/tmp/restic-repo".to_string());
-        let password = std::env::var("RESTIC_PASSWORD").unwrap_or_else(|_| "dummy_password".to_string());
+        let password = std::env::var("RESTIC_PASSWORD").map_err(|_| {
+            ToolError::LlmRecoverable(
+                "RESTIC_PASSWORD environment variable is not set. \
+                 Set RESTIC_PASSWORD to enable backup operations."
+                    .to_string(),
+            )
+        })?;
 
         let timeout = Duration::from_secs(300);
 
@@ -117,5 +123,83 @@ pub fn restic_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             "required": ["action"]
         }),
         execute: Arc::new(PydanticAdapter::new(ResticExecutor { runner })),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    struct MockRunner;
+
+    #[async_trait::async_trait]
+    impl crate::runner::CommandRunner for MockRunner {
+        async fn run(
+            &self,
+            _program: &str,
+            _args: &[&str],
+            _current_dir: Option<&std::path::Path>,
+            _envs: Vec<(String, String)>,
+        ) -> std::io::Result<std::process::Output> {
+            Ok(std::process::Output {
+                status: std::process::ExitStatus::default(),
+                stdout: b"ok".to_vec(),
+                stderr: b"".to_vec(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_missing_restic_password_returns_error() {
+        temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
+            let executor = ResticExecutor {
+                runner: Arc::new(MockRunner),
+            };
+            let args = ResticArgs {
+                action: "status".to_string(),
+                target: None,
+                snapshot_id: None,
+            };
+            let result = executor.execute_typed(args).await;
+            assert!(result.is_err(), "Should error when RESTIC_PASSWORD is not set");
+            match result.unwrap_err() {
+                ToolError::LlmRecoverable(msg) => {
+                    assert!(msg.contains("RESTIC_PASSWORD"), "Error should mention RESTIC_PASSWORD: {}", msg);
+                }
+                other => panic!("Expected LlmRecoverable, got: {:?}", other),
+            }
+        });
+    }
+
+    #[tokio::test]
+    async fn test_cloud_mode_returns_error() {
+        temp_env::with_vars(vec![
+            ("RESTIC_PASSWORD", Some("test_pass")),
+            ("OHC_EXECUTION_MODE", Some("cloud")),
+        ], || {
+            let executor = ResticExecutor {
+                runner: Arc::new(MockRunner),
+            };
+            let args = ResticArgs {
+                action: "status".to_string(),
+                target: None,
+                snapshot_id: None,
+            };
+            let result = executor.execute_typed(args).await;
+            assert!(result.is_err(), "Should error in cloud mode");
+            match result.unwrap_err() {
+                ToolError::LlmRecoverable(msg) => {
+                    assert!(msg.contains("cloud"), "Error should mention cloud mode: {}", msg);
+                }
+                other => panic!("Expected LlmRecoverable, got: {:?}", other),
+            }
+        });
+    }
+
+    #[tokio::test]
+    async fn test_no_hardcoded_dummy_password() {
+        let source = include_str!("restic.rs");
+        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
     }
 }

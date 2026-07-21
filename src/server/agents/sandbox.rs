@@ -62,11 +62,34 @@ impl LocalEnvironment {
         fs::create_dir_all(&home_dir).unwrap_or_default();
         command.env("HOME", home_dir.to_str().unwrap_or(dir_str));
 
-        // Scrub sensitive environment variables
-        command.env_remove("OHC_API_KEY");
-        command.env_remove("GH_TOKEN");
-        command.env_remove("GITHUB_TOKEN");
-        command.env_remove("OTEL_EXPORTER_OTLP_HEADERS");
+        // Scrub sensitive environment variables to prevent secrets leaking into sandboxed commands
+        for var in &[
+            "OHC_API_KEY",
+            "GH_TOKEN",
+            "GITHUB_TOKEN",
+            "OTEL_EXPORTER_OTLP_HEADERS",
+            "OHC_SQLITE_KEY",
+            "OHC_SQLITE_ENCRYPTION_KEY",
+            "JWT_SECRET",
+            "MINIMAX_API_KEY",
+            "OPENAI_API_KEY",
+            "GEMINI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "STRIPE_API_KEY",
+            "STRIPE_SECRET_KEY",
+            "SENDGRID_API_KEY",
+            "TWILIO_AUTH_TOKEN",
+            "RESTIC_PASSWORD",
+            "MERCADOPAGO_ACCESS_TOKEN",
+            "OHC_POWERSYNC_PRIV_KEY",
+            "DATABASE_URL",
+            "OHC_DATABASE_URL",
+            "REDIS_URL",
+            "VALKEY_URL",
+            "NATS_URL",
+        ] {
+            command.env_remove(var);
+        }
 
         let rusage_start = {
             let mut rusage = std::mem::MaybeUninit::<libc::rusage>::uninit();

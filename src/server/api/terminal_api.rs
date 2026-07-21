@@ -286,7 +286,7 @@ pub async fn reserve_inventory_handler(
     };
 
     let service = crate::services::inventory::InventoryService::new(
-        hub.redis_client.clone()
+        hub.redis_client()
     );
 
     match service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 }).await {
@@ -714,7 +714,7 @@ pub async fn commit_inventory_handler(
     };
 
     let service = crate::services::inventory::InventoryService::new(
-        hub.redis_client.clone()
+        hub.redis_client()
     );
 
     match service.commit_inventory(&tenant_id, &req_data.product_id, req_data.quantity, &req_data.lock_id).await {
@@ -751,7 +751,7 @@ pub async fn commit_inventory_handler(
                             topic: "pos_sales".to_string(),
                             payload: serde_json::to_vec(&event).unwrap_or_default(),
                             timestamp: chrono::Utc::now().timestamp(),
-                        });
+                        }).await;
 
                         // Create an agent action request for the Operations Agent
                         let action_req_id = uuid::Uuid::new_v4().to_string();
@@ -835,7 +835,7 @@ pub async fn create_payment_intent_handler(
     if let Some(product_id) = &req_data.product_id {
         let quantity = req_data.quantity.unwrap_or(1);
         let service = crate::services::inventory::InventoryService::new(
-            hub.redis_client.clone()
+            hub.redis_client()
         );
         match service.reserve_inventory(&tenant_id, product_id, quantity, 15).await {
             Ok(result) => {
@@ -921,7 +921,7 @@ pub async fn create_payment_intent_handler(
                 if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                     let quantity = req_data.quantity.unwrap_or(1);
                     let service = crate::services::inventory::InventoryService::new(
-                        hub.redis_client.clone()
+                        hub.redis_client()
                     );
                     if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
                         tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
@@ -934,7 +934,7 @@ pub async fn create_payment_intent_handler(
             if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                 let quantity = req_data.quantity.unwrap_or(1);
                 let service = crate::services::inventory::InventoryService::new(
-                    hub.redis_client.clone()
+                    hub.redis_client()
                 );
                 if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
                     tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
@@ -1132,7 +1132,7 @@ pub async fn capture_payment_intent_handler(
                         let quantity = req_data.quantity.unwrap_or(1);
                         let lock_id = req_data.lock_id.clone().unwrap_or_default();
                         let service = crate::services::inventory::InventoryService::new(
-                            hub.redis_client.clone()
+                            hub.redis_client()
                         );
                         match service.commit_inventory(&tenant_id, product_id, quantity, &lock_id).await {
                             Ok(res) if !res.success => {

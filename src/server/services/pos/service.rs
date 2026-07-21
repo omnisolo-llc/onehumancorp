@@ -63,7 +63,7 @@ impl MyPosService {
             topic: "pos_sales".to_string(),
             payload: serde_json::to_vec(&evt).unwrap_or_default(),
             timestamp: chrono::Utc::now().timestamp(),
-        });
+        }).await;
 
         Ok(())
     }

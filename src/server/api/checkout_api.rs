@@ -44,7 +44,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(cart) = &mut updated_cart_payload {
         if let Some(items) = cart.as_array_mut() {
-            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
             let ttl = if req_data.r#type == "IN_PERSON" { 15 } else { 300 };
 
             for item in items {
@@ -100,7 +100,7 @@ pub async fn create_checkout_session_handler(
     // Redlock inventory reservation in checkout flow
     if let Some(cart) = &req_data.cart_payload {
         if let Some(items) = cart.get("items").and_then(|i| i.as_array()) {
-            let service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            let service = crate::services::inventory::InventoryService::new(hub.redis_client());
             for item in items {
                 if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
                     let quantity = item.get("quantity").and_then(|q| q.as_i64()).unwrap_or(1) as i32;

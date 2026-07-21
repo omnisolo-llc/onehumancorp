@@ -1,5 +1,6 @@
 use sqlx::Row;
 pub mod rag_sync;
+pub mod redis_pool;
 pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
@@ -113,7 +114,7 @@ pub fn get_redis_client() -> Option<redis::Client> {
         return None;
     }
     REDIS_CLIENT.get_or_init(|| {
-        std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+        crate::redis_pool::get_redis_client()
     }).clone()
 }
 
@@ -1556,8 +1557,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let agent_id = req.agent_id.clone();
 
-        let rx = self.hub.subscribe(agent_id.clone());
-        let drained = self.hub.get_inbox(&agent_id);
+        let rx = self.hub.subscribe(agent_id.clone()).await;
+        let drained = self.hub.get_inbox(&agent_id).await;
 
         let drained_stream = tokio_stream::iter(drained.into_iter().map(Ok));
 
@@ -1729,7 +1730,7 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
         static COST_DASHBOARD_CACHE: std::sync::OnceLock<server_utils::cache::HybridCache<::server_ohc::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
-        let cache = COST_DASHBOARD_CACHE.get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        let cache = COST_DASHBOARD_CACHE.get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client()));
         let cache_key = format!("cost_dashboard:{}", tenant_id);
         if let Some(cached) = cache.get(&cache_key).await {
             return Ok(tonic::Response::new(cached));
@@ -1990,7 +1991,7 @@ impl HubService for MyHubService {
         ::server_auth::orchestration::authorize_register_agent(auth_info, request.get_ref())?;
         let req = request.into_inner();
         if let Some(agent) = req.agent {
-            self.hub.register_agent(agent);
+            self.hub.register_agent(agent).await;
             Ok(Response::new(RegisterAgentResponse { success: true }))
         } else {
             Err(Status::invalid_argument("agent is required"))
@@ -2024,7 +2025,7 @@ impl HubService for MyHubService {
         request: Request<OpenMeetingRequest>,
     ) -> Result<Response<MeetingRoom>, Status> {
         let req = request.into_inner();
-        let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda);
+        let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda).await;
         Ok(Response::new(meeting))
     }
 
@@ -2034,7 +2035,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
-            match self.hub.clone().publish(msg) {
+            match self.hub.clone().publish(msg).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -2049,7 +2050,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         if let Some(task) = req.task {
-            match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
+            match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task).await {
                 Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -2606,12 +2607,12 @@ async fn get_pending_approvals(
             return Err(Status::invalid_argument("task_id and target_role are required"));
         }
         
-        if self.hub.get_agent(&req.from_agent_id).is_none() {
+        if self.hub.get_agent(&req.from_agent_id).await.is_none() {
             return Err(Status::invalid_argument("sender agent is not registered"));
         }
 
         // Quota Enforcement
-        if self.hub.get_agents_count() >= 10 {
+        if self.hub.get_agents_count().await >= 10 {
             // Soft limit: allow even if VRAM limit is exceeded
         tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
         }
@@ -2628,7 +2629,7 @@ async fn get_pending_approvals(
             provider_type: "builtin".to_string(),
         };
         
-        self.hub.register_agent(sub_agent);
+        self.hub.register_agent(sub_agent).await;
         
         // Prompt injection checks
         if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
@@ -2657,7 +2658,7 @@ async fn get_pending_approvals(
             meeting_id: String::new(),
         };
         
-        match self.hub.clone().publish(msg) {
+        match self.hub.clone().publish(msg).await {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -2721,7 +2722,7 @@ async fn get_pending_approvals(
         if let Some(event) = req.event {
             self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
 
-            match self.hub.publish_mesh_event(event) {
+            match self.hub.publish_mesh_event(event).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -2741,7 +2742,7 @@ async fn get_pending_approvals(
         
         self.stream_counter.add(1, &[opentelemetry::KeyValue::new("topic", req.topic.clone())]);
 
-        let rx = self.hub.subscribe_mesh_events(req.topic);
+        let rx = self.hub.subscribe_mesh_events(req.topic).await;
         
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
@@ -2771,7 +2772,7 @@ async fn get_pending_approvals(
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
-            match self.hub.publish_teammate_event(req.channel, event) {
+            match self.hub.publish_teammate_event(req.channel, event).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -2789,7 +2790,7 @@ async fn get_pending_approvals(
             return Err(Status::invalid_argument("topic is required"));
         }
         
-        let rx = self.hub.subscribe_teammate_mesh(req.topic);
+        let rx = self.hub.subscribe_teammate_mesh(req.topic).await;
         
         let rx_stream = tokio_stream::wrappers::BroadcastStream::new(rx)
             .map(|res| match res {
@@ -3161,7 +3162,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
 
-    let mut products_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
+    let mut products_rx = hub.subscribe_teammate_mesh("products_inbox".to_string()).await;
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
@@ -7544,7 +7545,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
+        .merge(api::agent_stream::router(hub.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
+        .route("/ws", axum::routing::get(api::unified_ws::unified_ws_handler))
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
@@ -7848,7 +7851,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         while let Some(raw_event) = event_rx.recv().await {
             let event = hub_clone.sanitize_hub_event(raw_event);
-            hub_clone.append_recent_event(event);
+            hub_clone.append_recent_event(event).await;
         }
     });
 
@@ -7994,7 +7997,7 @@ async fn create_ui_bom_item_handler(
                             meeting_id: String::new(),
                         };
 
-                        match hub_for_sched.clone().publish(msg) {
+                        match hub_for_sched.clone().publish(msg).await {
                             Ok(_) => {
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
@@ -8015,7 +8018,7 @@ async fn create_ui_bom_item_handler(
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
-    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client.clone());
+    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client());
 
     let mut grpc_server = Server::builder();
     if let Some(tls_config) = grpc_tls_config {
@@ -8040,7 +8043,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
-        .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
+        .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))

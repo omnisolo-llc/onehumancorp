@@ -69,7 +69,7 @@ export default function ViralROICalculatorPage() {
             <p className="text-gray-600">Embed a smart ROI calculator on your site to capture leads and drive sales. Built-in viral loop helps you acquire new customers!</p>
           </div>
 
-          <div className="p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/40 rounded-3xl space-y-6">
+          <div className="p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-3xl space-y-6">
 
             <div>
               <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-2">Service or Product Name</label>
@@ -129,7 +129,7 @@ export default function ViralROICalculatorPage() {
 
           </div>
 
-          <div className="p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/40 rounded-3xl">
+          <div className="p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-3xl">
              <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Your Embed Code</h3>
              <p className="text-sm text-gray-600 mb-4">Copy this code and paste it into your website builder (Shopify, WordPress, Webflow, etc).</p>
 

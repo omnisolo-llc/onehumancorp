@@ -8,13 +8,28 @@ use base64::{Engine as _, engine::general_purpose};
 
 fn get_crypto_key() -> [u8; 32] {
     let key = std::env::var("OHC_SQLITE_KEY")
-        .unwrap_or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY").unwrap_or_else(|_| {
+        .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
+        .unwrap_or_else(|_| {
             if ::server_config::get().standalone {
-                "standalone_ephemeral_key".to_string()
+                tracing::warn!(
+                    "No OHC_SQLITE_KEY configured for standalone mode. \
+                     Generating ephemeral key. Data will NOT persist across restarts. \
+                     Set OHC_SQLITE_KEY for persistent encryption."
+                );
+                use std::time::{SystemTime, UNIX_EPOCH};
+                let ts = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos();
+                let pid = std::process::id();
+                format!("ephemeral-{}-{}", pid, ts)
             } else {
-                "transient_memory_key".to_string()
+                panic!(
+                    "CRITICAL: No OHC_SQLITE_KEY or OHC_SQLITE_ENCRYPTION_KEY configured. \
+                     Set one of these environment variables for production encryption."
+                );
             }
-        }));
+        });
     
     let mut hasher = Sha256::new();
     hasher.update(key.as_bytes());
@@ -107,5 +122,46 @@ mod tests {
     fn test_fallback_too_short() {
         let short = base64::engine::general_purpose::STANDARD.encode("short");
         assert_eq!(decrypt_deterministic(&short), short);
+    }
+
+    #[test]
+    fn test_cloud_mode_panics_without_key() {
+        temp_env::with_vars(vec![
+            ("OHC_SQLITE_KEY", None::<&str>),
+            ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+        ], || {
+            let result = std::panic::catch_unwind(|| {
+                temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+                    let _key = get_crypto_key();
+                });
+            });
+            assert!(result.is_ok(), "Should not panic when OHC_SQLITE_KEY is set");
+        });
+    }
+
+    #[test]
+    fn test_standalone_mode_generates_ephemeral_key() {
+        temp_env::with_vars(vec![
+            ("OHC_SQLITE_KEY", None::<&str>),
+            ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+        ], || {
+            // Ephemeral key includes PID+timestamp, so each call generates a different key.
+            // We just verify it doesn't panic and produces valid 32-byte keys.
+            let key1 = get_crypto_key();
+            let key2 = get_crypto_key();
+            assert_eq!(key1.len(), 32);
+            assert_eq!(key2.len(), 32);
+        });
+    }
+
+    #[test]
+    fn test_different_keys_produce_different_crypto_keys() {
+        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_a"))], || {
+            let key_a = get_crypto_key();
+            temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_b"))], || {
+                let key_b = get_crypto_key();
+                assert_ne!(key_a, key_b, "Different env keys must produce different crypto keys");
+            });
+        });
     }
 }

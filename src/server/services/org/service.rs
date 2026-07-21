@@ -18,7 +18,7 @@ pub struct MyOrgService {
 
 impl MyOrgService {
     pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
-        let redis_client = hub.redis_client.clone();
+        let redis_client = hub.redis_client();
         MyOrgService {
             hub,
             settings: RwLock::new(SettingsResponse {
@@ -37,7 +37,7 @@ impl OrgService for MyOrgService {
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
         let cache_key = "org_domains".to_string();
-        let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = DOMAINS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(domains) = cache.get(&cache_key).await {
             return Ok(Response::new(DomainsResponse { domains }));
@@ -78,7 +78,7 @@ impl OrgService for MyOrgService {
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
         let cache_key = "org_marketplace_items".to_string();
-        let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(items) = cache.get(&cache_key).await {
             return Ok(Response::new(MarketplaceItemsResponse { items }));
@@ -120,7 +120,7 @@ impl OrgService for MyOrgService {
                 let org_id_for_summary = org_id_bg.clone();
                 let org_id_for_meetings = org_id_bg.clone();
                 let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
-                    tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
+                    tokio::spawn(async move { hub_for_agents.get_agents_by_org(&org_id_for_agents).await }),
                     tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
                     tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
                     tokio::spawn({ let h = hub_bg.clone(); async move { h.tracker().check_agent_quota(&org_id_clone).await } })
@@ -203,7 +203,7 @@ impl OrgService for MyOrgService {
         let org_id_for_summary = org_id.clone();
         let org_id_for_meetings = org_id.clone();
         let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
+            tokio::spawn(async move { hub_for_agents.get_agents_by_org(&org_id_for_agents).await }),
             tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             tokio::spawn({ let h = self.hub.clone(); let o = org_id_clone.clone(); async move { h.tracker().check_agent_quota(&o).await } })

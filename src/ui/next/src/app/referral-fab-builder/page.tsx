@@ -71,7 +71,7 @@ export default function ReferralFabBuilder() {
 
         {/* Editor Section */}
         <div className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-8 shadow-sm">
+          <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-xl border border-gray-100 rounded-3xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold mb-6">Customize Your Floating Action Button</h2>
 
             <div className="space-y-5">

@@ -1,0 +1,17 @@
+[package]
+name = "server_integrations_google_workspace"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+async-trait = "0.1"
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+server_integrations_core = { path = "../core" }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
