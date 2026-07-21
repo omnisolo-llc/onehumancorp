@@ -32,7 +32,7 @@ test.describe('Voice Assistant Offline Sync', () => {
     });
 
     await page.goto('/dashboard');
-    await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
+    await page.evaluate(() => void ('has_onboarded', 'true'));
 
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);

@@ -6,10 +6,8 @@ test.describe('Mobile Agentic Unified Inbox Triage Flow @mobile', () => {
     test('Maya captures a lead, reviews an AI-drafted reply, and approves the quote all from the 375px feed', async ({ page }) => {
         const tenantId = `triage-maya-${Date.now()}`;
 
-        // Instead of API mocks, we'll verify the empty state works correctly out of the box in the live setup.
         await page.goto('/triage?tenant_id=' + tenantId);
 
-        // Verify the 375px native constraints and empty state.
         const caughtUpLocator = page.locator('div').filter({ hasText: "All caught up" }).first();
         await expect(caughtUpLocator).toBeVisible({ timeout: 5000 });
     });
