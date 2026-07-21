@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Client Portal</title>
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent: #0066cc;
+            --bg-body: #f5f5f7;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --glass-bg: rgba(30, 30, 30, 0.7);
+                --glass-border: rgba(255, 255, 255, 0.1);
+                --text-primary: #f5f5f7;
+                --text-secondary: #86868b;
+                --accent: #2997ff;
+                --bg-body: #000000;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 375px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--glass-shadow);
+            margin-bottom: 16px;
+        }
+
+        .action-card {
+            border: 2px solid var(--accent);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .action-card:active {
+            transform: scale(0.98);
+        }
+
+        .action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            background-color: var(--accent);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .action-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .action-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 375px;
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border-top: 1px solid var(--glass-border);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--text-secondary);
+            border-radius: 2px;
+            margin: 0 auto 20px auto;
+            opacity: 0.5;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--text-secondary);
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .signature-pad {
+            width: 100%;
+            height: 120px;
+            border: 1px dashed var(--text-secondary);
+            border-radius: 8px;
+            margin: 16px 0;
+            background: rgba(255,255,255,0.05);
+            touch-action: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Client Portal</h1>
+        <p class="subtitle" id="portal-subtitle">Loading your portal...</p>
+    </header>
+
+    <div id="loading">Loading requests...</div>
+    <div id="approvals-list"></div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal-overlay" id="approval-modal">
+    <div class="modal-content">
+        <div class="modal-handle"></div>
+        <h2 id="modal-title" style="margin-bottom: 8px;">Review Request</h2>
+        <p id="modal-desc" style="color: var(--text-secondary); margin-bottom: 24px; font-size: 15px;"></p>
+
+        <div style="margin-bottom: 16px;">
+            <p style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Please provide your signature to approve:</p>
+            <canvas class="signature-pad" id="signature-canvas"></canvas>
+            <button id="clear-sig" style="background:none; border:none; color:var(--accent); font-size:12px; cursor:pointer;">Clear Signature</button>
+        </div>
+
+        <button class="btn btn-primary" id="btn-approve">Approve & Sign</button>
+        <button class="btn btn-secondary" id="btn-reject" style="margin-top: 8px;">Reject / Request Changes</button>
+        <button class="btn btn-secondary" id="btn-close" style="border:none;">Cancel</button>
+    </div>
+</div>
+
+<script>
+    let currentToken = new URLSearchParams(window.location.search).get('token');
+    if (!currentToken) {
+        // Fallback for path-based routing if used
+        const parts = window.location.pathname.split('/');
+        currentToken = parts[parts.length - 1];
+    }
+
+    let currentApprovalId = null;
+
+    const listEl = document.getElementById('approvals-list');
+    const loadingEl = document.getElementById('loading');
+    const subtitleEl = document.getElementById('portal-subtitle');
+    const modalOverlay = document.getElementById('approval-modal');
+
+    // Signature pad setup
+    const canvas = document.getElementById('signature-canvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let hasSignature = false;
+
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    // Call resize immediately to avoid issues
+    setTimeout(resizeCanvas, 100);
+
+    function getCoordinates(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return {
+                x: e.touches[0].clientX - rect.left,
+                y: e.touches[0].clientY - rect.top
+            };
+        }
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    function startDrawing(e) {
+        isDrawing = true;
+        hasSignature = true;
+        const coords = getCoordinates(e);
+        ctx.beginPath();
+        ctx.moveTo(coords.x, coords.y);
+        e.preventDefault();
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        const coords = getCoordinates(e);
+        ctx.lineTo(coords.x, coords.y);
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-primary');
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        e.preventDefault();
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawing, {passive: false});
+    canvas.addEventListener('touchmove', draw, {passive: false});
+    canvas.addEventListener('touchend', stopDrawing);
+
+    document.getElementById('clear-sig').addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+    });
+
+    async function loadPortal() {
+        if (!currentToken) {
+            loadingEl.style.display = 'none';
+            subtitleEl.innerText = "Invalid link.";
+            listEl.innerHTML = '<div class="empty-state">No valid token provided.</div>';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/v1/client-portal/sessions/${currentToken}`);
+            if (!res.ok) throw new Error('Failed to load session');
+            const data = await res.json();
+
+            loadingEl.style.display = 'none';
+            subtitleEl.innerText = "Welcome back! Here are your pending items.";
+
+            if (data.pending_approvals.length === 0) {
+                listEl.innerHTML = `
+                    <div class="glass-card" style="text-align: center; padding: 40px 20px;">
+                        <div style="font-size: 40px; margin-bottom: 16px;">✨</div>
+                        <h3 style="margin-bottom: 8px;">All caught up!</h3>
+                        <p style="color: var(--text-secondary); font-size: 14px;">You have no pending requests to approve at this time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = data.pending_approvals.map(app => `
+                <div class="glass-card action-card" onclick="openApproval('${app.id}', '${app.request_type}', '${app.description}')">
+                    <div class="action-header">
+                        <span class="badge">Action Required</span>
+                        <span style="font-size: 12px; color: var(--text-secondary);">${app.request_type}</span>
+                    </div>
+                    <h3 class="action-title">Review & Approve: ${app.request_type}</h3>
+                    <p class="action-desc">${app.description.substring(0, 60)}${app.description.length > 60 ? '...' : ''}</p>
+                    <div style="margin-top: 16px; font-weight: 600; color: var(--accent); font-size: 14px;">Tap to review →</div>
+                </div>
+            `).join('');
+
+        } catch (e) {
+            console.error(e);
+            loadingEl.style.display = 'none';
+            subtitleEl.innerText = "Error loading portal";
+            listEl.innerHTML = '<div class="empty-state">This link may have expired or is invalid. Please request a new link from your provider.</div>';
+        }
+    }
+
+    function openApproval(id, type, desc) {
+        currentApprovalId = id;
+        document.getElementById('modal-title').innerText = `Review ${type}`;
+        document.getElementById('modal-desc').innerText = desc;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+        resizeCanvas();
+
+        modalOverlay.classList.add('active');
+    }
+
+    function closeModal() {
+        modalOverlay.classList.remove('active');
+        currentApprovalId = null;
+    }
+
+    document.getElementById('btn-close').addEventListener('click', closeModal);
+
+    async function submitAction(status) {
+        if (!currentApprovalId) return;
+
+        if (status === 'Approved' && !hasSignature) {
+            alert('Please provide a signature to approve.');
+            return;
+        }
+
+        try {
+            const btnApprove = document.getElementById('btn-approve');
+            const originalText = btnApprove.innerText;
+            btnApprove.innerText = "Processing...";
+            btnApprove.disabled = true;
+
+            const res = await fetch(`/api/v1/client-portal/approvals/${currentApprovalId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+
+            if (!res.ok) throw new Error('Failed to submit');
+
+            closeModal();
+            listEl.innerHTML = '';
+            loadingEl.style.display = 'block';
+            await loadPortal(); // Refresh list
+
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred. Please try again.');
+        } finally {
+            const btnApprove = document.getElementById('btn-approve');
+            btnApprove.innerText = "Approve & Sign";
+            btnApprove.disabled = false;
+        }
+    }
+
+    document.getElementById('btn-approve').addEventListener('click', () => submitAction('Approved'));
+    document.getElementById('btn-reject').addEventListener('click', () => submitAction('Rejected'));
+
+    // Init
+    loadPortal();
+
+</script>
+</body>
+</html>

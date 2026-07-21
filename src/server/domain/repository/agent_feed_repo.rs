@@ -364,7 +364,7 @@ impl AgentFeedRepository {
 mod tests {
     use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
     use chrono::Utc;
-    use sqlx::PgPool;
+
     use uuid::Uuid;
 
     #[tokio::test]

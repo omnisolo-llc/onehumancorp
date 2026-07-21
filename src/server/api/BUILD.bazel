@@ -60,6 +60,7 @@ exports_files(
         "invoice.rs",
     "quotes.rs",
         "tool_integrations.rs",
+        "client_portal/mod.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -119,6 +120,7 @@ rust_library(
         "invoice.rs",
     "quotes.rs",
         "tool_integrations.rs",
+        "client_portal/mod.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
     "//src/server/api/ohc_job_queue:srcs",
