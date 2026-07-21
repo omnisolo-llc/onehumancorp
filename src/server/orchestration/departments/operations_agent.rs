@@ -93,12 +93,21 @@ impl Department for OperationsAgent {
             } else {
                 // Fallback to local cache service invalidation if Redis isn't configured
                 let cache = crate::builder::edge::get_edge_cache();
-                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                let t_tag = format!("tenant-id:{}", event.tenant_id);
                 if !product_id.is_empty() {
-                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    let p_tag = format!("entity:product:{}", product_id);
+                    tokio::join!(
+                        cache.invalidate_by_tag(&t_tag),
+                        cdn_cache.invalidate_by_tag(&t_tag),
+                        cache.invalidate_by_tag(&p_tag),
+                        cdn_cache.invalidate_by_tag(&p_tag)
+                    );
+                } else {
+                    tokio::join!(
+                        cache.invalidate_by_tag(&t_tag),
+                        cdn_cache.invalidate_by_tag(&t_tag)
+                    );
                 }
             }
         }
@@ -316,12 +325,21 @@ impl Department for OperationsAgent {
             } else {
                 // Fallback to local cache service invalidation if Redis isn't configured
                 let cache = crate::builder::edge::get_edge_cache();
-                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+                let t_tag = format!("tenant-id:{}", event.tenant_id);
                 if !product_id.is_empty() {
-                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    let p_tag = format!("entity:product:{}", product_id);
+                    tokio::join!(
+                        cache.invalidate_by_tag(&t_tag),
+                        cdn_cache.invalidate_by_tag(&t_tag),
+                        cache.invalidate_by_tag(&p_tag),
+                        cdn_cache.invalidate_by_tag(&p_tag)
+                    );
+                } else {
+                    tokio::join!(
+                        cache.invalidate_by_tag(&t_tag),
+                        cdn_cache.invalidate_by_tag(&t_tag)
+                    );
                 }
             }
         }
