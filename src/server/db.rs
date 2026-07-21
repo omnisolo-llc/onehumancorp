@@ -4378,3 +4378,7 @@ mod e2e_search_workspace_tests {
         }
     }
 }
+
+pub fn get_pool_opt() -> Option<PgPool> {
+    Some(get_pool())
+}
