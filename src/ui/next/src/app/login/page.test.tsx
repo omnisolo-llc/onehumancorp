@@ -9,10 +9,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("next=%2Forders%3Ftab%3Dopen"),
 }));
 
+global.fetch = vi.fn();
+
 describe("login page", () => {
   beforeEach(() => {
     replace.mockReset();
-    vi.mocked(fetch).mockReset();
+    if (vi.isMockFunction(fetch)) vi.mocked(fetch).mockReset();
   });
 
   it("submits controlled credentials and navigates only after success", async () => {

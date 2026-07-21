@@ -1,3 +1,16 @@
+
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+  }),
+  usePathname: () => '',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -20,6 +33,7 @@ vi.mock('../components/AppShell', () => ({
 }));
 
 beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ drafts: [] }) });
   queryState.data = [];
 });
 

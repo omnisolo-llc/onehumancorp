@@ -9,11 +9,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, refresh }),
 }));
 
+global.fetch = vi.fn();
+
 describe("LogoutButton", () => {
   beforeEach(() => {
     replace.mockReset();
     refresh.mockReset();
-    vi.mocked(fetch).mockReset();
+    if (vi.isMockFunction(fetch)) vi.mocked(fetch).mockReset();
   });
 
   it("posts logout once and returns to login", async () => {
