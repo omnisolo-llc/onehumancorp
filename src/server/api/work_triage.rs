@@ -243,14 +243,29 @@ pub async fn get_daily_work_handler(
                             }
                         ).await;
 
+
                         if let Some(cached_feed) = fetched_feed {
                             if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
                                 let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
+                                    let mut ci = serde_json::json!({});
+                                    if let Some(cp) = &i.context_payload {
+                                        ci = cp.0.clone();
+                                    }
+                                    if !ci.as_object().unwrap().contains_key("source") {
+                                        ci.as_object_mut().unwrap().insert("source".to_string(), serde_json::json!(i.event_source));
+                                    }
+
+                                    let mut suggested_actions = serde_json::json!([]);
+                                    if let Some(pa) = i.proposed_action {
+                                        suggested_actions = serde_json::json!([pa.0]);
+                                    }
+
                                     serde_json::json!({
                                         "id": i.id,
                                         "intent": "agent_action",
                                         "status": i.lifecycle_state,
-                                        "suggested_actions": i.proposed_action
+                                        "customer_info": ci,
+                                        "suggested_actions": suggested_actions
                                     })
                                 }).collect();
                                 return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
@@ -259,13 +274,14 @@ pub async fn get_daily_work_handler(
                                     serde_json::json!({
                                         "id": i.id,
                                         "intent": "agent_action",
+                                        "customer_info": { "source": i.event_source },
                                         "status": i.lifecycle_state
                                     })
                                 }).collect();
                                 return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
                             }
                         }
-                        Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
+Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
                     })
                 }
             );
@@ -395,14 +411,29 @@ pub async fn get_daily_work_handler(
                             }
                         ).await;
 
+
                         if let Some(cached_feed) = fetched_feed {
                             if let crate::api::agent_feed::AnyAgentFeedListResponse::Standard(std_resp) = cached_feed {
                                 let items: Vec<serde_json::Value> = std_resp.items.into_iter().map(|i| {
+                                    let mut ci = serde_json::json!({});
+                                    if let Some(cp) = &i.context_payload {
+                                        ci = cp.0.clone();
+                                    }
+                                    if !ci.as_object().unwrap().contains_key("source") {
+                                        ci.as_object_mut().unwrap().insert("source".to_string(), serde_json::json!(i.event_source));
+                                    }
+
+                                    let mut suggested_actions = serde_json::json!([]);
+                                    if let Some(pa) = i.proposed_action {
+                                        suggested_actions = serde_json::json!([pa.0]);
+                                    }
+
                                     serde_json::json!({
                                         "id": i.id,
                                         "intent": "agent_action",
                                         "status": i.lifecycle_state,
-                                        "suggested_actions": i.proposed_action
+                                        "customer_info": ci,
+                                        "suggested_actions": suggested_actions
                                     })
                                 }).collect();
                                 return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
@@ -411,13 +442,14 @@ pub async fn get_daily_work_handler(
                                     serde_json::json!({
                                         "id": i.id,
                                         "intent": "agent_action",
+                                        "customer_info": { "source": i.event_source },
                                         "status": i.lifecycle_state
                                     })
                                 }).collect();
                                 return Ok::<Vec<serde_json::Value>, sqlx::Error>(items);
                             }
                         }
-                        Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
+Ok::<Vec<serde_json::Value>, sqlx::Error>(vec![])
                     })
                 }
             );
