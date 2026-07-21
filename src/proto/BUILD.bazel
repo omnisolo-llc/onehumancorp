@@ -17,6 +17,7 @@ exports_files([
     "skills.proto",
     "invoice.proto",
     "inbox.proto",
+    "ops_manager.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -353,5 +354,18 @@ proto_rust_library(
 proto_library(
     name = "search_proto",
     srcs = ["search.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "ops_manager_proto",
+    srcs = ["ops_manager.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "ops_manager",
+    proto = ":ops_manager_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ohc.ops_manager;
+
+message Entity {
+  string id = 1;
+  string tenant_id = 2;
+  string type = 3;
+  string payload_json = 4;
+}
+
+message CreateEntityRequest {
+  string type = 1;
+  string payload_json = 2;
+}
+
+message UpdateEntityRequest {
+  string id = 1;
+  string type = 2;
+  string payload_json = 3;
+}
+
+message DeleteEntityRequest {
+  string id = 1;
+}
+
+message GetEntityRequest {
+  string id = 1;
+}
+
+message ListEntitiesRequest {
+  string type = 1;
+}
+
+message ListEntitiesResponse {
+  repeated Entity entities = 1;
+}
+
+message EmptyResponse {}
+
+service OperationsManagerService {
+  rpc CreateEntity(CreateEntityRequest) returns (Entity);
+  rpc GetEntity(GetEntityRequest) returns (Entity);
+  rpc UpdateEntity(UpdateEntityRequest) returns (Entity);
+  rpc DeleteEntity(DeleteEntityRequest) returns (EmptyResponse);
+  rpc ListEntities(ListEntitiesRequest) returns (ListEntitiesResponse);
+}
