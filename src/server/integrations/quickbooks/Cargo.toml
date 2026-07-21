@@ -1,0 +1,14 @@
+[package]
+name = "server_integrations_quickbooks"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+server_integrations_core = { path = "../core" }
+serde = { workspace = true }
+tokio = { workspace = true }
