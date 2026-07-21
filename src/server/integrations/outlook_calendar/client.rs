@@ -113,11 +113,13 @@ struct OutlookListResponse<T> {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct OutlookError {
     error: OutlookErrorDetail,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct OutlookErrorDetail {
     message: String,
 }
@@ -136,6 +138,7 @@ impl OutlookCalendarClient {
         Self { access_token }
     }
 
+    #[allow(dead_code)]
     fn auth_header(&self) -> String {
         format!("Bearer {}", self.access_token)
     }

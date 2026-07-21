@@ -48,18 +48,21 @@ struct HubSpotPaging {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct HubSpotPageLink {
     after: String,
     link: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct HubSpotSearchResponse<T> {
     total: u64,
     results: Vec<T>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct HubSpotError {
     status: Option<String>,
     message: Option<String>,

@@ -105,21 +105,25 @@ pub struct GHFileContent {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct GHRepoList {
     items: Vec<GitHubRepo>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct GHPRList {
     items: Vec<GHPullRequest>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct GHIssueList {
     items: Vec<GHIssue>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct GHError {
     message: String,
 }
@@ -138,6 +142,7 @@ impl GitHubClient {
         Self { access_token }
     }
 
+    #[allow(dead_code)]
     fn auth_header(&self) -> String {
         format!("Bearer {}", self.access_token)
     }
@@ -151,6 +156,7 @@ impl GitHubClient {
         }
     }
 
+    #[allow(dead_code)]
     fn url(&self, path: &str) -> String {
         format!("{}{}", BASE_URL, path)
     }
