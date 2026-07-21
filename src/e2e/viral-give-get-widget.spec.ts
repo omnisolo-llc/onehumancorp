@@ -7,7 +7,7 @@ test.describe('Viral Give-Get Widget', () => {
     await adminPage(page, async () => {
       // Load actual dashboard then navigate
       await page.goto('/ui/dashboard.html');
-      await page.locator('#give-get-link').click();
+      await page.locator('#give-get-widget-btn').click();
 
       // Check main element loaded
       await expect(page.locator('h1')).toHaveText('Viral Give-Get Generator');
@@ -31,7 +31,7 @@ test.describe('Viral Give-Get Widget', () => {
     await adminPage(page, async () => {
       // Start from dashboard and click the widget link
       await page.goto('/ui/dashboard.html');
-      await page.locator('#give-get-link').click();
+      await page.locator('#give-get-widget-btn').click();
 
       // Wait for main elements
       await expect(page.locator('h1')).toHaveText('Viral Give-Get Generator');
