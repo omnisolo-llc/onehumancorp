@@ -68,10 +68,16 @@ pub async fn handle_oauth_callback(
                     "Invalid tunnel_base_url: must be HTTPS or localhost.",
                 ).into_response();
             } else {
-                let stripped = tunnel_base_url.strip_prefix("https://").unwrap_or(&tunnel_base_url);
-                let host = stripped.split('/').next().unwrap_or(stripped).split(':').next().unwrap_or(stripped);
-                if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
-                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                if let Ok(url) = url::Url::parse(&tunnel_base_url) {
+                    if let Some(host) = url.host_str() {
+                        if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
+                            return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                        }
+                    } else {
+                        return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                    }
+                } else {
+                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url format").into_response();
                 }
             }
 
@@ -274,4 +280,32 @@ mod tests {
 
         assert!(body_str.contains("token=abc%2Bdef"));
     }
+}
+
+#[tokio::test]
+async fn test_invalid_tunnel_id_ssrf_malicious_domain() {
+    let query = OAuthCallbackQuery {
+        code: "test_code".to_string(),
+        state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+        extra: std::collections::HashMap::new(),
+    };
+
+    temp_env::async_with_vars([("OHC_TUNNEL_BASE_URL", Some("https://attacker-ohc.network"))], async {
+        let response = handle_oauth_callback(axum::extract::Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }).await;
+}
+
+#[tokio::test]
+async fn test_invalid_tunnel_id_ssrf_malicious_domain_port() {
+    let query = OAuthCallbackQuery {
+        code: "test_code".to_string(),
+        state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+        extra: std::collections::HashMap::new(),
+    };
+
+    temp_env::async_with_vars([("OHC_TUNNEL_BASE_URL", Some("https://attacker.com:443?.ohc.network"))], async {
+        let response = handle_oauth_callback(axum::extract::Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }).await;
 }

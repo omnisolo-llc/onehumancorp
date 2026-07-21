@@ -482,42 +482,40 @@ impl DB {
             // Enforce SQLCipher for Standalone mode unconditionally
             let key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
                     let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
-                    if secret_path.exists() {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            use std::os::unix::fs::PermissionsExt;
-                            let mut options = std::fs::OpenOptions::new();
-                            options.read(true);
-                            #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            if let Ok(mut file) = options.open(&secret_path) {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
-                                        perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
-                                            std::process::exit(1);
-                                        }
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        use std::os::unix::fs::PermissionsExt;
+                        let mut options = std::fs::OpenOptions::new();
+                        options.read(true);
+                        #[cfg(target_os = "linux")]
+                        options.custom_flags(0x00020000); // O_NOFOLLOW
+                        #[cfg(target_os = "macos")]
+                        options.custom_flags(0x0100); // O_NOFOLLOW
+                        if let Ok(mut file) = options.open(&secret_path) {
+                            if let Ok(metadata) = file.metadata() {
+                                let mut perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
+                                    perms.set_mode(0o600);
+                                    if let Err(e) = file.set_permissions(perms) {
+                                        tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
+                                        std::process::exit(1);
                                     }
                                 }
-                                use std::io::Read;
-                                let mut bytes = String::new();
-                                if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
+                            }
+                            use std::io::Read;
+                            let mut bytes = String::new();
+                            if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
+                                return bytes.trim().to_string();
                             }
                         }
-                        #[cfg(not(unix))]
-                        {
-                            if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                                if !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return bytes.trim().to_string();
                             }
                         }
                     }
