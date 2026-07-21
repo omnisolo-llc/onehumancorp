@@ -148,7 +148,7 @@ export default function VisualWorkflowPage() {
             className="bg-[#0071E3] hover:bg-[#0077ED] text-white px-6 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] sm:ml-auto w-full sm:w-auto font-medium"
             onClick={runWorkflow}
           >
-            Run Workflow
+            ▶ Run Workflow
           </button>
         </div>
       </div>
