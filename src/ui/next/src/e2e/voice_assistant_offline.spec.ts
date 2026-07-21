@@ -1,38 +1,33 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Voice Assistant Offline Sync', () => {
+  // Use a fixture path for audio to avoid mocking MediaRecorder entirely
+  test.use({
+    launchOptions: {
+      args: [
+        '--use-fake-ui-for-media-stream',
+        '--use-fake-device-for-media-stream',
+      ]
+    }
+  });
+
   test('should queue voice command when offline and display sync status', async ({ page, context }) => {
+    // Grant permissions and use a clean URL so we aren't mutating globally stored state illegaly via JS
     await context.grantPermissions(['microphone']);
 
-    // Mock MediaRecorder
-    await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
-        state = 'inactive';
-        ondataavailable = null;
-        onstop = null;
-        constructor() {}
-        start() {
-          this.state = 'recording';
-          setTimeout(() => {
-            if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
-            }
-          }, 100);
-        }
-        stop() {
-          this.state = 'inactive';
-          if (this.onstop) {
-            this.onstop(new Event('stop'));
-          }
-        }
-      } as any;
-      (navigator as any).mediaDevices = {
-        getUserMedia: () => Promise.resolve(new MediaStream()),
-      };
-    });
-
     await page.goto('/dashboard');
-    await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
+    // We navigate to a view that triggers onboarding cleanly, or click through it if it's there
+    // wait for dashboard to load
+
+    // Instead of using localStorage which triggers mutation scanner, we will just click away from onboarding
+    try {
+        const onboardingClose = page.getByRole('button', { name: 'Close Onboarding' });
+        if (await onboardingClose.isVisible({ timeout: 2000 })) {
+            await onboardingClose.click();
+        }
+    } catch (e) {
+        // ignore
+    }
 
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);
@@ -43,6 +38,9 @@ test.describe('Voice Assistant Offline Sync', () => {
     // Start recording
     await voiceButton.dispatchEvent('mousedown');
     await expect(page.getByText(/Listening.../i)).toBeVisible();
+
+    // Wait a bit to collect data
+    await page.waitForTimeout(500);
 
     // Stop recording
     await voiceButton.dispatchEvent('mouseup');
