@@ -59,7 +59,8 @@ mod tests {
 
     #[test]
     fn test_returns_none_in_standalone_mode() {
-        let _ = std::env::set_var("OHC_STANDALONE_MODE", "true");
+        // SAFETY: test-only, single-threaded
+        unsafe { std::env::set_var("OHC_STANDALONE_MODE", "true") };
         assert!(get_redis_pool().is_none());
     }
 }

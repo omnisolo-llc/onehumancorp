@@ -1,6 +1,15 @@
 use async_trait::async_trait;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarEvent {
+    pub id: Option<String>,
+    pub summary: Option<String>,
+    pub start: Option<String>,
+    pub end: Option<String>,
+}
 
 #[async_trait]
 pub trait GoogleCalendarClientWrapper: Send + Sync {
@@ -52,6 +61,28 @@ impl RealGoogleCalendarClient {
         } else {
             Ok(token)
         }
+    }
+
+    fn parse_free_busy_response(json: &Value) -> Result<String, String> {
+        let mut events: Vec<serde_json::Value> = Vec::new();
+
+        if let Some(calendars) = json["calendars"].as_object() {
+            for (_calendar_id, calendar_data) in calendars {
+                if let Some(slots) = calendar_data["busy"].as_array() {
+                    for slot in slots {
+                        let start = slot["start"].as_str().unwrap_or("").to_string();
+                        let end = slot["end"].as_str().unwrap_or("").to_string();
+                        events.push(serde_json::json!({
+                            "start": start,
+                            "end": end,
+                            "summary": "Busy",
+                        }));
+                    }
+                }
+            }
+        }
+
+        Ok(serde_json::json!({ "events": events }).to_string())
     }
 }
 
@@ -108,7 +139,11 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("{}".to_string()) // In a real app we'd return parsed free/busy data
+                    let json = resp
+                        .json::<Value>()
+                        .await
+                        .map_err(|e| format!("Google Calendar response parse error: {}", e))?;
+                    Self::parse_free_busy_response(&json)
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -157,6 +192,69 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         .await
                         .map_err(|e| format!("Google Calendar API response parse error: {}", e))?;
                     created_event_reference(&json)
+                } else {
+                    Err(format!("Google Calendar API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+}
+
+impl RealGoogleCalendarClient {
+    pub async fn list_events(
+        &self,
+        time_min: &str,
+        time_max: &str,
+        max_results: u32,
+    ) -> Result<Vec<CalendarEvent>, String> {
+        let url = self.calendar_api_url("calendars/primary/events");
+        let token = self.validated_access_token()?;
+
+        let res = self
+            .http_client
+            .get(url)
+            .bearer_auth(token)
+            .query(&[
+                ("timeMin", time_min),
+                ("timeMax", time_max),
+                ("singleEvents", "true"),
+                ("orderBy", "startTime"),
+                ("maxResults", &max_results.to_string()),
+            ])
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    let json = resp
+                        .json::<Value>()
+                        .await
+                        .map_err(|e| format!("Google Calendar response parse error: {}", e))?;
+
+                    let events = json["items"]
+                        .as_array()
+                        .ok_or_else(|| "Missing items array in response".to_string())?
+                        .iter()
+                        .filter_map(|item| {
+                            let start = item["start"]["dateTime"]
+                                .as_str()
+                                .or_else(|| item["start"]["date"].as_str())
+                                .map(|s| s.to_string());
+                            let end = item["end"]["dateTime"]
+                                .as_str()
+                                .or_else(|| item["end"]["date"].as_str())
+                                .map(|s| s.to_string());
+                            Some(CalendarEvent {
+                                id: item["id"].as_str().map(|s| s.to_string()),
+                                summary: item["summary"].as_str().map(|s| s.to_string()),
+                                start,
+                                end,
+                            })
+                        })
+                        .collect();
+                    Ok(events)
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
                 }
@@ -319,5 +417,33 @@ mod tests {
         assert_eq!(error, "Google Calendar access token is required");
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
         assert!(!*request_seen.lock().await);
+    }
+
+    #[tokio::test]
+    async fn get_free_busy_parses_busy_slots() {
+        let response = r#"{
+            "calendars": {
+                "primary": {
+                    "busy": [
+                        { "start": "2026-07-21T09:00:00Z", "end": "2026-07-21T10:00:00Z" },
+                        { "start": "2026-07-21T14:00:00Z", "end": "2026-07-21T15:00:00Z" }
+                    ]
+                }
+            }
+        }"#;
+        let (base_url, _) = start_google_calendar_server(response).await;
+        let client =
+            RealGoogleCalendarClient::with_base_url_for_test("valid-token".to_string(), base_url);
+
+        let result = client
+            .get_free_busy("2026-07-21T00:00:00Z", "2026-07-22T00:00:00Z")
+            .await
+            .unwrap();
+
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        let events = parsed["events"].as_array().unwrap();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["start"], "2026-07-21T09:00:00Z");
+        assert_eq!(events[0]["end"], "2026-07-21T10:00:00Z");
     }
 }
