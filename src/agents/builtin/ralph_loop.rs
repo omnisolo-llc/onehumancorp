@@ -17,6 +17,12 @@ pub struct RalphProgress {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct InitializerOutput {
+    pub features: Vec<String>,
+    pub init_script: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Feature {
     pub name: String,
     pub status: String, // "pending", "in_progress", "completed"
@@ -60,127 +66,136 @@ impl RalphLoop {
 
         // Phase 2: Coding Agent Loop
         while !progress.is_complete {
-            if progress.current_feature_index >= progress.features.len() {
-                progress.is_complete = true;
-                self.save_progress(&progress).await?;
-                break;
-            }
-
-            let feature_name = progress.features[progress.current_feature_index]
-                .name
-                .clone();
-            if progress.features[progress.current_feature_index].status == "completed" {
-                progress.current_feature_index += 1;
-                continue;
-            }
-
-            tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
-
-            // Phase 2 (Coding Agent): Read git logs to orient itself
-            let git_log_output = Command::new("git")
-                .arg("log")
-                .arg("--oneline")
-                .arg("-n")
-                .arg("5")
-                .current_dir(&self.repo_path)
-                .output()
-                .ok()
-                .and_then(|out| String::from_utf8(out.stdout).ok())
-                .unwrap_or_else(|| "No git history available".to_string());
-
-            // Execute the agent run for this specific feature
-            let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
-            );
-
-            // We use a fresh config to keep the context window small (compaction/reset)
-            let mut feature_config = self.config.clone();
-            let scratchpad_context = if !progress.notes.is_empty() {
-                // Fix Gap 2: Bound the context window by only including the last 10 notes.
-                let start_idx = progress.notes.len().saturating_sub(10);
-                let recent_notes = &progress.notes[start_idx..];
-                format!(
-                    "\nStructured Scratchpad Notes:\n- {}",
-                    recent_notes.join("\n- ")
-                )
-            } else {
-                String::new()
-            };
-            feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
-
-            let mut on_event = |event: AgentEvent| {
-                if let AgentEvent::TaskError { error } = event {
-                    tracing::error!("Ralph Loop Feature Error: {}", error);
-                }
-            };
-
-            match self
-                .agent
-                .run(&feature_config, &feature_prompt, &mut on_event)
-                .await
-            {
-                Ok(result) => {
-                    tracing::info!(
-                        "Ralph Loop: Feature {} completed. Result: {}",
-                        feature_name,
-                        result
-                    );
-                    progress.features[progress.current_feature_index].status =
-                        "completed".to_string();
-                    progress
-                        .notes
-                        .push(format!("Completed feature {}: {}", feature_name, result));
-                    progress.current_feature_index += 1;
-                    self.save_progress(&progress).await?;
-
-                    // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git")
-                        .arg("add")
-                        .arg(".")
-                        .current_dir(&self.repo_path)
-                        .output()
-                    {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
-                    let commit_msg = format!("Completed feature: {}", feature_name);
-
-                    let _ = Command::new("git")
-                        .arg("config")
-                        .arg("user.name")
-                        .arg("Ralph Agent")
-                        .current_dir(&self.repo_path)
-                        .output();
-                    let _ = Command::new("git")
-                        .arg("config")
-                        .arg("user.email")
-                        .arg("ralph@example.com")
-                        .current_dir(&self.repo_path)
-                        .output();
-
-                    if let Err(e) = Command::new("git")
-                        .arg("commit")
-                        .arg("-m")
-                        .arg(&commit_msg)
-                        .current_dir(&self.repo_path)
-                        .output()
-                    {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
-                    progress
-                        .notes
-                        .push(format!("Failed feature {}: {}", feature_name, e));
-                    let _ = self.save_progress(&progress).await;
-                    return Err(e);
-                }
-            }
+            self.step_next_feature(&mut progress).await?;
         }
 
         tracing::info!("Ralph Loop completely finished.");
         Ok(())
+    }
+
+
+    pub async fn step_next_feature(
+        &self,
+        progress: &mut RalphProgress,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        if progress.is_complete || progress.current_feature_index >= progress.features.len() {
+            progress.is_complete = true;
+            self.save_progress(&progress).await?;
+            return Ok(false);
+        }
+
+        let feature_name = progress.features[progress.current_feature_index]
+            .name
+            .clone();
+        if progress.features[progress.current_feature_index].status == "completed" {
+            progress.current_feature_index += 1;
+            return Ok(true);
+        }
+
+        tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
+
+        // Phase 2 (Coding Agent): Read git logs to orient itself
+        let git_log_output = Command::new("git")
+            .arg("log")
+            .arg("--oneline")
+            .arg("-n")
+            .arg("5")
+            .current_dir(&self.repo_path)
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .unwrap_or_else(|| "No git history available".to_string());
+
+        // Execute the agent run for this specific feature
+        let feature_prompt = format!(
+            "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
+            progress.task_description, git_log_output, feature_name
+        );
+
+        // We use a fresh config to keep the context window small (compaction/reset)
+        let mut feature_config = self.config.clone();
+        let scratchpad_context = if !progress.notes.is_empty() {
+            // Fix Gap 2: Bound the context window by only including the last 10 notes.
+            let start_idx = progress.notes.len().saturating_sub(10);
+            let recent_notes = &progress.notes[start_idx..];
+            format!(
+                "\nStructured Scratchpad Notes:\n- {}",
+                recent_notes.join("\n- ")
+            )
+        } else {
+            String::new()
+        };
+        feature_config.user_instructions = format!("{}{}", feature_prompt, scratchpad_context);
+
+        let mut on_event = |event: AgentEvent| {
+            if let AgentEvent::TaskError { error } = event {
+                tracing::error!("Ralph Loop Feature Error: {}", error);
+            }
+        };
+
+        match self
+            .agent
+            .run(&feature_config, &feature_prompt, &mut on_event)
+            .await
+        {
+            Ok(result) => {
+                tracing::info!(
+                    "Ralph Loop: Feature {} completed. Result: {}",
+                    feature_name,
+                    result
+                );
+                progress.features[progress.current_feature_index].status =
+                    "completed".to_string();
+                progress
+                    .notes
+                    .push(format!("Completed feature {}: {}", feature_name, result));
+                progress.current_feature_index += 1;
+                self.save_progress(&progress).await?;
+
+                // Phase 2: Commit after completion
+                if let Err(e) = Command::new("git")
+                    .arg("add")
+                    .arg(".")
+                    .current_dir(&self.repo_path)
+                    .output()
+                {
+                    tracing::error!("Phase 2 failed to git add: {}", e);
+                }
+                let commit_msg = format!("Completed feature: {}", feature_name);
+
+                let _ = Command::new("git")
+                    .arg("config")
+                    .arg("user.name")
+                    .arg("Ralph Agent")
+                    .current_dir(&self.repo_path)
+                    .output();
+                let _ = Command::new("git")
+                    .arg("config")
+                    .arg("user.email")
+                    .arg("ralph@example.com")
+                    .current_dir(&self.repo_path)
+                    .output();
+
+                if let Err(e) = Command::new("git")
+                    .arg("commit")
+                    .arg("-m")
+                    .arg(&commit_msg)
+                    .current_dir(&self.repo_path)
+                    .output()
+                {
+                    tracing::error!("Phase 2 failed to git commit: {}", e);
+                }
+                Ok(true)
+            }
+            Err(e) => {
+                tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
+                progress
+                    .notes
+                    .push(format!("Failed feature {}: {}", feature_name, e));
+                let _ = self.save_progress(&progress).await;
+                Err(e)
+            }
+        }
     }
 
     async fn initialize(
@@ -197,7 +212,7 @@ impl RalphLoop {
         tracing::info!("Ralph Loop: Initializing new progress file.");
 
         let breakdown_prompt = format!(
-            "Break down the following task into 3 distinct, manageable features to implement sequentially. Respond strictly with a JSON array of strings representing the feature names. Task: {}",
+            "You are an Initializer Agent. Break down the following task into 3 distinct, manageable features to implement sequentially, and provide a bash initialization script to set up the environment. Respond strictly with a JSON object containing two keys: 'features' (an array of strings) and 'init_script' (a string containing the bash script). Task: {}",
             task
         );
 
@@ -219,13 +234,15 @@ impl RalphLoop {
         }
 
         let mut features = vec![];
-        if let Ok(parsed) = serde_json::from_str::<Vec<String>>(clean_result) {
-            for name in parsed {
+        let mut init_script_content = "#!/bin/bash\n# Ralph Loop Init Script\n".to_string();
+        if let Ok(parsed) = serde_json::from_str::<InitializerOutput>(clean_result) {
+            for name in parsed.features {
                 features.push(Feature {
                     name,
                     status: "pending".to_string(),
                 });
             }
+            init_script_content = parsed.init_script;
         } else {
             features.push(Feature {
                 name: "Step 1".to_string(),
@@ -250,7 +267,7 @@ impl RalphLoop {
         // Phase 1 (Initializer Agent): Setup environment, write init script, initial git commit.
         let init_script_path = self.repo_path.join("init.sh");
         if !init_script_path.exists() {
-            let _ = fs::write(&init_script_path, "#!/bin/bash\n# Ralph Loop Init Script\n").await;
+            let _ = fs::write(&init_script_path, init_script_content).await;
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
@@ -346,7 +363,7 @@ mod tests {
 
             if *count == 1 {
                 Ok(ChatResponse {
-                    message: Message::assistant(r#"["Feat1", "Feat2"]"#),
+                    message: Message::assistant("{\"features\": [\"Feat1\", \"Feat2\"], \"init_script\": \"#!/bin/bash\\n\"}"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
@@ -449,7 +466,7 @@ mod tests {
 
             if *count == 1 {
                 Ok(ChatResponse {
-                    message: Message::assistant(r#"["Feature A"]"#),
+                    message: Message::assistant("{\"features\": [\"Feature A\"], \"init_script\": \"#!/bin/bash\\n\"}"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
@@ -516,7 +533,7 @@ mod tests {
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ChatResponse {
                 message: Message::assistant(
-                    "```json\n[\"Markdown Feature 1\", \"Markdown Feature 2\"]\n```",
+                    "```json\n{\"features\": [\"Markdown Feature 1\", \"Markdown Feature 2\"], \"init_script\": \"#!/bin/bash\\n\"}\n```",
                 ),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
