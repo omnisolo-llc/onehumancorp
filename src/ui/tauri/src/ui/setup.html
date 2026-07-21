@@ -76,7 +76,38 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
-    </style>
+
+      input, select, textarea {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        color: #1D1D1F;
+        padding: 12px;
+        margin-bottom: 12px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .step {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+      @media (prefers-color-scheme: dark) {
+        input, select, textarea {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+        }
+        .step {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+</style>
   </head>
   <body>
     <div class="container glassmorphism">
@@ -125,7 +156,8 @@
 
       <div id="step-admin" class="step">
         <h2>Admin</h2>
-        <input type="text" data-testid="admin-name" placeholder="Admin Name" />
+        <input type="text" id="admin-name" data-testid="admin-name" placeholder="Admin Name" />
+        <div id="admin-name-error" style="display: none; color: #FF3B30; margin-top: 8px;">Admin name is required</div>
         <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
         <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
@@ -337,6 +369,14 @@
                 return; // Stop transition
               }
               document.getElementById('name-error').style.display = 'none';
+            }
+            if (currentStep === 'step-admin') {
+              const adminNameVal = document.getElementById('admin-name').value.trim();
+              if (!adminNameVal) {
+                document.getElementById('admin-name-error').style.display = 'block';
+                return; // Stop transition
+              }
+              document.getElementById('admin-name-error').style.display = 'none';
             }
             goToStep(e.target.dataset.next);
           }

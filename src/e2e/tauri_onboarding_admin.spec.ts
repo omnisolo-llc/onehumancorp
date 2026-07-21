@@ -7,12 +7,12 @@ test.describe('Tauri Onboarding Admin Setup', () => {
     await page.goto(`file://${process.cwd()}/src/ui/tauri/src/ui/setup.html`);
 
     // We expect the setup to redirect or load the initial step
-    await page.waitForSelector('#step-initial .next-step-btn');
-    await page.locator('#step-initial [data-next="step-context"]').click();
+    await page.waitForSelector('#step-intro .next-step-btn');
+    await page.locator('#step-intro [data-next="step-context"]').click();
 
     // Step Context
     await page.waitForSelector('#step-context:not([style*="display: none"])');
-    await page.click('[data-testid="context-local"]');
+    await page.click('[data-testid="context-storefront"]');
     await page.click('#step-context .next-step-btn');
 
     // Step Categories
@@ -39,7 +39,7 @@ test.describe('Tauri Onboarding Admin Setup', () => {
 
     // Step Assistant
     await page.waitForSelector('#step-assistant:not([style*="display: none"])');
-    await page.getByTestId('team-operations').click();
+    await page.getByTestId('team-support').click();
     await page.evaluate(() => {
         const sel = document.getElementById('assistant-tone') as HTMLSelectElement;
         if (sel) {
