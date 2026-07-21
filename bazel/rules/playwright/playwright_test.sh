@@ -84,10 +84,17 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts)
+    /app/src/e2e/*.spec.ts|/app/src/e2e/**/*.spec.ts)
+      printf '%s\n' "${rel#/app/}"
+      ;;
+    src/e2e/*.spec.ts|src/e2e/**/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+    /app/src/ui/next/e2e/*.spec.ts|/app/src/ui/next/src/e2e/*.spec.ts|/app/src/ui/next/e2e/**/*.spec.ts|/app/src/ui/next/src/e2e/**/*.spec.ts)
+      rel="${rel#/app/}"
+      printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
+      ;;
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|src/ui/next/e2e/**/*.spec.ts|src/ui/next/src/e2e/**/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
@@ -369,7 +376,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || docker inspect mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || docker inspect pgvector/pgvector:pg15 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -379,7 +386,7 @@ done
 if [ "$PULL_PG_SUCCESS" = true ]; then
   PULL_VK_SUCCESS=false
   for i in {1..3}; do
-  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1; then
+  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1 || docker inspect mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1 || docker inspect valkey/valkey:8-alpine >/dev/null 2>&1; then
       PULL_VK_SUCCESS=true
       break
     fi
@@ -387,8 +394,11 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
-      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
+    pg_image=$(docker inspect mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 && echo "mirror.gcr.io/pgvector/pgvector:pg15" || echo "pgvector/pgvector:pg15")
+    vk_image=$(docker inspect mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1 && echo "mirror.gcr.io/valkey/valkey:8-alpine" || echo "valkey/valkey:8-alpine")
+
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc "$pg_image"; then
+      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 "$vk_image"
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
