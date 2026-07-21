@@ -40,4 +40,19 @@ describe('Button Component', () => {
     render(<Button className="custom-class">Custom</Button>);
     expect(screen.getByText('Custom')).toHaveClass('custom-class');
   });
+
+  it('uses consistent primary color #0066FF for default variant', () => {
+    render(<Button>Primary</Button>);
+    const btn = screen.getByText('Primary');
+    expect(btn).toHaveClass('bg-[#0066FF]');
+    expect(btn).toHaveClass('text-white');
+    expect(btn).toHaveClass('hover:bg-[#0066FF]/90');
+    // Should not have dark mode color override (was #0071E3)
+    expect(btn.className).not.toMatch(/bg-\[#0071E3\]/);
+  });
+
+  it('uses consistent border-radius rounded-[8px]', () => {
+    render(<Button>Sized</Button>);
+    expect(screen.getByText('Sized')).toHaveClass('rounded-[8px]');
+  });
 });

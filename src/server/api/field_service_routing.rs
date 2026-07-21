@@ -91,7 +91,7 @@ async fn get_today_routes(
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let cache_key = format!("routes_today_{}:{}", tenant_id, mobile_optimized);
-    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client.clone()));
+    let cache = ROUTES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -329,7 +329,7 @@ async fn update_job_status(
                 msg_id: Uuid::new_v4().to_string(),
             };
 
-            if let Err(e) = state.hub.publish_teammate_event("job_status_updates".to_string(), event) {
+            if let Err(e) = state.hub.publish_teammate_event("job_status_updates".to_string(), event).await {
                 tracing::warn!("Failed to publish mesh event for job status change: {}", e);
             }
 

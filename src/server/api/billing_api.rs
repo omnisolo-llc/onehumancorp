@@ -337,7 +337,7 @@ pub async fn create_checkout_session_handler(
     let mut acquired_lock_id = "".to_string();
     if let Some(product_id) = &req.product_id {
             let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
-            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
             match inventory_service.reserve_inventory(&tenant_id, product_id, quantity, ttl).await {
                 Ok(result) => {
                     if !result.success {
@@ -364,7 +364,7 @@ pub async fn create_checkout_session_handler(
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
                 if let Some(product_id) = &req.product_id {
-                        let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+                        let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
                         let _ = inventory_service.release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id).await;
                 }
                 Err(StatusCode::INTERNAL_SERVER_ERROR)

@@ -212,7 +212,7 @@ export default function BuilderPage() {
                         </div>
                       )}
                    </div>
-                   <div className="p-4 bg-white/60 dark:bg-black/40 backdrop-blur-[30px] saturate-[210%]">
+                   <div className="p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%]">
                       <p className="text-xs font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider mb-1">Preview</p>
                       <p className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1 font-inter">{d[0]?.props?.headline || "Storefront Preview"}</p>
                    </div>
@@ -260,7 +260,7 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setStatus("idle");
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] group hover:bg-white/80 dark:hover:bg-black/50"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
                     <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>

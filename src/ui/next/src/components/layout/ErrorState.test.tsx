@@ -28,4 +28,18 @@ describe('ErrorState', () => {
     expect(divElement).toHaveClass('border-[rgba(255,255,255,0.4)]');
     expect(divElement).toHaveClass('dark:border-[rgba(255,255,255,0.1)]');
   });
+
+  it('uses consistent rounded-[16px] border-radius', () => {
+    const { container } = render(<ErrorState message="Radius Check" />);
+    const divElement = container.firstChild as HTMLElement;
+    expect(divElement).toHaveClass('rounded-[16px]');
+    // Should NOT use rounded-xl (old value)
+    expect(divElement.className).not.toMatch(/\brounded-xl\b/);
+  });
+
+  it('uses consistent shadow token', () => {
+    const { container } = render(<ErrorState message="Shadow Check" />);
+    const divElement = container.firstChild as HTMLElement;
+    expect(divElement).toHaveClass('shadow-[0_4px_24px_rgba(0,0,0,0.04)]');
+  });
 });

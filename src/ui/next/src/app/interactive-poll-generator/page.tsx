@@ -104,7 +104,7 @@ export default function InteractivePollGeneratorPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Configuration Panel */}
-          <div className="bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl rounded-2xl p-6 shadow-sm border border-white/20 dark:border-white/10 flex flex-col h-full">
+          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-xl rounded-2xl p-6 shadow-sm border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col h-full">
             <div className="flex-1 overflow-y-auto pr-2 space-y-6">
 
               <div>

@@ -389,7 +389,7 @@ pub async fn bench_agent_snapshot() {
         meeting_id.clone(),
         vec!["test_agent".to_string()],
         "Agenda".to_string(),
-    );
+    ).await;
     for i in 0..50 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -408,7 +408,7 @@ pub async fn bench_agent_snapshot() {
             content: msg.content,
             occurred_at_unix: msg.occurred_at_unix,
             meeting_id: msg.meeting_id,
-        });
+        }).await;
     }
 
     for i in 0..50 {
@@ -419,7 +419,7 @@ pub async fn bench_agent_snapshot() {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
     }
 
     for _ in 0..iterations {
@@ -553,7 +553,7 @@ pub async fn bench_dashboard_snapshot() {
         meeting_id.clone(),
         vec!["test_agent".to_string()],
         "Agenda".to_string(),
-    );
+    ).await;
     for i in 0..5 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -572,7 +572,7 @@ pub async fn bench_dashboard_snapshot() {
             content: msg.content,
             occurred_at_unix: msg.occurred_at_unix,
             meeting_id: msg.meeting_id,
-        });
+        }).await;
     }
 
     for i in 0..5 {
@@ -583,7 +583,7 @@ pub async fn bench_dashboard_snapshot() {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
     }
 
     for _ in 0..iterations {
@@ -826,7 +826,7 @@ pub async fn bench_get_analytics() {
             organization_id: org_id.to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
     }
 
     let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
@@ -834,7 +834,7 @@ pub async fn bench_get_analytics() {
         meeting_id.clone(),
         vec!["agent-0".to_string()],
         "Agenda".to_string(),
-    );
+    ).await;
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
     let iterations = std::env::var("BENCH_ITERATIONS")

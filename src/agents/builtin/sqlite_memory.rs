@@ -101,7 +101,7 @@ impl SqliteMemoryStore {
         limit: usize,
         summarize: bool,
     ) -> Result<Vec<String>, String> {
-        let search_pattern = format!("\"{}\"", query);
+        let search_pattern = format!("\"{}\"", query.replace('"', "\"\""));
         // Using SQLite FTS5 snippet function to highlight matches
         let rows = sqlx::query_as::<_, (String,)>("SELECT snippet(session_messages_fts, -1, '[', ']', '...', 64) FROM session_messages_fts WHERE session_id = ? AND session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
             .bind(session_id)
@@ -156,7 +156,7 @@ impl LongTermMemory for SqliteMemoryStore {
         limit: usize,
         summarize: bool,
     ) -> Result<Vec<String>, String> {
-        let search_pattern = format!("\"{}\"", query);
+        let search_pattern = format!("\"{}\"", query.replace('"', "\"\""));
         // Using SQLite FTS5 snippet function, but omitting the `session_id = ?` filter
         let rows = sqlx::query_as::<_, (String, String)>("SELECT session_id, snippet(session_messages_fts, -1, '[', ']', '...', 64) FROM session_messages_fts WHERE session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
             .bind(&search_pattern)
@@ -284,7 +284,7 @@ impl LongTermMemory for SqliteMemoryStore {
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         // FTS5 session search for long term memory retrieval
-        let search_pattern = format!("\"{}\"", query);
+        let search_pattern = format!("\"{}\"", query.replace('"', "\"\""));
         let rows = sqlx::query_as::<_, (String,)>(
             "SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?",
         )
@@ -374,7 +374,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
     }
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        let search_pattern = format!("\"{}\"", query);
+        let search_pattern = format!("\"{}\"", query.replace('"', "\"\""));
 
         let rows = sqlx::query_as::<_, (String, String, String)>("SELECT session_id, role, content FROM session_messages_fts WHERE session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
             .bind(&search_pattern)
@@ -725,6 +725,82 @@ mod tests {
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].id, id);
         assert_eq!(summaries[0].tenant_id, tenant_id);
+    }
+
+    #[tokio::test]
+    async fn test_fts5_search_sanitizes_double_quotes() {
+        use crate::tools::anthropic_memory::MemoryAccessor;
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(
+                &self,
+                _req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Summary"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![0.1; 1536])
+            }
+        }
+
+        let store = SqliteMemoryStore::new("sqlite::memory:", Arc::new(MockLlm))
+            .await
+            .unwrap();
+
+        store.store_session_message("s1", "user", "Hello world").await.unwrap();
+
+        // Query with embedded double quotes should not cause SQL error
+        let result = MemoryAccessor::search_transcripts(&store, "test\"injection", 10).await;
+        assert!(result.is_ok(), "FTS5 search with embedded quotes should not fail: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_fts5_cross_session_sanitizes_quotes() {
+        use crate::tools::anthropic_memory::MemoryAccessor;
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlm {
+            async fn chat(
+                &self,
+                _req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Summary"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: None,
+                })
+            }
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![0.1; 1536])
+            }
+        }
+
+        let store = SqliteMemoryStore::new("sqlite::memory:", Arc::new(MockLlm))
+            .await
+            .unwrap();
+
+        store.store_session_message("s1", "user", "Test message").await.unwrap();
+
+        // Cross-session search with embedded quotes should not fail
+        let result = MemoryAccessor::search_cross_session_messages(&store, "quote\"attack", 10, false).await;
+        assert!(result.is_ok(), "Cross-session FTS5 with quotes should not fail: {:?}", result.err());
     }
 
     #[tokio::test]

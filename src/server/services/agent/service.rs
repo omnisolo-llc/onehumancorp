@@ -14,7 +14,7 @@ pub struct MyAgentManagerService {
 
 impl MyAgentManagerService {
     pub fn new(hub: Arc<Hub>) -> Self {
-        let redis_client = hub.redis_client.clone();
+        let redis_client = hub.redis_client();
         MyAgentManagerService {
             hub,
             skills: RwLock::new(std::collections::HashMap::new()),
@@ -39,13 +39,13 @@ impl MyAgentManagerService {
         let org_id_clone_for_meetings = org_id.to_string();
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = if mobile_optimized {
             let (r1, r2) = tokio::join!(
-                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await) }),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await })
             );
             (r1, r2, Ok((0.0, 0, vec![])), Ok(vec![]))
         } else {
             tokio::join!(
-                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await) }),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await }),
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
@@ -162,7 +162,7 @@ impl AgentManagerService for MyAgentManagerService {
             provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
 
-        self.hub.register_agent(agent);
+        self.hub.register_agent(agent).await;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
@@ -181,13 +181,14 @@ impl AgentManagerService for MyAgentManagerService {
         let agent = self
             .hub
             .get_agent(&req.agent_id)
+            .await
             .ok_or_else(|| Status::permission_denied("agent does not belong to organization"))?;
         if agent.organization_id != org_id {
             return Err(Status::permission_denied(
                 "agent does not belong to organization",
             ));
         }
-        self.hub.fire_agent(&req.agent_id);
+        self.hub.fire_agent(&req.agent_id).await;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
@@ -209,6 +210,7 @@ impl AgentManagerService for MyAgentManagerService {
             let agent = self
                 .hub
                 .get_agent(agent_id)
+                .await
                 .ok_or_else(|| Status::permission_denied("agent does not belong to organization"))?;
             if agent.organization_id != org_id {
                 return Err(Status::permission_denied(
@@ -217,7 +219,7 @@ impl AgentManagerService for MyAgentManagerService {
             }
         }
 
-        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
+        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task).await
             .map_err(|e| Status::invalid_argument(e))?;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
         self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
@@ -254,7 +256,7 @@ impl AgentManagerService for MyAgentManagerService {
         request: Request<EmptyRequest>,
     ) -> Result<Response<IdentitiesResponse>, Status> {
         let org_id = authenticated_org(&request)?;
-        let agents = self.hub.get_agents_by_org(&org_id);
+        let agents = self.hub.get_agents_by_org(&org_id).await;
         let now = Utc::now();
         let identities = agents.into_iter().map(|a| AgentIdentity {
             agent_id: a.id.clone(),
@@ -328,7 +330,7 @@ impl AgentManagerService for MyAgentManagerService {
         let org_id_clone_for_agents = org_id.clone();
         let org_id_clone_for_meetings = org_id.clone();
         let (agents_res, meetings_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || Arc::new(hub1.get_agents_by_org(&org_id_clone_for_agents))),
+            tokio::spawn(async move { Arc::new(hub1.get_agents_by_org(&org_id_clone_for_agents).await) }),
             tokio::spawn(async move { hub2.get_meetings_by_org(&org_id_clone_for_meetings).await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -442,7 +444,7 @@ mod tests {
             organization_id: "org-a".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
         service
             .hub
             .get_cost_auditor()
@@ -454,7 +456,7 @@ mod tests {
             organization_id: "org-b".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
         service.hub.register_agent(Agent {
             id: "org-a-spoofed-prefix".to_string(),
             name: "Spoofed prefix".to_string(),
@@ -462,7 +464,7 @@ mod tests {
             organization_id: "org-b".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
 
         let identities = service
             .get_identities(request_for_org(EmptyRequest {}, "org-a"))
@@ -541,7 +543,7 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(error.code(), tonic::Code::PermissionDenied);
-        assert!(service.hub.get_agent("org-b-agent").is_some());
+        assert!(service.hub.get_agent("org-b-agent").await.is_some());
     }
 
     #[tokio::test]
@@ -665,9 +667,9 @@ mod benchmark_tests {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
 
-        hub.open_meeting("meeting_1".to_string(), vec!["agent_1".to_string()], "Test Agenda".to_string());
+        hub.open_meeting("meeting_1".to_string(), vec!["agent_1".to_string()], "Test Agenda".to_string()).await;
 
         MyAgentManagerService::new(hub)
     }

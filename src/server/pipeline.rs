@@ -89,7 +89,7 @@ impl Orchestrator {
             meeting_id: String::new(),
         };
         
-        self.hub.clone().publish(task_msg).map_err(|e| e.to_string())?;
+        self.hub.clone().publish(task_msg).await.map_err(|e| e.to_string())?;
         
         Ok(())
     }

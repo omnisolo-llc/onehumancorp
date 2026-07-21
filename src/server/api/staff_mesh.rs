@@ -218,8 +218,17 @@ pub async fn set_staff_pin_handler(
         }
     };
 
-    // In a real app, hash the pin here (e.g. using bcrypt)
-    let pin_hash = format!("hashed_{}", payload.pin);
+    let pin_hash = bcrypt::hash(&payload.pin, 10).unwrap_or_else(|_| {
+        tracing::error!("Failed to hash staff PIN with bcrypt, falling back to reject");
+        return String::new();
+    });
+    if pin_hash.is_empty() {
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "pin_hash_failed"})),
+        )
+            .into_response();
+    }
 
     match &db.store {
         crate::db::DbStore::Sqlite(pool) => {
@@ -1426,6 +1435,169 @@ mod tests {
 
         let response = app.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_pin_is_bcrypt_hashed() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let db = DB {
+            pool: crate::db::secure_pg_pool_options()
+                .acquire_timeout(std::time::Duration::from_millis(10))
+                .connect_lazy("postgres://dummy")
+                .unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        sqlx::query(
+            "CREATE TABLE ohc_staff_member (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                phone_number TEXT NOT NULL,
+                role TEXT NOT NULL,
+                pin_hash TEXT,
+                status TEXT NOT NULL DEFAULT 'ACTIVE',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                _sync_status TEXT DEFAULT 'pending',
+                version INTEGER DEFAULT 1
+            );",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE ohc_timecard_event (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                staff_id TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                event_time TIMESTAMP NOT NULL,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                _sync_status TEXT DEFAULT 'pending',
+                version INTEGER DEFAULT 1
+            );",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE staff_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                staff_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                priority TEXT NOT NULL DEFAULT 'normal',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shift_summaries (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                shift_id TEXT,
+                summary_text TEXT NOT NULL,
+                escalations TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        let db_arc = Arc::new(db);
+
+        let app = axum::Router::new()
+            .route(
+                "/staff",
+                axum::routing::post(create_staff_handler).get(get_staff_handler),
+            )
+            .route(
+                "/staff/{id}/pin",
+                axum::routing::post(set_staff_pin_handler),
+            )
+            .route("/timecard", axum::routing::post(sync_timecard_handler))
+            .with_state(db_arc);
+
+        let signed_claims = ::server_common::Claims {
+            sub: "pin-test-user".to_string(),
+            exp: 1_900_000_000,
+            iat: 1_800_000_000,
+            organization_id: Some("test_tenant".to_string()),
+            username: "pin-test".to_string(),
+            email: "pin-test@example.test".to_string(),
+            roles: vec![],
+            session_id: Some("pin-test-session".to_string()),
+            jti: "pin-test-jti".to_string(),
+        };
+
+        // Create staff
+        let create_payload = serde_json::json!({
+            "name": "PIN Test User",
+            "phone_number": "555-0100",
+            "role": "Manager"
+        });
+        let mut request = Request::builder()
+            .method("POST")
+            .uri("/staff")
+            .header("content-type", "application/json")
+            .body(Body::from(create_payload.to_string()))
+            .unwrap();
+        request.extensions_mut().insert(signed_claims.clone());
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let staff_id = body_json.get("id").unwrap().as_str().unwrap().to_string();
+
+        // Set PIN
+        let pin_payload = serde_json::json!({ "pin": "5678" });
+        let mut request = Request::builder()
+            .method("POST")
+            .uri(format!("/staff/{}/pin", staff_id))
+            .header("content-type", "application/json")
+            .body(Body::from(pin_payload.to_string()))
+            .unwrap();
+        request.extensions_mut().insert(signed_claims.clone());
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Verify PIN is bcrypt hashed (starts with $2$ or $2b$)
+        let row: (String,) = sqlx::query_as("SELECT pin_hash FROM ohc_staff_member WHERE id = ?")
+            .bind(&staff_id)
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+        let pin_hash = &row.0;
+        assert!(
+            pin_hash.starts_with("$2"),
+            "PIN hash should be bcrypt (starts with $2), got: {}",
+            pin_hash
+        );
+        assert!(
+            !pin_hash.starts_with("hashed_"),
+            "PIN hash should NOT be the old fake format 'hashed_*', got: {}",
+            pin_hash
+        );
+        // Verify bcrypt can verify the PIN
+        assert!(
+            bcrypt::verify("5678", pin_hash).unwrap_or(false),
+            "bcrypt should verify the PIN '5678'"
+        );
     }
 }
 

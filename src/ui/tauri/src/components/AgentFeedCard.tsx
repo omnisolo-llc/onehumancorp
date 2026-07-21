@@ -58,14 +58,14 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
                         <button
                             onClick={handleSave}
                             data-testid="feed-save-btn"
-                            className="flex-1 min-h-[36px] bg-[#0066FF] hover:bg-blue-600 text-white rounded-[8px] text-sm font-medium transition-colors"
+                            className="flex-1 min-h-[44px] bg-[#0066FF] hover:bg-blue-600 text-white rounded-[8px] text-sm font-medium transition-colors"
                         >
                             Save
                         </button>
                         <button
                             onClick={handleCancel}
                             data-testid="feed-cancel-btn"
-                            className="flex-1 min-h-[36px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-sm font-medium transition-colors"
+                            className="flex-1 min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-sm font-medium transition-colors"
                         >
                             Cancel
                         </button>

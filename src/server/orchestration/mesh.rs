@@ -77,7 +77,7 @@ impl P2PTransport for LocalTeammateMesh {
 #[async_trait]
 impl MeshTransport for LocalTeammateMesh {
     async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
-        let _ = self.hub.publish_teammate_event(topic.to_string(), message.clone());
+        let _ = self.hub.publish_teammate_event(topic.to_string(), message.clone()).await;
         self.inner.publish(topic, message).await
     }
 
@@ -384,7 +384,7 @@ mod tests {
         })).await.unwrap();
 
         // Also verify that the hub has the message
-        let mut hub_rx = hub.subscribe_teammate_mesh("test_topic".to_string());
+        let mut hub_rx = hub.subscribe_teammate_mesh("test_topic".to_string()).await;
 
         let event = TeammateMeshEvent {
             agent_id: "test_agent".to_string(),
