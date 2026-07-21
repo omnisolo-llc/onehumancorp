@@ -1188,6 +1188,58 @@ impl DB {
                         PRIMARY KEY (task_id, depends_on_task_id)
                     );
 
+                    CREATE TABLE IF NOT EXISTS credit_facilities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        approved_limit_usd REAL NOT NULL DEFAULT 0.0,
+                        utilized_amount_usd REAL NOT NULL DEFAULT 0.0,
+                        dynamic_score REAL NOT NULL DEFAULT 0.0,
+                        underwriter_version TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS vendor_relations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        vendor_name TEXT NOT NULL,
+                        vendor_email TEXT NOT NULL,
+                        current_terms TEXT NOT NULL DEFAULT 'COD',
+                        term_status TEXT NOT NULL DEFAULT 'APPROVED',
+                        terms_granted_at TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS supplier_invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        vendor_relation_id TEXT NOT NULL,
+                        invoice_number TEXT NOT NULL,
+                        total_amount REAL NOT NULL,
+                        currency TEXT NOT NULL DEFAULT 'USD',
+                        due_date TIMESTAMP,
+                        status TEXT NOT NULL DEFAULT 'UNPAID'
+                    );
+
+                    CREATE TABLE IF NOT EXISTS factoring_discounts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        client_invoice_id TEXT NOT NULL,
+                        invoice_amount REAL NOT NULL,
+                        advance_rate REAL NOT NULL DEFAULT 0.85,
+                        flat_fee_pct REAL NOT NULL DEFAULT 0.02,
+                        advanced_amount_usd REAL NOT NULL DEFAULT 0.0,
+                        factoring_status TEXT NOT NULL DEFAULT 'APPLIED',
+                        disbursed_at TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_sweep_configs (
+                        id TEXT PRIMARY KEY,
+                        supplier_invoice_id TEXT NOT NULL,
+                        daily_sweep_pct REAL NOT NULL DEFAULT 0.10,
+                        maximum_sweep_usd REAL,
+                        accumulated_sweep_usd REAL NOT NULL DEFAULT 0.0,
+                        last_sweep_run TIMESTAMP
+                    );
+
                     DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,

@@ -934,6 +934,7 @@ pub mod services {
     pub use ::server_services_b2b as b2b;
     #[cfg(not(ohc_bazel))]
     pub mod b2b;
+    pub mod credit_hub;
     pub mod integration;
     pub mod ops;
     pub mod mcp;
@@ -6496,6 +6497,255 @@ async fn ui_dashboard_metrics_handler(
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct NegotiatePayload {
+    pub vendor_relation_id: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SweepPayload {
+    pub supplier_invoice_id: String,
+    pub sales_amount: f64,
+}
+
+#[derive(serde::Deserialize)]
+pub struct FactorPayload {
+    pub client_invoice_id: String,
+    pub invoice_amount: f64,
+}
+
+async fn ui_credit_capacity_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    match crate::services::credit_hub::calculate_underwriting_capacity(&db, &tenant_id).await {
+        Ok(facility) => (axum::http::StatusCode::OK, axum::Json(facility)).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
+async fn ui_credit_vendors_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let vendors_res: Result<Vec<crate::services::credit_hub::VendorRelation>, sqlx::Error> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, crate::services::credit_hub::VendorRelation>("SELECT id::text as id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at FROM vendor_relations WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query("SELECT id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at FROM vendor_relations WHERE tenant_id = ?")
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await
+                .map(|rows| rows.into_iter().map(|row| {
+                    crate::services::credit_hub::VendorRelation {
+                        id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        vendor_name: row.get("vendor_name"),
+                        vendor_email: row.get("vendor_email"),
+                        current_terms: row.get("current_terms"),
+                        term_status: row.get("term_status"),
+                        terms_granted_at: Some(Utc::now()),
+                    }
+                }).collect())
+        }
+    };
+
+    match vendors_res {
+        Ok(mut list) => {
+            if list.is_empty() {
+                // Seed two default vendors
+                let v1_id = uuid::Uuid::new_v4().to_string();
+                let v2_id = uuid::Uuid::new_v4().to_string();
+
+                let _ = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)")
+                            .bind(&v1_id).bind(&tenant_id).bind("Milano Fabrics").bind("orders@milanofabrics.example").bind("COD").bind("APPROVED").bind(Utc::now())
+                            .execute(&db.pool).await;
+                        let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)")
+                            .bind(&v2_id).bind(&tenant_id).bind("West Coast Organic Flour Mill").bind("sales@westcoastorganic.example").bind("COD").bind("APPROVED").bind(Utc::now())
+                            .execute(&db.pool).await;
+                    }
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            .bind(&v1_id).bind(&tenant_id).bind("Milano Fabrics").bind("orders@milanofabrics.example").bind("COD").bind("APPROVED").bind(Utc::now().to_rfc3339())
+                            .execute(pool).await;
+                        let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            .bind(&v2_id).bind(&tenant_id).bind("West Coast Organic Flour Mill").bind("sales@westcoastorganic.example").bind("COD").bind("APPROVED").bind(Utc::now().to_rfc3339())
+                            .execute(pool).await;
+                    }
+                };
+
+                list = vec![
+                    crate::services::credit_hub::VendorRelation {
+                        id: v1_id,
+                        tenant_id: tenant_id.clone(),
+                        vendor_name: "Milano Fabrics".to_string(),
+                        vendor_email: "orders@milanofabrics.example".to_string(),
+                        current_terms: "COD".to_string(),
+                        term_status: "APPROVED".to_string(),
+                        terms_granted_at: Some(Utc::now()),
+                    },
+                    crate::services::credit_hub::VendorRelation {
+                        id: v2_id,
+                        tenant_id: tenant_id.clone(),
+                        vendor_name: "West Coast Organic Flour Mill".to_string(),
+                        vendor_email: "sales@westcoastorganic.example".to_string(),
+                        current_terms: "COD".to_string(),
+                        term_status: "APPROVED".to_string(),
+                        terms_granted_at: Some(Utc::now()),
+                    }
+                ];
+            }
+            (axum::http::StatusCode::OK, axum::Json(list)).into_response()
+        }
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e.to_string() }))).into_response(),
+    }
+}
+
+async fn ui_credit_negotiate_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<NegotiatePayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    match crate::services::credit_hub::trigger_ai_negotiation(&db, &tenant_id, &payload.vendor_relation_id).await {
+        Ok(vendor) => (axum::http::StatusCode::OK, axum::Json(vendor)).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
+async fn ui_credit_sweep_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<SweepPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    // First, ensure the supplier invoice exists
+    let invoice_exists: bool = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM supplier_invoices WHERE id = $1::uuid AND tenant_id = $2)")
+                .bind(&payload.supplier_invoice_id)
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(false)
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM supplier_invoices WHERE id = ? AND tenant_id = ?)")
+                .bind(&payload.supplier_invoice_id)
+                .bind(&tenant_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(false)
+        }
+    };
+
+    if !invoice_exists {
+        // Seed default vendor relation if empty
+        let vendor_id = uuid::Uuid::new_v4().to_string();
+        let _ = match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)")
+                    .bind(&vendor_id).bind(&tenant_id).bind("Seed Vendor").bind("vendor@seed.example").bind("COD").bind("APPROVED").bind(Utc::now())
+                    .execute(&db.pool).await;
+                let _ = sqlx::query("INSERT INTO supplier_invoices (id, tenant_id, vendor_relation_id, invoice_number, total_amount, currency, due_date, status) VALUES ($1::uuid, $2, $3::uuid, $4, $5, $6, $7, $8)")
+                    .bind(&payload.supplier_invoice_id).bind(&tenant_id).bind(&vendor_id).bind("INV-999").bind(1200.0).bind("USD").bind(Utc::now() + chrono::Duration::days(30)).bind("UNPAID")
+                    .execute(&db.pool).await;
+                ()
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO vendor_relations (id, tenant_id, vendor_name, vendor_email, current_terms, term_status, terms_granted_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                    .bind(&vendor_id).bind(&tenant_id).bind("Seed Vendor").bind("vendor@seed.example").bind("COD").bind("APPROVED").bind(Utc::now().to_rfc3339())
+                    .execute(pool).await;
+                let _ = sqlx::query("INSERT INTO supplier_invoices (id, tenant_id, vendor_relation_id, invoice_number, total_amount, currency, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(&payload.supplier_invoice_id).bind(&tenant_id).bind(&vendor_id).bind("INV-999").bind(1200.0).bind("USD").bind((Utc::now() + chrono::Duration::days(30)).to_rfc3339()).bind("UNPAID")
+                    .execute(pool).await;
+                ()
+            }
+        };
+    }
+
+    // Ensure the sweep config exists
+    let sweep_config_exists: bool = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM ledger_sweep_configs WHERE supplier_invoice_id = $1::uuid)")
+                .bind(&payload.supplier_invoice_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(false)
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM ledger_sweep_configs WHERE supplier_invoice_id = ?)")
+                .bind(&payload.supplier_invoice_id)
+                .fetch_one(pool)
+                .await
+                .unwrap_or(false)
+        }
+    };
+
+    if !sweep_config_exists {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let _ = match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO ledger_sweep_configs (id, supplier_invoice_id, daily_sweep_pct, maximum_sweep_usd, accumulated_sweep_usd, last_sweep_run) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)")
+                    .bind(&new_id).bind(&payload.supplier_invoice_id).bind(0.10).bind(120.0).bind(0.0).bind(Utc::now())
+                    .execute(&db.pool).await;
+                ()
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO ledger_sweep_configs (id, supplier_invoice_id, daily_sweep_pct, maximum_sweep_usd, accumulated_sweep_usd, last_sweep_run) VALUES (?, ?, ?, ?, ?, ?)")
+                    .bind(&new_id).bind(&payload.supplier_invoice_id).bind(0.10).bind(120.0).bind(0.0).bind(Utc::now().to_rfc3339())
+                    .execute(pool).await;
+                ()
+            }
+        };
+    }
+
+    match crate::services::credit_hub::execute_daily_sweep(&db, &tenant_id, &payload.supplier_invoice_id, payload.sales_amount).await {
+        Ok(sweep) => (axum::http::StatusCode::OK, axum::Json(sweep)).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
+async fn ui_credit_factor_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<FactorPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    match crate::services::credit_hub::submit_invoice_factoring(&db, &tenant_id, &payload.client_invoice_id, payload.invoice_amount).await {
+        Ok(factoring) => (axum::http::StatusCode::OK, axum::Json(factoring)).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
 async fn list_ui_supply_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -6982,6 +7232,11 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/v1/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
+        .route("/api/v1/ui/credit/capacity", axum::routing::get(ui_credit_capacity_handler).with_state(db.clone()))
+        .route("/api/v1/ui/credit/vendors", axum::routing::get(ui_credit_vendors_handler).with_state(db.clone()))
+        .route("/api/v1/ui/credit/negotiate", axum::routing::post(ui_credit_negotiate_handler).with_state(db.clone()))
+        .route("/api/v1/ui/credit/sweep", axum::routing::post(ui_credit_sweep_handler).with_state(db.clone()))
+        .route("/api/v1/ui/credit/factor", axum::routing::post(ui_credit_factor_handler).with_state(db.clone()))
         .route("/api/v1/ui/priority-tasks", axum::routing::get(list_ui_priority_tasks_handler).with_state(db.clone()))
         .route("/api/v1/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/v1/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
