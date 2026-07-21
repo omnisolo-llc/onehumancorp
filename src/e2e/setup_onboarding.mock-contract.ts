@@ -6,7 +6,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   const path = require('path');
   const tauriUiDir = process.env.RUNFILES_DIR
         ? path.join(process.env.RUNFILES_DIR, '_main', 'src', 'ui', 'tauri', 'src', 'ui')
-        : path.join(process.cwd(), '..', '..', 'src', 'ui', 'tauri', 'src', 'ui');
+        : path.join(process.cwd(), 'src', 'ui', 'tauri', 'src', 'ui');
   await page.route('**/setup.html', async route => {
       const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: htmlContent   });
@@ -22,7 +22,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.goto('http://mock/setup.html');
 
   // Verify it starts on the initial step
-  await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible();
+  await expect(page.locator('h2', { hasText: 'Tell us about your business' })).toBeVisible();
 
   // Test the Instant Setup flow (which has the "instant-bio" and "instant-image-url")
   await page.fill('#instant-bio', 'I am a mobile service mechanic in Austin');
@@ -35,18 +35,18 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.locator('button', { hasText: 'Step-by-Step Setup' }).click();
 
   // Step 1: Work Context (from looking at setup.html, step-context comes after initial)
-  await expect(page.locator('h1', { hasText: "How do you work?" })).toBeVisible();
+  await expect(page.locator('h2', { hasText: "How do you work?" })).toBeVisible();
   await page.locator('label.context-card').filter({ hasText: 'Service' }).click();
   await page.locator('button[data-next="step-categories"]').click();
 
   // Step 2: Categories
-  await expect(page.locator('h1', { hasText: "What's your category?" })).toBeVisible();
+  await expect(page.locator('h2', { hasText: "What's your category?" })).toBeVisible();
   // Ensure we can interact with it, we just need to pass the page validation
   await page.selectOption('#business-categories', { index: 1 });
   await page.locator('button[data-next="step-name"]').click();
 
   // Step 3: Business Name & Tagline
-  await expect(page.locator('h1', { hasText: "What's the name of your business?" })).toBeVisible();
+  await expect(page.locator('h2', { hasText: "What's the name of your business?" })).toBeVisible();
   const bizName = page.locator('#business-name');
   await expect(bizName).toHaveAttribute('enterkeyhint', 'next');
   await expect(bizName).toHaveAttribute('autocapitalize', 'words');
@@ -61,7 +61,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.getByTestId('team-operations').click();
 
 
-  await page.selectOption('#assistant-tone', { label: 'Professional' });
+  await page.selectOption('[data-testid="assistant-tone"]', { label: 'Professional' });
   await page.locator('button[data-next="step-admin"]').click();
 
   // Step 5: Admin Credentials
@@ -101,7 +101,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.locator('button[data-next="step-template"]').click();
 
   // Step 8: Template and Finish
-  await page.selectOption('#template-selection', { label: 'Modern' });
+  await page.selectOption('[data-testid="template-selection"]', { label: 'Modern' });
   const finishBtn = page.locator('#finish-btn');
   await expect(finishBtn).toBeVisible();
 
@@ -120,6 +120,5 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   });
 
   await finishBtn.click();
-  await page.waitForURL('**/dashboard.html*');
-  await expect(page.url()).toContain('dashboard.html');
+  await expect(page.locator('h1', { hasText: "You're Live!" })).toBeVisible();
 });

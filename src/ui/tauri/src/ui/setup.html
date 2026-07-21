@@ -83,23 +83,24 @@
       <h1>Setup</h1>
 
       <div id="step-intro" class="step active">
-        <h2>Welcome</h2>
-        <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" />
+        <h2>Tell us about your business</h2>
+        <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" enterkeyhint="next" />
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
         <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
-        <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Start My Business</button>
+        <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Step-by-Step Setup</button>
       </div>
 
       <div id="step-context" class="step">
-        <h2>Context</h2>
+        <h2>How do you work?</h2>
         <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label>
+        <label class="context-card" data-testid="context-service"><input type="radio" name="context" value="Service"> Service</label>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
       </div>
 
       <div id="step-categories" class="step">
-        <h2>Categories</h2>
+        <h2>What's your category?</h2>
         <select data-testid="business-categories" id="business-categories">
           <option value="">Select...</option>
           <option value="Home Baker">Home Baker</option>
@@ -108,50 +109,53 @@
       </div>
 
       <div id="step-name" class="step">
-        <h2>Name</h2>
-        <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" />
+        <h2>What's the name of your business?</h2>
+        <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" enterkeyhint="next" autocapitalize="words" />
+        <input type="text" id="business-tagline" class="glassmorphism glass-control" enterkeyhint="next" placeholder="Tagline" />
         <div id="name-error" class="error" style="display: none; margin-bottom: 12px;">Name is required</div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
       </div>
 
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
+        <label class="team-support-card toggle-row"><input type="checkbox" id="team-operations" data-testid="team-operations" value="Team Operations"> Team Operations</label>
         <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
         <select data-testid="assistant-tone">
           <option value="Friendly">Friendly</option>
+          <option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
 
       <div id="step-admin" class="step">
         <h2>Admin</h2>
-        <input type="text" data-testid="admin-name" placeholder="Admin Name" />
-        <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
-        <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
+        <input type="text" data-testid="admin-name" id="admin-name" placeholder="Admin Name" />
+        <input type="email" data-testid="admin-email" id="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" enterkeyhint="next" />
+        <input type="password" data-testid="admin-password" id="admin-password" autocomplete="new-password" placeholder="Password" enterkeyhint="next" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
       </div>
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" data-testid="first-offer" id="first-offer" placeholder="First Offer" enterkeyhint="next" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <input type="text" data-testid="location-input" id="location-input" placeholder="Location" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
       </div>
 
       <div id="step-target-audience" class="step">
         <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <input type="text" data-testid="target-audience" id="target-audience" placeholder="Target Audience" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <input type="text" data-testid="domain-name" id="domain-name" placeholder="Domain Name" inputmode="url" autocapitalize="none" autocorrect="off" enterkeyhint="done" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -171,6 +175,7 @@
       let state = {
         step: 0,
         businessName: '',
+        businessTagline: '',
         categories: '',
         adminName: '',
         adminEmail: '',
@@ -196,6 +201,7 @@
       function saveState() {
         const getVal = (selector) => { const el = document.querySelector(selector); return el ? el.value : ''; };
         state.businessName = getVal('#business-name');
+        state.businessTagline = getVal('#business-tagline');
         state.categories = getVal('#business-categories');
         state.adminName = getVal('[data-testid="admin-name"]');
         state.adminEmail = getVal('[data-testid="admin-email"]');
@@ -238,6 +244,7 @@
 
         const setVal = (selector, val) => { const el = document.querySelector(selector); if (el && val !== undefined) el.value = val; };
         setVal('#business-name', state.businessName);
+        setVal('#business-tagline', state.businessTagline);
         setVal('#business-categories', state.categories);
         setVal('[data-testid="admin-name"]', state.adminName);
         setVal('[data-testid="admin-email"]', state.adminEmail);
