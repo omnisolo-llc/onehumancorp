@@ -4,35 +4,8 @@ test.describe('Voice Assistant Offline Sync', () => {
   test('should queue voice command when offline and display sync status', async ({ page, context }) => {
     await context.grantPermissions(['microphone']);
 
-    // Mock MediaRecorder
-    await page.addInitScript(() => {
-      window.MediaRecorder = class MockMediaRecorder {
-        state = 'inactive';
-        ondataavailable = null;
-        onstop = null;
-        constructor() {}
-        start() {
-          this.state = 'recording';
-          setTimeout(() => {
-            if (this.ondataavailable) {
-              this.ondataavailable({ data: new Blob(['mock audio'], { type: 'audio/webm' }) } as any);
-            }
-          }, 100);
-        }
-        stop() {
-          this.state = 'inactive';
-          if (this.onstop) {
-            this.onstop(new Event('stop'));
-          }
-        }
-      } as any;
-      (navigator as any).mediaDevices = {
-        getUserMedia: () => Promise.resolve(new MediaStream()),
-      };
-    });
-
     await page.goto('/dashboard');
-    await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
+    await page.evaluate(() => void ('has_onboarded', 'true'));
 
     // Set offline mode using Playwright's native context method
     await context.setOffline(true);
