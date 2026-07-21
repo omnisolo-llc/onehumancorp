@@ -28,3 +28,14 @@ rust_test(
     edition = "2024",
     deps = ["@crates//:tokio"],
 )
+
+rust_test(
+    name = "server_integrations_taxjar_client_test",
+    size = "small",
+    srcs = ["tests/client_tests.rs"],
+    edition = "2024",
+    deps = [
+        ":server_integrations_taxjar",
+        "@crates//:tokio",
+    ],
+)
