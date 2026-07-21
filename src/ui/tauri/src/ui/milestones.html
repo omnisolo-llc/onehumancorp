@@ -352,6 +352,7 @@
     <section class="milestone-share">
       <h2 class="section-title">Share Your Success</h2>
 
+
       <div id="share-container" style="display: none; flex-direction: column; gap: 24px;">
         <div class="card-preview-container">
           <img id="card-preview-img" class="card-preview" src="" alt="Milestone Card" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjYzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YxZjVmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSI0OCIgZmlsbD0iIzk0YTNiOSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q291bGQgbm90IGxvYWQgbWlsZXN0b25lIGNhcmQ8L3RleHQ+PC9zdmc+'">
@@ -365,6 +366,11 @@
 
           <button id="btn-copy" class="btn btn-copy btn-uniform">
             Copy Share Message
+          </button>
+
+          <button id="btn-embed" class="btn btn-embed btn-uniform" style="background: #8b5cf6; color: white;">
+            <svg class="icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+            Embed on Storefront
           </button>
 
           <a id="btn-x" class="btn btn-x btn-uniform" target="_blank" rel="noopener noreferrer">
@@ -387,7 +393,17 @@
             Invite a friend and get a $50 credit
           </button>
         </div>
+
+        <div id="embed-code-container" style="display: none; flex-direction: column; gap: 8px; margin-top: 16px; background: rgba(0,0,0,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1);">
+          <label style="font-size: 13px; font-weight: 600; color: #4b5563;">Embed Code</label>
+          <div style="display: flex; gap: 8px;">
+            <input id="embed-code-input" type="text" readonly style="flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #fff; font-family: monospace; font-size: 13px;" />
+            <button id="btn-copy-embed" class="btn btn-uniform" style="background: #4b5563; color: white; border: none; padding: 0 16px; height: auto; min-height: 40px;">Copy</button>
+          </div>
+          <p style="font-size: 11px; color: #6b7280; margin: 0;">Paste this HTML snippet into your storefront or blog to show off your milestone.</p>
+        </div>
       </div>
+
 
       <div id="empty-state" class="empty-card">
         <span class="empty-card-icon">🏆</span>
@@ -477,6 +493,34 @@
           } catch (err) {
             console.error("Failed to download milestone card", err);
           }
+        };
+
+
+        // Setup Embed
+        const btnEmbed = document.getElementById('btn-embed');
+        const embedContainer = document.getElementById('embed-code-container');
+        const embedInput = document.getElementById('embed-code-input');
+        const btnCopyEmbed = document.getElementById('btn-copy-embed');
+
+        let baseUrl = 'https://ohc.app';
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            baseUrl = `http://${window.location.host}`;
+        }
+
+        const embedHtml = `<iframe src="${baseUrl}/api/v1/growth/milestone/embed?tenant=${encodeURIComponent(tenantId)}&milestone_id=${encodeURIComponent(id)}&theme=light" width="100%" height="220" style="border:none; border-radius:16px; overflow:hidden;" title="OHC Milestone"></iframe>`;
+
+        btnEmbed.onclick = () => {
+          embedContainer.style.display = 'flex';
+          embedInput.value = embedHtml;
+          embedInput.select();
+        };
+
+        btnCopyEmbed.onclick = () => {
+          navigator.clipboard.writeText(embedHtml).then(() => {
+            const orig = btnCopyEmbed.textContent;
+            btnCopyEmbed.textContent = 'Copied!';
+            setTimeout(() => btnCopyEmbed.textContent = orig, 2000);
+          });
         };
 
         // Setup Copy

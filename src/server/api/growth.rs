@@ -358,6 +358,8 @@ where
         .route("/interactive-poll/embed", get(handle_interactive_poll_embed))
         .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
+
+        .route("/milestone/embed", get(handle_milestone_embed))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -6534,4 +6536,97 @@ pub async fn handle_secret_menu_generate(
     state.hub.append_recent_event(msg);
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+
+#[derive(serde::Deserialize)]
+pub struct MilestoneEmbedParams {
+    pub tenant: String,
+    pub milestone_id: String,
+    pub theme: Option<String>,
+}
+
+pub async fn handle_milestone_embed(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(params): axum::extract::Query<MilestoneEmbedParams>,
+) -> impl axum::response::IntoResponse {
+    let tenant = params.tenant;
+    let milestone_id = params.milestone_id;
+    let theme = params.theme.unwrap_or_else(|| "light".to_string());
+
+    let (icon, title, desc) = match milestone_id.as_str() {
+        "first_sale" => ("🎉", "First Sale!", "Congratulations on your first sale!"),
+        "10th_order" => ("📈", "10th Order!", "You've successfully processed your 10th order on OHC."),
+        "50th_order" => ("🔥", "50th Order!", "You've successfully processed your 50th order on OHC."),
+        "100_orders" => ("📦", "100th Order!", "You've successfully processed your 100th order on OHC."),
+        "1000_orders" => ("👑", "1000th Order!", "You've successfully processed your 1000th order on OHC."),
+        "100_visitors" => ("🚀", "100 Visitors Today!", "Your storefront reached 100 visitors today!"),
+        "5_referrals" => ("🤝", "High Connector!", "You've successfully referred 5 other businesses to OHC!"),
+        "revenue_1k" => ("💰", "Four-Figure Club", "You've reached $1,000 in total revenue!"),
+        "revenue_10k" => ("💎", "Five-Figure Club", "You've reached $10,000 in total revenue!"),
+        "revenue_100k" => ("🌟", "Six-Figure Club", "You've reached $100,000 in total revenue!"),
+        _ => ("🏆", "Milestone Reached", "You've reached a new business milestone!"),
+    };
+
+    let bg_color = if theme == "dark" { "#1f2937" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f9fafb" } else { "#111827" };
+    let border_color = if theme == "dark" { "#374151" } else { "#e5e7eb" };
+    let desc_color = if theme == "dark" { "#9ca3af" } else { "#6b7280" };
+    let badge_bg = if theme == "dark" { "rgba(255, 255, 255, 0.1)" } else { "rgba(0, 0, 0, 0.05)" };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: transparent; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }}
+        .widget {{ background: {bg_color}; border-radius: 16px; padding: 24px; text-align: center; border: 1px solid {border_color}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); width: 100%; max-width: 320px; box-sizing: border-box; position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }}
+        .widget:hover {{ transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }}
+        .widget::before {{ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899); }}
+        .icon-container {{ font-size: 48px; margin: 0 auto 16px; background: {badge_bg}; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite; }}
+        .title {{ font-size: 20px; font-weight: 800; margin-bottom: 8px; font-family: 'Outfit', sans-serif; color: {text_color}; line-height: 1.2; }}
+        .desc {{ color: {desc_color}; font-size: 14px; margin-bottom: 20px; font-weight: 500; line-height: 1.4; }}
+        .powered {{ margin-top: 16px; padding-top: 16px; border-top: 1px solid {border_color}; font-size: 11px; font-weight: 700; color: #9ca3af; letter-spacing: 0.5px; text-transform: uppercase; transition: color 0.2s ease; }}
+        .powered:hover {{ color: #6b7280; }}
+        a {{ color: inherit; text-decoration: none; display: block; }}
+
+        @keyframes pulse {{
+            0% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }}
+            70% {{ transform: scale(1.05); box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }}
+            100% {{ transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }}
+        }}
+    </style>
+</head>
+<body>
+    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=milestone_embed" target="_blank" style="text-decoration: none;">
+        <div class="widget">
+            <div class="icon-container">{icon}</div>
+            <div class="title">{title}</div>
+            <div class="desc">{desc}</div>
+            <div class="powered">
+                ⚡ Powered by OHC
+            </div>
+        </div>
+    </a>
+</body>
+</html>"#,
+        bg_color = bg_color,
+        border_color = border_color,
+        badge_bg = badge_bg,
+        text_color = text_color,
+        desc_color = desc_color,
+        icon = icon,
+        title = title,
+        desc = desc,
+        tenant = tenant
+    );
+
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html")],
+        html,
+    )
 }

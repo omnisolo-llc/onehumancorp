@@ -57,3 +57,30 @@ test('viral milestones: verify social share buttons', async ({ page }) => {
   await expect(page.locator('text=Share to WhatsApp')).toBeVisible();
   await expect(page.locator('text=Share on Facebook')).toBeVisible();
 });
+
+test('viral milestones: verify embed storefront button', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+  await page.route('**/api/v1/growth/milestones/check*', async route => {
+    const json = {
+      milestones: [
+        { id: 'first_sale', title: 'First Sale!', description: 'Congrats!', reached: true }
+      ]
+    };
+    await route.fulfill({ json });
+  });
+
+  await page.goto('/milestone-alerts');
+
+  // Verify that the embed button is visible
+  const embedBtn = page.locator('#btn-embed');
+  await expect(embedBtn).toBeVisible();
+
+  // Click the embed button and verify the input is shown and contains iframe code
+  await embedBtn.click();
+  const embedContainer = page.locator('#embed-code-container');
+  await expect(embedContainer).toBeVisible();
+
+  const embedInput = page.locator('#embed-code-input');
+  await expect(embedInput).toHaveValue(/<iframe src=".*\/api\/v1\/growth\/milestone\/embed\?tenant=.*&milestone_id=first_sale&theme=light"/);
+});
