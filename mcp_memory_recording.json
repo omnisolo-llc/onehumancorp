@@ -1,7 +1,7 @@
 {
   "key_learnings": [
-    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
-    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
-    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
+    "The e2e tests rely heavily on `#my-plan-name` existing and being properly populated before trying to evaluate other data such as the storage capacity that are hydrated by `/api/v1/billing/my-plan`.",
+    "If `.not.toHaveText('--')` is evaluated on a non-existent element, it succeeds immediately, which can cause race conditions. It is better to use `toHaveText('Free')` or wait until an actual element is properly rendered and contains the expected state.",
+    "The containerized sandbox environments for test execution might block Docker-in-Docker layer operations (e.g. `pgvector` container failing to mount overlayfs) so any local test invocations should bypass docker mounts if run within typical sandbox."
   ]
 }
