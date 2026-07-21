@@ -461,33 +461,72 @@ pub async fn sync_offline_transactions_handler(
                                     item.get("product_id").and_then(|v| v.as_str()),
                                     item.get("quantity").and_then(|v| v.as_i64()),
                                 ) {
-                                    let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
-                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
+                                    let inventory_level_res: Result<(i32, String), sqlx::Error> = sqlx::query_as(
+                                        "SELECT available_count, id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE"
                                     )
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_one(&mut *db_tx)
                                     .await;
 
-                                    if let Ok((stock,)) = current_stock_res {
-                                        let qty_i32 = quantity as i32;
-                                        if stock < qty_i32 {
-                                            let tx_id = tx.id.clone().unwrap_or_default();
-                                            pending_reconciliation_items.push(serde_json::json!({
-                                                "transaction_id": tx_id,
-                                                "product_id": product_id,
-                                                "shortage": qty_i32 - stock,
-                                                "timestamp": chrono::Utc::now().to_rfc3339()
-                                            }));
-                                        }
+                                    let mut stock = 0;
+                                    let mut has_inventory_level = false;
+                                    let mut inv_level_id = "".to_string();
 
-                                        let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                    if let Ok((available_count, id)) = inventory_level_res {
+                                        stock = available_count;
+                                        has_inventory_level = true;
+                                        inv_level_id = id;
+                                    } else {
+                                        let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
+                                            "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
+                                        )
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .fetch_one(&mut *db_tx)
+                                        .await;
+                                        if let Ok((available_quantity,)) = current_stock_res {
+                                            stock = available_quantity;
+                                        }
+                                    }
+
+                                    let qty_i32 = quantity as i32;
+                                    if stock < qty_i32 {
+                                        let tx_id = tx.id.clone().unwrap_or_default();
+                                        pending_reconciliation_items.push(serde_json::json!({
+                                            "transaction_id": tx_id,
+                                            "product_id": product_id,
+                                            "shortage": qty_i32 - stock,
+                                            "timestamp": chrono::Utc::now().to_rfc3339()
+                                        }));
+                                    }
+
+                                    if has_inventory_level {
+                                        let _ = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE id = $2 AND tenant_id = $3")
                                             .bind(qty_i32)
-                                            .bind(product_id)
+                                            .bind(&inv_level_id)
                                             .bind(&tenant_id)
                                             .execute(&mut *db_tx)
                                             .await;
 
+                                        let tx_id = uuid::Uuid::new_v4().to_string();
+                                        let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'OFFLINE_POS_SYNC', -$4)")
+                                            .bind(&tx_id)
+                                            .bind(&tenant_id)
+                                            .bind(&inv_level_id)
+                                            .bind(qty_i32)
+                                            .execute(&mut *db_tx)
+                                            .await;
+                                    }
+
+                                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                                        .bind(qty_i32)
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .execute(&mut *db_tx)
+                                        .await;
+
+                                    if true {
                                         if let Some(client) = crate::get_redis_client() {
                                             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                                                 let invalidation_topic = "cache_invalidation_events";

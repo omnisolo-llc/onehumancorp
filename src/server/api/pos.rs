@@ -319,7 +319,14 @@ async fn get_inventory_handler(
     if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query(
+        "SELECT p.id, p.title, p.description, p.price_cents, p.currency,
+         COALESCE(il.available_count, p.inventory_count) as inventory_count,
+         p.is_subscribable, p.subscription_discount_percent, p.subscription_frequency
+         FROM products p
+         LEFT JOIN inventory_levels il ON p.id = il.variant_id AND p.tenant_id = il.tenant_id
+         WHERE p.tenant_id = $1"
+    )
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
