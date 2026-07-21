@@ -13,11 +13,19 @@ export default function VisualWorkflowPage() {
 
   const addNode = (type: string) => {
     const id = `node-${nodes.length + 1}`;
-    let data = {};
+    let data: any = {};
     if (type === "Llm") data = { prompt_template: "Translate to French: {{input_var}}" };
     if (type === "Input") data = { name: "input_var" };
     if (type === "Output") data = {};
     if (type === "HumanInLoop") data = { prompt_template: "Please approve this text: {{input_var}}" };
+
+    // Advanced orchestration nodes
+    if (type === "Tool") data = { tool_name: "calculator", args_template: "{\"expr\": \"{{input_var}}\"}" };
+    if (type === "Condition") data = { condition_expression: "{{input_var}} == 'yes'", true_target: "node-X", false_target: "node-Y" };
+    if (type === "SubAgent") data = { agent_name: "researcher", task_template: "Research {{input_var}}" };
+    if (type === "Merge") data = { state_keys: ["branchA", "branchB"], output_key: "merged_output" };
+    if (type === "ParallelFork") data = { targets: ["node-X", "node-Y"] };
+    if (type === "ParallelJoin") data = { state_keys: ["branchA", "branchB"], output_key: "joined_output" };
 
     setNodes([...nodes, { id, type, data }]);
   };
@@ -70,6 +78,7 @@ export default function VisualWorkflowPage() {
           />
         </div>
         <div className="flex flex-wrap gap-3">
+
           <WalkthroughTarget id="vw-add-node">
             <button
               className="bg-[#0071E3]/10 text-[#0071E3] hover:bg-[#0071E3]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
@@ -95,6 +104,44 @@ export default function VisualWorkflowPage() {
             onClick={() => addNode("HumanInLoop")}
           >
             + Add Human-In-Loop Node
+          </button>
+
+          {/* Advanced orchestration nodes */}
+          <button
+            className="bg-[#32ADE6]/10 text-[#32ADE6] hover:bg-[#32ADE6]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("Tool")}
+          >
+            + Add Tool Node
+          </button>
+          <button
+            className="bg-[#FF375F]/10 text-[#FF375F] hover:bg-[#FF375F]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("Condition")}
+          >
+            + Add Condition Node
+          </button>
+          <button
+            className="bg-[#30D158]/10 text-[#30D158] hover:bg-[#30D158]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("SubAgent")}
+          >
+            + Add SubAgent Node
+          </button>
+          <button
+            className="bg-[#FFD60A]/10 text-[#FFD60A] hover:bg-[#FFD60A]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("Merge")}
+          >
+            + Add Merge Node
+          </button>
+          <button
+            className="bg-[#64D2FF]/10 text-[#64D2FF] hover:bg-[#64D2FF]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("ParallelFork")}
+          >
+            + Add ParallelFork Node
+          </button>
+          <button
+            className="bg-[#FF453A]/10 text-[#FF453A] hover:bg-[#FF453A]/20 px-4 py-2.5 rounded-full shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("ParallelJoin")}
+          >
+            + Add ParallelJoin Node
           </button>
 
           <button

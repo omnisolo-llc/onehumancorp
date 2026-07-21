@@ -34,6 +34,36 @@ test.describe('Visual Workflow Builder', () => {
     await expect(page.locator('text=USER_FIXABLE: Human in loop required')).toBeVisible({ timeout: 15000 });
   });
 
+
+  test('User can add all node types including advanced orchestration nodes', async ({ page }) => {
+    await page.goto('/visual-workflow');
+
+    // Add advanced nodes
+    await page.getByRole('button', { name: '+ Add Tool Node' }).click();
+    await expect(page.locator('text=node-1')).toBeVisible();
+    await expect(page.locator('text=Tool')).toBeVisible();
+
+    await page.getByRole('button', { name: '+ Add Condition Node' }).click();
+    await expect(page.locator('text=node-2')).toBeVisible();
+    await expect(page.locator('text=Condition')).toBeVisible();
+
+    await page.getByRole('button', { name: '+ Add SubAgent Node' }).click();
+    await expect(page.locator('text=node-3')).toBeVisible();
+    await expect(page.locator('text=SubAgent')).toBeVisible();
+
+    await page.getByRole('button', { name: '+ Add Merge Node' }).click();
+    await expect(page.locator('text=node-4')).toBeVisible();
+    await expect(page.locator('text=Merge')).toBeVisible();
+
+    await page.getByRole('button', { name: '+ Add ParallelFork Node' }).click();
+    await expect(page.locator('text=node-5')).toBeVisible();
+    await expect(page.locator('text=ParallelFork')).toBeVisible();
+
+    await page.getByRole('button', { name: '+ Add ParallelJoin Node' }).click();
+    await expect(page.locator('text=node-6')).toBeVisible();
+    await expect(page.locator('text=ParallelJoin')).toBeVisible();
+  });
+
   test('User can add multiple output nodes and connect them', async ({ page }) => {
     await page.goto('/visual-workflow');
 
