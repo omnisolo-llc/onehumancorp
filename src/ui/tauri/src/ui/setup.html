@@ -288,11 +288,11 @@
           try {
             if (window.__TAURI__) {
               const res = await window.__TAURI__.core.invoke('process_intake', { input: prompt });
-              // We'd fill out the state with res, but for e2e mocking, let's just show success
-              // Wait, the e2e test checks for generateBtn having disabled=false and NO error on success?
-              // The test just checks waitForTimeout(500) after click, or checks error for network failure.
-              // Let's implement the standard logic.
-              // E2E test expects we handle 'fail network request' specifically.
+              // Fill out the state with the real backend response
+              state.name = res.business_name || '';
+              state.bio = prompt;
+              state.type = res.business_type || '';
+              saveState();
             } else {
               // Real backend call
               const res = await fetch('/api/v1/onboarding/start_zero_click', {

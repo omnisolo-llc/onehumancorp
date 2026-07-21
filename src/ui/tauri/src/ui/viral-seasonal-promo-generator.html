@@ -354,8 +354,7 @@
         document.getElementById('result-container').style.display = 'block';
 
       } catch (e) {
-        console.error('Error generating promo. No mocked fallback allowed per instructions.', e);
-        // Do not render mocked share links. Throw an error so the UI fails truthfully as per instructions.
+        console.error('Error generating promo.', e);
         alert('Failed to generate campaign. Backend returned an error.');
       } finally {
         btn.textContent = 'Generate Viral Campaign';
