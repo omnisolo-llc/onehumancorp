@@ -107,30 +107,30 @@ impl Department for OperationsAgent {
             let transcription = event.payload.get("transcription").and_then(|v| v.as_str()).unwrap_or("Unknown transcription");
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
-            // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
+            let action_payload = serde_json::json!({
+                "action_type": "Draft Voice Order",
+                "transcription": transcription,
+                "status": "pending_approval"
+            });
 
-            // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
-                let action_payload = serde_json::json!({
-                    "action_type": "Draft Voice Order",
-                    "transcription": transcription,
-                    "status": "pending_approval"
-                });
-                let _ = sqlx::query(
-                    "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
-                     VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
-                )
-                .bind(&event.tenant_id)
-                .bind(format!("Voice Command: \"{}\"", transcription))
-                .bind(action_payload)
-                .execute(&pool)
-                .await;
-            }
+            let context_payload = serde_json::json!({
+                "description": format!("Voice Command: \"{}\"", transcription)
+            });
+
+            let feed_id = uuid::Uuid::new_v4().to_string();
+            let pool = crate::db::get_pool();
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                 VALUES ($1, $2, 'Operations', $3, $4, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&feed_id)
+            .bind(&event.tenant_id)
+            .bind(sqlx::types::Json(context_payload))
+            .bind(sqlx::types::Json(action_payload))
+            .execute(&pool)
+            .await;
+
             return Ok(());
         }
 
