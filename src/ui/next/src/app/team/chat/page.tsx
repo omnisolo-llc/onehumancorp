@@ -171,7 +171,7 @@ export default function TeamChatPage() {
                     <button
                       type="button"
                       onClick={() => setMessage(msg.error?.retryMessage || '')}
-                      className="min-h-[36px] rounded-lg bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700"
+                      className="min-h-[44px] rounded-lg bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700"
                     >
                       Try again
                     </button>

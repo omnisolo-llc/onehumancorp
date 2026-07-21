@@ -54,4 +54,19 @@ describe('FailureReport', () => {
     expect(divElement).toHaveClass('border-[rgba(255,255,255,0.4)]');
     expect(divElement).toHaveClass('dark:border-[rgba(255,255,255,0.1)]');
   });
+
+  it('uses consistent rounded-[16px] border-radius and p-4 padding', () => {
+    const { container } = render(<FailureReport message="Layout Check" />);
+    const divElement = container.firstChild as HTMLElement;
+    expect(divElement).toHaveClass('rounded-[16px]');
+    expect(divElement).toHaveClass('p-4');
+    // Should NOT use p-6 (old inconsistent value)
+    expect(divElement.className).not.toMatch(/\bp-6\b/);
+  });
+
+  it('uses consistent shadow token', () => {
+    const { container } = render(<FailureReport message="Shadow Check" />);
+    const divElement = container.firstChild as HTMLElement;
+    expect(divElement).toHaveClass('shadow-[0_4px_24px_rgba(0,0,0,0.04)]');
+  });
 });

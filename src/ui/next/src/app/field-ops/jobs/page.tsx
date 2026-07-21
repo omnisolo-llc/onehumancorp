@@ -520,7 +520,7 @@ function FieldOpsJobsPageContent() {
       {/* Voice-to-Quote Modal */}
       {voiceQuoteJobId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white/80 dark:bg-[#16161A]/80 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-2xl p-6 w-full max-w-md flex flex-col">
+          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-2xl p-6 w-full max-w-md flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white flex items-center gap-2">
                 <span>🎤</span> Voice-to-Quote

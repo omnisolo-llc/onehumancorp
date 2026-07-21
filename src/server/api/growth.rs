@@ -296,7 +296,7 @@ pub async fn handle_conversational_execute(
             "source": "conversational_manager",
             "tenant_id": auth_info.org_id
         }));
-        state.hub.append_recent_event(msg);
+        state.hub.append_recent_event(msg).await;
         message = "Recovery campaign started successfully! I'll notify you as soon as we see results.".to_string();
     } else if req.action_id == "start_review_campaign_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -304,7 +304,7 @@ pub async fn handle_conversational_execute(
             "tenant_id": auth_info.org_id,
             "source": "conversational_manager"
         }));
-        state.hub.append_recent_event(msg);
+        state.hub.append_recent_event(msg).await;
         message = "Review campaign is now active. We're reaching out to your recent customers.".to_string();
     } else if req.action_id == "generate_social_post_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -312,7 +312,7 @@ pub async fn handle_conversational_execute(
             "tenant_id": auth_info.org_id,
             "source": "conversational_manager"
         }));
-        state.hub.append_recent_event(msg);
+        state.hub.append_recent_event(msg).await;
         message = "Successfully prepared social media post.".to_string();
     }
 
@@ -797,7 +797,7 @@ async fn handle_job_board_generate(
         "board_id": board_id,
         "title": req.title
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(JobBoardGenerateResponse {
         job_board_link: format!("https://ohc.app/jobs/{}", board_id),
@@ -1175,7 +1175,7 @@ async fn handle_send_receipt(
         "order_id": order_id,
         "customer_email": email
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Json(SendReceiptResponse { success: true, message: generated })
 }
@@ -1296,7 +1296,10 @@ async fn handle_affiliate_track(
     use axum::http::header::SET_COOKIE;
     use axum::http::HeaderValue;
 
-    let cookie_str = format!("affiliate_code={}; Path=/; HttpOnly; Max-Age=2592000", req.affiliate_code);
+    let cookie_str = format!(
+        "affiliate_code={}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000",
+        req.affiliate_code
+    );
 
     let mut response = Json(serde_json::json!({ "tracked": true })).into_response();
     if let Ok(header_val) = HeaderValue::from_str(&cookie_str) {
@@ -2789,7 +2792,7 @@ async fn handle_referral_click_post(
             state.hub.referral_tracker().record_click(&req.id);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
 
             Ok(Json(()).into_response())
         }
@@ -2811,7 +2814,7 @@ async fn handle_referral_click_get(
         "target": target_url,
         "source": q.source.clone().unwrap_or_else(|| "unknown".to_string())
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     // Record click if it maps to an actual referral code
     let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
@@ -2922,7 +2925,7 @@ async fn handle_referral_convert(
             state.hub.referral_tracker().record_conversion(&req.id);
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
             Ok(Json(()))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -2949,7 +2952,7 @@ async fn handle_referral_generate(
     {
         Ok(_) => {
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
                 referral_link: format!("https://ohc.app/ref/{}", ref_code),
             }))
@@ -2988,7 +2991,7 @@ async fn handle_team_invite_accept(
             }
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
             Ok(Json(()))
         },
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
@@ -3015,7 +3018,7 @@ async fn handle_create_team_invite(
             metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
             Ok(Json(CreateTeamInviteResponse { invite_link }))
@@ -3058,7 +3061,7 @@ pub async fn handle_unboxing_share_generate(
         "hashtag": req.hashtag,
         "reward": req.reward
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(UnboxingShareGenerateResponse {
         success: true,
@@ -3101,7 +3104,7 @@ mod tests {
             org_id: "tenant-a".to_string(),
             agent_id: "test-agent".to_string(),
         };
-        let event_count = hub.recent_events(100).len();
+        let event_count = hub.recent_events(100).await.len();
 
         let social = handle_social_post(
             Extension(state.clone()),
@@ -3157,7 +3160,7 @@ mod tests {
         let campaign_body: CampaignResponse = serde_json::from_slice(&campaign_body).unwrap();
         assert!(campaign_body.campaign_id.is_empty());
         assert_eq!(campaign_body.emails_sent, 0);
-        assert_eq!(hub.recent_events(100).len(), event_count);
+        assert_eq!(hub.recent_events(100).await.len(), event_count);
     }
 
 
@@ -3296,7 +3299,7 @@ mod tests {
         assert_eq!(metrics_res_json.metrics.revenue, 0.0);
         assert_eq!(metrics_res_json.metrics.pending_rewards, 0.0);
 
-        let recent_events = state.hub.recent_events(10);
+        let recent_events = state.hub.recent_events(10).await;
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
         assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
     }
@@ -3346,7 +3349,7 @@ mod tests {
         assert!(res2_not_found.is_err());
         assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
-        let recent_events = state.hub.recent_events(10);
+        let recent_events = state.hub.recent_events(10).await;
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_clicked"));
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_converted"));
     }
@@ -3475,7 +3478,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count, 1);
 
-        let recent_events = state.hub.recent_events(10);
+        let recent_events = state.hub.recent_events(10).await;
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
     }
 
@@ -3836,7 +3839,7 @@ async fn handle_cloud_bridge_invite(
             metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
-            state.hub.append_recent_event(msg);
+            state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
@@ -4063,7 +4066,7 @@ mod cloud_bridge_tests {
         let res_json = res.unwrap().0;
         assert!(res_json.invite_link.starts_with("https://ohc.app/invite/"));
 
-        let recent_events = state.hub.recent_events(10);
+        let recent_events = state.hub.recent_events(10).await;
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
     }
 }
@@ -5129,7 +5132,7 @@ async fn handle_generate_viral_waitlist(
         "product_name": req.product_name,
         "referral_goal": req.referral_goal
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(WaitlistGenerateResponse {
         success: true,
@@ -5159,7 +5162,7 @@ async fn handle_generate_viral_quiz(
         "topic": req.topic,
         "prize": req.prize
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(QuizGenerateResponse {
         success: true,
@@ -5187,7 +5190,7 @@ async fn handle_lead_magnet_capture(
         "source": req.source.unwrap_or_else(|| "lead_magnet_embed".to_string()),
         "campaign": req.campaign.unwrap_or_else(|| "unknown".to_string()),
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -5715,7 +5718,7 @@ pub async fn handle_birthday_club_capture(
         "email": req.email,
         "birthday": req.birthday,
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     Ok(Json(serde_json::json!({
         "success": true,
@@ -5739,7 +5742,7 @@ async fn handle_countdown_generate(
         "tenant_id": req.tenant_id,
         "title": req.title
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
     Json(serde_json::json!({ "success": true }))
 }
 
@@ -6393,7 +6396,7 @@ pub async fn handle_review_reward_submit(
         "rating": req.rating,
         "text": req.text,
     }));
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     let mock_customer_id = format!("review_customer_{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>());
     let referral_link = crate::services::growth::referral_api::generate_referral_link(&mock_customer_id).unwrap_or_else(|_| "https://ohc.app/invite/default".to_string());
@@ -6403,7 +6406,7 @@ pub async fn handle_review_reward_submit(
         "tenant_id": req.tenant,
         "referral_link": referral_link
     }));
-    state.hub.append_recent_event(msg2);
+    state.hub.append_recent_event(msg2).await;
 
     Ok(Json(ReviewRewardSubmitResponse {
         success: true,
@@ -6531,7 +6534,7 @@ pub async fn handle_secret_menu_generate(
     }));
 
     // publish returning result
-    state.hub.append_recent_event(msg);
+    state.hub.append_recent_event(msg).await;
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
 }

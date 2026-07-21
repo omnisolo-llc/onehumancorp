@@ -79,7 +79,7 @@ pub async fn run_health_monitor(
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
                     tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
-                    monitor_hub.fire_agent(&agent_id);
+                    monitor_hub.fire_agent(&agent_id).await;
                     pending_fires.remove(&agent_id);
                 }
             }
@@ -122,7 +122,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
         // Register a busy agent
         hub.register_agent(::server_ohc::orchestration::Agent {
@@ -132,10 +132,10 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "BUSY".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
-        assert!(hub.get_agent("agent_idle").is_some());
-        assert!(hub.get_agent("agent_busy").is_some());
+        assert!(hub.get_agent("agent_idle").await.is_some());
+        assert!(hub.get_agent("agent_busy").await.is_some());
 
         // We simulate a transport with NO active agents
         let transport = Arc::new(InProcessTransport::new());
@@ -152,8 +152,8 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
         // Both agents should be fired (removed) immediately in standalone mode
-        assert!(hub.get_agent("agent_idle").is_none());
-        assert!(hub.get_agent("agent_busy").is_none());
+        assert!(hub.get_agent("agent_idle").await.is_none());
+        assert!(hub.get_agent("agent_busy").await.is_none());
         handle.abort();
     }
 
@@ -178,7 +178,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        });
+        }).await;
 
         let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
@@ -190,7 +190,7 @@ mod tests {
         });
 
         tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
-        assert!(hub.get_agent("agent_cloud").is_none(), "Agent should be fired after retries in cloud mode");
+        assert!(hub.get_agent("agent_cloud").await.is_none(), "Agent should be fired after retries in cloud mode");
         handle.abort();
     }
 

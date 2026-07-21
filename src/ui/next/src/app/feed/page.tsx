@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
+import { useAgentWebSocket } from '../../hooks/useAgentWebSocket';
 
 import { AmbassadorReplyCard } from '../dashboard/AmbassadorReplyCard';
 
@@ -43,58 +44,37 @@ export default function FeedPage() {
   };
 
   useEffect(() => {
-
     fetchFeed();
-
-    let ws: WebSocket;
-    let reconnectTimeout: NodeJS.Timeout;
-
-    const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      // In production, Next.js proxy doesn't support WS well so we route directly to backend. Local dev also hits backend directly.
-      const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const item = JSON.parse(event.data);
-          if (item.error) {
-             console.error("Agent feed WS error:", item.error);
-             return;
-          }
-
-          if (!item?.id) return;
-
-          if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
-            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-          } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
-            setItems((current) => current.filter((existing) => existing.id !== item.id));
-          } else if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-            setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-          } else if (item.status) {
-             setItems((current) => current.filter((existing) => existing.id !== item.id));
-          }
-        } catch (err) {
-          console.error('Failed to parse websocket feed event:', err);
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimeout = setTimeout(connect, 3000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectTimeout);
-      if (ws) {
-        ws.onclose = null; // Prevent reconnection on unmount
-        ws.close();
-      }
-    };
   }, []);
+
+  const feedWsUrl = (() => {
+    if (typeof window === 'undefined') return '';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+  })();
+
+  useAgentWebSocket({
+    url: feedWsUrl,
+    onMessage: (item: any) => {
+      if (item.error) {
+        console.error('Agent feed WS error:', item.error);
+        return;
+      }
+
+      if (!item?.id) return;
+
+      if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
+        setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+      } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
+        setItems((current) => current.filter((existing) => existing.id !== item.id));
+      } else if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+        setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+      } else if (item.status) {
+        setItems((current) => current.filter((existing) => existing.id !== item.id));
+      }
+    },
+  });
 
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);

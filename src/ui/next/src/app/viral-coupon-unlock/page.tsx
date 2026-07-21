@@ -36,7 +36,7 @@ export default function ViralCouponUnlockPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-          <div className="p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/40 rounded-2xl">
+          <div className="p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl">
             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Coupon Settings</h2>
 
             <div className="mb-4">
@@ -98,7 +98,7 @@ export default function ViralCouponUnlockPage() {
         </div>
 
         <div className="w-full md:w-2/3 flex flex-col">
-          <div className="flex-1 shadow-[0_20px_40px_rgb(0,0,0,0.15)] overflow-hidden flex flex-col bg-white/40 backdrop-blur-[40px] saturate-[200%] border border-white/50 rounded-2xl relative">
+          <div className="flex-1 shadow-[0_20px_40px_rgb(0,0,0,0.15)] overflow-hidden flex flex-col bg-white/40 backdrop-blur-[40px] saturate-[210%] border border-white/50 rounded-2xl relative">
             <div className="bg-gray-200 py-3 px-4 flex items-center gap-2 border-b border-gray-300">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-red-400"></div>

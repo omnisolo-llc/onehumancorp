@@ -30,7 +30,7 @@ pub struct MyGrowthService {
 
 impl MyGrowthService {
     pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
-        let redis_client = hub.redis_client.clone();
+        let redis_client = hub.redis_client();
         MyGrowthService {
             pool,
             hub,

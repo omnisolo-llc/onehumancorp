@@ -4,6 +4,10 @@ use axum::{
 };
 use futures::{stream::StreamExt, sink::SinkExt};
 use serde::Deserialize;
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::{Mutex, Notify};
 
 #[derive(Deserialize)]
 pub struct SyncConnectQuery {
@@ -44,7 +48,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
     let orders_topic = format!("orders:{}", tenant_id);
     let tenant_events_topic = format!("tenant_events:{}", tenant_id);
 
-    let redis_client_opt = crate::get_redis_client();
+    let redis_client_opt = crate::redis_pool::get_redis_client();
 
     if let Some(client) = redis_client_opt {
         if let Ok(mut pubsub_conn) = client.get_async_pubsub().await {
@@ -54,11 +58,69 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
 
             let mut stream = pubsub_conn.into_on_message();
 
-            let mut send_task = tokio::spawn(async move {
+            // Bounded buffer with drop-oldest semantics (256 capacity)
+            let buffer: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::with_capacity(256)));
+            let notify = Arc::new(Notify::new());
+
+            // Task 1: Redis subscriber -> buffer (non-blocking, drops oldest on full)
+            let buf_producer = buffer.clone();
+            let notify_producer = notify.clone();
+            let pubsub_task = tokio::spawn(async move {
                 while let Some(msg) = stream.next().await {
                     if let Ok(payload) = msg.get_payload::<String>() {
-                        if sender.send(WsMessage::Text(payload.into())).await.is_err() {
-                            break;
+                        {
+                            let mut q = buf_producer.lock().await;
+                            if q.len() >= 256 {
+                                q.pop_front(); // drop oldest
+                            }
+                            q.push_back(payload);
+                        }
+                        notify_producer.notify_one();
+                    }
+                }
+            });
+
+            // Task 2: Buffer -> WebSocket with batching (50ms window, max 20)
+            let buf_consumer = buffer.clone();
+            let notify_consumer = notify.clone();
+            let mut send_task = tokio::spawn(async move {
+                let mut batch: Vec<String> = Vec::new();
+                let mut tick = tokio::time::interval(Duration::from_millis(50));
+                tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+                loop {
+                    // Drain all available messages from buffer first
+                    {
+                        let mut q = buf_consumer.lock().await;
+                        while let Some(msg) = q.pop_front() {
+                            batch.push(msg);
+                        }
+                    }
+
+                    if batch.len() >= 20 {
+                        flush_batch(&mut sender, &mut batch).await;
+                        continue;
+                    }
+
+                    if !batch.is_empty() {
+                        // We have messages but < 20; flush on timer
+                        tokio::select! {
+                            _ = notify_consumer.notified() => {
+                                // More messages may be available - loop back to drain
+                            }
+                            _ = tick.tick() => {
+                                flush_batch(&mut sender, &mut batch).await;
+                            }
+                        }
+                    } else {
+                        // No messages - wait for notification or timer
+                        tokio::select! {
+                            _ = notify_consumer.notified() => {
+                                // Loop back to drain
+                            }
+                            _ = tick.tick() => {
+                                // Timer fired with no messages - nothing to do
+                            }
                         }
                     }
                 }
@@ -71,8 +133,14 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
             });
 
             tokio::select! {
-                _ = (&mut send_task) => recv_task.abort(),
-                _ = (&mut recv_task) => send_task.abort(),
+                _ = (&mut send_task) => {
+                    recv_task.abort();
+                    pubsub_task.abort();
+                },
+                _ = (&mut recv_task) => {
+                    send_task.abort();
+                    pubsub_task.abort();
+                },
             };
         } else {
             // Can't connect to pubsub, close connection gracefully.
@@ -83,6 +151,24 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
     }
 }
 
+async fn flush_batch(sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>, batch: &mut Vec<String>) {
+    if batch.len() == 1 {
+        // Single message - send directly for backwards compatibility
+        let msg = batch.remove(0);
+        let _ = sender.send(WsMessage::Text(msg.into())).await;
+    } else {
+        // Multiple messages - send as batch
+        let items: Vec<serde_json::Value> = batch.drain(..)
+            .map(|m| serde_json::Value::String(m))
+            .collect();
+        let batch_msg = serde_json::json!({
+            "type": "batch",
+            "items": items
+        });
+        let _ = sender.send(WsMessage::Text(batch_msg.to_string().into())).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,8 +176,6 @@ mod tests {
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
-    #[allow(unused_imports)]
-    use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     #[tokio::test]
     async fn test_ws_sync_handler() {
@@ -155,6 +239,68 @@ mod tests {
 
                 assert!(msg2.is_text());
                 assert_eq!(msg2.to_text().unwrap(), payload2);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ws_sync_batching() {
+        if std::env::var("REDIS_URL").is_err() {
+            unsafe {
+                std::env::set_var("REDIS_URL", "redis://127.0.0.1:6379");
+                std::env::set_var("OHC_STANDALONE_MODE", "false");
+            }
+        }
+        let app = Router::new().route("/ws", get(ws_sync_handler));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if client.get_connection().is_ok() {
+                let ws_url = format!("ws://{}/ws?tenant_id=test_batch", addr);
+
+                let mut request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
+                request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+                let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
+
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let topic = "inventory:test_batch";
+
+                // Publish 5 messages rapidly - they should be batched
+                for i in 0..5 {
+                    let payload = format!("{{\"seq\":{}}}", i);
+                    let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                }
+
+                // Wait for batch to arrive (50ms window + buffer)
+                let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
+                    .await
+                    .expect("Timeout waiting for batch")
+                    .expect("Stream closed")
+                    .expect("Error receiving message");
+
+                assert!(msg.is_text());
+                let text = msg.to_text().unwrap();
+                let parsed: serde_json::Value = serde_json::from_str(text).expect("Invalid JSON");
+                assert_eq!(parsed["type"], "batch");
+                let items = parsed["items"].as_array().expect("items not an array");
+                assert_eq!(items.len(), 5);
+                for i in 0..5 {
+                    assert_eq!(items[i], format!("{{\"seq\":{}}}", i));
+                }
             }
         }
     }

@@ -91,7 +91,7 @@ async fn hire_handler(
         provider_type,
     };
 
-    hub.register_agent(agent);
+    hub.register_agent(agent).await;
     let model = if payload.model.trim().is_empty() {
         std::env::var("OHC_LLM_MODEL")
             .or_else(|_| std::env::var("MINIMAX_MODEL"))

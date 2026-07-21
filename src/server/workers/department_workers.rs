@@ -948,13 +948,13 @@ impl PromoterWorker {
     pub fn start(&self) {
         let _db = self.db.clone();
         let hub = self.hub.clone();
-        let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
-        let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
 
         // Handle product creation for social auto-posting
 
-let db_for_products = self.db.clone();
+        let hub_for_products = hub.clone();
+        let db_for_products = self.db.clone();
         tokio::spawn(async move {
+            let mut product_rx = hub_for_products.subscribe_teammate_mesh("products_inbox".to_string()).await;
             while let Ok(event) = product_rx.recv().await {
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
@@ -1099,8 +1099,10 @@ let db_for_products = self.db.clone();
             }
         });
 
+        let hub_for_promoter = hub.clone();
         let db_for_onboarding = self.db.clone();
         tokio::spawn(async move {
+            let mut promoter_rx = hub_for_promoter.subscribe_teammate_mesh("promoter_inbox".to_string()).await;
             while let Ok(event) = promoter_rx.recv().await {
                 if event.action == "OnboardingStarted" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
@@ -1180,7 +1182,7 @@ let db_for_products = self.db.clone();
                                     payload: out_payload,
                                     msg_id: Uuid::new_v4().to_string(),
                                 };
-                                let _ = hub.publish_teammate_event(format!("onboarding_{}", session_id), out_event);
+                                let _ = hub.publish_teammate_event(format!("onboarding_{}", session_id), out_event).await;
                             }
                         }
                     }

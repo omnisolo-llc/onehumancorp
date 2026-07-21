@@ -39,7 +39,7 @@ export function NetworkStatusIndicator() {
       className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none"
     >
       <WithTooltip id="network-status-tooltip" defaultText={isOffline ? "You are currently disconnected. Changes will be saved locally." : "Your changes are syncing to the cloud."}>
-        <div className={`bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto animate-in slide-in-from-top duration-300`}>
+        <div className={`bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-2 pointer-events-auto animate-in slide-in-from-top duration-300`}>
           <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-blue-500 animate-pulse'}`}></div>
           <span className="text-sm font-semibold text-gray-800">
             {isOffline ? 'Offline - Changes saved locally' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}

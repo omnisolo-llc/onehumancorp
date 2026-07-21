@@ -108,7 +108,7 @@ export default function ViralGiveGetWidgetPage() {
             <p className="text-gray-600 max-w-lg mx-auto">Create a classic "Give 20%, Get $10" referral program. Friends get a discount, and you get rewarded when they buy.</p>
         </div>
 
-        <div className="p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-white/60 backdrop-blur-[40px] saturate-[200%] border border-white/40 rounded-3xl">
+        <div className="p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[40px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-3xl">
 
           <div className="space-y-6 mb-8">
             <div>

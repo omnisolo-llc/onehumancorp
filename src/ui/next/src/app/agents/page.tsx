@@ -5,6 +5,7 @@ import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { useProPlan } from '../components/useProPlan';
+import { useAgentWebSocket } from '../../hooks/useAgentWebSocket';
 import {
   automations,
   connectors,
@@ -156,30 +157,23 @@ export default function AgentsPage() {
     }
     fetchAll();
   }, []);
-  useEffect(() => {
+  const feedWsUrl = (() => {
+    if (typeof window === 'undefined') return '';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const wsUrl = isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+    return isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
+  })();
 
-    let ws: WebSocket | null = null;
-    if (true) {
-      ws = new WebSocket(wsUrl);
-      ws.onmessage = (event) => {
-        try {
-          const item = JSON.parse(event.data);
-          if (!item?.id || !item?.description) return;
-          setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-          if (String(item.status || '').toLowerCase().includes('draft')) {
-            setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-          }
-        } catch (err) {
-          console.error('Failed to parse agent event:', err);
-        }
-      };
-      ws.onerror = () => ws?.close();
-    }
-    return () => ws?.close();
-  }, []);
+  useAgentWebSocket({
+    url: feedWsUrl,
+    onMessage: (item: any) => {
+      if (!item?.id || !item?.description) return;
+      setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+      if (String(item.status || '').toLowerCase().includes('draft')) {
+        setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+      }
+    },
+  });
   function summon(item: ExpertCatalogItem) {
     setSelected(item);
     setModel(item.model);

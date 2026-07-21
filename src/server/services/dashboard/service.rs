@@ -31,8 +31,8 @@ impl MyDashboardService {
     async fn fetch_agents_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
         let hub = self.hub.clone();
         let org_id_clone = org_id.to_string();
-        let mut agents = tokio::task::spawn_blocking(move || {
-            hub.get_agents_by_org(&org_id_clone)
+        let mut agents = tokio::spawn(async move {
+            hub.get_agents_by_org(&org_id_clone).await
         }).await.map_err(|e| e.to_string())?;
 
         if mobile_optimized {
@@ -47,7 +47,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
-        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -81,7 +81,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
         let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
-        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -116,7 +116,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
-        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -199,7 +199,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
-        let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -262,7 +262,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
-        let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -335,7 +335,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
         let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
-        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -392,7 +392,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
-        let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
@@ -435,7 +435,7 @@ impl DashboardService for MyDashboardService {
 
         let org_id = std::sync::Arc::new(req.organization_id);
         let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
-        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
             if !is_stale {
                 return Ok(Response::new(cached));
@@ -673,7 +673,7 @@ impl DashboardService for MyDashboardService {
         }
 
         let cache_key = format!("onboarding_state_{}", org_id);
-        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         if let Some(cached) = cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
@@ -778,9 +778,9 @@ impl DashboardService for MyDashboardService {
 
         match update_res {
             Ok(Ok(_)) => {
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
-                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             },
@@ -788,17 +788,17 @@ impl DashboardService for MyDashboardService {
                 tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
-                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
                 tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
-                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
                 agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
                 Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
@@ -845,11 +845,11 @@ mod tests {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        });
+        }).await;
 
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
-        hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string());
+        hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string()).await;
         let _ = hub.clone().publish(::server_ohc::orchestration::Message {
             id: "msg_1".to_string(),
             from_agent: "agent_1".to_string(),
@@ -858,7 +858,7 @@ mod tests {
             content: "This is a transcript".to_string(),
             occurred_at_unix: chrono::Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
-        });
+        }).await;
 
         MyDashboardService::new(db, hub)
     }
@@ -1007,7 +1007,7 @@ mod tests {
         // We can't directly check the TTL of a set value easily with current HybridCache API,
         // but we verify the code sets it to 30s.
         let service = setup_test_dashboard_service().await;
-        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(service.hub.redis_client.clone()));
+        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(service.hub.redis_client()));
 
         let agents = vec![::server_ohc::orchestration::Agent {
             id: "test".to_string(),

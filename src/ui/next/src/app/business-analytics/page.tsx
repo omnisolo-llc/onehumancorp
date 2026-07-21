@@ -46,7 +46,7 @@ export default function BusinessAnalytics() {
             </div>
           </section>
         )}
-        <section className="app-card p-6 rounded-2xl border border-gray-200 bg-white/70">
+        <section className="app-card p-6 rounded-2xl border border-gray-200 bg-[rgba(255,255,255,0.65)]">
           <h2 className="text-xl font-bold font-outfit text-gray-900">Predictive AI Growth Trends</h2>
           <p className="mt-2 text-sm text-gray-600">Forecasts and cohort analytics are unavailable because no predictive analytics API is connected.</p>
         </section>
@@ -57,7 +57,7 @@ export default function BusinessAnalytics() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="app-card p-5 rounded-2xl border border-white/40 bg-white/70">
+    <div className="app-card p-5 rounded-2xl border border-white/40 bg-[rgba(255,255,255,0.65)]">
       <div className="text-sm font-medium text-gray-500 mb-1">{label}</div>
       <div className="text-2xl font-bold font-outfit text-gray-900">{value}</div>
     </div>

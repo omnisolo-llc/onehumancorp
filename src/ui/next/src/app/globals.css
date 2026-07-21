@@ -388,8 +388,8 @@ body {
 }
 
 .app-button.primary {
-  border-color: #1f78e5;
-  background: #1f78e5;
+  border-color: #0066FF;
+  background: #0066FF;
   color: #fff;
 }
 
@@ -398,7 +398,7 @@ body {
 }
 
 .app-button.primary:hover {
-  background: #1768ca;
+  background: #0052cc;
 }
 
 .app-table-wrap {
@@ -1182,6 +1182,15 @@ button,
   .setup-page #setup-screen [class*="grid"][class*="cols-2"] {
     grid-template-columns: 1fr;
   }
+}
+
+/* Font families - single source of truth */
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-outfit {
+  font-family: 'Outfit', 'Inter', sans-serif;
 }
 
 /* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */

@@ -579,7 +579,7 @@ async fn handle_create_product(
         msg_id: uuid::Uuid::new_v4().to_string(),
     };
 
-    let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), event).await;
 
     (
         StatusCode::OK,

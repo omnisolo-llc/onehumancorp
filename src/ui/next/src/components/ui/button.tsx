@@ -26,7 +26,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         variantClasses = "text-primary underline-offset-4 hover:underline"
         break
       default:
-        variantClasses = "bg-[#0066FF] dark:bg-[#0071E3] text-white hover:bg-[#0066FF]/90 dark:hover:bg-[#0071E3]/90"
+        variantClasses = "bg-[#0066FF] text-white hover:bg-[#0066FF]/90"
     }
 
     let sizeClasses = ""

@@ -509,14 +509,14 @@ Your response:",
         tx.commit().await.map_err(|e| e.to_string())?;
 
         let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
-        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
+        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client()));
         tracing::debug!("Onboarding cache invalidated for tenant_id={} user_id={}", tenant_id, user_id);
         tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key); // pii-safe
         cache.invalidate(&cache_key).await;
 
         // Invalidate the Dashboard cache as well
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
-        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_ohc::app::GetOnboardingStateResponse>::new(self.hub.redis_client.clone()));
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_ohc::app::GetOnboardingStateResponse>::new(self.hub.redis_client()));
         tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key); // pii-safe
         dashboard_cache.invalidate(&dashboard_cache_key).await;
 
@@ -525,7 +525,7 @@ Your response:",
 
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
-        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client.clone()));
+        let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(self.hub.redis_client()));
         tracing::debug!("Attempting to get onboarding state from cache for key: {}", cache_key); // pii-safe
         if let Some(cached_state) = cache.get(&cache_key).await {
             let cached_state = sanitize_stored_onboarding_state(&cached_state);
@@ -729,7 +729,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            let _ = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event);
+            let _ = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event).await;
 
             let policy_event = ::server_ohc::orchestration::TeammateMeshEvent {
                 agent_id: "system".to_string(),
@@ -741,7 +741,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
+            let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event).await;
 
 
             // Schedule the weekly health report via the internal task queue for The Advisor
@@ -894,7 +894,7 @@ Your response:",
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
+        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event).await;
 
         Ok(())
     }
@@ -2936,7 +2936,7 @@ Your response:",
                     msg_id: uuid::Uuid::new_v4().to_string(),
                 };
 
-                let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+                let _ = hub.publish_teammate_event("products_inbox".to_string(), event).await;
                 Ok::<_, sqlx::Error>(())
             }));
         }
@@ -3160,7 +3160,7 @@ mod tests {
 
         // Prime the dashboard cache
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
-        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client.clone()));
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client()));
         let dashboard_resp = ::server_ohc::app::GetOnboardingStateResponse {
             state: Some(::server_ohc::app::OnboardingState {
                 organization_id: tenant_id.to_string(),
@@ -3173,7 +3173,7 @@ mod tests {
 
         // Prime the agent cache
         let agent_cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
-        let agent_cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(hub.redis_client.clone()));
+        let agent_cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<serde_json::Value>::new(hub.redis_client()));
         agent_cache.set(&agent_cache_key, state1.clone(), std::time::Duration::from_secs(3600)).await;
 
         // Verify caches are primed

@@ -31,4 +31,16 @@ describe('Card Component', () => {
     expect(footerElement).toBeInTheDocument();
     expect(footerElement).toHaveClass('custom-footer-class');
   });
+
+  it('uses canonical glass design tokens', () => {
+    const { container } = render(<Card>Glass Card</Card>);
+    const card = container.firstChild as HTMLElement;
+    expect(card).toHaveClass('rounded-[16px]');
+    expect(card).toHaveClass('bg-[rgba(255,255,255,0.65)]');
+    expect(card).toHaveClass('dark:bg-[rgba(22,22,26,0.7)]');
+    expect(card).toHaveClass('border-[rgba(255,255,255,0.4)]');
+    expect(card).toHaveClass('dark:border-[rgba(255,255,255,0.1)]');
+    expect(card).toHaveClass('backdrop-blur-[30px]');
+    expect(card).toHaveClass('backdrop-saturate-[210%]');
+  });
 });

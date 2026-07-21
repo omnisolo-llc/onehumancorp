@@ -49,7 +49,7 @@ export default function MysteryDiscountGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 sticky top-0 z-50">
+      <header className="px-6 py-4 flex items-center justify-between border-b bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border-[rgba(255,255,255,0.4)] sticky top-0 z-50">
         <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">Viral Mystery Discount Generator 🎁</h1>
         <div className="flex items-center gap-3">
           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -68,7 +68,7 @@ export default function MysteryDiscountGeneratorPage() {
             </p>
           </div>
 
-          <div className="p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-2xl">
+          <div className="p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] shadow-sm rounded-2xl">
             <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Widget Configuration</h2>
             <div className="flex flex-col gap-4">
               <div>
@@ -138,7 +138,7 @@ export default function MysteryDiscountGeneratorPage() {
 
         {/* Live Preview & Embed */}
         <section className="w-full lg:w-1/2 flex flex-col gap-6">
-          <div className="p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-2xl flex flex-col gap-4">
+          <div className="p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] shadow-sm rounded-2xl flex flex-col gap-4">
             <h2 className="text-xl font-semibold font-outfit text-gray-900">Live Preview</h2>
             <div className={`w-full rounded-2xl overflow-hidden border ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'} flex items-center justify-center`} style={{ height: '380px' }}>
               <iframe
@@ -151,7 +151,7 @@ export default function MysteryDiscountGeneratorPage() {
             </div>
           </div>
 
-          <div className="p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-2xl flex flex-col gap-4">
+          <div className="p-6 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] shadow-sm rounded-2xl flex flex-col gap-4">
             <h2 className="text-xl font-semibold font-outfit text-gray-900">Embed Code</h2>
             <p className="text-sm text-gray-600">Copy this code and paste it into your website's HTML where you want the Mystery Box to appear.</p>
             <div className="relative">

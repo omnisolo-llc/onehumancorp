@@ -48,7 +48,7 @@ export function PoweredByOHC({ tenantId, isOwner = false, className = '' }: Powe
     >
       {isHovered && (
         <div
-          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[9999] text-center animate-fade-in transition-all duration-300 pointer-events-auto"
+          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_4px_24px_rgba(0,0,0,0.04)] z-[9999] text-center animate-fade-in transition-all duration-300 pointer-events-auto"
         >
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/70 border-b border-r border-white/50 transform rotate-45 backdrop-blur-[30px] saturate-[210%] z-[9998]"></div>
 

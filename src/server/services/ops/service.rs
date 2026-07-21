@@ -42,7 +42,7 @@ impl OpsService for MyOpsService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<IncidentsResponse>, Status> {
         let cache_key = "ops_incidents".to_string();
-        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(incidents) = cache.get(&cache_key).await {
             return Ok(Response::new(IncidentsResponse { incidents }));
@@ -82,7 +82,7 @@ impl OpsService for MyOpsService {
             incidents.push(incident.clone());
         }
 
-        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_incidents").await;
         
         Ok(Response::new(incident))
@@ -119,7 +119,7 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("incident not found"));
         }
         
-        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = INCIDENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_incidents").await;
 
         Ok(Response::new(updated.unwrap()))
@@ -130,7 +130,7 @@ impl OpsService for MyOpsService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<ComputeProfilesResponse>, Status> {
         let cache_key = "ops_compute_profiles".to_string();
-        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(profiles) = cache.get(&cache_key).await {
             return Ok(Response::new(ComputeProfilesResponse { profiles }));
@@ -166,7 +166,7 @@ impl OpsService for MyOpsService {
             profiles.push(profile.clone());
         }
         
-        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_compute_profiles").await;
 
         Ok(Response::new(profile))
@@ -195,7 +195,7 @@ impl OpsService for MyOpsService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<BudgetAlertsResponse>, Status> {
         let cache_key = "ops_budget_alerts".to_string();
-        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(alerts) = cache.get(&cache_key).await {
             return Ok(Response::new(BudgetAlertsResponse { alerts }));
@@ -230,7 +230,7 @@ impl OpsService for MyOpsService {
             alerts.push(alert.clone());
         }
 
-        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = BUDGET_ALERTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_budget_alerts").await;
         
         Ok(Response::new(alert))
@@ -241,7 +241,7 @@ impl OpsService for MyOpsService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<PipelinesResponse>, Status> {
         let cache_key = "ops_pipelines".to_string();
-        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(pipelines) = cache.get(&cache_key).await {
             return Ok(Response::new(PipelinesResponse { pipelines }));
@@ -276,7 +276,7 @@ impl OpsService for MyOpsService {
             pipelines.push(pipeline.clone());
         }
         
-        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_pipelines").await;
 
         Ok(Response::new(pipeline))
@@ -307,7 +307,7 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("pipeline not found"));
         }
         
-        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_pipelines").await;
 
         Ok(Response::new(updated.unwrap()))
@@ -341,7 +341,7 @@ impl OpsService for MyOpsService {
             return Err(Status::not_found("pipeline not found"));
         }
         
-        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        let cache = PIPELINES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_pipelines").await;
 
         Ok(Response::new(updated.unwrap()))
@@ -390,15 +390,15 @@ impl OpsService for MyOpsService {
                     status: "IDLE".to_string(),
                     provider_type: "mock".to_string(),
                 };
-                self.hub.register_agent(new_agent);
+                self.hub.register_agent(new_agent).await;
             }
         } else if diff < 0 {
             let to_remove = -diff;
             for i in 0..to_remove {
                 if i < idle_agent_ids.len() as i32 {
-                    self.hub.fire_agent(&idle_agent_ids[i as usize]);
+                    self.hub.fire_agent(&idle_agent_ids[i as usize]).await;
                 } else if (i as usize - idle_agent_ids.len()) < active_agent_ids.len() {
-                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]);
+                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]).await;
                 }
             }
         }

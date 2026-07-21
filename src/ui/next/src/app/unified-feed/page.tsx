@@ -212,7 +212,7 @@ export default function UnifiedFeed() {
       >
         Go to Promoter Agent
       </a>
-      <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 p-4 sticky top-0 z-10 flex justify-between items-center">
+      <header className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 p-4 sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-xl font-bold tracking-tight">Today</h1>
       </header>
 
@@ -234,7 +234,7 @@ export default function UnifiedFeed() {
           feedItems.map((item) => (
             <div
               key={item.workItem.id}
-              className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
+              className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
               data-testid="agent-feed-card"
             >
               <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
