@@ -8,7 +8,7 @@ test.describe('Client Hub Portal E2E Flow', () => {
     // Verify header and welcome banner are visible
     await expect(page.locator('h1', { hasText: 'Client Hub Portal' })).toBeVisible();
     await expect(page.locator('h2', { hasText: 'Welcome Back, Acme Corporation!' })).toBeVisible();
-    await expect(page.locator('text=Action Required')).toBeVisible();
+    await expect(page.locator('text=Today's Priorities')).toBeVisible();
 
     // 2. Tab: Proposals & Quotes
     const proposalsTab = page.locator('button', { hasText: 'Proposals & Quotes' });

@@ -394,7 +394,7 @@ export default function ClientPortalPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Pending Tasks */}
                 <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
-                  <h3 className="font-bold text-slate-800 font-outfit mb-3">Action Required</h3>
+                  <h3 className="font-bold text-slate-800 font-outfit mb-3">Today's Priorities</h3>
                   <div className="space-y-3">
                     {quotes.some((q) => q.status === "DRAFT") && (
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">

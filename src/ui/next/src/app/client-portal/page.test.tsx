@@ -8,7 +8,7 @@ describe("ClientPortalPage", () => {
     render(<ClientPortalPage />);
 
     expect(screen.getByText("Welcome Back, Acme Corporation!")).toBeDefined();
-    expect(screen.getByText("Action Required")).toBeDefined();
+    expect(screen.getByText("Today's Priorities")).toBeDefined();
     expect(screen.getByText("My Subscriptions & Perks")).toBeDefined();
     expect(screen.getByText("1 Outstanding Proposal")).toBeDefined();
     expect(screen.getByText("1 Pending Invoice Payment")).toBeDefined();
