@@ -108,29 +108,38 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.memory.store(
-                &event.tenant_id,
-                "Operations",
-                &format!("Parsed offline voice intent: {}", transcription)
-            ).await?;
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                agent_id: "operations_agent".to_string(),
+                content: format!("Parsed offline voice intent: {}", transcription),
+                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
+                source_type: "AGENT_ACTION".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: false,
+                metadata: None,
+            };
+            let _ = self.orchestrator.write_long_term_memory(record).await;
 
             // Create a triage item or feed item to show the drafted order based on the intent
-            if let Some(pool) = crate::db::get_pool_opt() {
-                let action_payload = serde_json::json!({
-                    "action_type": "Draft Voice Order",
-                    "transcription": transcription,
-                    "status": "pending_approval"
-                });
-                let _ = sqlx::query(
-                    "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
-                     VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
-                )
-                .bind(&event.tenant_id)
-                .bind(format!("Voice Command: \"{}\"", transcription))
-                .bind(action_payload)
-                .execute(&pool)
-                .await;
-            }
+            let pool = crate::db::get_pool();
+            let action_payload = serde_json::json!({
+                "action_type": "Draft Voice Order",
+                "transcription": transcription,
+                "status": "pending_approval"
+            });
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (tenant_id, department, title, summary, event_source, proposed_action, lifecycle_state)
+                 VALUES ($1, 'Operations', 'Drafted Voice Order', $2, 'Operations Agent', $3, 'PENDING_APPROVAL')"
+            )
+            .bind(&event.tenant_id)
+            .bind(format!("Voice Command: \"{}\"", transcription))
+            .bind(action_payload)
+            .execute(&pool)
+            .await;
             return Ok(());
         }
 
