@@ -20,12 +20,21 @@ type WalkthroughProps = {
 export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: WalkthroughProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!isOpen || steps.length === 0) return;
 
     const currentStep = steps[currentStepIndex];
-    const targetElement = document.getElementById(currentStep.targetId);
+    let targetElement = document.getElementById(currentStep.targetId);
+
+    if (!targetElement && retryCount < 5) {
+      // Retry finding the target element if it's rendered dynamically
+      const retryTimer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+      }, 100);
+      return () => clearTimeout(retryTimer);
+    }
 
     if (targetElement) {
       // Scroll into view gently if needed
@@ -33,7 +42,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       // We need a slight delay to let scrolling settle before measuring
       const timeoutId = setTimeout(() => {
-        setTargetRect(targetElement.getBoundingClientRect());
+        setTargetRect(targetElement!.getBoundingClientRect());
       }, 300);
 
       // Also attach resize/scroll listeners for recalculation with debounce
@@ -41,7 +50,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       const handleScroll = () => {
           clearTimeout(resizeTimeoutId);
           resizeTimeoutId = setTimeout(() => {
-              setTargetRect(targetElement.getBoundingClientRect());
+              setTargetRect(targetElement!.getBoundingClientRect());
           }, 50);
       };
       window.addEventListener('scroll', handleScroll, true);
@@ -54,10 +63,15 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         window.removeEventListener('resize', handleScroll);
       };
     } else {
-      console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);
+      console.warn(\`Walkthrough: Target element with id "\${currentStep.targetId}" not found.\`);
       setTargetRect(null);
     }
-  }, [isOpen, currentStepIndex, steps]);
+  }, [isOpen, currentStepIndex, steps, retryCount]);
+
+  // Reset retry count when changing step
+  useEffect(() => {
+    setRetryCount(0);
+  }, [currentStepIndex, isOpen]);
 
   if (!isOpen || steps.length === 0) return null;
 
@@ -142,13 +156,13 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Speech Bubble */}
       <div
         role="dialog"
-        aria-label={`${currentStep.title} walkthrough step`}
+        aria-label={\`\${currentStep.title} walkthrough step\`}
         id="walkthrough-bubble"
         className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.2)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white/90', 'white/80 dark:border-white/10')}`}></div>
+           <div className={\`absolute w-0 h-0 border-solid \${arrowClass.replace('white/90', 'white/80 dark:border-white/10')}\`}></div>
         )}
 
         <div className="flex justify-between items-start mb-3">
@@ -174,13 +188,13 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{__html: \`
         @keyframes pop-in {
-          0% { opacity: 0; transform: scale(0.9) ${bubbleStyle.transform}; }
-          100% { opacity: 1; transform: scale(1) ${bubbleStyle.transform}; }
+          0% { opacity: 0; transform: scale(0.9) \${bubbleStyle.transform}; }
+          100% { opacity: 1; transform: scale(1) \${bubbleStyle.transform}; }
         }
         .animate-pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-      `}} />
+      \`}} />
     </>
   );
 }
@@ -192,7 +206,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
  */
 export function WalkthroughTarget({ id, children, className = "", tooltipId }: { id: string, children?: ReactNode, className?: string, tooltipId?: string }) {
   const inner = (
-    <div id={id} className={`relative ${className}`}>
+    <div id={id} className={\`relative \${className}\`}>
       {children || <div className="hidden" aria-hidden="true" />}
     </div>
   );
