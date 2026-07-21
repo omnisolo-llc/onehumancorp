@@ -1,4 +1,5 @@
 "use client";
+import { motion } from "framer-motion";
 
 import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
@@ -673,11 +674,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   return (
     <section
       id="unified-agent-feed-section"
-      className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
+      className="app-panel mb-6 w-full max-w-[375px] sm:max-w-full mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
       aria-label="Unified Agent Feed"
     >
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
-        Action Required
+        Today's Triage Center
       </h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -738,8 +739,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               if (group.items.length === 1) {
                 const approval = group.items[0];
                 return (
-                  <AgentActionCard
+                  <motion.div
                     key={approval.id}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(e, { offset, velocity }) => {
+                      if (offset.x > 100) {
+                        handleDecision(approval.id, true, editContent, approval.event_source);
+                      } else if (offset.x < -100) {
+                        handleDecision(approval.id, false, undefined, approval.event_source);
+                      }
+                    }}
+                  >
+                  <AgentActionCard
                     approval={approval}
                     queuedActionIds={queuedActionIds}
                     editingId={editingId}
@@ -752,25 +764,42 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     setEditQuoteScope={setEditQuoteScope}
                     handleDecision={handleDecision}
                   />
+                  </motion.div>
                 );
               }
               return (
-                <GroupedAgentActionCard
-                  key={group.groupKey}
-                  groupKey={group.groupKey}
-                  title={group.title}
-                  items={group.items}
-                  queuedActionIds={queuedActionIds}
-                  editingId={editingId}
-                  editContent={editContent}
-                  editQuotePrice={editQuotePrice}
-                  editQuoteScope={editQuoteScope}
-                  setEditingId={setEditingId}
-                  setEditContent={setEditContent}
-                  setEditQuotePrice={setEditQuotePrice}
-                  setEditQuoteScope={setEditQuoteScope}
-                  handleDecision={handleDecision}
-                />
+                <motion.div
+                    key={group.groupKey}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(e, { offset, velocity }) => {
+                      if (offset.x > 100) {
+                        group.items.forEach(approval => {
+                          handleDecision(approval.id, true, undefined, approval.event_source);
+                        });
+                      } else if (offset.x < -100) {
+                        group.items.forEach(approval => {
+                          handleDecision(approval.id, false, undefined, approval.event_source);
+                        });
+                      }
+                    }}
+                  >
+                  <GroupedAgentActionCard
+                    groupKey={group.groupKey}
+                    title={group.title}
+                    items={group.items}
+                    queuedActionIds={queuedActionIds}
+                    editingId={editingId}
+                    editContent={editContent}
+                    editQuotePrice={editQuotePrice}
+                    editQuoteScope={editQuoteScope}
+                    setEditingId={setEditingId}
+                    setEditContent={setEditContent}
+                    setEditQuotePrice={setEditQuotePrice}
+                    setEditQuoteScope={setEditQuoteScope}
+                    handleDecision={handleDecision}
+                  />
+                  </motion.div>
               );
             })}
           </>

@@ -237,11 +237,21 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
+        const dailyWorkPromise = fetch('/api/v1/ui/dashboard/daily-work')
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        const triagePromise = fetch(`/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`)
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        const [unifiedData, onboardingData, ledgerData, usageData, dailyWorkData, triageData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
           ledgerPromise,
           usagePromise,
+          dailyWorkPromise,
+          triagePromise,
         ]);
 
         if (usageData && usageData.remainingActions !== undefined) {
@@ -260,16 +270,39 @@ export default function Dashboard() {
         const approvalsData = unifiedData?.pending_approvals || [];
         const agentFeedData = { items: unifiedData?.agent_feed || [] };
 
-        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+        const dailyItems = dailyWorkData?.items || [];
+        const triageItems = Array.isArray(triageData) ? triageData : (Array.isArray(triageData?.items) ? triageData.items : []);
 
-        if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !agentFeedData.items?.length) {
+        const mappedDaily = dailyItems.map((di: any) => ({
+            id: di.id,
+            tenant_id: tenantId(),
+            event_source: "daily_work",
+            context_payload: { description: di.intent },
+            proposed_action: di.suggested_actions?.[0],
+            lifecycle_state: di.status,
+            created_at: new Date().toISOString(),
+        }));
+
+        const mappedTriage = triageItems.map((ti: any) => ({
+            id: ti.id,
+            tenant_id: ti.tenant_id,
+            event_source: "triage",
+            context_payload: { description: ti.context },
+            proposed_action: { action_type: ti.action_type, proposed_content: ti.action_payload },
+            lifecycle_state: ti.status || "PENDING_APPROVAL",
+            created_at: ti.created_at,
+        }));
+
+        const allAgentItems = [...(agentFeedData.items || []), ...mappedDaily, ...mappedTriage];
+        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: { items: allAgentItems } }));
+
+        if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !allAgentItems.length) {
             setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
             setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED"));
-        } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
+        } else if (allAgentItems.length > 0) {
+            setPendingApprovals(allAgentItems.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
+            setActivities(allAgentItems.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
                 id: a.id,
-                event_type: a.lifecycle_state,
                 department: a.event_source,
                 payload: typeof a.context_payload === 'object' ? JSON.stringify({ original_payload: a.context_payload }) : a.context_payload,
                 created_at: a.created_at
