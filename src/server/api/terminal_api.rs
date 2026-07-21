@@ -461,8 +461,34 @@ pub async fn sync_offline_transactions_handler(
                                     item.get("product_id").and_then(|v| v.as_str()),
                                     item.get("quantity").and_then(|v| v.as_i64()),
                                 ) {
+                                    let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
+                                        if let Some(p) = crate::db::get_sqlite_pool_if_exists() {
+                                            Box::new(crate::orchestration::locks::StandaloneLock::with_pool(p))
+                                        } else {
+                                            Box::new(crate::orchestration::locks::StandaloneLock::new())
+                                        }
+                                    } else {
+                                        if let Some(client) = crate::get_redis_client() {
+                                            Box::new(crate::orchestration::locks::RedisLock::new(client))
+                                        } else {
+                                            if let Some(p) = crate::db::get_sqlite_pool_if_exists() {
+                                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(p))
+                                            } else {
+                                                Box::new(crate::orchestration::locks::StandaloneLock::new())
+                                            }
+                                        }
+                                    };
+
+                                    let mut _lock_guard = match locker.acquire_resource(&tenant_id, "inventory", product_id).await {
+                                        Ok(guard) => guard,
+                                        Err(_) => {
+                                            tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", product_id);
+                                            continue;
+                                        }
+                                    };
+
                                     let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
-                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE"
+                                        "SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE"
                                     )
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -479,6 +505,64 @@ pub async fn sync_offline_transactions_handler(
                                                 "shortage": qty_i32 - stock,
                                                 "timestamp": chrono::Utc::now().to_rfc3339()
                                             }));
+
+                                            // trigger Operations Agent conflict resolution
+                                            let action_request_id = uuid::Uuid::new_v4().to_string();
+                                            let action_payload = serde_json::json!({
+                                                "transaction_id": tx_id,
+                                                "product_id": product_id,
+                                                "suggested_action": "Restock Item",
+                                                "reason": "Lock contention on limited item during checkout sync"
+                                            }).to_string();
+
+                                            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'pos_sync_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                                .bind(&action_request_id)
+                                                .bind(&tenant_id)
+                                                .bind(product_id)
+                                                .bind(&action_payload)
+                                                .execute(&mut *db_tx)
+                                                .await;
+
+                                            let cs_action_request_id = uuid::Uuid::new_v4().to_string();
+                                            let cs_payload = serde_json::json!({
+                                                "transaction_id": tx_id,
+                                                "product_id": product_id,
+                                                "suggested_action": "Notify Customer of Out of Stock",
+                                                "reason": "Lock contention on limited item during checkout sync"
+                                            }).to_string();
+
+                                            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'pos_sync_service', 'customer_success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                                .bind(&cs_action_request_id)
+                                                .bind(&tenant_id)
+                                                .bind(product_id)
+                                                .bind(&cs_payload)
+                                                .execute(&mut *db_tx)
+                                                .await;
+                                        }
+
+                                        let _ = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count - $1) WHERE variant_id = $2 AND tenant_id = $3")
+                                            .bind(qty_i32)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .execute(&mut *db_tx)
+                                            .await;
+
+                                        let inventory_level_res = sqlx::query("SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2")
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .fetch_optional(&mut *db_tx)
+                                            .await;
+                                        if let Ok(Some(row)) = inventory_level_res {
+                                            use sqlx::Row;
+                                            let level_id: String = row.get("id");
+                                            let tx_id_inv = uuid::Uuid::new_v4().to_string();
+                                            let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'SALE', -$4)")
+                                                .bind(&tx_id_inv)
+                                                .bind(&tenant_id)
+                                                .bind(level_id)
+                                                .bind(qty_i32)
+                                                .execute(&mut *db_tx)
+                                                .await;
                                         }
 
                                         let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
