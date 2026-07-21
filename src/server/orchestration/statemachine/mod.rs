@@ -42,6 +42,7 @@ pub struct TaskDeliberation {
 pub enum DbStore {
     Postgres(sqlx::PgPool),
     Sqlite(sqlx::SqlitePool),
+    MySql(sqlx::MySqlPool),
 }
 
 pub struct DeliberationStateMachine {
@@ -175,6 +176,82 @@ impl DeliberationStateMachine {
                     Ok(None)
                 }
             }
+            DbStore::MySql(mysql_pool) => {
+                let mut tx = mysql_pool.begin().await.map_err(|e| e.to_string())?;
+
+                let row = sqlx::query(
+                    r#"
+                    SELECT * FROM shared_tasks_decomposition
+                    WHERE status = 'PENDING' AND organization_id = ?
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                    "#
+                )
+                .bind(organization_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(row) = row {
+                    let task_id: String = row.get("id");
+
+                    sqlx::query(
+                        r#"
+                        UPDATE shared_tasks_decomposition
+                        SET status = 'DELIBERATING', assigned_agent_id = ?, updated_at = ?
+                        WHERE id = ? AND organization_id = ?
+                        "#
+                    )
+                    .bind(assigned_agent_id)
+                    .bind(Utc::now())
+                    .bind(&task_id)
+                    .bind(organization_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    tx.commit().await.map_err(|e| e.to_string())?;
+
+                    let created_at = match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") {
+                        Ok(dt) => dt,
+                        Err(_) => {
+                            if let Ok(created_str) = row.try_get::<String, _>("created_at") {
+                                chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+                                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
+                                    .unwrap_or_else(|_| chrono::Utc::now())
+                            } else {
+                                chrono::Utc::now()
+                            }
+                        }
+                    };
+
+                    let locked_until = match row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("locked_until") {
+                        Ok(dt) => dt,
+                        Err(_) => {
+                            if let Ok(Some(locked_str)) = row.try_get::<Option<String>, _>("locked_until") {
+                                chrono::DateTime::parse_from_rfc3339(&locked_str).map(|d| d.with_timezone(&chrono::Utc)).ok()
+                            } else {
+                                None
+                            }
+                        }
+                    };
+
+                    Ok(Some(TaskDeliberation {
+                        id: task_id,
+                        organization_id: row.get("organization_id"),
+                        status: "DELIBERATING".to_string(),
+                        dependencies: row.get("dependencies"),
+                        assigned_agent_id: Some(assigned_agent_id.to_string()),
+                        locked_until,
+                        created_at,
+                        updated_at: Utc::now(),
+                    }))
+                } else {
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                    Ok(None)
+                }
+            }
         }
     }
 
@@ -226,6 +303,27 @@ impl DeliberationStateMachine {
                 .map_err(|e| e.to_string())?;
 
                 if res.is_none() {
+                    return Err("Invalid state transition or task not found for organization".to_string());
+                }
+                Ok(())
+            }
+            DbStore::MySql(mysql_pool) => {
+                let res = sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'RESOLVING_DEPENDENCIES', dependencies = ?, updated_at = ?
+                    WHERE id = ? AND organization_id = ? AND status = 'DELIBERATING'
+                    "#
+                )
+                .bind(dependencies)
+                .bind(Utc::now())
+                .bind(task_id)
+                .bind(organization_id)
+                .execute(mysql_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if res.rows_affected() == 0 {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -294,6 +392,26 @@ impl DeliberationStateMachine {
                 }
                 Ok(())
             }
+            DbStore::MySql(mysql_pool) => {
+                let res = sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'COMPLETED', updated_at = ?
+                    WHERE id = ? AND organization_id = ? AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
+                    "#
+                )
+                .bind(Utc::now())
+                .bind(task_id)
+                .bind(organization_id)
+                .execute(mysql_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if res.rows_affected() == 0 {
+                    return Err("Invalid state transition or task not found for organization".to_string());
+                }
+                Ok(())
+            }
         }
     }
 
@@ -354,6 +472,26 @@ impl DeliberationStateMachine {
                 .map_err(|e| e.to_string())?;
 
                 if res.is_none() {
+                    return Err("Task not found for organization".to_string());
+                }
+                Ok(())
+            }
+            DbStore::MySql(mysql_pool) => {
+                let res = sqlx::query(
+                    r#"
+                    UPDATE shared_tasks_decomposition
+                    SET status = 'FAILED', updated_at = ?
+                    WHERE id = ? AND organization_id = ?
+                    "#
+                )
+                .bind(Utc::now())
+                .bind(task_id)
+                .bind(organization_id)
+                .execute(mysql_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if res.rows_affected() == 0 {
                     return Err("Task not found for organization".to_string());
                 }
                 Ok(())

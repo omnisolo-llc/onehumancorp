@@ -108,22 +108,24 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            self.orchestrator.write_long_term_memory(
-                ohc_builtin_agent::memory_store::EmbeddingRecord {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: event.tenant_id.clone(),
-                    agent_id: "Operations".to_string(),
-                    content: format!("Parsed offline voice intent: {}", transcription),
-                    embedding: vec![],
-                    source_type: "Operations Agent".to_string(),
-                    created_at: chrono::Utc::now(),
-                    last_referenced_at: chrono::Utc::now(),
-                    reference_count: 0,
-                    reliability_score: 100,
-                    owner_override: false,
-                    metadata: Some(serde_json::json!({}).to_string()),
-                }
-            ).await?;
+            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                agent_id: "operations_agent".to_string(),
+                content: format!("Parsed offline voice intent: {}", transcription),
+                embedding: vec![0.0; 1536],
+                source_type: "AGENT_ACTION".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: false,
+                metadata: None,
+            };
+            self.orchestrator
+                .write_long_term_memory(record)
+                .await
+                .map_err(|e| e.to_string())?;
 
             // Create a triage item or feed item to show the drafted order based on the intent
             let pool = crate::db::get_pool();

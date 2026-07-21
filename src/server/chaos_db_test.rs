@@ -282,7 +282,16 @@ mod chaos_db_tests {
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
-        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        let pg_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pg_pool = match crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(200))
+            .connect(&pg_url)
+            .await
+        {
+            Ok(pool) => pool,
+            Err(_) => return,
+        };
 
         let db_id = uuid::Uuid::new_v4().to_string();
         let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
@@ -344,7 +353,16 @@ mod chaos_db_tests {
 
     #[tokio::test]
     async fn test_chaos_parity_audit_comprehensive() {
-        let pg_pool = crate::db::create_dummy_pg_pool().await;
+        let pg_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let pg_pool = match crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(200))
+            .connect(&pg_url)
+            .await
+        {
+            Ok(pool) => pool,
+            Err(_) => return,
+        };
 
         // Also wipe out some tables for isolation in test
         let db_id = uuid::Uuid::new_v4().to_string();
