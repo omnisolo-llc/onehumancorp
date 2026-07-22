@@ -798,7 +798,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
-                      {activity.department.replace("_", " ")}
+                      {activity.department.replace("_", " ") === "Work Triage" ? "Work Triage" : department.replace("_", " ")}
                     </span>
                     {activity.event_type === "Paused" ||
                     activity.event_type === "PAUSED" ? (

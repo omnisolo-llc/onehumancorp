@@ -3814,17 +3814,17 @@ pub async fn simulate_ui_triage_item_handler(
             };
 
             if let Err(e) = sqlx::query(
-                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+                "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
             )
             .bind(&item_id)
             .bind(&tenant_id)
-            .bind("12345")
-            .bind("Instagram DM")
-            .bind("High")
-            .bind("Do you have vegan chocolate cake available this weekend?")
+            .bind("mock-signal-id")
+            .bind("inquiry")
+            .bind(sqlx::types::Json(serde_json::json!({"description": "Do you have vegan chocolate cake available this weekend?", "feature_type": "triage"})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "feature_type": "triage", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})))
             .execute(&mut *tx)
             .await {
-                tracing::error!("Failed to insert triage_items: {:?}", e);
+                tracing::error!("Failed to insert daily_work_items: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
@@ -3871,17 +3871,17 @@ pub async fn simulate_ui_triage_item_handler(
             };
 
             if let Err(e) = sqlx::query(
-                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')"
             )
             .bind(&item_id)
             .bind(&tenant_id)
-            .bind("12345")
-            .bind("Instagram DM")
-            .bind("High")
-            .bind("Do you have vegan chocolate cake available this weekend?")
+            .bind("mock-signal-id")
+            .bind("inquiry")
+            .bind(sqlx::types::Json(serde_json::json!({"description": "Do you have vegan chocolate cake available this weekend?", "feature_type": "triage"})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "feature_type": "triage", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})))
             .execute(&mut *tx)
             .await {
-                tracing::error!("Failed to insert triage_items: {:?}", e);
+                tracing::error!("Failed to insert daily_work_items: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
@@ -5785,7 +5785,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') UNION ALL SELECT id, 'Work Triage' as event_source, CASE WHEN status = 'PENDING' THEN 'PENDING_APPROVAL' WHEN status = 'DISMISSED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM daily_work_items WHERE tenant_id = $1 AND status IN ('PENDING', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5801,7 +5801,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 }).collect::<Vec<_>>())
             } else {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') UNION ALL SELECT id, tenant_id, 'Work Triage' as event_source, customer_info::text as context_payload, suggested_actions::text as proposed_action, CASE WHEN status = 'PENDING' THEN 'PENDING_APPROVAL' WHEN status = 'DISMISSED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM daily_work_items WHERE tenant_id = $1 AND status IN ('PENDING', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5824,8 +5824,9 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') UNION ALL SELECT id, 'Work Triage' as event_source, CASE WHEN status = 'PENDING' THEN 'PENDING_APPROVAL' WHEN status = 'DISMISSED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM daily_work_items WHERE tenant_id = ? AND status IN ('PENDING', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC LIMIT ?"
                 )
+                .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(limit)
@@ -5841,8 +5842,9 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 }).collect::<Vec<_>>())
             } else {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') UNION ALL SELECT id, tenant_id, 'Work Triage' as event_source, customer_info as context_payload, suggested_actions as proposed_action, CASE WHEN status = 'PENDING' THEN 'PENDING_APPROVAL' WHEN status = 'DISMISSED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM daily_work_items WHERE tenant_id = ? AND status IN ('PENDING', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC LIMIT ?"
                 )
+                .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(tenant_id)
                 .bind(limit)
