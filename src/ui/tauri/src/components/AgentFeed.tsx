@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AgentFeedCard, ActionRequiredDraft } from './AgentFeedCard';
 import { PayoutSummaryCard } from './owner_feed/PayoutSummaryCard';
 import { ReviewDraftQuoteCard } from './owner_feed/ReviewDraftQuoteCard';
+import { PromoterCard } from './owner_feed/PromoterCard';
 
 export const AgentFeed: React.FC = () => {
     const [drafts, setDrafts] = useState<ActionRequiredDraft[]>([]);
@@ -147,6 +148,21 @@ export const AgentFeed: React.FC = () => {
                                 totalCost={parsedPayload.total_cost || 0}
                                 onApprove={() => handleApprove(draft.draft_id)}
                                 onEdit={() => handleEdit(draft.draft_id, "Edited quote placeholder")}
+                            />
+                        </div>
+                    );
+                }
+
+                if (actionType === 'social_post') {
+                    const parsedPayload = draft.proposed_action || draft.context_payload || {};
+                    return (
+                        <div key={draft.draft_id} className="w-full mb-4">
+                            <PromoterCard
+                                productName={parsedPayload.product_name || 'Product'}
+                                imageUrl={parsedPayload.image_url || ''}
+                                draftCopy={parsedPayload.draft_copy || ''}
+                                onApprove={() => handleApprove(draft.draft_id)}
+                                onEdit={() => handleEdit(draft.draft_id, "Edited variant placeholder")}
                             />
                         </div>
                     );

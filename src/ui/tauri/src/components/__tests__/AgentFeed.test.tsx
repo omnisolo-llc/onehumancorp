@@ -77,8 +77,8 @@ describe('AgentFeed', () => {
         render(<AgentFeed />);
 
         await waitFor(() => {
-            expect(screen.getByText('All caught up!')).toBeDefined();
-            expect(screen.getByText('No pending actions right now.')).toBeDefined();
+            expect(screen.getByText('All caught up')).toBeDefined();
+            expect(screen.getByText('No pending actions required at this time.')).toBeDefined();
         });
     });
 
@@ -93,6 +93,27 @@ describe('AgentFeed', () => {
         await waitFor(() => {
             expect(screen.getByTestId('feed-card-draft-1')).toBeDefined();
             expect(screen.getByTestId('feed-card-draft-2')).toBeDefined();
+        });
+    });
+
+    it('renders promoter card correctly', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => [{
+                draft_id: 'draft-3',
+                action_type: 'social_post',
+                status: 'pending',
+                proposed_action: {
+                    product_name: 'Test Product',
+                    draft_copy: 'Test Draft Copy'
+                }
+            }]
+        });
+
+        render(<AgentFeed />);
+        await waitFor(() => {
+            expect(screen.getByText(/The Promoter/)).toBeDefined();
+            expect(screen.getByText(/Test Product/)).toBeDefined();
         });
     });
 

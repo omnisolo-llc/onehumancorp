@@ -213,8 +213,8 @@ impl MarketingAgent {
     }
 
     pub async fn draft_product_caption(&self, product_name: &str, description: &str) -> String {
-        let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
-        let fallback = format!("Check out our new {}!", product_name);
+        let prompt = format!("Draft 3 variant captions optimized for different social media platforms (e.g. short/punchy for TikTok, visual/descriptive for Instagram, engaging for Facebook) for a new product named '{}'. Description: '{}'. Separate them clearly.", product_name, description);
+        let fallback = format!("Variant 1 (Instagram):\nCheck out our new {}! ✨\n\nVariant 2 (TikTok):\nNew drop: {} 🔥\n\nVariant 3 (Facebook):\nWe're excited to announce the {}. Get yours today!", product_name, product_name, product_name);
         self.copy_client.draft_caption(&prompt, &fallback).await
     }
 
@@ -314,6 +314,18 @@ impl Department for MarketingAgent {
                                 }
                             }
                         });
+
+                        let optimized_image_url = self.optimize_product_image_url("").await;
+                        let draft_copy = self.draft_product_caption(&name, &description).await;
+                        let payload = serde_json::json!({
+                            "feature_type": "social_post",
+                            "product_name": name,
+                            "image_url": optimized_image_url,
+                            "draft_copy": draft_copy
+                        });
+
+                        let action_desc = format!("Draft social post for {}", name);
+                        let _ = self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), ActionRisk::DraftForReview, payload).await;
                     }
                 }
             }
