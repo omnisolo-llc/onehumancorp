@@ -318,11 +318,16 @@ fn router_with_state(state: HttpAuthState) -> Router {
         .route("/keys/{id}", axum::routing::delete(revoke_api_key))
         .layer(axum::middleware::from_fn_with_state(state.store.clone(), super::strict_bearer_auth_middleware));
 
+    let admin_router = Router::new()
+        .route("/usage", axum::routing::get(list_member_usage_analytics))
+        .layer(axum::middleware::from_fn_with_state(state.store.clone(), super::strict_bearer_auth_middleware));
+
     Router::new()
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
         .route("/api/v1/auth/register", post(register))
         .nest("/api/v1/settings", settings_router)
+        .nest("/api/v1/ui/admin", admin_router)
         .with_state(state)
 }
 
@@ -530,6 +535,94 @@ async fn revoke_api_key(
     keys.retain(|k| k.id != id);
 
     no_store_json(StatusCode::OK, &serde_json::json!({ "ok": true }))
+}
+
+#[derive(Serialize)]
+struct MemberUsageAggregate {
+    username: String,
+    feature: String,
+    tokens_used: i32,
+    computed_cost: f64,
+}
+
+#[derive(Clone)]
+struct InMemoryUsageLog {
+    username: String,
+    feature: String,
+    tokens_used: i32,
+    computed_cost: f64,
+    organization_id: String,
+}
+
+static IN_MEMORY_USAGE_LOGS: OnceLock<Mutex<Vec<InMemoryUsageLog>>> = OnceLock::new();
+
+fn get_in_memory_usage_logs() -> &'static Mutex<Vec<InMemoryUsageLog>> {
+    IN_MEMORY_USAGE_LOGS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+async fn list_member_usage_analytics(
+    Extension(claims): Extension<::server_common::Claims>,
+) -> Response {
+    if !claims.roles.iter().any(|role| role.eq_ignore_ascii_case("admin")) {
+        return error(StatusCode::FORBIDDEN, "admin access required");
+    }
+
+    let mut analytics = Vec::new();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let organization_id = claims.organization_id.clone().unwrap_or_default();
+
+    if has_db {
+        let pool = crate::db::get_pool();
+        let query_res = sqlx::query(
+            "SELECT u.username, l.feature, SUM(l.tokens_used), CAST(SUM(l.computed_cost) AS double precision) \
+             FROM user_usage_logs l \
+             JOIN users u ON l.user_id = u.id \
+             WHERE l.organization_id = $1 \
+             GROUP BY u.username, l.feature"
+        )
+        .bind(&organization_id)
+        .fetch_all(&pool)
+        .await;
+
+        match query_res {
+            Ok(rows) => {
+                for row in rows {
+                    use sqlx::Row;
+                    let username: String = row.get(0);
+                    let feature: String = row.get(1);
+                    let tokens_used_sum: i64 = row.get(2);
+                    let computed_cost_sum: f64 = row.get(3);
+
+                    analytics.push(MemberUsageAggregate {
+                        username,
+                        feature,
+                        tokens_used: tokens_used_sum as i32,
+                        computed_cost: computed_cost_sum,
+                    });
+                }
+            }
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        }
+    } else {
+        let logs = get_in_memory_usage_logs().lock().unwrap();
+        for l in logs.iter() {
+            if l.organization_id == organization_id {
+                analytics.push(MemberUsageAggregate {
+                    username: l.username.clone(),
+                    feature: l.feature.clone(),
+                    tokens_used: l.tokens_used,
+                    computed_cost: l.computed_cost,
+                });
+            }
+        }
+    }
+
+    no_store_json(StatusCode::OK, &analytics)
 }
 
 impl HttpAuthState {
@@ -1945,5 +2038,85 @@ mod tests {
         .unwrap();
         let list_array2 = list_body2.as_array().unwrap();
         assert!(list_array2.iter().all(|k| k["id"] != key_id));
+    }
+
+    #[tokio::test]
+    async fn test_member_usage_analytics_auth_and_restriction() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let (app, store, user) = app_with_user().await;
+        
+        // 1. Unauthenticated request returns 401
+        let unauthorized_request = with_peer(
+            Request::get("/api/v1/ui/admin/usage")
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(unauthorized_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        // 2. Authenticated non-admin user returns 403
+        let viewer_user = store
+            .create_user(
+                "ViewerBob".into(),
+                "viewer@example.test".into(),
+                "password".into(),
+                vec!["VIEWER".into()],
+                "tenant-7".into(),
+            )
+            .await
+            .unwrap();
+        let viewer_token = store.issue_token(&viewer_user).unwrap();
+
+        let forbidden_request = with_peer(
+            Request::get("/api/v1/ui/admin/usage")
+                .header("authorization", format!("Bearer {viewer_token}"))
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(forbidden_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let body = to_bytes(response.into_body(), 1024).await.unwrap();
+        assert_eq!(body.as_ref(), br#"{"error":"admin access required"}"#);
+
+        // 3. Authenticated admin user returns 200 and listed analytics
+        let admin_token = store.issue_token(&user).unwrap();
+        
+        // Populate a mock log
+        {
+            let mut logs = get_in_memory_usage_logs().lock().unwrap();
+            logs.push(InMemoryUsageLog {
+                username: "Alice".to_string(),
+                feature: "gateway_run".to_string(),
+                tokens_used: 1250,
+                computed_cost: 0.0025,
+                organization_id: "tenant-7".to_string(),
+            });
+        }
+
+        let success_request = with_peer(
+            Request::get("/api/v1/ui/admin/usage")
+                .header("authorization", format!("Bearer {admin_token}"))
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(success_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        
+        let body: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        
+        let array = body.as_array().unwrap();
+        assert!(!array.is_empty());
+        assert_eq!(array[0]["username"], "Alice");
+        assert_eq!(array[0]["feature"], "gateway_run");
+        assert_eq!(array[0]["tokens_used"], 1250);
+        assert_eq!(array[0]["computed_cost"], 0.0025);
     }
 }
