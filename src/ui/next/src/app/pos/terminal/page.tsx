@@ -167,17 +167,24 @@ export default function POSTerminal() {
   };
 
   const loadDashboard = async () => {
-    if (isOffline) {
-       // Just load something empty for now
-       setInventory([]);
-       return;
-    }
     try {
       const res = await fetch('/api/v1/pos/inventory');
+      if (!res.ok) throw new Error('Failed to load inventory');
       const data = await res.json();
-      setInventory(data.inventory || []);
+      const normalizedInventory = Array.isArray(data.inventory) ? data.inventory : (Array.isArray(data) ? data : []);
+      setInventory(normalizedInventory);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ohc_pos_inventory_cache', JSON.stringify(normalizedInventory));
+      }
     } catch (e) {
       console.error("Failed to load inventory", e);
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('ohc_pos_inventory_cache');
+        if (cached) {
+          setInventory(JSON.parse(cached));
+          return;
+        }
+      }
       setInventory([]);
     }
   };
