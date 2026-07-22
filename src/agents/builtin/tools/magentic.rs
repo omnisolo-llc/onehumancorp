@@ -131,6 +131,68 @@ mod tests {
     use crate::ToolExecutor;
 
     #[tokio::test]
+    async fn test_magentic_missing_title_on_add() {
+        let store = Arc::new(RwLock::new(TaskStore::default()));
+        let executor = PydanticAdapter::new(MagenticExecutor { store });
+        let args = json!({ "action": "add" });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("magentic: title is required for add")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_magentic_missing_id_on_update() {
+        let store = Arc::new(RwLock::new(TaskStore::default()));
+        let executor = PydanticAdapter::new(MagenticExecutor { store });
+        let args = json!({ "action": "update" });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("magentic: id is required for update")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_magentic_update_non_existent_task() {
+        let store = Arc::new(RwLock::new(TaskStore::default()));
+        let executor = PydanticAdapter::new(MagenticExecutor { store });
+        let args = json!({ "action": "update", "id": "does-not-exist" });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Task not found")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_magentic_list_empty() {
+        let store = Arc::new(RwLock::new(TaskStore::default()));
+        let executor = PydanticAdapter::new(MagenticExecutor { store });
+        let args = json!({ "action": "list" });
+        let result = executor.execute(args).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "No tasks in ledger.");
+    }
+
+    #[tokio::test]
+    async fn test_magentic_invalid_action() {
+        let store = Arc::new(RwLock::new(TaskStore::default()));
+        let executor = PydanticAdapter::new(MagenticExecutor { store });
+        let args = json!({ "action": "invalid" });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("valid action is required")),
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+
+    #[tokio::test]
     async fn test_magentic_tool_add() {
         let store = Arc::new(RwLock::new(TaskStore::default()));
         let executor = PydanticAdapter::new(MagenticExecutor {
