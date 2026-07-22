@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_encryption() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true")), ("OHC_SQLITE_KEY", Some("test_key"))], || {
             let plaintext = "hello world";
             let ciphertext1 = encrypt_deterministic(plaintext);
             let ciphertext2 = encrypt_deterministic(plaintext);
@@ -142,6 +142,7 @@ mod tests {
     #[test]
     fn test_standalone_mode_generates_ephemeral_key() {
         temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),
             ("OHC_SQLITE_KEY", None::<&str>),
             ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
         ], || {

@@ -1122,7 +1122,7 @@ async fn handle_send_cart(
     let cart_value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
 
     // Fallback to "my-store" if tenant_id is not in request and not in token
-    let tenant_id = req.tenant_id.or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or_else(|| "my-store".to_string());
+    let tenant_id = claims.and_then(|c| c.organization_id.clone()).unwrap_or_else(|| "my-store".to_string());
 
     let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres }));
     let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
@@ -1158,12 +1158,13 @@ async fn handle_send_cart(
 
 async fn handle_send_receipt(
     Extension(state): Extension<GrowthState>,
+    claims: Option<Extension<::server_common::Claims>>,
     Json(req): Json<SendReceiptRequest>,
 ) -> impl IntoResponse {
     let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
     let order_id = req.order_id.unwrap_or_else(|| "unknown_order".to_string());
     let amount = req.amount.unwrap_or_else(|| "$0.00".to_string());
-    let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
+    let tenant_id = claims.and_then(|c| c.organization_id.clone()).unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
         "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
@@ -2352,10 +2353,10 @@ pub struct MilestoneResponse {
 async fn handle_get_milestone(
     Extension(state): Extension<GrowthState>,
     claims: Option<Extension<::server_common::Claims>>,
-    axum::extract::Query(query): axum::extract::Query<MilestoneQuery>,
+    axum::extract::Query(_query): axum::extract::Query<MilestoneQuery>,
 ) -> impl IntoResponse {
     let fallback_tenant = "DEFAULT".to_string();
-    let tenant_id = query.tenant_id.clone().or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or(fallback_tenant);
+    let tenant_id = claims.and_then(|c| c.organization_id.clone()).unwrap_or(fallback_tenant);
 
     // Check business milestones to find highest achievement
     let mut best_milestone_id = "first_sale".to_string();
