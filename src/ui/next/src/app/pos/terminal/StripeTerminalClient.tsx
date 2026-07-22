@@ -358,9 +358,9 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             </div>
           )}
 
-          {selectedMethod === 'tap' && !connectedReader && (
+          {selectedMethod === 'tap' && !connectedReader && (typeof window !== 'undefined' && navigator.onLine) && (
             <div className="mb-4">
-              <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+              <button onClick={discoverReaders} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors hover:bg-blue-700`}>
                 Discover Readers
               </button>
               <ul className="mt-4 space-y-2">
@@ -376,25 +376,27 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             </div>
           )}
 
-          {selectedMethod === 'tap' && connectedReader && (
+          {selectedMethod === 'tap' && (connectedReader || (typeof window !== 'undefined' && !navigator.onLine)) && (
             <div className="mt-4">
               <button onClick={async () => {
                 setStatus('Initializing Tap to Pay...');
                 setReserving(true);
                 try {
-                  const sessionRes = await fetch('/api/v1/checkout/session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
-                  });
-                  if (!sessionRes.ok) {
-                     if (sessionRes.status === 409) {
-                         setStatus('Error: Oops! Item just sold out.');
-                     } else {
-                         setStatus('Failed to create checkout session.');
-                     }
-                     if (onOptimisticRollback) onOptimisticRollback();
-                     return;
+                  if (typeof window !== 'undefined' && navigator.onLine) {
+                    const sessionRes = await fetch('/api/v1/checkout/session', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
+                    });
+                    if (!sessionRes.ok) {
+                       if (sessionRes.status === 409) {
+                           setStatus('Error: Oops! Item just sold out.');
+                       } else {
+                           setStatus('Failed to create checkout session.');
+                       }
+                       if (onOptimisticRollback) onOptimisticRollback();
+                       return;
+                    }
                   }
                   if (onOptimisticReserve) onOptimisticReserve();
                   await processPayment();
@@ -403,7 +405,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                 } finally {
                   setReserving(false);
                 }
-              }} id="tap-to-pay-btn" disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+              }} id="tap-to-pay-btn" disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                 {reserving ? 'Processing...' : `Confirm & Tap ${(amount / 100).toFixed(2)}`}
               </button>
             </div>
