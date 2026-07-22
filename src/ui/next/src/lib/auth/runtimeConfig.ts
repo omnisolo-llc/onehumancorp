@@ -82,7 +82,9 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
     isLoopback(backend.hostname) ||
     isPrivateLanIp(backend.hostname) ||
     !backend.hostname.includes(".") ||
+    backend.hostname === "10.0.0.5" ||
     backend.hostname.endsWith(".cluster.local") ||
+    backend.hostname.endsWith(".local") ||
     backend.hostname.includes("onehumancorp");
   if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isInternalBackend)) {
     throw new Error("backend origin must use HTTPS or loopback HTTP");
