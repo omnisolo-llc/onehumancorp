@@ -1230,9 +1230,135 @@ pub struct CalendlyEvent {
 }
 
 pub async fn calendly_webhook_handler(
-    axum::extract::State(__webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<CalendlyEvent>,
+    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(payload): axum::Json<CalendlyEvent>,
 ) -> impl axum::response::IntoResponse {
+    use crate::services::booking::{BookingService, BookingRecord};
+    use crate::services::agent_feed::service::AgentFeedService;
+    use chrono::{DateTime, Utc};
+    use sqlx::Row;
+
+    let event_type = &payload.event;
+    if event_type == "invitee.created" || event_type == "invitee.canceled" {
+        let tenant_id = payload.payload.get("tracking")
+            .and_then(|t| t.get("tenant_id"))
+            .and_then(|t| t.as_str())
+            .unwrap_or("default_tenant")
+            .to_string();
+
+        let event_data = payload.payload.get("event").unwrap_or(&serde_json::Value::Null);
+
+        let start_time_str = event_data.get("start_time")
+            .or_else(|| payload.payload.get("start_time"))
+            .and_then(|s| s.as_str())
+            .unwrap_or("");
+
+        let end_time_str = event_data.get("end_time")
+            .or_else(|| payload.payload.get("end_time"))
+            .and_then(|s| s.as_str())
+            .unwrap_or("");
+
+        let start_time = DateTime::parse_from_rfc3339(start_time_str)
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now());
+
+        let end_time = DateTime::parse_from_rfc3339(end_time_str)
+            .map(|dt| dt.with_timezone(&Utc))
+            .ok();
+
+        let status = if event_type == "invitee.canceled" { "cancelled" } else { "confirmed" };
+
+        let _invitee_email = payload.payload.get("invitee")
+            .and_then(|i| i.get("email"))
+            .and_then(|e| e.as_str())
+            .unwrap_or("unknown@example.com");
+
+        let mut customer_id_str = uuid::Uuid::new_v4().to_string();
+
+        if let crate::db::DbStore::Postgres = &webhook_state.db.store {
+            let row_res = sqlx::query("SELECT id FROM customers WHERE email = $1 AND tenant_id = $2 LIMIT 1")
+                .bind(_invitee_email)
+                .bind(&tenant_id)
+                .fetch_optional(&webhook_state.db_pool)
+                .await;
+
+            if let Ok(Some(row)) = row_res {
+                if let Ok(id) = row.try_get::<String, _>("id") {
+                    customer_id_str = id;
+                } else if let Ok(id_uuid) = row.try_get::<uuid::Uuid, _>("id") {
+                    customer_id_str = id_uuid.to_string();
+                }
+            } else {
+                let new_id = uuid::Uuid::new_v4();
+                let insert_res = sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
+                    .bind(new_id)
+                    .bind(&tenant_id)
+                    .bind(_invitee_email)
+                    .bind("Calendly Invitee")
+                    .execute(&webhook_state.db_pool)
+                    .await;
+                if insert_res.is_ok() {
+                    customer_id_str = new_id.to_string();
+                }
+            }
+        } else if let crate::db::DbStore::Sqlite(_) = &webhook_state.db.store {
+             let row_res = sqlx::query("SELECT id FROM customers WHERE email = ? AND tenant_id = ? LIMIT 1")
+                .bind(_invitee_email)
+                .bind(&tenant_id)
+                .fetch_optional(&webhook_state.db_pool)
+                .await;
+
+            if let Ok(Some(row)) = row_res {
+                 if let Ok(id) = row.try_get::<String, _>("id") {
+                    customer_id_str = id;
+                } else if let Ok(id_uuid) = row.try_get::<uuid::Uuid, _>("id") {
+                    customer_id_str = id_uuid.to_string();
+                }
+            } else {
+                let new_id = uuid::Uuid::new_v4();
+                let insert_res = sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
+                    .bind(new_id.to_string())
+                    .bind(&tenant_id)
+                    .bind(_invitee_email)
+                    .bind("Calendly Invitee")
+                    .execute(&webhook_state.db_pool)
+                    .await;
+                if insert_res.is_ok() {
+                    customer_id_str = new_id.to_string();
+                }
+            }
+        }
+
+        let booking = BookingRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            customer_id: customer_id_str,
+            service_id: "calendly_service".to_string(),
+            quote_id: None,
+            start_time,
+            end_time,
+            status: status.to_string(),
+        };
+
+        if let Err(e) = BookingService::create_booking(booking).await {
+            tracing::error!("Failed to create booking from Calendly event: {}", e);
+        }
+
+        // Send to agent feed
+        let feed_service = AgentFeedService::new(webhook_state.db_pool.clone());
+        let mut feed_payload = payload.payload.clone();
+        if let Some(obj) = feed_payload.as_object_mut() {
+            obj.insert("title".to_string(), serde_json::json!(format!("Calendly Booking: {}", _invitee_email)));
+            obj.insert("description".to_string(), serde_json::json!(format!("A new appointment has been scheduled for {}.", start_time_str)));
+        }
+
+        let _ = feed_service.process_event(
+            &tenant_id,
+            "calendly_booking",
+            &feed_payload
+        ).await;
+    }
+
     axum::http::StatusCode::OK.into_response()
 }
 

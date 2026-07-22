@@ -81,6 +81,8 @@ export default function UnifiedFeed() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraftText, setEditDraftText] = useState<string>("");
+  const [showCalendlyModal, setShowCalendlyModal] = useState(false);
+  const [selectedCalendlyBooking, setSelectedCalendlyBooking] = useState<any>(null);
 
   const fetchFeed = async () => {
     try {
@@ -234,7 +236,8 @@ export default function UnifiedFeed() {
           feedItems.map((item) => (
             <div
               key={item.workItem.id}
-              className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300"
+              onClick={() => { if (item.workItem.source === 'calendly_booking') { setSelectedCalendlyBooking(item); setShowCalendlyModal(true); } }}
+              className={`w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300 ${item.workItem.source === 'calendly_booking' ? 'cursor-pointer' : ''}`}
               data-testid="agent-feed-card"
             >
               <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
@@ -387,6 +390,41 @@ export default function UnifiedFeed() {
           ))
         )}
       </main>
+
+      {/* Calendly Booking Modal */}
+      {showCalendlyModal && selectedCalendlyBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white/80 dark:bg-black/80 backdrop-blur-md rounded-2xl w-full max-w-[375px] shadow-2xl overflow-hidden border border-white/20 dark:border-white/10 flex flex-col">
+            <div className="p-6 pb-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Booking Details</h3>
+                <button onClick={() => setShowCalendlyModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                <strong>Event:</strong> {selectedCalendlyBooking.workItem.payload?.title || "Appointment"}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                <strong>Description:</strong> {selectedCalendlyBooking.workItem.payload?.description || "A new appointment has been scheduled."}
+              </p>
+            </div>
+
+            <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 grid gap-3">
+              <button className="w-full h-[44px] flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors" data-testid="calendly-draft-follow-up">
+                Draft Follow-up
+              </button>
+              <button className="w-full h-[44px] flex items-center justify-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-xl font-medium transition-colors" data-testid="calendly-reschedule">
+                Reschedule
+              </button>
+              <button className="w-full h-[44px] flex items-center justify-center bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 rounded-xl font-medium transition-colors" data-testid="calendly-cancel">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
