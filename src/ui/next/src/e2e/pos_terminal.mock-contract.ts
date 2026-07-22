@@ -59,28 +59,18 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     await page.route('/api/v1/payments/terminal/token', async route => {
       await route.fulfill({ json: { secret: 'mock_token' } });
     });
-});
-
     await page.route('/api/v1/payments/terminal/reserve', async route => {
       await route.fulfill({ json: { success: true, lock_id: 'mock_lock' } });
     });
-});
-
     await page.route('/api/v1/payments/terminal/intent', async route => {
       await route.fulfill({ json: { client_secret: 'mock_secret' } });
     });
-});
-
     await page.route('/api/v1/payments/terminal/intent/capture', async route => {
       await route.fulfill({ json: { success: true, status: 'succeeded' } });
     });
-});
-
     await page.route('/api/v1/payments/terminal/commit', async route => {
       await route.fulfill({ json: { success: true } });
     });
-});
-
     // Test the Record Cash Sale flow which utilizes the same inventory commit logic
     // We test this because the Stripe SDK cannot be easily mocked in a browser E2E test without a physical device
     const cashBtn = page.locator('button', { hasText: /Record Cash Sale/ });
@@ -89,7 +79,7 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 15000 });
     }
   });
-});
+
   test('should gracefully handle offline tap-to-pay intent enqueueing', async ({ page }) => {
     // Test the offline flow
     await page.goto('http://localhost:3000/dashboard');
@@ -133,7 +123,6 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
         await expect(page.getByText('Saved Offline - Will sync when connected')).toBeVisible({ timeout: 5000 });
     }
   });
-});
 
   test('should queue tap-to-pay transaction offline and sync when online', async ({ page }) => {
     // 1. Log in to get token
@@ -149,7 +138,6 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
             password: 'admin'
         }
     });
-});
     expect(response.ok()).toBeTruthy();
     const { token } = await response.json();
 
@@ -162,7 +150,6 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
             price_cents: 1000
         }
     });
-});
     expect(createProductRes.ok()).toBeTruthy();
 
     await page.goto('http://localhost:3000/pos/terminal');
