@@ -124,13 +124,15 @@ You have access to the following Staff Availability Data (Simulated):
 Shift ID 'shift_123' belongs to 'sam_890'.
 Available replacement: 'alex_456'.
 If the message is a call-out, action_type MUST be 'Reassign Shift' and action_payload MUST be a JSON string with 'original_staff_id' (e.g. 'sam_890'), 'new_staff_id' (e.g. 'alex_456'), 'shift_id' (e.g. 'shift_123'), 'start_time', 'end_time'.
+Extract any customer preferences or specific traits (e.g., "allergic to peanuts", "likes afternoon visits", "needs vegan cake").
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Reassign Shift\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\",
+    \"customer_insights\": [\"preference 1\", \"preference 2\"]
 }}",
                 sender_id, customer_message, source
             );
@@ -320,24 +322,115 @@ Output JSON format:
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+            // Handle customer insights and interactions
+            let insights_array = extracted.get("customer_insights").and_then(|v| v.as_array());
+            if let Some(c_id) = customer_id_val {
+                let interaction_id = Uuid::new_v4().to_string();
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES ($1, $2, $3, $4, $5, NOW())")
+                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
+                            .execute(&self.db.pool).await {
+                            tracing::error!("Failed to insert customer_interaction (Postgres): {}", e);
+                        }
+                        if let Some(arr) = insights_array {
+                            for insight in arr {
+                                if let Some(insight_str) = insight.as_str() {
+                                    let insight_id = Uuid::new_v4().to_string();
+                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())")
+                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
+                                        .execute(&self.db.pool).await {
+                                        tracing::error!("Failed to insert customer_insight (Postgres): {}", e);
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
+                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
+                            .execute(pool).await {
+                            tracing::error!("Failed to insert customer_interaction (Sqlite): {}", e);
+                        }
+                        if let Some(arr) = insights_array {
+                            for insight in arr {
+                                if let Some(insight_str) = insight.as_str() {
+                                    let insight_id = Uuid::new_v4().to_string();
+                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
+                                        .execute(pool).await {
+                                        tracing::error!("Failed to insert customer_insight (Sqlite): {}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle customer insights and interactions
+            let insights_array = extracted.get("customer_insights").and_then(|v| v.as_array());
+            if let Some(c_id) = customer_id_val {
+                let interaction_id = Uuid::new_v4().to_string();
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES ($1, $2, $3, $4, $5, NOW())")
+                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
+                            .execute(&self.db.pool).await {
+                            tracing::error!("Failed to insert customer_interaction (Postgres): {}", e);
+                        }
+
+                        if let Some(arr) = insights_array {
+                            for insight in arr {
+                                if let Some(insight_str) = insight.as_str() {
+                                    let insight_id = Uuid::new_v4().to_string();
+                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())")
+                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
+                                        .execute(&self.db.pool).await {
+                                        tracing::error!("Failed to insert customer_insight (Postgres): {}", e);
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
+                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
+                            .execute(pool).await {
+                            tracing::error!("Failed to insert customer_interaction (Sqlite): {}", e);
+                        }
+
+                        if let Some(arr) = insights_array {
+                            for insight in arr {
+                                if let Some(insight_str) = insight.as_str() {
+                                    let insight_id = Uuid::new_v4().to_string();
+                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
+                                        .execute(pool).await {
+                                        tracing::error!("Failed to insert customer_insight (Sqlite): {}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             let mut quote_id_opt: Option<String> = None;
             let mut _quote_total_amount_cents: Option<i64> = None;
 
             let mut booking_id_opt: Option<String> = None;
 
             if action_type == "Draft Booking" {
+                let mut draft_booking_id = Uuid::new_v4();
                 if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
-                    let draft_booking_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_booking_id.to_string());
                     let service_id = booking_data.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown_service");
                     let start_time_str = booking_data.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
                     let end_time_str = booking_data.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
-
                     let st = chrono::DateTime::parse_from_rfc3339(start_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
                     let et = chrono::DateTime::parse_from_rfc3339(end_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
-
                     let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
-
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
                             if let Ok(mut tx) = self.db.pool.begin().await {
@@ -351,7 +444,6 @@ Output JSON format:
                                 .bind(st)
                                 .bind(et)
                                 .execute(&mut *tx).await;
-
                                 let _ = sqlx::query(
                                     "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4"
                                 )
@@ -360,9 +452,23 @@ Output JSON format:
                                 .bind(st)
                                 .bind(et)
                                 .execute(&mut *tx).await;
-
                                 let _ = tx.commit().await;
                             }
+                        },
+                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                            let _ = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, \pending, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(&draft_booking_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(customer_id_uuid.to_string())
+                            .bind(service_id)
+                            .bind(st.to_rfc3339())
+                            .bind(et.to_rfc3339())
+                            .execute(&**sqlite_pool).await;
+                        }
+                    }
+                }
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                             let _ = sqlx::query(

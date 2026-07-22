@@ -2593,6 +2593,7 @@ mod real_feature_state_tests {
 pub struct CustomerMemorySynthesis {
     pub customer_id: String,
     pub summary: String,
+    pub insights: Vec<String>,
 }
 
 async fn synthesize_customer_memory(
@@ -2604,12 +2605,20 @@ async fn synthesize_customer_memory(
 
     let limit = 5;
     let mut history_items = Vec::new();
+    let mut insights = Vec::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = $1 AND metadata->>'customer_id' = $2 ORDER BY last_referenced_at DESC LIMIT $3";
+            let insights_rows = sqlx::query("SELECT content FROM customer_insights WHERE tenant_id = $1 AND customer_id = $2").bind(&tenant_id).bind(&customer_id).fetch_all(&mut *tx).await.unwrap_or_default();
+            for row in insights_rows {
+                use sqlx::Row;
+                if let Ok(c) = row.try_get::<String, _>("content") {
+                    insights.push(c);
+                }
+            }
             let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.unwrap();
             for row in rows {
@@ -2621,6 +2630,13 @@ async fn synthesize_customer_memory(
         }
         crate::db::DbStore::Sqlite(pool) => {
             let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = ? AND json_extract(metadata, '$.customer_id') = ? ORDER BY last_referenced_at DESC LIMIT ?";
+            let insights_rows = sqlx::query("SELECT content FROM customer_insights WHERE tenant_id = ? AND customer_id = ?").bind(&tenant_id).bind(&customer_id).fetch_all(pool).await.unwrap_or_default();
+            for row in insights_rows {
+                use sqlx::Row;
+                if let Ok(c) = row.try_get::<String, _>("content") {
+                    insights.push(c);
+                }
+            }
             let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             for row in rows {
                 use sqlx::Row;
@@ -2635,6 +2651,7 @@ async fn synthesize_customer_memory(
         return Ok(Json(CustomerMemorySynthesis {
             customer_id,
             summary: "No past interactions recorded.".to_string(),
+            insights,
         }));
     }
 
@@ -2666,5 +2683,6 @@ async fn synthesize_customer_memory(
     Ok(Json(CustomerMemorySynthesis {
         customer_id,
         summary,
+        insights,
     }))
 }

@@ -86,6 +86,17 @@ function CustomerMemoryGraphContent() {
                {data?.segments && data.segments.map((s: string) => <span key={s} className="ml-1 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">{s}</span>)}
              </div>
           </div>
+          {data?.insights && data.insights.length > 0 && (
+            <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-sm font-semibold mb-2 text-[#0066FF]">What to know before you reply</h3>
+              <ul className="list-disc pl-5 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                {data.insights.map((insight: string, i: number) => (
+                  <li key={i}>{insight}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="text-sm font-semibold mb-2">Agent Summary</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
