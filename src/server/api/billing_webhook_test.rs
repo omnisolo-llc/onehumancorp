@@ -596,3 +596,64 @@ async fn test_stripe_webhook_pos_transaction() {
 
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_calendly_webhook_invitee_created() {
+    use axum::routing::post;
+    use crate::api::billing_webhook::{calendly_webhook_handler, WebhookState, CalendlyEvent};
+    use serde_json::json;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    if client.get_multiplexed_async_connection().await.is_err() { return; }
+
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client));
+    let db = match crate::db::DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let db_arc = std::sync::Arc::new(db);
+    let transport = std::sync::Arc::new(crate::orchestration::mesh::InProcessTransport::new());
+    let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+    let orchestrator = std::sync::Arc::new(crate::orchestration::DepartmentOrchestrator::new(db_arc.clone(), mesh));
+    let webhook_state = WebhookState {
+        rate_limiter,
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
+    };
+
+    let app = axum::Router::new()
+        .route("/api/v1/webhooks/calendly", post(calendly_webhook_handler))
+        .with_state(webhook_state);
+
+    let payload = json!({
+        "event": "invitee.created",
+        "payload": {
+            "tracking": {
+                "tenant_id": "test_tenant_calendly_001"
+            },
+            "event": {
+                "start_time": "2024-05-10T12:00:00Z",
+                "end_time": "2024-05-10T13:00:00Z"
+            },
+            "invitee": {
+                "email": "test@example.com"
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+
+    let client_req = reqwest::Client::new();
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/calendly", addr))
+        .json(&payload).send().await.unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+}
