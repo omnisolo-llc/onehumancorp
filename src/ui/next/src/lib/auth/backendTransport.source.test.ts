@@ -1,8 +1,38 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const API_ROOT = join(process.cwd(), "src/app/api");
+function findFolder(relativePath: string): string {
+  const paths = [
+    join(process.cwd(), relativePath),
+    join(process.cwd(), "src/ui/next", relativePath),
+    join(__dirname, "../../../..", relativePath),
+    join(__dirname, "../../..", relativePath),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return p;
+    }
+  }
+  throw new Error(`Could not find folder: ${relativePath}`);
+}
+
+function findFile(relativePath: string): string {
+  const paths = [
+    join(process.cwd(), relativePath),
+    join(process.cwd(), "src/ui/next", relativePath),
+    join(__dirname, "../../../..", relativePath),
+    join(__dirname, "../../..", relativePath),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return readFileSync(p, "utf8");
+    }
+  }
+  throw new Error(`Could not find file: ${relativePath}`);
+}
+
+const API_ROOT = findFolder("src/app/api");
 const BACKEND_CONFIGURATION =
   /process\.env\.[A-Z0-9_]*(?:URL|ORIGIN)|https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/;
 const BROWSER_IDENTITY =
@@ -37,7 +67,7 @@ describe("protected backend transport source contract", () => {
   });
 
   it("does not reintroduce backend rewrites that bypass the server transport", () => {
-    const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+    const config = findFile("next.config.mjs");
     expect(config).not.toMatch(/\brewrites\s*\(/);
     expect(config).not.toMatch(/destination\s*:.*BACKEND_URL/);
   });

@@ -1,9 +1,23 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function source(relativePath: string): string {
-  return readFileSync(join(process.cwd(), relativePath), "utf8");
+  const paths = [
+    join(process.cwd(), relativePath),
+    join(process.cwd(), "src/ui/next", relativePath),
+    join(__dirname, "../../../..", relativePath),
+    join(__dirname, "../../..", relativePath),
+    join(__dirname, "../..", relativePath),
+    join(__dirname, "..", relativePath),
+    join(__dirname, relativePath),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return readFileSync(p, "utf8");
+    }
+  }
+  throw new Error(`Could not find file: ${relativePath}`);
 }
 
 describe("product-shell overlay authority", () => {

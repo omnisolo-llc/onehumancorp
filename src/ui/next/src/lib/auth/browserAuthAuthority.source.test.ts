@@ -1,16 +1,31 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+function findFolder(relativePath: string): string {
+  const paths = [
+    join(process.cwd(), relativePath),
+    join(process.cwd(), "src/ui/next", relativePath),
+    join(__dirname, "../../../..", relativePath),
+    join(__dirname, "../../..", relativePath),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return p;
+    }
+  }
+  throw new Error(`Could not find folder: ${relativePath}`);
+}
+
 const ROOTS = [
-  join(process.cwd(), "src/app"),
-  join(process.cwd(), "src/components"),
-  join(process.cwd(), "src/hooks"),
-  join(process.cwd(), "src/lib"),
+  findFolder("src/app"),
+  findFolder("src/components"),
+  findFolder("src/hooks"),
+  findFolder("src/lib"),
 ];
 const SERVER_ONLY_FILES = new Set([
-  join(process.cwd(), "src/lib/auth/backendTransport.ts"),
-  join(process.cwd(), "src/lib/auth/serverSession.ts"),
+  join(findFolder("src/lib"), "auth/backendTransport.ts"),
+  join(findFolder("src/lib"), "auth/serverSession.ts"),
 ]);
 const BROWSER_IDENTITY =
   /localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|ohc_token|organization_id|roles|spiffe_id|tenant|tenant_id|token|user_id)["']\s*\)/;
@@ -21,7 +36,7 @@ function productionBrowserFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      if (path === join(process.cwd(), "src/app/api")) return [];
+      if (path === join(findFolder("src/app"), "api")) return [];
       return productionBrowserFiles(path);
     }
     if (!/\.(?:ts|tsx)$/.test(entry.name)) return [];
