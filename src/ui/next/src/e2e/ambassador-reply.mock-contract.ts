@@ -70,23 +70,33 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     }
   });
 
-  test('Owner views draft in feed, edits it, and approves it', async ({ page }) => {
+  test('Owner views draft in feed, edits it, and approves it', async ({ page, request }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
+    // Trigger the Ambassador's draft reply via a real API call (no mocks)
+    // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
+    const tenantId = 'e2e-tenant';
+    const webhookPayload = {
+      tenant_id: tenantId,
+      sender_id: 'testuser',
+      message: 'Do you have vegan chocolate cake available for Saturday?',
+      source: 'instagram'
+    };
+
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const response = await request.post(`${apiBase}/api/v1/inbox/webhook`, {
+      data: webhookPayload,
+    });
+    expect(response.ok()).toBeTruthy();
+
     await page.goto('/feed');
     await expect(page.getByTestId('agent-feed')).toBeVisible();
 
-    // Trigger simulation
-    const simBtn = page.getByTestId('simulate-ambassador-btn');
-    if (await simBtn.isVisible()) {
-      await simBtn.click();
-    }
-
-    const feedCard = page.getByTestId('agent-feed-card').first();
+    const feedCard = page.getByTestId('agent-feed-card').filter({ hasText: 'CUSTOMER MESSAGE' }).first();
     await expect(feedCard).toBeVisible({ timeout: 15000 });
 
     // Verify specific Ambassador UI elements
