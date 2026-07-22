@@ -107,7 +107,13 @@ describe('CustomerReferralProgramPage', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
     render(<CustomerReferralProgramPage />);
+
+    // Wait for fetch and state update to complete
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    // Add a tiny delay to allow promises to flush and state to update
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 
