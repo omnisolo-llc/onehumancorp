@@ -47,6 +47,10 @@ export class SyncManager {
     }
   }
 
+  public async enqueueMutation(mutation: any) {
+    return this.enqueue(mutation);
+  }
+
   public async getQueueLength(): Promise<number> {
     const queue = await this.getQueue();
     return queue.length;
@@ -532,3 +536,6 @@ export class SyncManager {
     }
   }
 }
+
+export const syncManager = SyncManager.getInstance();
+
