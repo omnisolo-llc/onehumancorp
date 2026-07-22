@@ -43,8 +43,8 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
-      .step.active { display: block; }
+      .step { display: none !important; }
+      .step.active { display: block !important; }
       .next-step-btn {
         width: 100%;
         padding: 12px;
@@ -76,6 +76,28 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
+      .chat-message {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .chat-message.user {
+        align-items: flex-end;
+      }
+      .chat-sender {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .chat-bubble {
+        background: #0066FF;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 16px;
+        border-bottom-right-radius: 4px;
+        max-width: 80%;
+        word-wrap: break-word;
+      }
     </style>
   </head>
   <body>
@@ -87,9 +109,27 @@
         <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" />
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
+        <button class="next-step-btn" data-next="step-chat" style="background: transparent; border: 1px solid #0066FF; color: #0066FF;">Conversational Setup</button>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
         <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
         <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Start My Business</button>
+      </div>
+
+      <div id="step-chat" class="step">
+        <h2>Conversational Setup</h2>
+        <div id="chat-history-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;"></div>
+        <div id="chat-image-container" style="display: none; margin-bottom: 12px;">
+          <input type="file" id="chat-image-upload" />
+        </div>
+        <button id="chat-upload-btn" class="secondary-btn" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-bottom: 12px;">Upload Image</button>
+        <input type="text" id="chat-input" placeholder="e.g. I am a home baker" class="glassmorphism glass-control" />
+        <button id="chat-send-btn" class="next-step-btn">Send</button>
+      </div>
+
+      <div id="step-approval" class="step">
+        <h1>Ready to Launch</h1>
+        <p>Your workspace configuration has been generated based on your inputs.</p>
+        <button id="approve-publish-btn" class="next-step-btn">Publish</button>
       </div>
 
       <div id="step-context" class="step">
@@ -184,11 +224,12 @@
         support: '',
         assistantTone: '',
         instantBio: '',
+        chatHistory: [],
         updated_at: 0
       };
 
       const stepOrder = [
-        'step-intro', 'step-context', 'step-categories', 'step-name',
+        'step-intro', 'step-chat', 'step-approval', 'step-context', 'step-categories', 'step-name',
         'step-assistant', 'step-admin', 'step-offer', 'step-location',
         'step-target-audience', 'step-domain', 'step-template'
       ];
@@ -262,6 +303,26 @@
         if (state.step > 0 && state.step < stepOrder.length) {
             goToStep(stepOrder[state.step]);
         }
+        renderChatHistory();
+      }
+
+      function renderChatHistory() {
+        const historyContainer = document.getElementById('chat-history-container');
+        if (!historyContainer) return;
+        historyContainer.innerHTML = '';
+        state.chatHistory.forEach(msg => {
+          const msgEl = document.createElement('div');
+          msgEl.className = 'chat-message user';
+          const senderEl = document.createElement('div');
+          senderEl.className = 'chat-sender';
+          senderEl.innerText = 'You';
+          const bubbleEl = document.createElement('div');
+          bubbleEl.className = 'chat-bubble';
+          bubbleEl.innerText = msg;
+          msgEl.appendChild(senderEl);
+          msgEl.appendChild(bubbleEl);
+          historyContainer.appendChild(msgEl);
+        });
       }
 
       // Instant build logic
@@ -315,6 +376,62 @@
             instantError.style.display = 'block';
             generateBtn.disabled = false;
             generateBtn.innerText = 'Generate My Workspace'; // Expected by test
+          }
+        });
+      }
+
+      const chatUploadBtn = document.getElementById('chat-upload-btn');
+      const chatImageContainer = document.getElementById('chat-image-container');
+      if (chatUploadBtn && chatImageContainer) {
+        chatUploadBtn.addEventListener('click', () => {
+          chatImageContainer.style.display = chatImageContainer.style.display === 'none' ? 'block' : 'none';
+        });
+      }
+
+      const chatInput = document.getElementById('chat-input');
+      const chatSendBtn = document.getElementById('chat-send-btn');
+      const approvePublishBtn = document.getElementById('approve-publish-btn');
+
+      const handleChatSend = () => {
+        const val = chatInput.value.trim();
+        if (!val) return;
+        state.chatHistory.push(val);
+        chatInput.value = '';
+        renderChatHistory();
+        saveState();
+        goToStep('step-approval');
+      };
+
+      if (chatSendBtn) {
+        chatSendBtn.addEventListener('click', handleChatSend);
+      }
+      if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleChatSend();
+          }
+        });
+      }
+
+      if (approvePublishBtn) {
+        approvePublishBtn.addEventListener('click', async () => {
+          try {
+            const prompt = state.chatHistory.length > 0 ? state.chatHistory[state.chatHistory.length - 1] : '';
+            const res = await fetch('/api/v1/onboarding/start_zero_click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, image_url: null })
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || data.message || 'Network request failed');
+            }
+            localStorage.removeItem('onboardingState');
+            document.body.innerHTML = '<h1>You\'re Live!</h1>';
+          } catch (e) {
+            console.error(e);
           }
         });
       }
