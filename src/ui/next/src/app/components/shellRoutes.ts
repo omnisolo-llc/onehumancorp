@@ -184,6 +184,11 @@ function titleFromPath(pathname: string) {
 
 export function resolveShellRoute(pathname: string | null): ShellRoute {
   const safePathname = pathname || "/";
+
+  if (safePathname.startsWith("/embed/")) {
+    return { owner: "page", title: "", subtitle: "" };
+  }
+
   const metadataPrefix = longestMatchingPrefix(safePathname, Object.keys(routeMetadata));
   const metadata = metadataPrefix ? routeMetadata[metadataPrefix] : undefined;
 

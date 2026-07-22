@@ -30,6 +30,13 @@ export const PUBLIC_ROUTE_ENTRIES = [
     reason: "load immutable framework assets needed by the login page",
     owner: "framework",
   },
+  {
+    method: "GET",
+    invocation: "page",
+    matcher: { kind: "path-prefix", path: "/embed/" },
+    reason: "allow access to public embed widgets",
+    owner: "growth",
+  },
 ] as const satisfies readonly PublicRouteEntry[];
 
 export function classifyRequest(input: RequestDescriptor): RouteDecision {

@@ -45,6 +45,14 @@ export type PublicRouteEntry =
       reason: string;
       owner: "framework";
       api?: never;
+    }>
+  | Readonly<{
+      method: "GET";
+      invocation: "page";
+      matcher: Readonly<{ kind: "path-prefix"; path: string }>;
+      reason: string;
+      owner: "growth";
+      api?: never;
     }>;
 
 export type RouteDecision =
