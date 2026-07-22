@@ -140,6 +140,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "CRITICAL: No OHC_SQLITE_KEY or OHC_SQLITE_ENCRYPTION_KEY configured.")]
     fn test_standalone_mode_generates_ephemeral_key() {
         temp_env::with_vars(vec![
             ("OHC_SQLITE_KEY", None::<&str>),
