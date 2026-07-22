@@ -141,7 +141,7 @@ impl IntegrationsRegistry {
                           if let Some(client) = clients.get(integration_id) {
                               let client = client.clone();
                               tokio::spawn(async move {
-                                  if let Err(e) = client.send_message(&channel_id, &text).await {
+                                  if let Err(e) = client.send_message("slack", &channel_id, &text).await {
                                       ::server_telemetry::record_error_signal("[bug] Failed to send Slack message");
                                       tracing::warn!("Failed to send Slack message: {}", e);
                                   }
