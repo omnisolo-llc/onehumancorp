@@ -127,7 +127,7 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
         return 0.0;
     }
     let saved_bytes = (original_bytes - compressed_bytes) as f64;
-    let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
+    let saved_bytes = saved_bytes.max(0.0);
     let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
     let savings = saved_gb * config.cost_per_gb_month;
     (savings * 10000.0).round() / 10000.0
@@ -145,7 +145,7 @@ pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, c
         return 0.0;
     }
     let saved_bytes = (original_bytes - compressed_bytes) as f64;
-    let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
+    let saved_bytes = saved_bytes.max(0.0);
     let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
     let savings = saved_gb * config.cost_per_network_gb;
     (savings * 10000.0).round() / 10000.0
@@ -460,6 +460,25 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(0, 0, "gpt-4o"), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_savings_extreme_values() {
+        let config = CostConfig {
+            cost_per_network_gb: 0.50,
+            cost_per_gb_month: 0.10,
+            ..Default::default()
+        };
+
+        let original = i64::MAX;
+        let compressed = 0;
+        let network_savings = calculate_bandwidth_savings(original, compressed, &config);
+        assert!(network_savings > 0.0);
+        let storage_savings = calculate_storage_savings(original, compressed, &config);
+        assert!(storage_savings > 0.0);
+
+        assert_eq!(calculate_bandwidth_savings(100, 200, &config), 0.0);
+        assert_eq!(calculate_storage_savings(100, 200, &config), 0.0);
     }
 }
 // Optimizations handled: Cost savings functionality verified and intact
