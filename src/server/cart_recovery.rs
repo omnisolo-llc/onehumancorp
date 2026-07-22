@@ -761,7 +761,8 @@ where
         let id = uuid::Uuid::new_v4().to_string();
         let proposed_action = serde_json::json!({
             "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name),
-            "response": body
+            "response": body,
+            "feature_type": "cart_recovery.dispatch"
         });
 
         let mut completion_tx = pool
@@ -1101,4 +1102,42 @@ mod tests {
 
         assert!(matches!(err, CartRecoveryError::MissingProviderConfig(_)));
     }
+}
+
+
+pub async fn handle_approved_cart_recovery(
+    tenant_id: &str,
+    payload: &Value,
+    pool: &PgPool,
+) -> Result<(), String> {
+    let delivery = Arc::new(HttpCartRecoveryDeliveryProvider::from_env());
+    let processor = CartRecoveryJobProcessor::new(delivery);
+
+    let _receipt = processor
+        .process_payload(payload)
+        .await
+        .map_err(|e| format!("Failed to process cart recovery delivery: {:?}", e))?;
+
+    if let Some(session_id) = payload.get("checkout_session_id").and_then(|v| v.as_str()) {
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|err| format!("Failed to begin transaction: {}", err))?;
+        ::server_common::auth_utils::set_system_context(&mut *tx)
+            .await
+            .map_err(|err| format!("Failed to set system context: {}", err))?;
+
+        sqlx::query("UPDATE conversational_checkout_sessions SET status = 'recovered', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+            .bind(session_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Failed to update conversational_checkout_sessions: {}", e))?;
+
+        tx.commit()
+            .await
+            .map_err(|err| format!("Failed to commit transaction: {}", err))?;
+    }
+
+    Ok(())
 }
