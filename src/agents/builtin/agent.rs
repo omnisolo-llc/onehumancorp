@@ -8151,7 +8151,22 @@ mod tests {
         )
         .build();
 
-        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
+        let expected = "<server_system_message>
+Server System Message
+</server_system_message>
+
+<tool_definitions>
+- test_tool: A test tool
+  Schema: {\"type\":\"object\"}
+</tool_definitions>
+
+<developer_instructions>
+Developer Instructions
+</developer_instructions>
+
+<user_instructions>
+User Instructions
+</user_instructions>";
 
         assert_eq!(prompt, expected);
     }
