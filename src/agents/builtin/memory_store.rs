@@ -1518,6 +1518,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     }
 }
 
+#[derive(Clone)]
 pub struct PersistentMemoryStore {
     pub repo: std::sync::Arc<VectorRepository>,
     #[allow(dead_code)]
@@ -1594,6 +1595,75 @@ impl LongTermMemory for PersistentMemoryStore {
             metadata: Some(serde_json::to_string(&tags).unwrap_or_default()),
         };
         self.repo.upsert(&record).await
+    }
+    fn as_anthropic_accessor(
+        &self,
+    ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+        Some(std::sync::Arc::new(self.clone()))
+    }
+}
+
+#[async_trait]
+impl crate::tools::anthropic_memory::MemoryAccessor for PersistentMemoryStore {
+    async fn search_cross_session_messages(
+        &self,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        // Fallback to LongTermMemory default (no-op)
+        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(
+            self, query, limit, summarize,
+        )
+        .await
+    }
+
+    async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        let pool = self.repo.get_store_pool();
+        let timestamp = chrono::Utc::now().timestamp();
+
+        sqlx::query("INSERT INTO topics (topic_name, content, updated_at) VALUES (?, ?, ?) ON CONFLICT(topic_name) DO UPDATE SET content=excluded.content, updated_at=excluded.updated_at")
+            .bind(topic_name)
+            .bind(content)
+            .bind(timestamp)
+            .execute(pool)
+            .await
+            .map_err(|e| format!("Failed to write topic '{}': {}", topic_name, e))?;
+
+        Ok(())
+    }
+
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        let pool = self.repo.get_store_pool();
+        let row = sqlx::query_as::<_, (String,)>("SELECT content FROM topics WHERE topic_name = ?")
+            .bind(topic_name)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| format!("Failed to retrieve topic '{}': {}", topic_name, e))?;
+
+        match row {
+            Some((content,)) => Ok(content),
+            None => Err(format!("Topic '{}' not found", topic_name)),
+        }
+    }
+
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let pool = self.repo.get_store_pool();
+        let search_pattern = format!("\"{}\"", query.replace('"', "\"\""));
+
+        let rows = sqlx::query_as::<_, (String, String, String)>("SELECT session_id, role, content FROM session_messages_fts WHERE session_messages_fts MATCH ? ORDER BY rank LIMIT ?")
+            .bind(&search_pattern)
+            .bind(limit as i64)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("Failed to search transcripts: {}", e))?;
+
+        let results: Vec<String> = rows
+            .into_iter()
+            .map(|(sid, role, content)| format!("[Session: {}] {}: {}", sid, role, content))
+            .collect();
+
+        Ok(results)
     }
 }
 
@@ -3006,6 +3076,87 @@ mod get_conflicts_tests {
         let retrieved = store.retrieve("query", 10).await.unwrap();
         assert_eq!(retrieved.len(), 1);
         assert_eq!(retrieved[0], "test content");
+    }
+
+    #[tokio::test]
+    async fn test_persistent_memory_store_anthropic_3tier_mechanic() {
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+        use ohc_builtin_agent_llm::LlmClient;
+        use std::sync::Arc;
+
+        struct MockLlm;
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(
+                &self,
+                _req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(ChatResponse {
+                    message: Message::assistant(""),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock_response_id".to_string()),
+                })
+            }
+
+            async fn generate_embedding(
+                &self,
+                _text: &str,
+            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(vec![0.1, 0.2, 0.3])
+            }
+        }
+
+        let conn_opts = std::str::FromStr::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        // Need topics and session_messages_fts tables for MemoryAccessor implementation
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS topics (
+                topic_name TEXT PRIMARY KEY,
+                content TEXT,
+                updated_at INTEGER
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let _ = sqlx::query(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS session_messages_fts USING fts5(session_id UNINDEXED, role UNINDEXED, content, tokenize='porter');"
+        ).execute(&pool).await.unwrap();
+
+        // Insert a test transcript
+        let _ = sqlx::query("INSERT INTO session_messages_fts (session_id, role, content) VALUES (?, ?, ?)")
+            .bind("test_sess")
+            .bind("user")
+            .bind("hello world anthropic")
+            .execute(&pool).await.unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let llm = Arc::new(MockLlm);
+        let store = PersistentMemoryStore {
+            repo: repo.clone(),
+            tenant_id: "tenant1".to_string(),
+            agent_id: "agent1".to_string(),
+            llm: llm.clone(),
+        };
+
+        // Get as_anthropic_accessor
+        let accessor = store.as_anthropic_accessor().expect("Should return MemoryAccessor");
+
+        // Test write_topic
+        accessor.write_topic("system_architecture", "Detailed DB schema for PersistentStore").await.unwrap();
+
+        // Test retrieve_topic
+        let topic_content = accessor.retrieve_topic("system_architecture").await.unwrap();
+        assert_eq!(topic_content, "Detailed DB schema for PersistentStore");
+        assert!(accessor.retrieve_topic("nonexistent").await.is_err());
+
+        // Test search_transcripts
+        let transcripts = accessor.search_transcripts("hello", 10).await.unwrap();
+        assert_eq!(transcripts.len(), 1);
+        assert_eq!(transcripts[0], "[Session: test_sess] user: hello world anthropic");
     }
 }
 
