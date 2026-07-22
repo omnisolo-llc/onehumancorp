@@ -57,5 +57,8 @@ describe('ChangelogPage', () => {
     await act(async () => {
       render(<ChangelogPage />);
     });
+    const textElement = await screen.findByText(/Faster loading times for product images/);
+    expect(textElement.tagName.toLowerCase()).toBe('span');
+    expect(textElement.parentElement?.tagName.toLowerCase()).toBe('p');
   });
 });
