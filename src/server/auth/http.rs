@@ -353,18 +353,18 @@ fn get_member_uuid(sub: &str) -> uuid::Uuid {
 }
 
 #[derive(Clone)]
-struct InMemoryApiKey {
-    id: String,
-    key_hash: String,
-    name: String,
-    member_id: String,
-    organization_id: String,
-    created_at: String,
+pub struct InMemoryApiKey {
+    pub id: String,
+    pub key_hash: String,
+    pub name: String,
+    pub member_id: String,
+    pub organization_id: String,
+    pub created_at: String,
 }
 
 static IN_MEMORY_API_KEYS: OnceLock<Mutex<Vec<InMemoryApiKey>>> = OnceLock::new();
 
-fn get_in_memory_keys() -> &'static Mutex<Vec<InMemoryApiKey>> {
+pub fn get_in_memory_keys() -> &'static Mutex<Vec<InMemoryApiKey>> {
     IN_MEMORY_API_KEYS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
