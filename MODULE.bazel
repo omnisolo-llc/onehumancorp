@@ -336,3 +336,6 @@ archive_override(
         "https://mirror.bazel.build/github.com/cncf/xds/archive/555b57ec207be86f811fb0c04752db6f85e3d7e2.tar.gz",
     ],
 )
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+use_repo(go_deps, "com_github_redis_go_redis_v9", "com_github_alicebob_miniredis_v2")

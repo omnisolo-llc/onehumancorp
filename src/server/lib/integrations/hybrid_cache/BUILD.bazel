@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybrid_cache",
+    srcs = ["cache.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/lib/integrations/hybrid_cache",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "hybrid_cache_test",
+    srcs = ["cache_test.go"],
+    embed = [":hybrid_cache"],
+    deps = [
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
