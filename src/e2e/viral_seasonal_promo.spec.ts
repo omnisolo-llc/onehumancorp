@@ -25,15 +25,6 @@ test.describe('Viral Seasonal Promo Generator UI', () => {
         await expect(page.locator('#preview-title')).toHaveText('Holiday Gift Event');
         await expect(page.locator('#preview-badge')).toHaveText('25% OFF');
 
-        // Intercept API request to prevent failure
-        await page.route('/api/v1/growth/seasonal-promo/generate', route => {
-            route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({ share_link: 'https://ohc.app/promo/e2e-tenant?theme=christmas&discount=25' })
-            });
-        });
-
         // Click the generate button
         await page.click('button[data-testid="generate-promo-btn"]');
 

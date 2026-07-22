@@ -4944,21 +4944,24 @@ async fn handle_simulate_referral_checkout(
 pub struct GeneratePromoRequest {
     pub occasion: Option<String>,
     pub discount: Option<String>,
+    pub tenant_id: Option<String>,
+    pub shares_needed: Option<i32>,
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct GeneratePromoResponse {
     pub content: String,
+    pub share_link: Option<String>,
 }
 
 pub async fn handle_promo_generate(
     Extension(_state): Extension<GrowthState>,
     axum::Json(req): axum::Json<GeneratePromoRequest>,
 ) -> impl axum::response::IntoResponse {
-    let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
+    let occasion_raw = req.occasion.clone().unwrap_or_else(|| "Winter Wonderland".to_string());
     let occasion = if occasion_raw.trim().is_empty() { "Winter Wonderland".to_string() } else { occasion_raw };
 
-    let discount_raw = req.discount.unwrap_or_else(|| "25".to_string());
+    let discount_raw = req.discount.clone().unwrap_or_else(|| "25".to_string());
     let discount = if discount_raw.trim().is_empty() { "25".to_string() } else { discount_raw };
 
     let mut generated = format!(
@@ -4970,8 +4973,21 @@ pub async fn handle_promo_generate(
         generated.push_str("\n\n⚡ Powered by OHC");
     }
 
+    let tenant_id = req.tenant_id.unwrap_or_else(|| "e2e-tenant".to_string());
+
+    // We expect the payload from frontend to be:
+    // { "tenant_id": tenant, "occasion": themeSelect.value, "discount": discountInput.value, "shares_needed": parseInt(sharesInput.value) }
+    // the frontend generates: `https://ohc.app/promo/${tenant}?theme=${themeSelect.value}&discount=${discountInput.value}`
+    let share_link = format!(
+        "https://ohc.app/promo/{}?theme={}&discount={}",
+        tenant_id,
+        req.occasion.unwrap_or_else(|| "christmas".to_string()),
+        req.discount.unwrap_or_else(|| "25".to_string())
+    );
+
     axum::Json(GeneratePromoResponse {
         content: generated,
+        share_link: Some(share_link),
     })
 }
 
