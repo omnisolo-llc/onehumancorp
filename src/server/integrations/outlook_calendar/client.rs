@@ -10,6 +10,7 @@ fn get_client() -> &'static reqwest::Client {
 const BASE_URL: &str = "https://graph.microsoft.com/v1.0";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookEvent {
     #[serde(default)]
     pub id: String,
@@ -34,6 +35,7 @@ pub struct OutlookEvent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookBody {
     #[serde(default)]
     pub content_type: String,
@@ -42,6 +44,7 @@ pub struct OutlookBody {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookDateTime {
     #[serde(default)]
     pub date_time: String,
@@ -50,6 +53,7 @@ pub struct OutlookDateTime {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookAttendee {
     #[serde(default)]
     pub email_address: OutlookEmailAddress,
@@ -60,6 +64,7 @@ pub struct OutlookAttendee {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookEmailAddress {
     #[serde(default)]
     pub address: String,
@@ -68,12 +73,14 @@ pub struct OutlookEmailAddress {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookOnlineMeeting {
     #[serde(default)]
     pub join_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookCalendar {
     #[serde(default)]
     pub id: String,
@@ -84,6 +91,7 @@ pub struct OutlookCalendar {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FreeBusySlot {
     #[serde(default)]
     pub start: Option<OutlookDateTime>,
@@ -94,12 +102,14 @@ pub struct FreeBusySlot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookScheduleResponse {
     #[serde(default)]
     pub value: Vec<OutlookSchedule>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OutlookSchedule {
     #[serde(default)]
     pub schedule_id: Option<String>,
@@ -126,16 +136,23 @@ struct OutlookErrorDetail {
 
 pub struct OutlookCalendarClient {
     access_token: String,
+    base_url: String,
 }
 
 impl OutlookCalendarClient {
     pub fn new(access_token: String) -> Self {
-        Self { access_token }
+        Self {
+            access_token,
+            base_url: BASE_URL.to_string(),
+        }
     }
 
     #[cfg(test)]
-    fn with_base_url_for_test(access_token: String, _base_url: String) -> Self {
-        Self { access_token }
+    fn with_base_url_for_test(access_token: String, base_url: String) -> Self {
+        Self {
+            access_token,
+            base_url,
+        }
     }
 
     #[allow(dead_code)]
@@ -153,7 +170,7 @@ impl OutlookCalendarClient {
     }
 
     fn url(&self, path: &str) -> String {
-        format!("{}{}", BASE_URL, path)
+        format!("{}{}", self.base_url, path)
     }
 
     pub async fn get_events(

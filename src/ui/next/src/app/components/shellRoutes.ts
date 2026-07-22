@@ -14,6 +14,7 @@ const pageOwnedExactRoutes = new Set([
   "/analytics",
   "/assistant",
   "/business-analytics",
+  "/client-portal",
   "/cost-dashboard",
   "/dashboard",
   "/dashboard/campaigns",
@@ -99,6 +100,10 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/langgraph": {
     title: "LangGraph",
     subtitle: "Explicit state graph workflows.",
+  },
+  "/client-portal": {
+    title: "Client Portal",
+    subtitle: "Secure customer hub for proposals, invoices, courses, and support.",
   },
   "/link-in-bio-generator": { title: "Link In Bio Generator" },
   "/login": {
