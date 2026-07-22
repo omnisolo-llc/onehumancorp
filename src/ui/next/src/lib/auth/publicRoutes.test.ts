@@ -53,6 +53,13 @@ describe("bootstrap public contracts", () => {
         reason: "load immutable framework assets needed by the login page",
         owner: "framework",
       },
+      {
+        method: "GET",
+        invocation: "page",
+        matcher: { kind: "path-prefix", path: "/embed/" },
+        reason: "allow access to public embed widgets",
+        owner: "growth",
+      },
     ]);
   });
 
@@ -61,6 +68,8 @@ describe("bootstrap public contracts", () => {
     ["POST", "/api/v1/auth/login", "route-handler", "public"],
     ["post", "/api/v1/auth/login", "route-handler", "public"],
     ["GET", "/_next/static/chunks/app.js", "asset", "public"],
+    ["GET", "/embed/post-purchase-share", "page", "public"],
+    ["GET", "/embed/social-proof", "page", "public"],
     ["POST", "/login", "server-action", "protected"],
     ["GET", "/login", "rsc", "protected"],
     ["GET", "/login", "prefetch", "protected"],
