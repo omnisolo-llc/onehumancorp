@@ -368,54 +368,6 @@ Output JSON format:
                 }
             }
 
-            // Handle customer insights and interactions
-            let insights_array = extracted.get("customer_insights").and_then(|v| v.as_array());
-            if let Some(c_id) = customer_id_val {
-                let interaction_id = Uuid::new_v4().to_string();
-                match &self.db.store {
-                    crate::db::DbStore::Postgres => {
-                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES ($1, $2, $3, $4, $5, NOW())")
-                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
-                            .execute(&self.db.pool).await {
-                            tracing::error!("Failed to insert customer_interaction (Postgres): {}", e);
-                        }
-
-                        if let Some(arr) = insights_array {
-                            for insight in arr {
-                                if let Some(insight_str) = insight.as_str() {
-                                    let insight_id = Uuid::new_v4().to_string();
-                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())")
-                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
-                                        .execute(&self.db.pool).await {
-                                        tracing::error!("Failed to insert customer_insight (Postgres): {}", e);
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    crate::db::DbStore::Sqlite(pool) => {
-                        if let Err(e) = sqlx::query("INSERT INTO customer_interactions (id, tenant_id, customer_id, interaction_type, content, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
-                            .bind(&interaction_id).bind(&tenant_id).bind(c_id).bind("message_triage").bind(customer_message)
-                            .execute(pool).await {
-                            tracing::error!("Failed to insert customer_interaction (Sqlite): {}", e);
-                        }
-
-                        if let Some(arr) = insights_array {
-                            for insight in arr {
-                                if let Some(insight_str) = insight.as_str() {
-                                    let insight_id = Uuid::new_v4().to_string();
-                                    if let Err(e) = sqlx::query("INSERT INTO customer_insights (id, tenant_id, customer_id, category, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                                        .bind(&insight_id).bind(&tenant_id).bind(c_id).bind("preference").bind(insight_str)
-                                        .execute(pool).await {
-                                        tracing::error!("Failed to insert customer_insight (Sqlite): {}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             let mut quote_id_opt: Option<String> = None;
             let mut _quote_total_amount_cents: Option<i64> = None;
 

@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS customer_insights (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     category TEXT NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS customer_insights (
 CREATE TABLE IF NOT EXISTS customer_interactions (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     interaction_type TEXT NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
