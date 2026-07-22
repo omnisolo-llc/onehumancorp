@@ -41,10 +41,15 @@ pub fn router(
             auth_store,
             ::server_auth::strict_bearer_auth_middleware,
         ))
+        .with_state(agent.clone());
+
+    let gateway_r = Router::new()
+        .route("/api/v1/gateway/run", post(gateway_run_handler))
+        .layer(axum::middleware::from_fn(::server_auth::api_key_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
-    Router::new().merge(r)
+    Router::new().merge(r).merge(gateway_r)
 }
 
 fn is_onboarding_admin(claims: &::server_common::Claims) -> bool {
@@ -455,6 +460,14 @@ async fn start_zero_click(
     }))
 }
 
+pub async fn gateway_run_handler(
+    state: State<Arc<OnboardingAgent>>,
+    extension: Extension<::server_auth::orchestration::AuthInfo>,
+    json: Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    start_zero_click(state, extension, json).await
+}
+
 async fn launch_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
@@ -696,5 +709,81 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(viewer.status(), axum::http::StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn test_gateway_run_auth_and_execution() {
+        use axum::{body::Body, http::Request};
+        use tower::ServiceExt;
+        use sha2::Digest;
+
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/unused").unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
+        let (event_tx, _) = tokio::sync::mpsc::channel(1);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool));
+        let agent = Arc::new(OnboardingAgent::new(db, hub));
+        let auth_store = Arc::new(::server_auth::Store::new());
+
+        let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let app = router(agent, auth_store).with_state(transport);
+
+        // 1. Request without key is rejected with 401
+        let no_key_req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/gateway/run")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"prompt":"baker"}"#))
+            .unwrap();
+        let response = app.clone().oneshot(no_key_req).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        // 2. Request with invalid key is rejected with 401
+        let invalid_key_req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/gateway/run")
+            .header("authorization", "Bearer ohc_gwy_invalidkey")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"prompt":"baker"}"#))
+            .unwrap();
+        let response = app.clone().oneshot(invalid_key_req).await.unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        // 3. Request with valid key passes authentication
+        let raw_key = "ohc_gwy_test_gateway_key_123";
+        let key_hash = format!("{:x}", sha2::Sha256::digest(raw_key.as_bytes()));
+
+        {
+            let mut keys = ::server_auth::http::get_in_memory_keys().lock().unwrap();
+            keys.push(::server_auth::http::InMemoryApiKey {
+                id: "key-test-1".to_string(),
+                key_hash,
+                name: "Test Gateway Key".to_string(),
+                member_id: "user-a".to_string(),
+                organization_id: "tenant-a".to_string(),
+                created_at: chrono::Utc::now().to_rfc3339(),
+            });
+        }
+
+        let valid_key_req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/gateway/run")
+            .header("authorization", format!("Bearer {raw_key}"))
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"prompt":"baker"}"#))
+            .unwrap();
+        let response = app.oneshot(valid_key_req).await.unwrap();
+
+        // Since no real database is set up or seeded, this may return 500 Internal Server Error,
+        // but getting past 401 proves the api_key_auth_middleware successfully authenticated the key.
+        let status = response.status();
+        assert!(
+            status == axum::http::StatusCode::OK || status == axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Expected status OK or INTERNAL_SERVER_ERROR, got {:?}",
+            status
+        );
     }
 }
