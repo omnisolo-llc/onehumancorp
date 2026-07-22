@@ -252,8 +252,10 @@ impl RedisRateLimiter {
 
         tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
 
+        let cost_cents = crate::calculator::calculate_cost_cents(model, tokens, 0, 0);
+
         if let Some(tracker) = &self.token_tracking {
-            tracker.record_tokens(tenant_id, model, tokens as u64);
+            tracker.record_tokens(tenant_id, model, tokens as u64, cost_cents as u64);
         }
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
@@ -261,8 +263,6 @@ impl RedisRateLimiter {
 
         let _ : () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens).await.unwrap_or(());
         let _ : () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens).await.unwrap_or(());
-
-        let cost_cents = crate::calculator::calculate_cost_cents(model, tokens, 0, 0);
 
         if let Some(store) = &self.telemetry_store {
             store.mission_cost_cents.add(
