@@ -758,7 +758,7 @@ export default function OnboardingWizard() {
               <button
                 type="button"
                 onClick={handleBackToIntro}
-                className="setup-nav-button min-h-[44px]"
+                className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
               >
                 Back
               </button>
@@ -776,7 +776,7 @@ export default function OnboardingWizard() {
             <button
               type="button"
               onClick={handleSkipSetup}
-              className="setup-nav-button min-h-[44px]"
+              className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
             >
               Skip setup
             </button>
@@ -1160,7 +1160,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1274,7 +1274,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1380,7 +1380,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1483,7 +1483,7 @@ export default function OnboardingWizard() {
                     <button
                       type="button"
                       onClick={() => handleSaveDraft()}
-                      className="setup-nav-button min-h-[44px]"
+                      className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1617,7 +1617,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
-                  className="setup-nav-button min-h-[44px]"
+                  className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
@@ -1828,7 +1828,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                       onClick={() => handleSaveDraft()}
-                  className="setup-nav-button min-h-[44px]"
+                  className="setup-nav-button min-h-[44px] px-4 py-2 bg-transparent text-[#0066FF] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[8px] transition-colors"
                 >
                   <IconLabel icon="save">Save Draft</IconLabel>
                 </button>
