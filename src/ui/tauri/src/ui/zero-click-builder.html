@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>OHC - Zero-Click Storefront Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg-color: #F5F5F7;
+        --card-bg: rgba(255, 255, 255, 0.5);
+        --text-primary: #1D1D1F;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --input-bg: rgba(255, 255, 255, 0.7);
+        --primary-btn: #0066FF;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #000000;
+          --card-bg: rgba(30, 30, 30, 0.5);
+          --text-primary: #F5F5F7;
+          --border-color: rgba(255, 255, 255, 0.1);
+          --input-bg: rgba(0, 0, 0, 0.5);
+        }
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+      .container {
+        width: 100%;
+        max-width: 375px;
+        padding: 24px;
+        box-sizing: border-box;
+        background: var(--card-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+      }
+      p.subtitle {
+        font-size: 14px;
+        opacity: 0.8;
+        margin: 0 0 24px 0;
+        line-height: 1.4;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 16px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        background-color: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 16px;
+        resize: none;
+        outline: none;
+        margin-bottom: 8px;
+      }
+      textarea:focus {
+        border-color: var(--primary-btn);
+        box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+      }
+      .error {
+        color: #FF3B30;
+        font-size: 14px;
+        margin: 0 0 16px 0;
+        display: none;
+      }
+      button {
+        width: 100%;
+        min-height: 44px;
+        background-color: var(--primary-btn);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+      }
+      button:active {
+        opacity: 0.8;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .view {
+        display: none;
+        flex-direction: column;
+      }
+      .view.active {
+        display: flex;
+      }
+
+      /* Loading State */
+      .loader {
+        width: 64px;
+        height: 64px;
+        border: 4px solid rgba(0, 102, 255, 0.3);
+        border-top: 4px solid var(--primary-btn);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 24px auto;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .pulsing-text {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        text-align: center;
+        font-size: 14px;
+        opacity: 0.8;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      /* Success State */
+      .success-icon {
+        width: 64px;
+        height: 64px;
+        background-color: rgba(52, 199, 89, 0.2);
+        color: #34C759;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin: 0 auto 16px auto;
+      }
+      .preview-container {
+        width: 100%;
+        aspect-ratio: 9/16;
+        background-color: rgba(0,0,0,0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+      .preview-container iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        position: relative;
+        z-index: 2;
+      }
+      .preview-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        opacity: 0.5;
+        z-index: 1;
+      }
+      .footer-branding {
+        margin-top: 24px;
+        text-align: center;
+      }
+      .footer-branding a {
+        color: var(--primary-btn);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+
+      <!-- Input View -->
+      <div id="view-input" class="view active">
+        <h1>Zero-Click Business Generator</h1>
+        <p class="subtitle">Describe your business in one sentence, and our AI will build your entire storefront, catalog, and operations backend instantly.</p>
+
+        <label for="prompt">What do you do?</label>
+        <textarea id="prompt" placeholder="e.g., I am a home baker in Austin selling custom vegan cakes and cupcakes."></textarea>
+
+        <div id="error-msg" class="error"></div>
+
+        <button id="generate-btn" disabled>Generate Store</button>
+      </div>
+
+      <!-- Loading View -->
+      <div id="view-loading" class="view" style="align-items: center; padding: 40px 0;">
+        <div class="loader"></div>
+        <h2 style="margin:0 0 8px 0; font-size:20px;">Analyzing your business...</h2>
+        <p class="pulsing-text">Provisioning catalog and operations...</p>
+      </div>
+
+      <!-- Success View -->
+      <div id="view-success" class="view">
+        <div class="success-icon">✓</div>
+        <h2 style="text-align: center; margin: 0 0 8px 0;">Your business is live!</h2>
+        <p class="subtitle" style="text-align: center;">Your mobile storefront is ready for customers.</p>
+
+        <div class="preview-container">
+          <div class="preview-loading">Loading Preview...</div>
+          <iframe id="preview-frame" title="Live Storefront Preview"></iframe>
+        </div>
+
+        <button id="launch-btn">🚀 Launch My Store</button>
+
+        <div class="footer-branding">
+          <a href="/setup.html" id="dashboard-footer-viral-link">⚡ Powered by OHC</a>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      const inputView = document.getElementById('view-input');
+      const loadingView = document.getElementById('view-loading');
+      const successView = document.getElementById('view-success');
+
+      const promptTextarea = document.getElementById('prompt');
+      const generateBtn = document.getElementById('generate-btn');
+      const errorMsg = document.getElementById('error-msg');
+      const launchBtn = document.getElementById('launch-btn');
+      const previewFrame = document.getElementById('preview-frame');
+
+      function switchView(viewElement) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        viewElement.classList.add('active');
+      }
+
+      promptTextarea.addEventListener('input', () => {
+        const val = promptTextarea.value.trim();
+        generateBtn.disabled = val.length === 0;
+        if (val.length > 0) {
+          errorMsg.style.display = 'none';
+        }
+      });
+
+      generateBtn.addEventListener('click', async () => {
+        const prompt = promptTextarea.value.trim();
+        if (!prompt) return;
+
+        errorMsg.style.display = 'none';
+        switchView(loadingView);
+
+        try {
+          // Check for Tauri IPC first
+          if (window.__TAURI__) {
+            await window.__TAURI__.core.invoke('process_zero_click', { prompt });
+            // Simulate processing time
+            setTimeout(() => {
+                previewFrame.src = '/storefront.html?preview=true';
+                switchView(successView);
+            }, 2000);
+          } else {
+            // Real backend call
+            const res = await fetch('/api/v1/onboarding/start_zero_click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt })
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || 'Failed to generate store');
+            }
+
+            previewFrame.src = '/storefront.html?preview=true';
+            switchView(successView);
+          }
+        } catch (e) {
+          errorMsg.innerText = e.message || 'An error occurred while generating your store.';
+          errorMsg.style.display = 'block';
+          switchView(inputView);
+        }
+      });
+
+      launchBtn.addEventListener('click', () => {
+        window.location.href = '/dashboard.html';
+      });
+    </script>
+  </body>
+</html>
