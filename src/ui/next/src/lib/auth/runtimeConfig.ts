@@ -78,7 +78,13 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
   }
 
   const backend = exactOrigin(backendValue, "backend origin");
-  if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isLoopback(backend.hostname))) {
+  const isInternalBackend =
+    isLoopback(backend.hostname) ||
+    isPrivateLanIp(backend.hostname) ||
+    !backend.hostname.includes(".") ||
+    backend.hostname.endsWith(".cluster.local") ||
+    backend.hostname.includes("onehumancorp");
+  if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isInternalBackend)) {
     throw new Error("backend origin must use HTTPS or loopback HTTP");
   }
 
