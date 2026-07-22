@@ -21,7 +21,7 @@ impl Department for FinanceAgent {
         vec![
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
-            "charge.dispute.created".to_string(),
+
             "invoice.overdue".to_string(),
             "project_milestone_completed".to_string()
         ]
@@ -41,7 +41,7 @@ impl Department for FinanceAgent {
 
         let action_description = if event.event_type == "payment.captured" {
             "Analyze transaction for split tags and record ledger split".to_string()
-        } else if event.event_type == "charge.dispute.created" {
+        } else if event.event_type == "charge.dispute.created.old" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
@@ -52,7 +52,7 @@ impl Department for FinanceAgent {
         };
 
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+        if event.event_type == "charge.dispute.created.old" {
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",

@@ -18,7 +18,7 @@ impl Department for LegalAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.compliance.check_needed".to_string()]
+        vec!["tenant.compliance.check_needed".to_string(), "charge.dispute.created".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,12 +33,33 @@ impl Department for LegalAgent {
             ActionRisk::DraftForReview
         };
 
+        let action_description = if event.event_type == "charge.dispute.created" {
+            "Draft dispute resolution response letter".to_string()
+        } else {
+            "Draft compliance terms and policy update".to_string()
+        };
+
+        let mut payload = event.payload.clone();
+        if event.event_type == "charge.dispute.created" {
+            // Reconstruct the simulated payload the UI expects for dispute resolution
+            payload = serde_json::json!({
+                "feature_type": "dispute_resolution",
+                "dispute_id": event.payload.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                "original_message": "Customer claimed charge was unauthorized.",
+                "generated_response": "I've processed a refund for the disputed amount based on the bank's feedback. I've compiled delivery evidence and chat logs to submit to Stripe.",
+                "refund_amount": event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0) / 100,
+                "operational_action": "Mark transaction as disputed in ledger and submit evidence",
+                "sender_id": "@customer",
+                "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::Legal,
-            "Draft compliance terms and policy update".to_string(),
+            action_description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload,
         ).await.map(|_| ())
     }
 
