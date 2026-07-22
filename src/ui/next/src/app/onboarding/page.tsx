@@ -1021,7 +1021,7 @@ export default function OnboardingWizard() {
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
                       disabled={isLoading}
-                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
+                      className="min-h-[44px] bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
                     </button>
@@ -1096,7 +1096,7 @@ export default function OnboardingWizard() {
                     id="generate-storefront-btn"
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
-                    className="flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                    className="flex items-center justify-center w-full min-h-[44px] bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     <span className="flex items-center gap-2">
                       <SetupIcon name="sparkles" /> Generate Storefront

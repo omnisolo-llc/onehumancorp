@@ -409,7 +409,7 @@ export default function WebsiteBuilderPage() {
                       <span className="font-semibold text-gray-800">Digital Products</span>
                     </label>
                     <button
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
+                      className="w-full min-h-[44px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
                       onClick={() => setWizardStep(4)}
                     >
                       Next
@@ -506,7 +506,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
+                      className="w-full min-h-[44px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
                       onClick={() => setWizardStep(8)}
                     >
                       Next
@@ -539,7 +539,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <div id="step-9" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
+                      className="w-full min-h-[44px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] mt-4"
                       onClick={() => setWizardStep(9)}
                     >
                       Next
@@ -735,7 +735,7 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-[#0066FF] text-white font-bold p-4 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#005bb5] rounded-lg"
+            className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold p-4 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#005bb5] rounded-lg"
             onClick={() => router.push('/dashboard')}
           >
             View Welcome Checklist
@@ -796,7 +796,7 @@ export default function WebsiteBuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-lg hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2 rounded-lg"
+              className="w-full min-h-[44px] bg-[#0066FF] text-white p-4 font-bold shadow-lg hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2 rounded-lg"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
