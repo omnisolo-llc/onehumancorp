@@ -263,12 +263,17 @@ export default function Dashboard() {
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
-        if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !agentFeedData.items?.length) {
-            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
-            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED"));
-        } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
+        let mergedPending: any[] = [];
+        let mergedActivity: any[] = [];
+
+        if (approvalsData && Array.isArray(approvalsData)) {
+            mergedPending = mergedPending.concat(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
+            mergedActivity = mergedActivity.concat(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED"));
+        }
+
+        if (agentFeedData && agentFeedData.items) {
+            mergedPending = mergedPending.concat(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
+            mergedActivity = mergedActivity.concat(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
                 id: a.id,
                 event_type: a.lifecycle_state,
                 department: a.event_source,
@@ -276,6 +281,13 @@ export default function Dashboard() {
                 created_at: a.created_at
             })));
         }
+
+        // Deduplicate by ID
+        const uniquePending = Array.from(new Map(mergedPending.map(item => [item.id, item])).values());
+        const uniqueActivity = Array.from(new Map(mergedActivity.map(item => [item.id, item])).values());
+
+        setPendingApprovals(uniquePending);
+        setActivities(uniqueActivity);
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
