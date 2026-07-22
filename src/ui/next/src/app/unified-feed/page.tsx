@@ -103,17 +103,18 @@ export default function UnifiedFeed() {
             payload: raw.context_payload,
             status: raw.lifecycle_state,
           },
-          draft: raw.proposed_action
+          draft: (raw.proposed_action || raw.context_payload?.feature_type)
             ? {
                 id: raw.id,
                 response:
-                  raw.proposed_action.draft_reply ||
-                  raw.proposed_action.summary ||
-                  JSON.stringify(raw.proposed_action),
+                  raw.proposed_action?.draft_reply ||
+                  raw.proposed_action?.summary ||
+                  (raw.context_payload?.message ? `AI Suggested: "${raw.context_payload?.message}"` : JSON.stringify(raw.proposed_action || raw.context_payload)),
                 status: "draft",
                 action_type:
-                  raw.proposed_action.action_type ||
-                  raw.proposed_action.feature_type,
+                  raw.proposed_action?.action_type ||
+                  raw.proposed_action?.feature_type ||
+                  raw.context_payload?.feature_type,
               }
             : undefined,
         };
@@ -376,8 +377,10 @@ export default function UnifiedFeed() {
                           data-testid="feed-approve-btn"
                         >
                           {processingId === item.workItem.id
-                            ? "..."
-                            : "Approve & Send"}
+                            ? "Sending..."
+                            : item.draft?.action_type === "autonomous_quote" || item.draft?.action_type === "booking_draft" || item.draft?.action_type === "booking_request"
+                              ? "Approve & Send Deposit Link"
+                              : "Approve & Send"}
                         </button>
                       </div>
                     )}

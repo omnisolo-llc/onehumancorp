@@ -443,6 +443,7 @@ async fn handle_reserve(
     .bind(&feed_id)
     .bind(&tenant_id)
     .bind(serde_json::json!({
+        "feature_type": "autonomous_quote",
         "booking_id": booking_id,
         "service_id": payload.service_id,
         "start_time": payload.start_time,

@@ -48,7 +48,7 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     await page.waitForTimeout(2000);
 
     // Look for approve button
-    const approveBtn = page.getByRole('button', { name: /Approve/i }).first();
+    const approveBtn = page.getByRole('button', { name: /Approve & Send Deposit Link/i }).first();
 await expect(approveBtn).toBeVisible({ timeout: 5000 });
     await approveBtn.click();
     await expect(approveBtn).toBeHidden({ timeout: 5000 });

@@ -120,6 +120,7 @@ async fn handle_booking_request(
     .bind(&feed_id)
     .bind(&tenant_id_clone)
     .bind(serde_json::json!({
+        "feature_type": "booking_draft",
         "message": payload.description,
         "source": "booking_form"
     }))
