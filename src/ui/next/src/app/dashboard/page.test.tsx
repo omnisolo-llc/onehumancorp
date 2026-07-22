@@ -95,7 +95,7 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText("Recent Orders")).toBeDefined();
   expect(screen.queryByText(/\/api\/ui\/dashboard\/unified-feed/)).toBeNull();
   expect(screen.getByText("Inbox Activity")).toBeDefined();
-  expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/feed");
+  expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveProperty("href", "http://localhost:3000/feed");
   expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
   expect(screen.getByText("Assistant Tasks")).toBeDefined();
   expect(screen.getByText("My Plan")).toBeDefined();

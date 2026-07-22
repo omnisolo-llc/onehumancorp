@@ -26,7 +26,7 @@ describe('ReviewDraftQuoteCard', () => {
 
     // Assert text rendering
     expect(screen.getByText('Draft Quote Ready')).toBeDefined();
-    expect(screen.getByText('Action Required')).toBeDefined();
+    expect(screen.getByText('Action Needed')).toBeDefined();
     expect(screen.getByText('Website Redesign for Alice')).toBeDefined();
 
     // Assert cost formatting

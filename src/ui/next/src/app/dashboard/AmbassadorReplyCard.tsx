@@ -59,7 +59,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center text-[#0066FF] font-semibold text-sm">
         {(approval.lifecycle_state === "PENDING_APPROVAL" || approval.lifecycle_state === "PENDING") && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px] self-start sm:self-center">
-            Action Required: Approve Reply
+            Action Needed: Approve Reply
           </span>
         )}
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
