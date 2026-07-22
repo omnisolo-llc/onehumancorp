@@ -1,0 +1,11 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -4148,6 +4148,10 @@
+             loop {
+                 let turn_span = tracing::info_span!("agent_turn", iteration = iteration, max = final_cfg.max_iterations);
+                 let mut final_cfg = cfg.clone();
++                if final_cfg.enable_ultracode {
++                    final_cfg.developer_instructions.push_str("\n\n[Ultracode Mode]: You are operating with xhigh reasoning effort. For any substantive task, you MUST plan a dynamic workflow script using the `spawn_subagent` or `dynamic_workflows` mechanics instead of executing it directly. Combine multiple subagents for understanding the codebase, making changes, and verifying them. Write a JavaScript orchestration script.");
++                }
+                 let cfg_max_retries = final_cfg.max_retries;
+                 // Rebuild tools list for prompt construction

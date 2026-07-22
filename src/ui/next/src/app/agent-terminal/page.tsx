@@ -25,14 +25,14 @@ export default function AgentTerminalPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ backend: newBackend }),
     });
-    setOutput((prev) => [...prev, `[System] Switched to ${newBackend} backend.`]);
+    setOutput((prev) => [...prev, \`[System] Switched to \${newBackend} backend.\`]);
   };
 
   const handleCommandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!command.trim()) return;
 
-    setOutput((prev) => [...prev, `$ ${command}`]);
+    setOutput((prev) => [...prev, \`$ \${command}\`]);
     setCommand('');
     setLoading(true);
 
@@ -44,13 +44,13 @@ export default function AgentTerminalPage() {
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to start session: ${res.statusText}`);
+        throw new Error(\`Failed to start session: \${res.statusText}\`);
       }
 
       const data = await res.json();
       setOutput((prev) => [...prev, data.output]);
     } catch (err: any) {
-      setOutput((prev) => [...prev, `Error: ${err.message}`]);
+      setOutput((prev) => [...prev, \`Error: \${err.message}\`]);
     } finally {
       setLoading(false);
     }
@@ -76,6 +76,11 @@ export default function AgentTerminalPage() {
             >
               <option value="local">Local</option>
               <option value="docker">Docker</option>
+              <option value="ssh">SSH</option>
+              <option value="singularity">Singularity</option>
+              <option value="modal">Modal</option>
+              <option value="daytona">Daytona</option>
+              <option value="vercal_sandbox">Vercal Sandbox</option>
             </select>
           </label>
         </div>
