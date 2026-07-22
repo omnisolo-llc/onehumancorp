@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import '@testing-library/jest-dom';
 import InboxPage from './page';
+import mockRouter from 'next-router-mock';
 
 const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,
@@ -17,6 +19,18 @@ vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
 
 vi.mock('../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => mockRouter.pathname,
+}));
+
+global.fetch = vi.fn(() => Promise.resolve({
+  ok: true,
+  json: () => Promise.resolve({
+    pending_approvals: []
+  })
 }));
 
 beforeEach(() => {

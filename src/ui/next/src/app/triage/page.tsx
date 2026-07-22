@@ -268,7 +268,7 @@ export default function TriagePage() {
                     {item.action_type && (
                       <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
-                          Proposed Action: {item.action_type}
+                          AI Summary & Proposed Action: {item.action_type}
                         </div>
                         <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
                           {item.action_payload || "No specific payload"}
@@ -335,7 +335,7 @@ export default function TriagePage() {
                               data-testid={`triage-approve-${item.id}`}
                               onClick={() => handleDecision(item.id, true)}
                             >
-                              {isProcessing ? "Processing..." : "Approve as-is"}
+                              {isProcessing ? "Processing..." : "Approve"}
                             </button>
                           </>
                         ) : (
@@ -345,16 +345,16 @@ export default function TriagePage() {
                             data-testid={`triage-approve-${item.id}`}
                             onClick={() => handleDecision(item.id, true)}
                           >
-                            {isProcessing ? "Processing..." : "Approve & Send"}
+                            {isProcessing ? "Processing..." : "Approve"}
                           </button>
                         )}
                         <button
                           disabled={isProcessing}
-                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-red-300 dark:border-red-900 bg-red-50/50 dark:bg-red-900/30 backdrop-blur-[30px] saturate-[210%] text-red-700 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                           data-testid={`triage-dismiss-${item.id}`}
                           onClick={() => handleDecision(item.id, false)}
                         >
-                          Dismiss
+                          Reject
                         </button>
                       </div>
                     )}

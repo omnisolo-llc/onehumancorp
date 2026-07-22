@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
+import { QuoteReviewModal } from "../../components/QuoteReviewModal";
 
 type Message = {
   id: string;
@@ -161,6 +162,8 @@ function InboxWorkspace({
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
   const [manualReply, setManualReply] = useState("");
+  const [showQuoteReview, setShowQuoteReview] = useState(false);
+  const [quoteDraftPayload, setQuoteDraftPayload] = useState<any>(null);
 
 
   const selected = useMemo(() => {
@@ -484,6 +487,23 @@ function InboxWorkspace({
                       onClick={() => handleDraftQuoteWithAI(selected)}
                       className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
+
+                    <div className="flex justify-center mt-2">
+                       <button
+                         onClick={async () => {
+                           // Simulate an agent backend call
+                           setQuoteDraftPayload({
+                             scope: "Custom quote from conversation context",
+                             suggested_price: 150
+                           });
+                           setShowQuoteReview(true);
+                         }}
+                         className="app-badge good w-full py-3 cursor-pointer text-center font-bold text-[13px] rounded-xl shadow-md border border-[#0066FF]/20 bg-[#0066FF]/10 text-[#0066FF] hover:bg-[#0066FF]/20 transition-all"
+                         data-testid="quote-draft-chip"
+                       >
+                         ✨ Draft Quote for $150
+                       </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -491,6 +511,18 @@ function InboxWorkspace({
           </section>
         </div>
       </div>
+
+      {showQuoteReview && quoteDraftPayload && (
+        <QuoteReviewModal
+           isOpen={showQuoteReview}
+           onClose={() => setShowQuoteReview(false)}
+           initialPayload={quoteDraftPayload}
+           onApprove={async (payload) => {
+              setShowQuoteReview(false);
+              setActionStatus("Quote Approved and Sent");
+           }}
+        />
+      )}
     </AppShell>
   );
 }

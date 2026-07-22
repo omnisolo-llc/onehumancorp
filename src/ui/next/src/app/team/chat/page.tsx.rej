@@ -1,0 +1,20 @@
+--- src/ui/next/src/app/team/chat/page.tsx
++++ src/ui/next/src/app/team/chat/page.tsx
+@@ -282,6 +282,17 @@
+         </div>
+       </div>
+
++      {showQuoteReview && quoteDraftPayload && (
++        <QuoteReviewModal
++           isOpen={showQuoteReview}
++           onClose={() => setShowQuoteReview(false)}
++           initialPayload={quoteDraftPayload}
++           onApprove={(payload) => {
++              setShowQuoteReview(false);
++           }}
++        />
++      )}
++
+     </div>
+   );
+ }

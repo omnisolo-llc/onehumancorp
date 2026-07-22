@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { QuoteReviewModal } from "../../../components/QuoteReviewModal";
 
 export type ActionCard = {
   id: string;
@@ -27,6 +28,8 @@ type ChatMessage = {
 export default function TeamChatPage() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showQuoteReview, setShowQuoteReview] = useState(false);
+  const [quoteDraftPayload, setQuoteDraftPayload] = useState<any>(null);
   const router = useRouter();
 
   const handleApprove = async (msgId: string) => {
@@ -191,11 +194,28 @@ export default function TeamChatPage() {
                     </div>
 
                     {msg.card.feature_type === 'quote_draft' ? (
-                      <div data-testid="quote-draft-card">
-                        <p className="text-sm font-semibold text-gray-900 mb-1">Action Required: Approve Estimate for {msg.card.department}</p>
-                        <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
-                        <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
-                      </div>
+                      <>
+                        <div data-testid="quote-draft-card">
+                          <p className="text-sm font-semibold text-gray-900 mb-1">Action Required: Approve Estimate for {msg.card.department}</p>
+                          <p className="text-xs text-gray-600 mb-2">Scope of Work: {msg.card.scope || msg.card.description}</p>
+                          <p className="text-sm font-bold text-gray-900 mb-4">Calculated Total: ${msg.card.suggested_price || 0}</p>
+                        </div>
+                        <div className="flex justify-center mt-2 w-full">
+                           <button
+                             onClick={() => {
+                               setQuoteDraftPayload({
+                                 scope: msg.card?.scope || msg.card?.description,
+                                 suggested_price: msg.card?.suggested_price
+                               });
+                               setShowQuoteReview(true);
+                             }}
+                             className="app-badge good w-full py-3 cursor-pointer text-center font-bold text-[13px] rounded-xl shadow-md border border-[#0066FF]/20 bg-[#0066FF]/10 text-[#0066FF] hover:bg-[#0066FF]/20 transition-all"
+                             data-testid="quote-draft-chip"
+                           >
+                             ✨ Draft Quote for ${msg.card?.suggested_price || 0}
+                           </button>
+                        </div>
+                      </>
                     ) : (
                       <>
                         <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
@@ -260,6 +280,17 @@ export default function TeamChatPage() {
           </div>
         </div>
       </div>
+
+      {showQuoteReview && quoteDraftPayload && (
+        <QuoteReviewModal
+           isOpen={showQuoteReview}
+           onClose={() => setShowQuoteReview(false)}
+           initialPayload={quoteDraftPayload}
+           onApprove={(payload) => {
+              setShowQuoteReview(false);
+           }}
+        />
+      )}
     </div>
   );
 }
