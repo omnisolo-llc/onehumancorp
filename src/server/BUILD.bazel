@@ -710,7 +710,7 @@ SERVER_LIB_SPLIT_TESTS = [
             "RUST_TEST_THREADS": "1",
         },
         proc_macro_deps = [
-            "@crates//:async-trait",
+        "@crates//:async-trait",
         ],
         target_compatible_with = select({
             "@platforms//os:linux": [],
@@ -801,7 +801,7 @@ test_suite(
             "RUST_TEST_THREADS": "1",
         },
         proc_macro_deps = [
-            "@crates//:async-trait",
+        "@crates//:async-trait",
         ],
         tags = ["manual"],
         target_compatible_with = select({
@@ -955,6 +955,7 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
+        "@crates//:tracing",
 
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
