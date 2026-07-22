@@ -165,6 +165,14 @@
         <button id="finish-btn" data-testid="finish-btn" class="next-step-btn">Finish</button><button id="save-draft-btn" data-testid="save-draft-btn" class="secondary-btn">Save Draft</button>
       </div>
 
+
+      <div id="step-approval" class="step">
+        <h1>Ready to Launch</h1>
+        <div id="approval-details"><p>Suggested Deposit Policy</p></div>
+        <button id="approve-publish-btn" class="next-step-btn">Approve & Publish</button>
+        <button id="approve-publish-btn-chat" class="next-step-btn" style="margin-top: 10px; background: #34C759;">Approve & Publish (Chat)</button>
+      </div>
+
     </div>
 
     <script>
@@ -190,7 +198,7 @@
       const stepOrder = [
         'step-intro', 'step-context', 'step-categories', 'step-name',
         'step-assistant', 'step-admin', 'step-offer', 'step-location',
-        'step-target-audience', 'step-domain', 'step-template'
+        'step-target-audience', 'step-domain', 'step-template', 'step-approval'
       ];
 
       function saveState() {
@@ -308,8 +316,7 @@
             }
 
             // Assume success means we transition to launched
-            localStorage.removeItem('onboardingState');
-            document.body.innerHTML = '<h1>You\'re Live!</h1>';
+            goToStep('step-approval');
           } catch (e) {
             instantError.innerText = e.message || 'Error occurred';
             instantError.style.display = 'block';
@@ -414,7 +421,25 @@
         }
       });
 
+
       document.addEventListener('DOMContentLoaded', () => {
+        const approveBtn = document.getElementById('approve-publish-btn');
+        if (approveBtn) {
+            approveBtn.addEventListener('click', () => {
+                localStorage.removeItem('onboardingState');
+                document.body.innerHTML = '<h1>You\'re Live!</h1>';
+                setTimeout(() => window.location.href = 'success.html', 100);
+            });
+        }
+        const approveChatBtn = document.getElementById('approve-publish-btn-chat');
+        if (approveChatBtn) {
+            approveChatBtn.addEventListener('click', () => {
+                localStorage.removeItem('onboardingState');
+                document.body.innerHTML = '<h1>You\'re Live!</h1>';
+                setTimeout(() => window.location.href = 'dashboard.html', 100);
+            });
+        }
+
         const saveDraftBtn = document.getElementById('save-draft-btn');
         if (saveDraftBtn) {
             saveDraftBtn.addEventListener('click', () => {
