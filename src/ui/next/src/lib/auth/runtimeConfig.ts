@@ -80,7 +80,6 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
   const backend = exactOrigin(backendValue, "backend origin");
   const isInternalBackend =
     isLoopback(backend.hostname) ||
-    isPrivateLanIp(backend.hostname) ||
     !backend.hostname.includes(".") ||
     backend.hostname.endsWith(".cluster.local") ||
     backend.hostname.includes("onehumancorp");

@@ -7,9 +7,21 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), back: vi.fn() })),
 }));
 
+let mockHasPro = false;
+vi.mock('../components/useProPlan', () => ({
+  useProPlan: () => ({
+    hasPro: mockHasPro,
+    planError: null,
+    claimError: null,
+    claimTrial: vi.fn(),
+    refreshPlan: vi.fn(),
+  }),
+}));
+
 describe('CustomerReferralProgramPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasPro = false;
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
     Object.assign(navigator, {
       clipboard: {
@@ -104,10 +116,10 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('removes branding when pro is true and toggle is clicked', async () => {
+    mockHasPro = true;
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
     render(<CustomerReferralProgramPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 
