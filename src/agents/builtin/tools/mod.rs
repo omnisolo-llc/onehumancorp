@@ -55,8 +55,6 @@ pub mod sleep;
 pub mod subagent;
 pub mod superpowers_tool;
 pub mod tail;
-pub mod tasks;
-pub mod escalations;
 pub mod task;
 pub mod toolsearch;
 pub mod workflow;
