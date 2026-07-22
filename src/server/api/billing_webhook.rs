@@ -1223,6 +1223,12 @@ pub async fn manychat_webhook_handler(
     }
 }
 
+
+use std::collections::HashMap;
+use axum::extract::Query;
+use uuid::Uuid;
+use chrono::Utc;
+
 #[derive(Debug, serde::Deserialize)]
 pub struct CalendlyEvent {
     pub event: String,
@@ -1231,8 +1237,59 @@ pub struct CalendlyEvent {
 
 pub async fn calendly_webhook_handler(
     axum::extract::State(__webhook_state): axum::extract::State<WebhookState>,
+    Query(params): Query<HashMap<String, String>>,
     axum::Json(_payload): axum::Json<CalendlyEvent>,
 ) -> impl axum::response::IntoResponse {
+    let tenant_id = match params.get("tenant_id") {
+        Some(id) => id.clone(),
+        None => return axum::http::StatusCode::BAD_REQUEST.into_response(),
+    };
+
+    let mut tx = match begin_webhook_system_transaction(&__webhook_state.db_pool).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to begin transaction: {}", e);
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        tracing::error!("Failed to set org context: {}", e);
+    }
+
+    let email = _payload.payload.get("email").and_then(|v| v.as_str()).unwrap_or("unknown@example.com").to_string();
+    let name = _payload.payload.get("name").and_then(|v| v.as_str()).unwrap_or("Customer");
+
+    let _ = sqlx::query("INSERT INTO services (id, tenant_id, title, price_cents) VALUES ('svc_calendly_ext', $1, 'Calendly Booking', 0) ON CONFLICT (id) DO NOTHING")
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await;
+
+    let booking_id = Uuid::new_v4().to_string();
+    let start_time = Utc::now();
+    let end_time = start_time + chrono::Duration::hours(1);
+
+    let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'confirmed')")
+        .bind(&booking_id)
+        .bind(&tenant_id)
+        .bind("svc_calendly_ext")
+        .bind(start_time)
+        .bind(end_time)
+        .execute(&mut *tx)
+        .await;
+
+    let feed_item_id = Uuid::new_v4().to_string();
+    let title = format!("New Calendly Booking");
+    let description = format!("New Calendly Booking from {} ({})", name, email);
+    let _ = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, lifecycle_state, context_payload, proposed_action) VALUES ($1, $2, 'operations', 'PENDING_APPROVAL', $3, $4)")
+        .bind(&feed_item_id)
+        .bind(&tenant_id)
+        .bind(serde_json::json!({"title": title, "description": description}))
+        .bind(serde_json::json!({"action": "review_booking"}))
+        .execute(&mut *tx)
+        .await;
+
+    let _ = tx.commit().await;
     axum::http::StatusCode::OK.into_response()
 }
 
