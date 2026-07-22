@@ -97,7 +97,8 @@ mod tests {
 
     #[test]
     fn test_deterministic_encryption() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+        temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),("OHC_SQLITE_KEY", Some("test_key"))], || {
             let plaintext = "hello world";
             let ciphertext1 = encrypt_deterministic(plaintext);
             let ciphertext2 = encrypt_deterministic(plaintext);
@@ -127,11 +128,13 @@ mod tests {
     #[test]
     fn test_cloud_mode_panics_without_key() {
         temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),
             ("OHC_SQLITE_KEY", None::<&str>),
             ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
         ], || {
             let result = std::panic::catch_unwind(|| {
-                temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+                temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),("OHC_SQLITE_KEY", Some("test_key"))], || {
                     let _key = get_crypto_key();
                 });
             });
@@ -142,6 +145,7 @@ mod tests {
     #[test]
     fn test_standalone_mode_generates_ephemeral_key() {
         temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),
             ("OHC_SQLITE_KEY", None::<&str>),
             ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
         ], || {
@@ -156,9 +160,11 @@ mod tests {
 
     #[test]
     fn test_different_keys_produce_different_crypto_keys() {
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_a"))], || {
+        temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),("OHC_SQLITE_KEY", Some("key_a"))], || {
             let key_a = get_crypto_key();
-            temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_b"))], || {
+            temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),("OHC_SQLITE_KEY", Some("key_b"))], || {
                 let key_b = get_crypto_key();
                 assert_ne!(key_a, key_b, "Different env keys must produce different crypto keys");
             });

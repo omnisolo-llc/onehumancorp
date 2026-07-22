@@ -28,6 +28,9 @@ SERVER_RS_SRCS = [
     "settings.rs",
     "sip.rs",
     "tasks.rs",
+    "redis_pool.rs",
+    "//src/server/api:agent_stream.rs",
+    "//src/server/api:unified_ws.rs",
     "ultraplan.rs",
     "//src/server/agents:mod.rs",
     "//src/server/agents:sandbox.rs",
@@ -955,6 +958,7 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
+        "@crates//:tracing",
 
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",

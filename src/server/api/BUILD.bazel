@@ -25,6 +25,8 @@ exports_files(
         "syndication_handler.rs",
         "omnichannel_webhook.rs",
         "unified_inbox_webhook.rs",
+    "agent_stream.rs",
+    "unified_ws.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "meta_webhook.rs",
@@ -87,6 +89,8 @@ rust_library(
         "syndication_handler.rs",
         "omnichannel_webhook.rs",
         "unified_inbox_webhook.rs",
+    "agent_stream.rs",
+    "unified_ws.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "meta_webhook.rs",
@@ -260,3 +264,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files([
+    "agent_stream.rs",
+    "unified_ws.rs",
+])
