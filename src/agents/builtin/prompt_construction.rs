@@ -191,6 +191,7 @@ pub struct StrictHierarchicalPromptBuilder {
     developer_instructions: String,
     user_instructions: String,
     lightweight_memory_index: Vec<String>,
+    tool_definitions: String,
 }
 
 impl StrictHierarchicalPromptBuilder {
@@ -198,10 +199,19 @@ impl StrictHierarchicalPromptBuilder {
     /// sole tool-definition representation; `_tools` remains for API stability.
     pub fn new(
         cfg: &AgentRunConfig,
-        _tools: &[crate::tools::Tool],
+        tools: &[crate::tools::Tool],
         cascading_agents_md: Option<String>,
         lightweight_memory_index: Option<Vec<String>>,
     ) -> Self {
+        let mut tool_defs = String::new();
+        if !tools.is_empty() {
+            for tool in tools {
+                tool_defs.push_str(&format!("- {}: {}
+", tool.name, tool.description));
+                tool_defs.push_str(&format!("  Schema: {}
+", tool.parameters.to_string()));
+            }
+        }
         let mut user_instr = cfg.user_instructions.clone();
 
         // Inject cascading AGENTS.md instructions
@@ -250,6 +260,7 @@ impl StrictHierarchicalPromptBuilder {
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
+            tool_definitions: tool_defs,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
             lightweight_memory_index: processed_memory_index,
@@ -280,6 +291,19 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("<server_system_message>\n");
             combined_system.push_str(&self.server_system_message);
             combined_system.push_str("\n</server_system_message>");
+        }
+
+        // 2. Tool Definitions
+        if !self.tool_definitions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("
+
+");
+            }
+            combined_system.push_str("<tool_definitions>
+");
+            combined_system.push_str(&self.tool_definitions);
+            combined_system.push_str("</tool_definitions>");
         }
 
         // 2. Developer Instructions
@@ -359,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn native_tool_schema_is_not_duplicated_in_system_text() {
+    fn test_tool_definitions_injected_at_priority_2() {
         let cfg = AgentRunConfig {
             server_system_message: "Be accurate".into(),
             ..Default::default()
@@ -377,8 +401,13 @@ mod tests {
 
         let prompt = StrictHierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
 
-        assert!(!prompt.contains("<tool_definitions>"));
-        assert!(!prompt.contains("Lookup authoritative facts"));
+        assert!(prompt.contains("<tool_definitions>"));
+        assert!(prompt.contains("Lookup authoritative facts"));
+
+        // Priority check
+        let sys_pos = prompt.find("<server_system_message>").unwrap();
+        let tool_pos = prompt.find("<tool_definitions>").unwrap();
+        assert!(sys_pos < tool_pos, "System message must be before tool definitions");
     }
 
     #[test]
