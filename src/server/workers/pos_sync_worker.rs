@@ -15,7 +15,7 @@ impl PosSyncWorker {
 #[async_trait::async_trait]
 impl crate::queue::TaskJobHandler for PosSyncWorker {
     async fn handle(&self, job: crate::queue::Job) -> Result<(), String> {
-        let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
+        let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::json!({}));
         let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
             .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
             .unwrap_or("");
@@ -48,7 +48,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 .bind(transaction_id)
                 .execute(&mut *tx)
                 .await
-                .unwrap();
+                .map_err(|e| e.to_string())?;
 
             let product_id_owned: Option<String> = payload.get("mutation").and_then(|m| m.get("product_id")).and_then(|v| v.as_str()).map(|s| s.to_string())
                 .or_else(|| {
@@ -101,7 +101,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .execute(&mut *tx)
             .await;
 
-            tx.commit().await.unwrap();
+            tx.commit().await.map_err(|e| e.to_string())?;
             return Ok(());
         }
 
@@ -109,7 +109,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .bind(transaction_id)
             .execute(&mut *tx)
             .await
-            .unwrap();
+            .map_err(|e| e.to_string())?;
 
 
         // Handle tap_to_pay offline processing via Stripe
@@ -208,9 +208,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 .bind(transaction_id)
                 .execute(&mut *tx)
                 .await
-                .unwrap();
+                .map_err(|e| e.to_string())?;
 
-            tx.commit().await.unwrap();
+            tx.commit().await.map_err(|e| e.to_string())?;
             return Ok(());
         }
 
@@ -747,15 +747,49 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             }
         }
 
+
+        let finance_task_id = uuid::Uuid::new_v4().to_string();
+        let finance_payload = serde_json::json!({
+            "transaction_id": transaction_id,
+            "amount_cents": payload_amount_cents,
+            "client_id": client_id,
+            "message": format!("Offline POS Sync completed. Updated daily summary with ${:.2}.", payload_amount_cents as f64 / 100.0)
+        }).to_string();
+
+        sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'finance', 'DailySummaryUpdate', $3::jsonb, 'PENDING')")
+            .bind(finance_task_id)
+            .bind(&job.tenant_id)
+            .bind(&finance_payload)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+
+        let cs_task_id = uuid::Uuid::new_v4().to_string();
+        let cs_payload = serde_json::json!({
+            "transaction_id": transaction_id,
+            "amount_cents": payload_amount_cents,
+            "client_id": client_id,
+            "message": "Send thank you receipt and request review from POS customer."
+        }).to_string();
+
+        sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'customer_success', 'ReceiptAndReviewRequest', $3::jsonb, 'PENDING')")
+            .bind(cs_task_id)
+            .bind(&job.tenant_id)
+            .bind(&cs_payload)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
         sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'offline_pos_sync', $3::jsonb)")
             .bind(uuid::Uuid::new_v4().to_string())
             .bind(&job.tenant_id)
             .bind(&job.payload)
             .execute(&mut *tx)
             .await
-            .unwrap();
+            .map_err(|e| e.to_string())?;
 
-        tx.commit().await.unwrap();
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
