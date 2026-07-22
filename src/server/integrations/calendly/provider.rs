@@ -36,6 +36,24 @@ impl CalendlyProvider {
     pub async fn fetch_event_types(&self) -> Result<Vec<String>, String> {
         self._client.fetch_event_types().await
     }
+<<<<<<< HEAD
+
+    pub async fn create_event(
+        &self,
+        event_type_uri: &str,
+        start_time: &str,
+        invitee_email: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_event(event_type_uri, start_time, invitee_email)
+            .await
+    }
+
+    pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
+        self._client.get_free_busy(time_min, time_max).await
+    }
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 }
 
 #[cfg(test)]

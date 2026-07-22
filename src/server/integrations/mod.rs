@@ -10,6 +10,10 @@ pub mod mercadopago;
 pub use ::server_integrations_chromadb as chromadb;
 pub mod meta;
 pub mod google_calendar;
+<<<<<<< HEAD
+pub mod google_workspace;
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
 pub mod lob;
@@ -25,6 +29,18 @@ pub use ::server_integrations_easypost as easypost;
 pub use ::server_integrations_shipday as shipday;
 pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;
+<<<<<<< HEAD
+pub mod salesforce;
+pub mod slack;
+pub use ::server_integrations_hubspot as hubspot;
+pub mod zendesk;
+pub mod quickbooks;
+pub mod xero;
+pub mod shopify;
+pub mod jira;
+pub mod asana;
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
 pub use ::server_integrations_razorpay as razorpay;
 pub use ::server_integrations_manychat as manychat;
@@ -32,9 +48,16 @@ pub use ::server_integrations_task_scheduler as task_scheduler;
 pub use ::server_integrations_restic as restic;
 pub use ::server_integrations_resend as resend;
 
+<<<<<<< HEAD
+pub mod google_analytics;
+pub mod github_api;
+pub mod outlook_calendar;
+pub mod trello;
+=======
 
 
 
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 #[cfg(ohc_bazel)]
 pub use ::server_integrations_whatsapp_cloud as whatsapp_cloud;
 #[cfg(not(ohc_bazel))]

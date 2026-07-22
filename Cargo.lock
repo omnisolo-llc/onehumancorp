@@ -4889,6 +4889,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 
 [[package]]
+<<<<<<< HEAD
+name = "mime_guess"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
+dependencies = [
+ "mime",
+ "unicase",
+]
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "minicbor"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5653,6 +5666,12 @@ dependencies = [
  "server_integrations_doordash",
  "server_integrations_easypost",
  "server_integrations_google_calendar",
+<<<<<<< HEAD
+ "server_integrations_google_workspace",
+ "server_integrations_hubspot",
+ "server_integrations_jira",
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
  "server_integrations_jitsi",
  "server_integrations_listmonk",
  "server_integrations_mailchimp",
@@ -7538,6 +7557,10 @@ dependencies = [
  "hyper-util",
  "js-sys",
  "log",
+<<<<<<< HEAD
+ "mime_guess",
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -8712,6 +8735,47 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+name = "server_integrations_google_workspace"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "server_integrations_hubspot"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+]
+
+[[package]]
+name = "server_integrations_jira"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "server_integrations_jitsi"
 version = "0.1.0"
 dependencies = [
@@ -8884,6 +8948,20 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+name = "server_integrations_quickbooks"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+]
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "server_integrations_razorpay"
 version = "0.1.0"
 dependencies = [
@@ -8986,6 +9064,20 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+name = "server_integrations_shopify"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+]
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "server_integrations_stripe"
 version = "0.1.0"
 dependencies = [
@@ -9063,6 +9155,20 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+name = "server_integrations_xero"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+]
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "server_integrations_zoom"
 version = "0.1.0"
 dependencies = [
@@ -11534,6 +11640,15 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+name = "unicase"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
+
+[[package]]
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 name = "unicode-bidi"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

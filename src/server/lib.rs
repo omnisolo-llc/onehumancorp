@@ -1,7 +1,10 @@
 use sqlx::Row;
 pub mod rag_sync;
 pub mod redis_pool;
+<<<<<<< HEAD
+=======
 
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;

@@ -47,6 +47,13 @@ export class SyncManager {
     }
   }
 
+<<<<<<< HEAD
+  public async enqueueMutation(mutation: any) {
+    return this.enqueue(mutation);
+  }
+
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   public async getQueueLength(): Promise<number> {
     const queue = await this.getQueue();
     return queue.length;
@@ -532,3 +539,9 @@ export class SyncManager {
     }
   }
 }
+<<<<<<< HEAD
+
+export const syncManager = SyncManager.getInstance();
+
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)

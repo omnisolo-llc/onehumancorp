@@ -131,6 +131,10 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
+<<<<<<< HEAD
+  const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
   const handleApproveDraft = async (approvalId: string) => {
     try {
@@ -286,6 +290,10 @@ export default function Dashboard() {
         } else {
           setActiveDepartments([]);
         }
+<<<<<<< HEAD
+        setOnboardingStatus(onboardingData?.status || null);
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -361,6 +369,22 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+<<<<<<< HEAD
+      {onboardingStatus !== "launched" && (
+        <div className="mb-6 p-6 rounded-[12px] bg-blue-50 border border-blue-200 shadow-sm dark:bg-blue-950/20 dark:border-blue-900">
+          <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Complete Your Business Setup</h2>
+          <p className="text-blue-700 dark:text-blue-300 mb-4 font-medium font-outfit">Set up your business profile, customize your website, and activate your AI agents to start selling!</p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="flex min-h-[44px] items-center justify-center rounded-xl bg-blue-600 px-6 font-bold text-white shadow-md hover:bg-blue-700 transition"
+          >
+            Start business setup
+          </button>
+        </div>
+      )}
+
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />

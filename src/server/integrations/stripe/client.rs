@@ -251,6 +251,76 @@ impl StripeClient {
         Ok(url.to_string())
     }
 
+<<<<<<< HEAD
+    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+        let api_key = self.require_api_key()?;
+        let client = reqwest::Client::new();
+
+        let res = client
+            .get(format!("{}/v1/subscriptions/{}", Self::api_base(), subscription_id))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe get subscription request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse Stripe subscription response: {}", e))?;
+
+        Ok(StripeSubscription {
+            id: json["id"].as_str().unwrap_or_default().to_string(),
+            status: json["status"].as_str().unwrap_or_default().to_string(),
+            current_period_end: json["current_period_end"].as_i64().unwrap_or(0),
+        })
+    }
+
+    pub async fn list_invoices(&self, customer_id: &str) -> Result<Vec<StripeInvoice>, String> {
+        let api_key = self.require_api_key()?;
+        let client = reqwest::Client::new();
+
+        let res = client
+            .get(format!(
+                "{}/v1/invoices?customer={}&limit=10",
+                Self::api_base(),
+                customer_id
+            ))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe list invoices request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse Stripe invoices response: {}", e))?;
+
+        let invoices = json["data"]
+            .as_array()
+            .ok_or_else(|| "Missing data array in Stripe invoices response".to_string())?
+            .iter()
+            .map(|inv| StripeInvoice {
+                id: inv["id"].as_str().unwrap_or_default().to_string(),
+                amount_due: inv["amount_due"].as_i64().unwrap_or(0),
+                status: inv["status"].as_str().unwrap_or_default().to_string(),
+                invoice_pdf: inv["invoice_pdf"].as_str().map(|s| s.to_string()),
+            })
+            .collect();
+
+        Ok(invoices)
+=======
     pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
@@ -268,6 +338,7 @@ impl StripeClient {
                 invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
             }
         ])
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
     }
 
     pub async fn cancel_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
@@ -302,8 +373,47 @@ impl StripeClient {
         Ok(stripe_sub)
     }
 
+<<<<<<< HEAD
+    pub async fn submit_dispute_evidence(&self, dispute_id: &str, evidence_data: serde_json::Value) -> Result<(), String> {
+        let api_key = self.require_api_key()?;
+        let client = reqwest::Client::new();
+
+        let mut form = std::collections::HashMap::new();
+        if let Some(evidence_str) = evidence_data["evidence"].as_str() {
+            form.insert("evidence".to_string(), evidence_str.to_string());
+        }
+        if let Some(customer_email) = evidence_data["customer_email_address"].as_str() {
+            form.insert(
+                "customer_email_address".to_string(),
+                customer_email.to_string(),
+            );
+        }
+        if let Some(uncategorized) = evidence_data["uncategorized_text"].as_str() {
+            form.insert("uncategorized_text".to_string(), uncategorized.to_string());
+        }
+
+        let res = client
+            .post(format!(
+                "{}/v1/disputes/{}",
+                Self::api_base(),
+                dispute_id
+            ))
+            .basic_auth(api_key, Some(""))
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe submit dispute evidence request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+=======
     pub async fn submit_dispute_evidence(&self, _dispute_id: &str, _evidence_data: serde_json::Value) -> Result<(), String> {
         // Simulates submitting dispute evidence to Stripe
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
         Ok(())
     }
 

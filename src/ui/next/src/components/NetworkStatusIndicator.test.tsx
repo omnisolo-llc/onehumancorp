@@ -60,9 +60,16 @@ describe('NetworkStatusIndicator', () => {
 
     // Verify the div contains the specific Translucent Glass classes
     const container = screen.getByText('Offline - Changes saved locally').closest('div');
+<<<<<<< HEAD
+    expect(container).toHaveClass('bg-[rgba(255,255,255,0.65)]');
+    expect(container).toHaveClass('backdrop-blur-[30px]');
+    expect(container).toHaveClass('saturate-[210%]');
+    expect(container).toHaveClass('border-[rgba(255,255,255,0.4)]');
+=======
     expect(container).toHaveClass('bg-white/65');
     expect(container).toHaveClass('backdrop-blur-[30px]');
     expect(container).toHaveClass('saturate-[210%]');
     expect(container).toHaveClass('border-white/40');
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   });
 });

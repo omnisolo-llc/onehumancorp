@@ -78,7 +78,17 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
   }
 
   const backend = exactOrigin(backendValue, "backend origin");
+<<<<<<< HEAD
+  const isInternalBackend =
+    isLoopback(backend.hostname) ||
+    isPrivateLanIp(backend.hostname) ||
+    !backend.hostname.includes(".") ||
+    backend.hostname.endsWith(".cluster.local") ||
+    backend.hostname.includes("onehumancorp");
+  if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isInternalBackend)) {
+=======
   if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isLoopback(backend.hostname))) {
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
     throw new Error("backend origin must use HTTPS or loopback HTTP");
   }
 

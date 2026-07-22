@@ -21,7 +21,11 @@ where
 {
     axum::Router::new()
         .route(
+<<<<<<< HEAD
+            "/api/v1/agents/:id/stream",
+=======
             "/api/v1/agents/{id}/stream",
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
             axum::routing::get(stream_agent),
         )
         .with_state(hub)

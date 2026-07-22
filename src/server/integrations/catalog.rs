@@ -152,6 +152,27 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "backup",
             "local://restic".to_string(),
         ),
+<<<<<<< HEAD
+        metadata_provider(
+            "google_analytics",
+            "Google Analytics",
+            "analytics",
+            "https://analyticsdata.googleapis.com/v1beta".to_string(),
+        ),
+        metadata_provider(
+            "github_api",
+            "GitHub API",
+            "code_management",
+            "https://api.github.com".to_string(),
+        ),
+        metadata_provider(
+            "outlook_calendar",
+            "Outlook Calendar",
+            "calendar",
+            "https://graph.microsoft.com/v1.0".to_string(),
+        ),
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
     ]
 }
 

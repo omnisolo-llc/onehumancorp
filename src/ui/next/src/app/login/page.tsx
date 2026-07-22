@@ -119,6 +119,9 @@ function LoginForm() {
             </button>
           </form>
 
+<<<<<<< HEAD
+          <div className="min-h-6" />
+=======
           <div className="relative my-7 flex items-center" aria-hidden="true">
             <div className="flex-grow border-t border-gray-300 dark:border-gray-600" />
             <span className="mx-4 flex-shrink-0 text-sm text-gray-500">or</span>
@@ -131,6 +134,7 @@ function LoginForm() {
           >
             Start business setup
           </Link>
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
         </section>
       </div>
     </main>

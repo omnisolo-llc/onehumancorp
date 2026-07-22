@@ -364,6 +364,10 @@ impl AgentFeedRepository {
 mod tests {
     use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
     use chrono::Utc;
+<<<<<<< HEAD
+=======
+    use sqlx::PgPool;
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
     use uuid::Uuid;
 
     #[tokio::test]

@@ -28,9 +28,12 @@ SERVER_RS_SRCS = [
     "settings.rs",
     "sip.rs",
     "tasks.rs",
+<<<<<<< HEAD
+=======
     "redis_pool.rs",
     "//src/server/api:agent_stream.rs",
     "//src/server/api:unified_ws.rs",
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
     "ultraplan.rs",
     "//src/server/agents:mod.rs",
     "//src/server/agents:sandbox.rs",
@@ -957,8 +960,11 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "@crates//:libc",
+<<<<<<< HEAD
+=======
         "@crates//:tracing",
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
+        "@crates//:libc",
 
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",

@@ -59,7 +59,12 @@ mod tests {
 
     #[test]
     fn test_returns_none_in_standalone_mode() {
+<<<<<<< HEAD
+        // SAFETY: test-only, single-threaded
+        unsafe { std::env::set_var("OHC_STANDALONE_MODE", "true") };
+=======
         let _ = std::env::set_var("OHC_STANDALONE_MODE", "true");
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
         assert!(get_redis_pool().is_none());
     }
 }

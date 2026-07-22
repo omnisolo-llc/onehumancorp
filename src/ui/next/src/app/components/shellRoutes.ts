@@ -14,6 +14,10 @@ const pageOwnedExactRoutes = new Set([
   "/analytics",
   "/assistant",
   "/business-analytics",
+<<<<<<< HEAD
+  "/client-portal",
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   "/cost-dashboard",
   "/dashboard",
   "/dashboard/campaigns",
@@ -28,6 +32,11 @@ const pageOwnedExactRoutes = new Set([
   "/kairos",
   "/kitchen",
   "/lead-magnet-generator",
+<<<<<<< HEAD
+  "/login",
+  "/onboarding",
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   "/operations",
   "/orders",
   "/pipeline",
@@ -35,6 +44,10 @@ const pageOwnedExactRoutes = new Set([
   "/scaling",
   "/services",
   "/settings",
+<<<<<<< HEAD
+  "/setup.html",
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   "/staff",
   "/staff/manager",
   "/triage",
@@ -100,6 +113,13 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
     title: "LangGraph",
     subtitle: "Explicit state graph workflows.",
   },
+<<<<<<< HEAD
+  "/client-portal": {
+    title: "Client Portal",
+    subtitle: "Secure customer hub for proposals, invoices, courses, and support.",
+  },
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   "/link-in-bio-generator": { title: "Link In Bio Generator" },
   "/login": {
     title: "Login",

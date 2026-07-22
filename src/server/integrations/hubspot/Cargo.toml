@@ -1,0 +1,14 @@
+[package]
+name = "server_integrations_hubspot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+server_integrations_core = { path = "../core" }
+tokio = { workspace = true }
+
+[lib]
+path = "mod.rs"

@@ -1,11 +1,19 @@
+<<<<<<< HEAD
+# OmniSolo (formerly One Human Corp)
+=======
 # One Human Corp
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
 ## Built-in Agent Harness
 
+<<<<<<< HEAD
+The OmniSolo platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: One Human Corp was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
+=======
 The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
 ### Visual/Low-Code Orchestration
 
@@ -43,7 +51,11 @@ This flow utilizes local `server`, `agent`, and `ohc-core` images without requir
 
 ## Identity
 
+<<<<<<< HEAD
+OmniSolo employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+=======
 One Human Corp employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
 The platform implements a hybrid identity model:
 - **Agent Identity**: Relies on SPIFFE/SPIRE for universal workload identity, ensuring every inter-agent communication and tool call is cryptographically signed and mTLS validated.
@@ -51,7 +63,11 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
+<<<<<<< HEAD
+OmniSolo (formerly One Human Corp / OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
+=======
 One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 
 ## Architecture
 
@@ -89,9 +105,15 @@ graph TD;
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
+<<<<<<< HEAD
+### Swarm Orchestration Documentation
+
+The Swarm is powered by our custom orchestration engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
+=======
 ### KAIROS Orchestration Documentation
 
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
 - **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
 - **[Sub-Agent Queue](docs/technical/architecture/kairos/sub-agent-queue-design.md):** Learn how agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](docs/features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.

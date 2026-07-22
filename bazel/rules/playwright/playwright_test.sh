@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [[ -z "${TEST_SRCDIR:-}" || -z "${TEST_TMPDIR:-}" ]]; then
   echo "[playwright] Error: Playwright tests must run under Bazel with TEST_SRCDIR and TEST_TMPDIR set." >&2
-  exit 0
+  exit 1
 fi
 
 RUNFILES_ROOT="${RUNFILES_ROOT:-}"
@@ -20,7 +20,7 @@ fi
 workspace_root="$RUNFILES_ROOT"
 if [[ ! -f "$workspace_root/package.json" || ! -d "$workspace_root/node_modules" ]]; then
   echo "[playwright] Error: Bazel runfiles are missing package.json or node_modules under $workspace_root" >&2
-  exit 0
+  exit 1
 fi
 
 SOURCE_REPO_ROOT_CANDIDATES=(
@@ -61,7 +61,7 @@ if [[ -n "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]]; then
   done
   if [[ -z "$resolved_chromium_path" ]]; then
     echo "[playwright] Error: Bazel Chromium executable not found: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" >&2
-    exit 0
+    exit 1
   fi
   export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$resolved_chromium_path"
   echo "[playwright] Chromium executable: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
@@ -84,7 +84,11 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
+<<<<<<< HEAD
+    src/e2e/*.spec.ts)
+=======
     *src/e2e/*.spec.ts)
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
       printf '%s\n' "$rel"
       ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
@@ -164,7 +168,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
       echo "[playwright] Resolved browsers path: $PLAYWRIGHT_BROWSERS_PATH"
   else
       echo "[playwright] Error: Bazel Playwright browsers path not found: $PLAYWRIGHT_BROWSERS_PATH"
-      exit 0
+      exit 1
   fi
 fi
 
@@ -200,7 +204,7 @@ cp "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 if [[ ! -d "$workspace_root/node_modules" ]]; then
   echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
   echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
-  exit 0
+  exit 1
 fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
@@ -220,7 +224,7 @@ else
   SPEC_DISCOVERY="$RUNFILES_ROOT/bazel/rules/playwright/discover_playwright_specs.sh"
   if [[ ! -x "$SPEC_DISCOVERY" ]]; then
     echo "[playwright] Spec discovery helper is missing or not executable: $SPEC_DISCOVERY" >&2
-    exit 0
+    exit 1
   fi
   while IFS= read -r -d '' spec_file; do
     spec_file="$(realpath "$spec_file")"
@@ -235,7 +239,7 @@ fi
 
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} == 0 )); then
   echo "[playwright] Error: no Playwright spec files were discovered in Bazel runfiles." >&2
-  exit 0
+  exit 1
 fi
 
 for support_file in authenticate.ts fixtures.ts current_app_smoke.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
@@ -261,12 +265,12 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
 fi
 if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   echo "[playwright] Error: Playwright CLI not found in node_modules"
-  exit 0
+  exit 1
 fi
 
 if ! docker info >/dev/null 2>&1; then
   echo "[playwright] Error: Docker is required for Bazel Playwright E2E tests."
-  exit 0
+  exit 1
 fi
 
 # Unique container names for parallel isolation
@@ -495,7 +499,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     TLS_GENERATOR="$RUNFILES_ROOT/bazel/rules/playwright/generate_test_tls.sh"
     if [[ ! -x "$TLS_GENERATOR" ]]; then
       echo "[playwright] TLS generator is missing or not executable: $TLS_GENERATOR" >&2
-      exit 0
+      exit 1
     fi
     "$TLS_GENERATOR" "$TEST_TMPDIR"
     export OHC_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
@@ -506,7 +510,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
 
   if [[ "$DATABASE_URL" == *"127.0.0.1:5432"* ]] || [[ "$DATABASE_URL" == *"localhost:5432"* ]]; then
     echo "Error: DATABASE_URL is hardcoded to port 5432 ($DATABASE_URL)"
-    exit 0
+    exit 1
   fi
 
   DATABASE_URL="$DB_URL" \
@@ -551,24 +555,24 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     if ! kill -0 "$SERVER_PID" 2>/dev/null; then
       echo "[playwright] Server process died."
       tail -20 "$TEST_TMPDIR/server.log"
-      exit 0
+      exit 1
     fi
     if (( i == 120 )); then
       echo "[playwright] Error: Server failed to become healthy after 120 seconds."
       tail -50 "$TEST_TMPDIR/server.log"
-      exit 0
+      exit 1
     fi
     sleep 1
   done
 
   if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Skipping E2E test due to missing Docker container (fallback not allowed)" >&2
-    exit 0
+    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
+    exit 1
   fi
   E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ ! -f "$E2E_SEED_SQL" ]]; then
     echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
-    exit 0
+    exit 1
   fi
   echo "[playwright] Applying deterministic PostgreSQL E2E seed data..."
   docker exec -i "$POSTGRES_NAME" \
@@ -577,7 +581,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     >"$TEST_TMPDIR/e2e-seed.log"
 else
   echo "[playwright] Error: server binary not found"
-  exit 0
+  exit 1
 fi
 
 NEXT_APP_ROOT=""
@@ -641,7 +645,7 @@ fi
 
 if [[ -z "$NEXT_APP_ROOT" ]]; then
   echo "[playwright] Error: Next UI app not found in Bazel runfiles."
-  exit 0
+  exit 1
 fi
 
 if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
@@ -650,7 +654,7 @@ if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
     ln -s "$workspace_root/node_modules" "$NEXT_APP_ROOT/node_modules" || true
   else
     echo "[playwright] Error: Next node_modules not found in Bazel runfiles at $NEXT_APP_ROOT/node_modules and fallback failed"
-    exit 0
+    exit 1
   fi
 fi
 
@@ -695,12 +699,12 @@ for i in $(seq 1 120); do
   if ! kill -0 "$NEXT_PID" 2>/dev/null; then
     echo "[playwright] Next UI process died."
     tail -50 "$TEST_TMPDIR/next.log"
-    exit 0
+    exit 1
   fi
   if (( i == 120 )); then
     echo "[playwright] Error: Next UI failed to become ready after 120 seconds."
     tail -80 "$TEST_TMPDIR/next.log"
-    exit 0
+    exit 1
   fi
   sleep 1
 done
@@ -760,12 +764,12 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
     if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."
     else
-      exit 0
+      exit 1
     fi
   fi
   if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
     echo "[playwright] Error: selected Playwright specs resolved to zero tests." >&2
-    exit 0
+    exit 1
   fi
 
   echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
@@ -780,12 +784,12 @@ else
     if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."
     else
-      exit 0
+      exit 1
     fi
   fi
   if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
     echo "[playwright] Error: Playwright discovery resolved to zero tests." >&2
-    exit 0
+    exit 1
   fi
 
   echo "[playwright] Running all specs on host"

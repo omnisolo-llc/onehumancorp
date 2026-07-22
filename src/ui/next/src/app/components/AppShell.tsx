@@ -71,6 +71,10 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+<<<<<<< HEAD
+  { label: "Client Portal", href: "/client-portal", icon: "team" },
+=======
+>>>>>>> 97cc191c1 (perf: tokio RwLock, Redis pool, SSE streaming, unified WS, backpressure, React hooks)
   { label: "Help", href: "/help", icon: "activity" },
 ];
 
