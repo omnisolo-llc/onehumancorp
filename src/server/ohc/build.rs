@@ -22,6 +22,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/inventory.proto",
     ];
 
+    if std::env::var_os("PROTOC").is_none() {
+        unsafe { std::env::set_var("PROTOC", "protoc"); }
+    }
+
     tonic_build::configure()
         .build_client(true)
         .build_server(true)
