@@ -1575,19 +1575,27 @@ async fn approve_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
+    let mut tx = match pool.begin().await {
+        Ok(tx) => tx,
+        Err(error) => {
+            tracing::error!("Failed to begin quote approval transaction: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
     let approve_query = format!(
-        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
+        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2 FOR UPDATE",
     );
     let mut quote = match sqlx::query_as::<_, Quote>(&approve_query)
-    .bind(quote_id.to_string())
-    .bind(authority.tenant_id())
-    .fetch_optional(&pool)
-    .await
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&mut *tx)
+        .await
     {
         Ok(Some(q)) => q,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            tracing::error!("Failed to approve quote: {}", e);
+            tracing::error!("Failed to fetch quote for approval: {}", e);
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -1616,20 +1624,34 @@ async fn approve_quote(
         {
             Ok(url) => {
                 quote.stripe_payment_link = Some(url.clone());
-                if let Err(error) = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id::text = $2")
-                    .bind(url)
-                    .bind(quote_id.to_string())
-                    .execute(&pool)
-                    .await
-                {
-                    tracing::error!("Failed to save Stripe payment link to quote: {}", error);
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                }
             },
             Err(error) => {
                 tracing::error!("Failed to create Stripe checkout session for deposit: {}", error);
             }
         }
+    }
+
+    let update_query = format!(
+        "UPDATE quotes SET status = 'SENT', updated_at = NOW(), stripe_payment_link = $1 WHERE id::text = $2 AND tenant_id = $3 RETURNING {QUOTE_COLUMNS}",
+    );
+    quote = match sqlx::query_as::<_, Quote>(&update_query)
+        .bind(quote.stripe_payment_link.clone())
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&mut *tx)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(error) => {
+            tracing::error!("Failed to update quote status and payment link: {}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    if let Err(error) = tx.commit().await {
+        tracing::error!("Failed to commit quote approval: {}", error);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
     (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
