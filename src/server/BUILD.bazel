@@ -955,6 +955,7 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
+        "@crates//:tracing",
 
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",

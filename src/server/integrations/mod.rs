@@ -28,7 +28,7 @@ pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;
 pub mod salesforce;
 pub mod slack;
-pub use ::server_integrations_hubspot as hubspot;
+pub mod hubspot;
 pub mod zendesk;
 pub mod quickbooks;
 pub mod xero;
