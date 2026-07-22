@@ -552,6 +552,7 @@ impl Store {
     }
 
     pub async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+        let org_id = org_id.trim().to_string();
         self.validate_org_id(&org_id)?;
         if username.is_empty() {
             return Err("username is required".to_string());
@@ -614,6 +615,7 @@ impl Store {
             .clone()
             .try_acquire_owned()
             .map_err(|_| AuthenticationError::Unavailable("credential verifier busy".into()))?;
+        let org_id = org_id.trim();
         if self.validate_org_id(org_id).is_err() {
             let password = password.to_string();
             let org_id = org_id.to_string();
@@ -697,10 +699,10 @@ impl Store {
 
     fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
         if ::server_config::get().multitenant {
-            if org_id.trim().eq_ignore_ascii_case("system") {
+            if org_id.eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
-            if org_id.trim().is_empty() {
+            if org_id.is_empty() {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
@@ -708,6 +710,7 @@ impl Store {
     }
 
     pub async fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+        let org_id = org_id.trim();
         if self.validate_org_id(org_id).is_err() {
             return None;
         }
@@ -730,6 +733,7 @@ impl Store {
     }
 
     pub async fn list_users(&self, org_id: &str) -> Vec<User> {
+        let org_id = org_id.trim();
         if self.validate_org_id(org_id).is_err() {
             return vec![];
         }
@@ -752,6 +756,7 @@ impl Store {
     }
 
     pub async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+        let org_id = org_id.trim();
         self.validate_org_id(org_id)?;
 
         if let Some(repo) = &self.repo {
@@ -821,6 +826,7 @@ impl Store {
     }
 
     pub async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        let org_id = org_id.trim();
         self.validate_org_id(org_id)?;
 
         if let Some(repo) = &self.repo {
@@ -860,6 +866,7 @@ impl Store {
         exp: DateTime<Utc>,
         org_id: &str,
     ) -> Result<(), String> {
+        let org_id = org_id.trim();
         self.validate_org_id(org_id)?;
         if let Some(error) = &self.redis_configuration_error {
             return Err(error.clone());
@@ -891,6 +898,7 @@ impl Store {
     }
 
     pub async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
+        let org_id = org_id.trim();
         self.validate_org_id(org_id)?;
         if let Some(error) = &self.redis_configuration_error {
             return Err(error.clone());

@@ -12,20 +12,21 @@ pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sql
 where
     E: Executor<'a, Database = Postgres>,
 {
+    let org_id = org_id.trim();
     if ::server_config::get().multitenant {
-        if org_id.trim().eq_ignore_ascii_case("system") {
+        if org_id.eq_ignore_ascii_case("system") {
             return Err(sqlx::Error::Configuration(
                 "tenant_id 'system' cannot be queried in multi-tenant mode".into(),
             ));
         }
-        if org_id.trim().is_empty() {
+        if org_id.is_empty() {
             return Err(sqlx::Error::Configuration(
                 "empty tenant_id is not allowed in multi-tenant mode".into(),
             ));
         }
     }
 
-    if org_id.trim().eq_ignore_ascii_case("system") {
+    if org_id.eq_ignore_ascii_case("system") {
         // Elevate privileges for system-level queries.
         // We cannot issue multiple queries because sqlx extended protocol doesn't allow it,
         // and we cannot call execute multiple times because E is consumed.

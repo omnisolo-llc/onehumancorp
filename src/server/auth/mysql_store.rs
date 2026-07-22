@@ -42,6 +42,7 @@ impl MySqlUserRepository {
 #[async_trait]
 impl UserRepository for MySqlUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
@@ -69,6 +70,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = ? AND tenant_id = ?";
         let row_opt = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
@@ -96,6 +98,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = ? AND tenant_id = ?";
         let row_opt = sqlx::query(query).bind(username).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
@@ -123,6 +126,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = ? AND tenant_id = ?";
         let row_opt = sqlx::query(query).bind(email).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
@@ -154,6 +158,7 @@ impl UserRepository for MySqlUserRepository {
         identifier: &str,
         org_id: &str,
     ) -> Result<Option<User>, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let rows = sqlx::query(
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at
@@ -189,6 +194,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = ? AND tenant_id = ?";
         let row_opt = sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
@@ -216,6 +222,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = ? ORDER BY created_at";
         let rows = sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?;
@@ -242,6 +249,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
 
@@ -272,6 +280,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
         let query = "DELETE FROM users WHERE id = ? AND tenant_id = ?";
         let res = sqlx::query(query).bind(id).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
@@ -283,6 +292,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -309,6 +319,7 @@ impl UserRepository for MySqlUserRepository {
     }
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
+        let org_id = org_id.trim();
         validate_org_id!(org_id);
 
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = ? AND expires_at >= ? AND tenant_id = ?")
