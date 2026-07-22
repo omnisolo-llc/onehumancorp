@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+  schedule:
+    - cron: "0 2 * * *"  # every night at 2:00 AM UTC
   workflow_dispatch:
 
 concurrency:
@@ -103,7 +105,7 @@ jobs:
 
   build-desktop-installers:
     name: Build desktop installers (${{ matrix.name }})
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     env:
@@ -677,7 +679,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: oci-runner
     needs:
       - build-release-artifacts
@@ -709,6 +711,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v0.0.0-nightly-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('OmniSolo Nightly Build {0}', github.run_number) }}
           files: |
             dist/*.tar.gz
             dist/*.sig
@@ -726,18 +730,18 @@ jobs:
             dist/checksums.txt
           generate_release_notes: true
           body: |
-            ## OHC ${{ github.ref_name }}
+            ## OmniSolo (formerly OHC) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
 
             ### Download & Installation
 
-            - **Windows**: `OHC-${{ github.ref_name }}-Windows.msi` or `OHC-${{ github.ref_name }}-Windows-Portable.zip`
-            - **macOS**: `OHC-${{ github.ref_name }}-macOS.dmg`, `OHC-${{ github.ref_name }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ github.ref_name }}-macOS.tar.gz`
-            - **Linux x86_64**: `OHC-${{ github.ref_name }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
-            - **Linux ARM64**: `OHC-${{ github.ref_name }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
+            - **Windows**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows.msi` or `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows-Portable.zip`
+            - **macOS**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.dmg`, `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.tar.gz`
+            - **Linux x86_64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
+            - **Linux ARM64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
 
             `latest.json` is uploaded after artifact publication for the Tauri desktop updater.
           draft: false
-          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          prerelease: ${{ github.event_name == 'schedule' || contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
