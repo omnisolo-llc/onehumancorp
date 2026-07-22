@@ -34,6 +34,7 @@ pub struct AppConfig {
     pub cloud_missions_endpoint: Option<String>,
     pub cloud_context_endpoint: Option<String>,
     pub telemetry_enabled: bool,
+    pub registration_enabled: bool,
     pub bootstrap_org_id: String,
     pub bootstrap_org_name: String,
     pub bootstrap_ceo_name: String,
@@ -76,6 +77,7 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .set_default("headless", false)?
         .set_default("agent_auth_disabled", false)?
         .set_default("telemetry_enabled", false)?
+        .set_default("registration_enabled", false)?
 
         // Optional file
         .add_source(::config::File::with_name("ohc").required(false))
