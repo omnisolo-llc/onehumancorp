@@ -25,7 +25,7 @@ function copyHeaders(from: Headers, to: Headers): void {
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  if (isPublicFrameworkAsset(request)) return NextResponse.next();
+  if (isPublicFrameworkAsset(request) || request.nextUrl.pathname.startsWith("/builder") || request.nextUrl.pathname.startsWith("/help") || request.nextUrl.pathname.startsWith("/changelog") || request.nextUrl.pathname.startsWith("/api-docs")) return NextResponse.next();
 
   let dependencies: MiddlewareDependencies;
   try {
