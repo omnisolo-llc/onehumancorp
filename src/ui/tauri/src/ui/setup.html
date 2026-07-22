@@ -151,7 +151,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism" style="display: flex; align-items: center; padding: 0; margin-bottom: 12px; border-radius: 8px;">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" style="margin-bottom: 0; border: none; background: transparent; flex: 1; min-width: 0;" />
+          <span style="padding-right: 12px; color: #666; white-space: nowrap;">.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -319,26 +323,65 @@
         });
       }
 
-      function goToStep(stepId) {
+      function validateStep(stepId) {
+        if (stepId === 'step-name') {
+          const nameVal = document.getElementById('business-name').value.trim();
+          const errorEl = document.getElementById('name-error');
+          if (!nameVal) {
+            if (errorEl) errorEl.style.display = 'block';
+            return false;
+          }
+          if (errorEl) errorEl.style.display = 'none';
+          return true;
+        }
+
+        if (stepId === 'step-domain') {
+          const domainInput = document.getElementById('domain-name');
+          const errorEl = document.getElementById('domain-error');
+          const val = domainInput ? domainInput.value.trim() : '';
+
+          if (val.length < 3) {
+            if (errorEl) { errorEl.innerText = 'Domain must be at least 3 characters long.'; errorEl.style.display = 'block'; }
+            return false;
+          }
+          if (val.startsWith('-') || val.endsWith('-')) {
+            if (errorEl) { errorEl.innerText = 'Domain cannot start or end with a hyphen.'; errorEl.style.display = 'block'; }
+            return false;
+          }
+          if (!/^[a-z0-9\-]+$/.test(val)) {
+            if (errorEl) { errorEl.innerText = 'Domain can contain only lowercase letters, numbers, and hyphens.'; errorEl.style.display = 'block'; }
+            return false;
+          }
+
+          if (errorEl) errorEl.style.display = 'none';
+          return true;
+        }
+        return true;
+      }
+
+      function goToStep(stepId, skipValidation = false) {
+        // Find current step to validate
+        const currentActive = document.querySelector('.step.active');
+        if (!skipValidation && currentActive && currentActive.id) {
+           if (!validateStep(currentActive.id)) return;
+        }
+
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-        document.getElementById(stepId).classList.add('active');
+        const nextStep = document.getElementById(stepId);
+        if (nextStep) nextStep.classList.add('active');
         state.step = stepOrder.indexOf(stepId);
         saveState();
       }
+
+      window.validateStep = validateStep;
+      window.goToStep = goToStep;
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           if (e.target.dataset.next) {
             const currentStep = e.target.closest('.step').id;
-            if (currentStep === 'step-name') {
-              const nameVal = document.getElementById('business-name').value.trim();
-              if (!nameVal) {
-                document.getElementById('name-error').style.display = 'block';
-                return; // Stop transition
-              }
-              document.getElementById('name-error').style.display = 'none';
-            }
-            goToStep(e.target.dataset.next);
+            if (!validateStep(currentStep)) return;
+            goToStep(e.target.dataset.next, true); // already validated
           }
         });
       });
@@ -362,6 +405,16 @@
 
       document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', debouncedSave));
       document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', debouncedSave));
+
+      const domainInputEl = document.getElementById('domain-name');
+      if (domainInputEl) {
+        domainInputEl.addEventListener('input', () => {
+          const errorEl = document.getElementById('domain-error');
+          if (errorEl && errorEl.style.display !== 'none') {
+            validateStep('step-domain');
+          }
+        });
+      }
 
       document.getElementById('finish-btn').addEventListener('click', async () => {
         saveState(); // Ensure latest password state is captured right before submit
