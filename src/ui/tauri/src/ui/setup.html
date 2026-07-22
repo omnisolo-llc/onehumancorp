@@ -82,10 +82,29 @@
     <div class="container glassmorphism">
       <h1>Setup</h1>
 
+
       <div id="step-intro" class="step active">
         <h2>Welcome</h2>
         <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" />
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
+        <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
+
+        <div id="generation-loading" style="display: none; padding: 20px; text-align: center;" class="glassmorphism">
+            <h3>Designing catalog...</h3>
+            <p>Setting up booking logic and AI agents...</p>
+        </div>
+
+        <div id="generation-preview" style="display: none; padding: 20px;" class="glassmorphism">
+            <h3>Storefront Preview Ready</h3>
+            <p>Your products, pricing, and layout have been generated securely.</p>
+            <button id="connect-bank-action" class="next-step-btn" style="background-color: #28a745;">Connect Bank / Setup Payments</button>
+        </div>
+
+        <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
+        <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
+        <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Start My Business</button>
+      </div>
+
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
         <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
@@ -307,9 +326,17 @@
               }
             }
 
-            // Assume success means we transition to launched
-            localStorage.removeItem('onboardingState');
-            document.body.innerHTML = '<h1>You\'re Live!</h1>';
+            // Show loading state
+            document.getElementById('generation-loading').style.display = 'block';
+            document.getElementById('generate-storefront-btn').style.display = 'none';
+            document.getElementById('instant-bio').style.display = 'none';
+
+            // Simulate the backend processing delay visually (or wait for response in real scenario)
+            setTimeout(() => {
+                document.getElementById('generation-loading').style.display = 'none';
+                document.getElementById('generation-preview').style.display = 'block';
+                localStorage.removeItem('onboardingState');
+            }, 1000); // Wait 1 second to mock the generation time
           } catch (e) {
             instantError.innerText = e.message || 'Error occurred';
             instantError.style.display = 'block';

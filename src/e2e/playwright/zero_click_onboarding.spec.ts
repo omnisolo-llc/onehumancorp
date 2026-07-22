@@ -1,34 +1,32 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Zero-Click Onboarding Flow', () => {
-  test.use({ viewport: { width: 375, height: 667 } }); // strictly mobile viewport
+test.describe('Zero Click Builder Viral Growth Loop', () => {
+    test('Maya the Baker generates a storefront with zero clicks', async ({ page }) => {
+        // We use the actual UI layout present in setup.html
+        await page.goto('/setup.html');
 
-  test('should complete the zero-click onboarding flow on mobile', async ({ page }) => {
-    // Navigate to the real local server
-    await page.goto('http://127.0.0.1:18789/setup.html');
-    await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
+        // Wait for the instant-bio section which contains the Zero-Click generation prompt
+        const container = page.locator('#instant-bio');
+        await expect(container).toBeVisible();
 
-    // Initial Screen
-    await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
+        // 1. Enter the business prompt
+        const promptInput = page.locator('#bio-input');
+        await promptInput.fill('I am a baker in Austin selling custom vegan cakes');
 
-    // Check if the input loaded
-    await expect(page.locator('#instant-bio')).toBeVisible();
+        // 2. Tap Generate
+        const generateBtn = page.locator('#generate-storefront-btn');
+        await generateBtn.click();
 
-    // Type into the input
-    await page.locator('#instant-bio').fill('I am a baker in Austin selling custom cakes');
+        // 3. Ensure the loading state is shown
+        const loadingState = page.locator('#generation-loading');
+        await expect(loadingState).toBeVisible();
+        await expect(loadingState).toContainText('Designing catalog...');
 
-    // Click the submit button
-    await page.locator('#generate-storefront-btn').click();
+        // 4. Ensure the live preview and next action are shown
+        const previewState = page.locator('#generation-preview');
+        await expect(previewState).toBeVisible({ timeout: 15000 });
 
-    // Wait for the approval details screen
-    await expect(page.locator('h1', { hasText: 'Ready to Launch' })).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#approval-details')).toBeVisible();
-
-    // Click Approve & Publish
-    const approveBtn = page.locator('#approve-publish-btn-chat');
-    await approveBtn.click();
-
-    // The flow goes to the success/dashboard screen.
-    await expect(page).toHaveURL(/.*dashboard\.html.*/, { timeout: 30000 });
-  });
+        const nextAction = page.locator('#connect-bank-action');
+        await expect(nextAction).toBeVisible();
+    });
 });

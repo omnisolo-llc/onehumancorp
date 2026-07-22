@@ -376,14 +376,18 @@ mod tests {
             for resp_body in responses {
                 if let Ok(stream) = listener_clone.accept() {
                     let mut stream = stream.0;
-                    let reader = BufReader::new(stream.try_clone().unwrap());
+                    let mut reader = BufReader::new(stream.try_clone().unwrap());
                     let mut headers = Vec::new();
-                    for line in reader.lines() {
-                        match line {
-                            Ok(line) if line.is_empty() => break,
-                            Ok(line) => headers.push(line),
-                            Err(_) => break,
+                    loop {
+                        let mut line = String::new();
+                        if reader.read_line(&mut line).is_err() {
+                            break;
                         }
+                        let trimmed = line.trim_end();
+                        if trimmed.is_empty() {
+                            break;
+                        }
+                        headers.push(trimmed.to_string());
                     }
 
                     let content_length = headers
@@ -394,7 +398,8 @@ mod tests {
                         .unwrap_or(0);
 
                     let mut body = vec![0u8; content_length];
-                    std::io::Read::read_exact(&mut stream, &mut body).unwrap();
+                    let mut reader = reader;
+                    std::io::Read::read_exact(&mut reader, &mut body).unwrap();
 
                     let response = format!(
                         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
