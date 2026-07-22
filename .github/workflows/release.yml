@@ -712,7 +712,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v0.0.0-nightly-{0}', github.run_number) }}
-          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('OHC Nightly Build {0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('OmniSolo Nightly Build {0}', github.run_number) }}
           files: |
             dist/*.tar.gz
             dist/*.sig
@@ -730,7 +730,7 @@ jobs:
             dist/checksums.txt
           generate_release_notes: true
           body: |
-            ## OHC ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
+            ## OmniSolo (formerly OHC) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
 
             ### Download & Installation
 
