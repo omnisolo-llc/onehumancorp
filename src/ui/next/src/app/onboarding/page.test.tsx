@@ -940,6 +940,13 @@ describe("OnboardingWizard", () => {
       });
     }
 
+    act(() => {
+      useOnboardingStore.setState({
+        adminEmail: "valid@email.com",
+        adminPassword: "Valid1Password",
+      });
+    });
+
     // Click Save Draft
     const saveDraftBtn = screen.getAllByRole("button", { name: /Save Draft/i }).pop()!;
     await user.click(saveDraftBtn);
