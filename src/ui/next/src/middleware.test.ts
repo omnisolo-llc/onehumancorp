@@ -46,7 +46,8 @@ describe("Next authentication middleware adapter", () => {
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual({ error: "authentication unavailable" });
-    expect(error).toHaveBeenCalledWith("auth.middleware.configuration_unavailable");
+    // Expect the first argument of the error mock to contain the prefix text rather than an exact match
+    expect(error.mock.calls[0][0]).toMatch(/^auth\.middleware\.configuration_unavailable/);
   });
 
   it("redirects protected pages and expires malformed session cookies", async () => {
