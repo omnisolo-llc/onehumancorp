@@ -13,6 +13,8 @@ overrides:
   '@modelcontextprotocol/sdk': '>=1.24.0'
   ws: '>=6.2.4'
   postcss: '>=8.5.10'
+  brace-expansion: '>=2.0.1'
+  esbuild: '>=0.25.0'
 
 importers:
 
@@ -4258,7 +4260,7 @@ packages:
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.1.18
-      esbuild: ^0.27.0 || ^0.28.0
+      esbuild: '>=0.25.0'
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0
