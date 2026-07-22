@@ -1,11 +1,11 @@
-# One Human Corp
+# OmniSolo (formerly One Human Corp)
 
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
 ## Built-in Agent Harness
 
-The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
+The OmniSolo platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: One Human Corp was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
 
 ### Visual/Low-Code Orchestration
 
@@ -43,7 +43,7 @@ This flow utilizes local `server`, `agent`, and `ohc-core` images without requir
 
 ## Identity
 
-One Human Corp employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+OmniSolo employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
 
 The platform implements a hybrid identity model:
 - **Agent Identity**: Relies on SPIFFE/SPIRE for universal workload identity, ensuring every inter-agent communication and tool call is cryptographically signed and mTLS validated.
@@ -51,7 +51,7 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
-One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
+OmniSolo (formerly One Human Corp / OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
 
@@ -89,9 +89,9 @@ graph TD;
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
-### KAIROS Orchestration Documentation
+### Swarm Orchestration Documentation
 
-The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
+The Swarm is powered by our custom orchestration engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
 - **[Sub-Agent Queue](docs/technical/architecture/kairos/sub-agent-queue-design.md):** Learn how agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](docs/features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
