@@ -165,3 +165,19 @@ ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Add omni_inbox message for the e2e test
+INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
+VALUES (
+    'e2e-inbox-msg-1',
+    'e2e-tenant',
+    'Instagram',
+    'Do you have vegan options?',
+    'Do you have vegan options?',
+    'English',
+    'Yes, we have vegan cakes available!',
+    'unread',
+    'maya_bakes',
+    NULL,
+    NOW()
+) ON CONFLICT DO NOTHING;

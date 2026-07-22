@@ -17,5 +17,10 @@ test.describe('Omnichannel Inbox UI', () => {
 
     await expect(page.getByText('maya_bakes')).toBeVisible();
     await expect(page.getByText('Known Customer')).toBeVisible();
+
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send' });
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+    await expect(approveBtn).toHaveText('Sent! ✅');
   });
 });

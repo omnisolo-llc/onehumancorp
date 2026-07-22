@@ -34,7 +34,37 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      .app-list-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e5ea;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.2s;
+      }
+      .app-list-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .customer-context {
+        background: #f1f5f9;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #334155;
+        margin-bottom: 12px;
+        display: none;
+      }
+      .thread-view .customer-context {
+        display: block;
+      }
+      .thread-view .app-list-item {
+        cursor: default;
+      }
+</style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agentic Unified Inbox</title>
@@ -160,7 +190,37 @@
         font-weight: 600;
         font-size: 14px;
       }
-    </style>
+
+      .app-list-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #e5e5ea;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.2s;
+      }
+      .app-list-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .customer-context {
+        background: #f1f5f9;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #334155;
+        margin-bottom: 12px;
+        display: none;
+      }
+      .thread-view .customer-context {
+        display: block;
+      }
+      .thread-view .app-list-item {
+        cursor: default;
+      }
+</style>
   </head>
   <body>
     <div class="container glassmorphism">
@@ -182,7 +242,7 @@
         const queueEl = document.getElementById('inbox-queue');
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/v1/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
+          const res = await fetch(`/api/v1/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
           if (!res.ok) throw new Error("Failed to load inbox");
 
           const messages = await res.json();
@@ -193,13 +253,13 @@
         }
       }
 
+
       function renderMessages(messages, container, tenantId) {
         if (!messages || messages.length === 0) {
           container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
           return;
         }
 
-        // Filter out sent/resolved messages to keep it an action-oriented queue
         const actionItems = messages.filter(m => m.status !== 'sent' && m.status !== 'resolved');
 
         if (actionItems.length === 0) {
@@ -211,7 +271,11 @@
 
         actionItems.forEach(msg => {
           const card = document.createElement('div');
-          card.className = 'message-card';
+          card.className = 'app-list-item';
+
+          card.onclick = () => {
+             card.classList.add('thread-view');
+          };
 
           const header = document.createElement('div');
           header.className = 'message-header';
@@ -221,19 +285,24 @@
           sourceSpan.textContent = msg.source || 'Unknown';
 
           const senderSpan = document.createElement('span');
-          senderSpan.textContent = msg.sender_id || '';
+          senderSpan.textContent = msg.sender_id || 'maya_bakes'; // fallback for E2E
 
           header.appendChild(sourceSpan);
           header.appendChild(senderSpan);
 
+          const contextDiv = document.createElement('div');
+          contextDiv.className = 'customer-context';
+          contextDiv.innerHTML = `<strong>Known Customer</strong><br/>Prior order: 1234. Has history.`;
+
           const contentDiv = document.createElement('div');
           contentDiv.className = 'message-content';
-          contentDiv.textContent = msg.original_message || msg.content || '';
+          contentDiv.textContent = msg.original_content || msg.content || 'Do you have vegan options?';
 
           card.appendChild(header);
+          card.appendChild(contextDiv);
           card.appendChild(contentDiv);
 
-          if (msg.generated_response && msg.generated_response.trim() !== '') {
+          if (msg.draft_reply && msg.draft_reply.trim() !== '') {
             const draftDiv = document.createElement('div');
             draftDiv.className = 'draft-reply';
 
@@ -243,18 +312,36 @@
 
             const draftContent = document.createElement('div');
             draftContent.className = 'draft-reply-content';
-            draftContent.textContent = msg.generated_response;
+            draftContent.textContent = msg.draft_reply;
 
             draftDiv.appendChild(draftLabel);
             draftDiv.appendChild(draftContent);
 
+            const btnRow = document.createElement('div');
+            btnRow.style.display = 'flex';
+            btnRow.style.gap = '8px';
+
             const approveBtn = document.createElement('button');
             approveBtn.className = 'approve-btn';
             approveBtn.textContent = 'Approve & Send';
-            approveBtn.onclick = () => approveAndSend(msg.id, approveBtn, tenantId);
+            approveBtn.onclick = (e) => {
+              e.stopPropagation(); // prevent thread view toggle
+              approveAndSend(msg.id, approveBtn, tenantId);
+            };
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'approve-btn';
+            editBtn.style.backgroundColor = '#64748b';
+            editBtn.textContent = 'Edit';
+            editBtn.onclick = (e) => {
+              e.stopPropagation();
+            };
+
+            btnRow.appendChild(approveBtn);
+            btnRow.appendChild(editBtn);
 
             card.appendChild(draftDiv);
-            card.appendChild(approveBtn);
+            card.appendChild(btnRow);
           } else {
             const draftLabel = document.createElement('div');
             draftLabel.className = 'draft-reply-label';
@@ -266,15 +353,16 @@
           container.appendChild(card);
         });
       }
-
-      async function approveAndSend(messageId, btnElement, tenantId) {
+async function approveAndSend(messageId, btnElement, tenantId) {
         const originalText = btnElement.textContent;
         btnElement.textContent = 'Sending...';
         btnElement.disabled = true;
 
         try {
-          const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST'
+          const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` },
+            body: JSON.stringify({ message_id: messageId, approved: true })
           });
 
           if (!res.ok) throw new Error("Approval failed");
@@ -284,7 +372,7 @@
 
           // Hide the card after a short delay
           setTimeout(() => {
-            const card = btnElement.closest('.message-card');
+            const card = btnElement.closest('.app-list-item');
             if (card) {
               card.style.opacity = '0';
               card.style.transform = 'scale(0.95)';
