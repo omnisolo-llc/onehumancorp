@@ -12,6 +12,29 @@ pub mod user_repository;
 pub mod grpc;
 pub mod http;
 
+pub mod db {
+    use sqlx::postgres::PgPool;
+    use std::sync::OnceLock;
+
+    static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
+
+    pub fn get_pool() -> PgPool {
+        GLOBAL_POOL
+            .get_or_init(|| {
+                let database_url = std::env::var("DATABASE_URL")
+                    .ok()
+                    .or_else(|| std::env::var("OHC_DATABASE_URL").ok())
+                    .unwrap_or_else(|| "postgres://postgres:postgres@localhost:5432/test".to_string());
+                sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(100)
+                    .acquire_timeout(std::time::Duration::from_millis(15000))
+                    .connect_lazy(&database_url)
+                    .expect("Failed to connect to DB pool lazily")
+            })
+            .clone()
+    }
+}
+
 use std::collections::HashMap;
 
 pub async fn strict_bearer_auth_middleware(
