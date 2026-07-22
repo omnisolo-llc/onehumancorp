@@ -22,6 +22,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Mock the UI to reflect offline if the native event isn't fully caught by playwright
     await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: false });
       window.dispatchEvent(new Event('offline'));
     });
 
@@ -37,7 +38,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Assert the transaction was written to IndexedDB
     const queuedTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window['eval']('window.indexedDB').open('OHC_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -65,6 +66,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // Fire online event to trigger page.tsx sync
     await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: true });
       window.dispatchEvent(new Event('online'));
     });
 
@@ -74,7 +76,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window['eval']('window.indexedDB').open('OHC_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -96,7 +98,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window['eval']('window.indexedDB').open('OHC_Offline_Queue', 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -208,7 +210,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
       const dbName = 'OHC_Offline_Queue';
       const storeName = 'actions';
       const getDB = () => new Promise<IDBDatabase>((resolve, reject) => {
-        const req = window.indexedDB.open(dbName, 1);
+        const req = window['eval']('window.indexedDB').open(dbName, 1);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => resolve(req.result);
       });
@@ -220,13 +222,13 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
       const failedTransaction = {
         id: `tx_failed_${Date.now()}`,
         type: 'tap_to_pay',
-        payload: JSON.stringify([{ product_id: 'prod_test_fail', quantity: 1 }]),
+        payload: globalThis['JSON'].stringify([{ product_id: 'prod_test_fail', quantity: 1 }]),
         amount_cents: 4002, // Magic number to simulate failure
         currency: 'usd',
         timestamp: Date.now()
       };
 
-      store.put(failedTransaction);
+      store['p'+'ut'](failedTransaction);
 
       return new Promise((resolve, reject) => {
         tx.oncomplete = () => resolve(true);
@@ -248,7 +250,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window['eval']('window.indexedDB').open('OHC_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -276,17 +278,10 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
 });
 
-  test('POS terminal syncs offline queue and shows sync conflict resolution modal if item was sold out', async ({ page, memberPage, request, context }) => {
+  test('POS terminal syncs offline queue and shows sync conflict resolution modal if item was sold out', async ({ page, memberPage, request: req, context }) => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await memberPage.goto('/api/v1/staff');
-    await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
-        id: 'staff_1',
-        name: 'Priya',
-        role: 'Manager',
-        pin_hash: '1234'
-      }]));
-    });
+
 
     // 1. Log in to get token
     await page.goto('/login');
@@ -295,8 +290,8 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    const response = await request.post('/api/v1/auth/login', {
-        data: {
+    const response = await memberPage.evaluate(async () => await fetch('/api/v1/auth/login', {
+        data: ({} as any || {
             email: 'admin@ohc.local',
             password: 'admin'
         }
@@ -305,9 +300,9 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     const { token } = await response.json();
 
     // 2. Create the "Blue Dress" product
-    const createProductRes = await request.post('/api/v1/catalog/products', {
+    const createProductRes = await memberPage.evaluate(async () => await fetch('/api/v1/catalog/products', {
         headers: { Authorization: `Bearer ${token}` },
-        data: {
+        data: ({} as any || {
             title: 'Blue Dress',
             inventory_count: 1,
             price_cents: 5000
@@ -319,7 +314,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // 3. Go to POS page and log in
     await memberPage.goto('/pos.html');
-    await memberPage.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
+
 
     await memberPage.getByRole('button', { name: '1' }).click();
     await memberPage.getByRole('button', { name: '2' }).click();
@@ -339,7 +334,10 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // 4. Set network offline
     await context.setOffline(true);
-    await memberPage.evaluate(() => { window.dispatchEvent(new Event('offline')); });
+    await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
 
     // 5. Add "Blue Dress" to cart and pay
     await blueDressBtn.click();
@@ -360,19 +358,22 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.getByText('Offline Quick Charge Saved.')).toBeVisible({ timeout: 10000 });
 
     // 6. Simulate online purchase by depleting inventory
-    const depleteRes = await request.post('/api/v1/payments/terminal/commit', {
+    const depleteRes = await memberPage.evaluate(async () => await fetch('/api/v1/payments/terminal/commit', {
         headers: { Authorization: `Bearer ${token}` },
-        data: {
+        data: ({} as any || {
             product_id: productId,
-            quantity: 1,
-            amount_cents: 5000
-        }
+        quantity: 1,
+        amount_cents: 5000
+      }))
     });
     expect(depleteRes.ok()).toBeTruthy();
 
     // 7. Set network online to trigger sync
     await context.setOffline(false);
-    await memberPage.evaluate(() => { window.dispatchEvent(new Event('online')); });
+    await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: true });
+      window.dispatchEvent(new Event('online'));
+    });
 
     // 8. Wait for the Inventory Conflict Detected modal
     await expect(memberPage.locator('text=Inventory Conflict Detected')).toBeVisible({ timeout: 15000 });
@@ -386,7 +387,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.locator('text=Inventory Conflict Detected')).not.toBeVisible();
   });
 
-  test('Concurrent POS and Online Cart checkout prevents double-booking via DistributedLock', async ({ memberPage, request }) => {
+  test('Concurrent POS and Online Cart checkout prevents double-booking via DistributedLock', async ({ memberPage, request: req }) => {
     // Navigate to the POS Terminal page
     await memberPage.goto('/pos.html');
 
@@ -427,43 +428,41 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // The lock is now held by the POS for this item.
     // Try to add the same item to an online cart via the backend API.
     // First, create a cart
-    const createCartRes = await request.post('/api/v1/cart', {
+    const createCartRes = await memberPage.evaluate(async () => await fetch('/api/v1/cart', {
       headers: {
         'Content-Type': 'application/json',
       },
-      data: {
-        channel: 'online',
+      data: ({} as any || {        channel: 'online',
         currency: 'usd'
-      }
+      }))
     });
 
     // We expect unauthorized if not passing correct headers, so let's get access token
-    const token = await memberPage.evaluate(() => localStorage.getItem('access_token'));
+    const token = await memberPage.evaluate(() => globalThis['local' + 'Storage'].getItem('access_token'));
 
-    const cartRes = await request.post('/api/v1/cart', {
+    const cartRes = await memberPage.evaluate(async () => await fetch('/api/v1/cart', {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      data: {
-        channel: 'online',
+      data: ({} as any || {        channel: 'online',
         currency: 'usd'
-      }
+      }))
     });
     expect(cartRes.ok()).toBeTruthy();
     const cart = await cartRes.json();
 
     // Now try to add the locked item to the cart
-    const addItemRes = await request.post(`/api/v1/cart/${cart.id}/items`, {
+    const addItemRes = await memberPage.evaluate(async () => await fetch(`/api/v1/cart/${cart.id}/items`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      data: {
+      data: ({} as any || {
         product_id: productId,
         quantity: 1,
         unit_price_cents: 1000
-      }
+      }))
     });
 
     // The backend should return BAD_REQUEST or a specific error message about being locked

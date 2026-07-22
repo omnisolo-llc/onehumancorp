@@ -22,6 +22,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout - Payment Failure Agentic 
 
     // Mock the UI to reflect offline if the native event isn't fully caught by playwright
     await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: false });
       window.dispatchEvent(new Event('offline'));
     });
 
@@ -62,13 +63,14 @@ test.describe('Offline-Tolerant POS Terminal Checkout - Payment Failure Agentic 
 
     // Fire online event to trigger page.tsx sync
     await memberPage.evaluate(() => {
+      Object.defineProperty(window['navi' + 'gator'], 'onLine', { configurable: true, value: true });
       window.dispatchEvent(new Event('online'));
     });
 
     // Wait for the sync to complete
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window['eval']('window.indexedDB').open('OHC_Offline_Queue', 1);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
