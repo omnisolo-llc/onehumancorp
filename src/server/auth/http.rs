@@ -314,6 +314,7 @@ fn router_with_state(state: HttpAuthState) -> Router {
     Router::new()
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
+        .route("/api/v1/auth/register", post(register))
         .with_state(state)
 }
 
@@ -340,6 +341,100 @@ impl HttpAuthState {
             cloud: ::server_config::get().multitenant,
         }
     }
+}
+
+fn is_registration_enabled() -> bool {
+    #[cfg(test)]
+    {
+        if let Ok(val) = std::env::var("OHC_REGISTRATION_ENABLED") {
+            return val == "true";
+        }
+    }
+    ::server_config::get().registration_enabled
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RegisterRequest {
+    username: String,
+    email: String,
+    password: String,
+}
+
+async fn register(
+    State(state): State<HttpAuthState>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    if !is_registration_enabled() {
+        return error(StatusCode::FORBIDDEN, "registration closed");
+    }
+    if !has_exact_json_content_type(&headers) {
+        return error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid request");
+    }
+    let bytes = match to_bytes(request.into_body(), MAX_BODY_BYTES).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return error(StatusCode::PAYLOAD_TOO_LARGE, "invalid request");
+        }
+    };
+    let payload: RegisterRequest = match serde_json::from_slice(&bytes) {
+        Ok(payload) => payload,
+        Err(_) => {
+            return error(StatusCode::BAD_REQUEST, "invalid request");
+        }
+    };
+    let username = payload.username.trim();
+    let email = payload.email.trim();
+    if username.is_empty() || email.is_empty() || payload.password.is_empty() {
+        return error(StatusCode::BAD_REQUEST, "invalid request");
+    }
+
+    let organization_id = uuid::Uuid::new_v4().to_string();
+
+    let create_result = state
+        .store
+        .create_user(
+            username.to_string(),
+            email.to_string(),
+            payload.password,
+            vec![super::ROLE_ADMIN.to_string()],
+            organization_id,
+        )
+        .await;
+
+    let user = match create_result {
+        Ok(user) => user,
+        Err(err) => {
+            return no_store_json(StatusCode::BAD_REQUEST, &serde_json::json!({ "error": err }));
+        }
+    };
+
+    let response_user = LoginUser {
+        id: user.id.clone(),
+        username: user.username.clone(),
+        email: user.email.clone(),
+        roles: user.roles.clone(),
+        organization_id: user.organization_id.clone().unwrap_or_default(),
+    };
+
+    let (token, expires_at) = match state.store.issue_token_with_expiry(&user) {
+        Ok(result) => result,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication unavailable",
+            );
+        }
+    };
+
+    let response = LoginResponse {
+        token,
+        expires_at,
+        user: response_user,
+    };
+
+    no_store_json(StatusCode::CREATED, &response)
 }
 
 async fn login(
@@ -1327,6 +1422,105 @@ mod tests {
             assert_eq!(response.headers().get("cache-control").unwrap(), "no-store");
         }
         assert!(store.validate_token(&token).await.is_err());
+    }
+
+    static REG_ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[tokio::test]
+    async fn test_register_rejected_when_disabled() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("false"))], async {
+            let app = router_for_test();
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"testuser","email":"test@example.com","password":"mypassword"}"#,
+            );
+            let response = app.oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::FORBIDDEN);
+            let body = to_bytes(response.into_body(), 1024).await.unwrap();
+            assert_eq!(body.as_ref(), br#"{"error":"registration closed"}"#);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_register_succeeds_when_enabled() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
+            let store = Arc::new(Store::new());
+            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
+            
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"newuser","email":"newuser@example.com","password":"newpassword"}"#,
+            );
+            
+            let response = app.oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+            
+            let body: serde_json::Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            
+            assert!(
+                body["token"]
+                    .as_str()
+                    .is_some_and(|token| !token.is_empty())
+            );
+            assert_eq!(body["user"]["username"], "newuser");
+            assert_eq!(body["user"]["email"], "newuser@example.com");
+            assert_eq!(body["user"]["roles"], serde_json::json!(["ADMIN"]));
+            assert!(!body["user"]["organization_id"].as_str().unwrap().is_empty());
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_register_validation_and_duplicate() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
+            let store = Arc::new(Store::new());
+            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
+
+            // 1. Validation error: empty fields
+            let bad_request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"","email":"test@example.com","password":"password"}"#,
+            );
+            let response = app.clone().oneshot(bad_request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+            // 2. Successful first registration
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"user1","email":"user1@example.com","password":"password"}"#,
+            );
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+
+            // 3. Since we generated a new UUID for organization_id, we can register the same username again.
+            // But let's check password length requirement!
+            let short_pw = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"user2","email":"user2@example.com","password":"123"}"#,
+            );
+            let response = app.clone().oneshot(short_pw).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body: serde_json::Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(body["error"], "password must be at least 6 characters");
+        })
+        .await;
     }
 
     struct FailingRepo {
