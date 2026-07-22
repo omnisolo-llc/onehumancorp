@@ -107,6 +107,14 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                         instr.push_str(hint);
                         instr
                     }));
+                } else if err_str.contains("unknown field") {
+                    let field_name = err_str.split('`').nth(1).unwrap_or("unknown");
+                    let hint = format!("An unknown field was provided. The field '{}' is not part of the tool's schema. Please remove it or check the field name.", field_name);
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(&hint);
+                        instr
+                    }));
                 }
 
                 return Err(ToolError::LlmRecoverable(
@@ -276,6 +284,39 @@ mod tests {
             assert!(msg.contains("An unrecognized enum variant was provided."));
         } else {
             panic!("Expected LlmRecoverable error about unknown variant");
+        }
+    }
+
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct StrictArgs {
+        foo: String,
+    }
+
+    struct StrictExecutor;
+    #[async_trait::async_trait]
+    impl PydanticToolExecutor<StrictArgs> for StrictExecutor {
+        async fn execute_typed(&self, _args: StrictArgs) -> Result<String, ToolError> {
+            Ok("strict_ok".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_unknown_field() {
+        let adapter = PydanticAdapter::new(StrictExecutor);
+
+        // We intentionally inject an unknown field "hallucinated_param"
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "hallucinated_param": "bad" }))
+            .await;
+
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("unknown field"));
+            assert!(msg.contains("An unknown field was provided."));
+            assert!(msg.contains("hallucinated_param"));
+        } else {
+            panic!("Expected LlmRecoverable error about unknown field hallucination");
         }
     }
 
