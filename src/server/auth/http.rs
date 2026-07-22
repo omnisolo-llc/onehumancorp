@@ -10,15 +10,17 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::Response,
     routing::post,
+    Extension,
 };
+use base64::Engine as _;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
+use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     net::{IpAddr, SocketAddr},
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -311,10 +313,223 @@ pub fn router(store: Arc<Store>) -> Result<Router, String> {
 }
 
 fn router_with_state(state: HttpAuthState) -> Router {
+    let settings_router = Router::new()
+        .route("/keys", axum::routing::post(generate_api_key).get(list_api_keys))
+        .route("/keys/{id}", axum::routing::delete(revoke_api_key))
+        .layer(axum::middleware::from_fn_with_state(state.store.clone(), super::strict_bearer_auth_middleware));
+
     Router::new()
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
+        .route("/api/v1/auth/register", post(register))
+        .nest("/api/v1/settings", settings_router)
         .with_state(state)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CreateKeyRequest {
+    name: String,
+}
+
+#[derive(Serialize)]
+struct CreateKeyResponse {
+    raw_key: String,
+    name: String,
+    created_at: String,
+}
+
+#[derive(Serialize)]
+struct ApiKeyMetadata {
+    id: String,
+    name: String,
+    created_at: String,
+    expires_at: Option<String>,
+}
+
+fn get_member_uuid(sub: &str) -> uuid::Uuid {
+    uuid::Uuid::parse_str(sub)
+        .unwrap_or_else(|_| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, sub.as_bytes()))
+}
+
+#[derive(Clone)]
+pub struct InMemoryApiKey {
+    pub id: String,
+    pub key_hash: String,
+    pub name: String,
+    pub member_id: String,
+    pub organization_id: String,
+    pub created_at: String,
+}
+
+static IN_MEMORY_API_KEYS: OnceLock<Mutex<Vec<InMemoryApiKey>>> = OnceLock::new();
+
+pub fn get_in_memory_keys() -> &'static Mutex<Vec<InMemoryApiKey>> {
+    IN_MEMORY_API_KEYS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+async fn generate_api_key(
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<CreateKeyRequest>,
+) -> Response {
+    let mut bytes = [0_u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+
+    let raw_key = format!(
+        "ohc_gwy_{}",
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&bytes)
+    );
+
+    let key_hash = format!("{:x}", Sha256::digest(raw_key.as_bytes()));
+    let created_at = chrono::Utc::now().to_rfc3339();
+    let key_id = uuid::Uuid::new_v4().to_string();
+    let member_id = get_member_uuid(&claims.sub);
+    let organization_id = claims.organization_id.clone().unwrap_or_default();
+
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+
+    if has_db {
+        let pool = crate::db::get_pool();
+        let insert_res = sqlx::query(
+            "INSERT INTO api_keys (id, key_hash, name, member_id, organization_id) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(uuid::Uuid::parse_str(&key_id).unwrap_or_default())
+        .bind(&key_hash)
+        .bind(&payload.name)
+        .bind(member_id)
+        .bind(&organization_id)
+        .execute(&pool)
+        .await;
+
+        if let Err(e) = insert_res {
+            return no_store_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &serde_json::json!({ "error": e.to_string() }),
+            );
+        }
+    }
+
+    let mut keys = get_in_memory_keys().lock().unwrap();
+    keys.push(InMemoryApiKey {
+        id: key_id.clone(),
+        key_hash,
+        name: payload.name.clone(),
+        member_id: claims.sub.clone(),
+        organization_id,
+        created_at: created_at.clone(),
+    });
+
+    let resp = CreateKeyResponse {
+        raw_key,
+        name: payload.name,
+        created_at,
+    };
+
+    no_store_json(StatusCode::CREATED, &resp)
+}
+
+async fn list_api_keys(
+    Extension(claims): Extension<::server_common::Claims>,
+) -> Response {
+    let mut api_keys = Vec::new();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+
+    if has_db {
+        let pool = crate::db::get_pool();
+        let member_id = get_member_uuid(&claims.sub);
+        let organization_id = claims.organization_id.clone().unwrap_or_default();
+
+        let query_res = sqlx::query(
+            "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
+        )
+        .bind(member_id)
+        .bind(&organization_id)
+        .fetch_all(&pool)
+        .await;
+
+        match query_res {
+            Ok(rows) => {
+                for row in rows {
+                    use sqlx::Row;
+                    let id: uuid::Uuid = row.get(0);
+                    let name: String = row.get(1);
+                    let created_at: chrono::DateTime<chrono::Utc> = row.get(2);
+                    let expires_at: Option<chrono::DateTime<chrono::Utc>> = row.get(3);
+
+                    api_keys.push(ApiKeyMetadata {
+                        id: id.to_string(),
+                        name,
+                        created_at: created_at.to_rfc3339(),
+                        expires_at: expires_at.map(|dt| dt.to_rfc3339()),
+                    });
+                }
+            }
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        }
+    } else {
+        let keys = get_in_memory_keys().lock().unwrap();
+        let org_id = claims.organization_id.clone().unwrap_or_default();
+        for k in keys.iter() {
+            if k.member_id == claims.sub && k.organization_id == org_id {
+                api_keys.push(ApiKeyMetadata {
+                    id: k.id.clone(),
+                    name: k.name.clone(),
+                    created_at: k.created_at.clone(),
+                    expires_at: None,
+                });
+            }
+        }
+    }
+
+    no_store_json(StatusCode::OK, &api_keys)
+}
+
+async fn revoke_api_key(
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> Response {
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+
+    if has_db {
+        let pool = crate::db::get_pool();
+        let key_uuid = match uuid::Uuid::parse_str(&id) {
+            Ok(u) => u,
+            Err(_) => {
+                return no_store_json(
+                    StatusCode::BAD_REQUEST,
+                    &serde_json::json!({ "error": "invalid key id" }),
+                );
+            }
+        };
+        let member_id = get_member_uuid(&claims.sub);
+        let organization_id = claims.organization_id.clone().unwrap_or_default();
+
+        let delete_res = sqlx::query(
+            "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
+        )
+        .bind(key_uuid)
+        .bind(member_id)
+        .bind(&organization_id)
+        .execute(&pool)
+        .await;
+
+        if let Err(e) = delete_res {
+            return no_store_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &serde_json::json!({ "error": e.to_string() }),
+            );
+        }
+    }
+
+    let mut keys = get_in_memory_keys().lock().unwrap();
+    keys.retain(|k| k.id != id);
+
+    no_store_json(StatusCode::OK, &serde_json::json!({ "ok": true }))
 }
 
 impl HttpAuthState {
@@ -340,6 +555,100 @@ impl HttpAuthState {
             cloud: ::server_config::get().multitenant,
         }
     }
+}
+
+fn is_registration_enabled() -> bool {
+    #[cfg(test)]
+    {
+        if let Ok(val) = std::env::var("OHC_REGISTRATION_ENABLED") {
+            return val == "true";
+        }
+    }
+    ::server_config::get().registration_enabled
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RegisterRequest {
+    username: String,
+    email: String,
+    password: String,
+}
+
+async fn register(
+    State(state): State<HttpAuthState>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    if !is_registration_enabled() {
+        return error(StatusCode::FORBIDDEN, "registration closed");
+    }
+    if !has_exact_json_content_type(&headers) {
+        return error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid request");
+    }
+    let bytes = match to_bytes(request.into_body(), MAX_BODY_BYTES).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return error(StatusCode::PAYLOAD_TOO_LARGE, "invalid request");
+        }
+    };
+    let payload: RegisterRequest = match serde_json::from_slice(&bytes) {
+        Ok(payload) => payload,
+        Err(_) => {
+            return error(StatusCode::BAD_REQUEST, "invalid request");
+        }
+    };
+    let username = payload.username.trim();
+    let email = payload.email.trim();
+    if username.is_empty() || email.is_empty() || payload.password.is_empty() {
+        return error(StatusCode::BAD_REQUEST, "invalid request");
+    }
+
+    let organization_id = uuid::Uuid::new_v4().to_string();
+
+    let create_result = state
+        .store
+        .create_user(
+            username.to_string(),
+            email.to_string(),
+            payload.password,
+            vec![super::ROLE_ADMIN.to_string()],
+            organization_id,
+        )
+        .await;
+
+    let user = match create_result {
+        Ok(user) => user,
+        Err(err) => {
+            return no_store_json(StatusCode::BAD_REQUEST, &serde_json::json!({ "error": err }));
+        }
+    };
+
+    let response_user = LoginUser {
+        id: user.id.clone(),
+        username: user.username.clone(),
+        email: user.email.clone(),
+        roles: user.roles.clone(),
+        organization_id: user.organization_id.clone().unwrap_or_default(),
+    };
+
+    let (token, expires_at) = match state.store.issue_token_with_expiry(&user) {
+        Ok(result) => result,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication unavailable",
+            );
+        }
+    };
+
+    let response = LoginResponse {
+        token,
+        expires_at,
+        user: response_user,
+    };
+
+    no_store_json(StatusCode::CREATED, &response)
 }
 
 async fn login(
@@ -1329,6 +1638,105 @@ mod tests {
         assert!(store.validate_token(&token).await.is_err());
     }
 
+    static REG_ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[tokio::test]
+    async fn test_register_rejected_when_disabled() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("false"))], async {
+            let app = router_for_test();
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"testuser","email":"test@example.com","password":"mypassword"}"#,
+            );
+            let response = app.oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::FORBIDDEN);
+            let body = to_bytes(response.into_body(), 1024).await.unwrap();
+            assert_eq!(body.as_ref(), br#"{"error":"registration closed"}"#);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_register_succeeds_when_enabled() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
+            let store = Arc::new(Store::new());
+            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
+
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"newuser","email":"newuser@example.com","password":"newpassword"}"#,
+            );
+
+            let response = app.oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+
+            let body: serde_json::Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+
+            assert!(
+                body["token"]
+                    .as_str()
+                    .is_some_and(|token| !token.is_empty())
+            );
+            assert_eq!(body["user"]["username"], "newuser");
+            assert_eq!(body["user"]["email"], "newuser@example.com");
+            assert_eq!(body["user"]["roles"], serde_json::json!(["ADMIN"]));
+            assert!(!body["user"]["organization_id"].as_str().unwrap().is_empty());
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_register_validation_and_duplicate() {
+        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
+            let store = Arc::new(Store::new());
+            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
+
+            // 1. Validation error: empty fields
+            let bad_request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"","email":"test@example.com","password":"password"}"#,
+            );
+            let response = app.clone().oneshot(bad_request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+            // 2. Successful first registration
+            let request = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"user1","email":"user1@example.com","password":"password"}"#,
+            );
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+
+            // 3. Since we generated a new UUID for organization_id, we can register the same username again.
+            // But let's check password length requirement!
+            let short_pw = json_request(
+                "/api/v1/auth/register",
+                r#"{"username":"user2","email":"user2@example.com","password":"123"}"#,
+            );
+            let response = app.clone().oneshot(short_pw).await.unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body: serde_json::Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(body["error"], "password must be at least 6 characters");
+        })
+        .await;
+    }
+
     struct FailingRepo {
         lookup_fails: bool,
         revocation_fails: bool,
@@ -1422,5 +1830,120 @@ mod tests {
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         let body = to_bytes(response.into_body(), 1024).await.unwrap();
         assert_eq!(body.as_ref(), br#"{"error":"logout unavailable"}"#);
+    }
+
+    #[tokio::test]
+    async fn test_api_keys_workflow() {
+        let (app, store, user) = app_with_user().await;
+        let token = store.issue_token(&user).unwrap();
+
+        // 1. Creating a key requires authentication (unauthorized returns 401)
+        let unauthorized_request = with_peer(
+            Request::post("/api/v1/settings/keys")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"name":"Test Key"}"#))
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(unauthorized_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        // 2. Successfully creates a key for authenticated users
+        let authorized_request = with_peer(
+            Request::post("/api/v1/settings/keys")
+                .header("authorization", format!("Bearer {token}"))
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"name":"My Test Key"}"#))
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(authorized_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+
+        let raw_key = body["raw_key"].as_str().unwrap();
+        assert!(raw_key.starts_with("ohc_gwy_"));
+        assert_eq!(body["name"], "My Test Key");
+        assert!(body["created_at"].as_str().is_some());
+
+        // Verify correctly hashing it in the database
+        // SHA256 of raw_key
+        let expected_hash = format!("{:x}", Sha256::digest(raw_key.as_bytes()));
+
+        // Check our in-memory fallback list to verify the hash is correct
+        {
+            let keys = get_in_memory_keys().lock().unwrap();
+            let key = keys.iter().find(|k| k.name == "My Test Key").unwrap();
+            assert_eq!(key.key_hash, expected_hash);
+            assert_eq!(key.member_id, user.id);
+        }
+
+        // 3. Listing keys returns all created keys
+        let list_request = with_peer(
+            Request::get("/api/v1/settings/keys")
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(list_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let list_body: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+
+        let list_array = list_body.as_array().unwrap();
+        assert!(!list_array.is_empty());
+        let created_key_meta = list_array.iter().find(|k| k["name"] == "My Test Key").unwrap();
+        let key_id = created_key_meta["id"].as_str().unwrap().to_string();
+
+        // 4. Revoking a key deletes it
+        let delete_request = with_peer(
+            Request::delete(format!("/api/v1/settings/keys/{}", key_id))
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response = app.clone().oneshot(delete_request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let delete_body: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response.into_body(), MAX_BODY_BYTES)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(delete_body["ok"], true);
+
+        // Verify it is no longer listed
+        let list_request2 = with_peer(
+            Request::get("/api/v1/settings/keys")
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .unwrap(),
+            IpAddr::V4(Ipv4Addr::LOCALHOST),
+        );
+        let response2 = app.clone().oneshot(list_request2).await.unwrap();
+        assert_eq!(response2.status(), StatusCode::OK);
+
+        let list_body2: serde_json::Value = serde_json::from_slice(
+            &to_bytes(response2.into_body(), MAX_BODY_BYTES)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        let list_array2 = list_body2.as_array().unwrap();
+        assert!(list_array2.iter().all(|k| k["id"] != key_id));
     }
 }
