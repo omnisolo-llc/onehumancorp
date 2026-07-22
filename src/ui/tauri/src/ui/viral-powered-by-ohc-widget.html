@@ -183,8 +183,25 @@
 
   <div class="container">
     <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">⚡</div>
-    <h1>Embed Footer Badge</h1>
+    <h1>Viral Widget Builder</h1>
     <p class="subtitle">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
+
+
+    <div style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; width: 100%;">
+      <label for="widget-title" style="font-weight: 500; font-size: 14px;">Widget Title</label>
+      <input type="text" id="widget-title" aria-label="Widget Title" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);" placeholder="e.g. Special Viral Offer" />
+
+      <label for="widget-theme" style="font-weight: 500; font-size: 14px;">Theme</label>
+      <select id="widget-theme" aria-label="Theme" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+        <input type="checkbox" id="remove-branding" />
+        <label for="remove-branding" style="font-size: 14px;">Remove "Powered by OHC" Badge</label>
+      </div>
+    </div>
 
     <div class="preview-box">
       <div class="ohc-badge">
@@ -201,7 +218,7 @@
 
       <div class="code-block" id="embed-code"></div>
 
-      <button id="copy-btn" class="copy-btn">Copy Code</button>
+      <button id="copy-btn" class="copy-btn">Copy Embed Code</button>
     </div>
   </div>
 
@@ -219,6 +236,11 @@
         let referralLink = `https://ohc.network/invite/${tenantId}`;
 
         try {
+          const title = document.getElementById('widget-title').value || "Powered by OHC";
+          const theme = document.getElementById('widget-theme').value;
+          const bg = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.8)';
+          const color = '#fff';
+
           // Attempt to call the actual backend API to generate a referral link if it exists
           const res = await fetch('/api/v1/growth/referrals/generate', {
             method: 'POST',
@@ -243,8 +265,8 @@
     var b = document.createElement('a');
     b.href = '${referralLink}';
     b.target = '_blank';
-    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
-    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
+    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:' + bg + ';color:' + color + ';border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> ' + title;
     document.body.appendChild(b);
   })();
 <\/script>`;
@@ -264,17 +286,67 @@
       }
     });
 
+
+    // Live preview updates
+    const titleInput = document.getElementById('widget-title');
+    const themeSelect = document.getElementById('widget-theme');
+
+    function updatePreview() {
+        const title = titleInput.value || "Powered by OHC";
+        const theme = themeSelect.value;
+        const badge = document.querySelector('.ohc-badge');
+
+        badge.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> ${title}`;
+
+        if (theme === 'dark') {
+            badge.style.background = 'rgba(255, 255, 255, 0.1)';
+            badge.style.color = '#f5f5f7';
+        } else {
+            badge.style.background = 'rgba(0, 0, 0, 0.05)';
+            badge.style.color = 'var(--text-secondary)';
+        }
+    }
+
+    function regenerateSnippet() {
+        if(document.getElementById('result-area').style.display === 'block') {
+             document.getElementById('generate-btn').click();
+        }
+    }
+
+    titleInput.addEventListener('input', () => { updatePreview(); regenerateSnippet(); });
+    themeSelect.addEventListener('change', () => { updatePreview(); regenerateSnippet(); });
+
+    document.getElementById('remove-branding').addEventListener('change', (e) => {
+        if (e.target.checked) {
+            e.target.checked = false; // Prevent checking
+            document.getElementById('paywall-modal').style.display = 'flex';
+        }
+    });
+
+    document.getElementById('close-paywall-btn').addEventListener('click', () => {
+        document.getElementById('paywall-modal').style.display = 'none';
+    });
+
     document.getElementById('copy-btn').addEventListener('click', async () => {
       const code = document.getElementById('embed-code').textContent;
       try {
         await navigator.clipboard.writeText(code);
         const btn = document.getElementById('copy-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+        btn.textContent = 'Copied to Clipboard!';
+        setTimeout(() => { btn.textContent = 'Copy Embed Code'; }, 2000);
       } catch (err) {
         console.error('Failed to copy', err);
       }
     });
   </script>
+
+  <div id="paywall-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 300px; text-align: center; color: black;">
+      <h2>Upgrade to Remove Branding</h2>
+      <p>Please upgrade to a Pro plan to remove the OHC branding.</p>
+      <button aria-label="Close paywall" id="close-paywall-btn" style="background: #333; margin-top: 16px;">Close paywall</button>
+    </div>
+  </div>
+
 </body>
 </html>
