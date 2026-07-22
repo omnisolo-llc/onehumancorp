@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function source(relativePath: string): string {
-  const basePath = process.cwd().endsWith("src/ui/next") ? process.cwd() : join(process.cwd(), "src/ui/next");
-  return readFileSync(join(basePath, relativePath), "utf8");
+  const cleanPath = relativePath.startsWith("src/app/") ? relativePath.slice("src/app/".length) : relativePath;
+  return readFileSync(join(__dirname, cleanPath), "utf8");
 }
 
 describe("product-shell overlay authority", () => {

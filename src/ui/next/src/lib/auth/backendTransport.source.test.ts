@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const basePath = process.cwd().endsWith("src/ui/next") ? process.cwd() : join(process.cwd(), "src/ui/next");
+const basePath = join(__dirname, "../../..");
 const API_ROOT = join(basePath, "src/app/api");
 const BACKEND_CONFIGURATION =
   /process\.env\.[A-Z0-9_]*(?:URL|ORIGIN)|https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/;

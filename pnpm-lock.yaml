@@ -52,14 +52,11 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       dompurify:
-        specifier: ^3.4.11
-        version: 3.4.11
+        specifier: ^3.4.12
+        version: 3.4.12
       framer-motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      glob:
-        specifier: ^13.0.6
-        version: 13.0.6
       google-protobuf:
         specifier: ^3.21.4
         version: 3.21.4
@@ -285,8 +282,8 @@ importers:
         specifier: ^4.4.0
         version: 4.4.0
       dompurify:
-        specifier: ^3.0.6
-        version: 3.4.11
+        specifier: ^3.4.12
+        version: 3.4.12
       framer-motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2378,8 +2375,8 @@ packages:
   dom-accessibility-api@0.6.3:
     resolution: {integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==}
 
-  dompurify@3.4.11:
-    resolution: {integrity: sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw==}
+  dompurify@3.4.12:
+    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
 
   dprint-node@1.0.8:
     resolution: {integrity: sha512-iVKnUtYfGrYcW1ZAlfR/F59cUVL8QIhWoBJoSjkkdua/dkWIgjZfiLMeTjiB06X0ZLkQ0M2C1VbUj/CxkIf1zg==}
@@ -6391,7 +6388,7 @@ snapshots:
 
   dom-accessibility-api@0.6.3: {}
 
-  dompurify@3.4.11:
+  dompurify@3.4.12:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -6958,7 +6955,7 @@ snapshots:
 
   isomorphic-dompurify@3.18.0:
     dependencies:
-      dompurify: 3.4.11
+      dompurify: 3.4.12
       jsdom: 29.1.1
     transitivePeerDependencies:
       - '@noble/hashes'
@@ -8011,7 +8008,7 @@ snapshots:
       classnames: 2.5.1
       css.escape: 1.5.1
       deep-extend: 0.6.0
-      dompurify: 3.4.11
+      dompurify: 3.4.12
       ieee754: 1.2.1
       immutable: 3.8.3
       js-file-download: 0.4.12
@@ -8054,7 +8051,7 @@ snapshots:
       classnames: 2.5.1
       css.escape: 1.5.1
       deep-extend: 0.6.0
-      dompurify: 3.4.11
+      dompurify: 3.4.12
       ieee754: 1.2.1
       immutable: 3.8.3
       js-file-download: 0.4.12

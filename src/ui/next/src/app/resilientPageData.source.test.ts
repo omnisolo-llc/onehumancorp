@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const basePath = process.cwd().endsWith("src/ui/next") ? process.cwd() : join(process.cwd(), "src/ui/next");
+const basePath = join(__dirname, "../..");
 
 function page(relativePath: string): string {
   return readFileSync(join(basePath, "src/app", relativePath), "utf8");
