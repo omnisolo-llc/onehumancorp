@@ -755,6 +755,31 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .await
             .unwrap();
 
+        // Trigger Customer Success Agent for Follow-up / Review Request
+        let cs_payload = serde_json::json!({
+            "transaction_id": transaction_id,
+            "client_id": client_id,
+            "event": "offline_pos_synced",
+            "message": "Send thank you receipt and request for a review."
+        }).to_string();
+
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'CUSTOMER_SUCCESS_FOLLOWUP', $3::jsonb, 'PENDING')")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&job.tenant_id)
+            .bind(&cs_payload)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
+        // Ledger Update for Finance Agent
+        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Finance', 'offline_pos_revenue_sync', $3::jsonb)")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&job.tenant_id)
+            .bind(&job.payload)
+            .execute(&mut *tx)
+            .await
+            .unwrap();
+
         tx.commit().await.unwrap();
 
         Ok(())
@@ -826,6 +851,13 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
 
+        let finance_ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'offline_pos_revenue_sync'")
+            .fetch_one(&pool).await.unwrap();
+        assert!(finance_ledger_count.0 > 0);
+
+        let cs_job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'CUSTOMER_SUCCESS_FOLLOWUP'")
+            .fetch_one(&pool).await.unwrap();
+        assert!(cs_job_count.0 > 0);
 
         let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION'")
             .fetch_one(&pool).await.unwrap();

@@ -26,7 +26,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     });
 
     // Ensure the Offline Mode badge is visible
-    await expect(memberPage.locator('text=Offline - Changes saved locally').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Click "Quick Charge $50" while offline
     await memberPage.getByRole('button', { name: 'Quick Charge $50' }).click();
@@ -37,7 +37,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Assert the transaction was written to IndexedDB
     const queuedTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OHC_Offline_Queue', 2);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -74,7 +74,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OHC_Offline_Queue', 2);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
@@ -96,7 +96,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Ensure the queue was cleared successfully
     const afterSyncTxs = await memberPage.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OHC_Offline_Queue', 2);
         req.onerror = () => reject(req.error);
         req.onsuccess = () => {
           const db = req.result;
@@ -201,7 +201,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.evaluate(() => {
       window.dispatchEvent(new Event('offline'));
     });
-    await expect(memberPage.locator('text=Offline - Changes saved locally').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
 
     // Inject failed payment mock directly into IndexedDB Offline Queue
     await memberPage.evaluate(async () => {
@@ -248,7 +248,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Wait for the sync to complete and the IndexedDB to be cleared
     await memberPage.waitForFunction(async () => {
       return new Promise<boolean>((resolve) => {
-        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        const req = window.indexedDB.open('OHC_Offline_Queue', 2);
         req.onsuccess = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains('actions')) {
