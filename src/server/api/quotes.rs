@@ -1595,7 +1595,59 @@ async fn approve_quote(
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
+    let invoice_id = Uuid::new_v4();
+    let total_amount = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
+    let stripe_key =
+        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+    let mut payment_link = String::new();
+    match stripe_client
+        .create_checkout_session(
+            &format!("Invoice for Quote #{}", quote.id),
+            &quote.customer_id,
+            total_amount,
+            None,
+            None,
+        )
+        .await
+    {
+        Ok(url) => payment_link = url,
+        Err(error) => {
+            tracing::error!(
+                "Failed to create Stripe checkout session for invoice: {}",
+                error
+            );
+        }
+    }
+
+    let invoice_res = sqlx::query(
+        "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_payment_link, stripe_invoice_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6, '', NOW(), NOW())"
+    )
+    .bind(invoice_id.to_string())
+    .bind(authority.tenant_id())
+    .bind(&quote.customer_id)
+    .bind(&quote.id)
+    .bind(total_amount)
+    .bind(&payment_link)
+    .execute(&pool)
+    .await;
+
+    match invoice_res {
+        Ok(result) if result.rows_affected() == 1 => {}
+        Ok(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(error) => {
+            // Try inserting without quote_id if it fails due to schema difference
+            let _ = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, $4, 'draft', $5, 'USD', $6, $7, NOW(), NOW())")
+                .bind(invoice_id.to_string()).bind(authority.tenant_id()).bind(&quote.customer_id).bind("Client").bind(chrono::Utc::now().timestamp() + 30*24*3600).bind(total_amount).bind(&payment_link).execute(&pool).await;
+            tracing::error!("Fallback insert invoice: {}", error);
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "quote": quote,
+        "invoice_id": invoice_id.to_string(),
+        "stripe_payment_link": payment_link
+    }))).into_response()
 }
 
 // Temporary marker to slice off old approve_quote

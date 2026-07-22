@@ -46,7 +46,14 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+
+        "invoice_draft" => {
+            crate::domain::invoice::handle_invoice_draft_action(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         "invoice_followup" => {
+
             crate::domain::invoice::handle_invoice_action(tenant_id, payload, pool)
                 .await
                 .map_err(|e| e.to_string())?;
