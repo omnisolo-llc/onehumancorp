@@ -1578,7 +1578,7 @@ async fn approve_quote(
     let approve_query = format!(
         "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
     );
-    let quote = match sqlx::query_as::<_, Quote>(&approve_query)
+    let mut quote = match sqlx::query_as::<_, Quote>(&approve_query)
     .bind(quote_id.to_string())
     .bind(authority.tenant_id())
     .fetch_optional(&pool)
@@ -1593,6 +1593,43 @@ async fn approve_quote(
     };
     if !authority.owns_quote(&quote) {
         return StatusCode::NOT_FOUND.into_response();
+    }
+
+    let total_amount = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
+    let required_deposit = (quote.required_deposit_cents.unwrap_or(0) as f64) / 100.0;
+
+    // Only generate a link if we have an amount to collect.
+    if required_deposit > 0.0 || total_amount > 0.0 {
+        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        let amount_to_charge = if required_deposit > 0.0 { required_deposit } else { total_amount };
+
+        match stripe_client
+            .create_checkout_session(
+                &format!("Deposit for Quote #{}", quote.id),
+                &quote.customer_id,
+                amount_to_charge,
+                None,
+                None,
+            )
+            .await
+        {
+            Ok(url) => {
+                quote.stripe_payment_link = Some(url.clone());
+                if let Err(error) = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id::text = $2")
+                    .bind(url)
+                    .bind(quote_id.to_string())
+                    .execute(&pool)
+                    .await
+                {
+                    tracing::error!("Failed to save Stripe payment link to quote: {}", error);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            },
+            Err(error) => {
+                tracing::error!("Failed to create Stripe checkout session for deposit: {}", error);
+            }
+        }
     }
 
     (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()

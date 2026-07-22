@@ -41,7 +41,7 @@ export const ReviewDraftQuoteCard: React.FC<ReviewDraftQuoteCardProps> = ({
           onClick={onApprove} data-testid="feed-approve-btn"
                     className="flex-1 bg-[#0066FF] text-white min-h-[44px] px-4 rounded-[8px] text-sm font-medium hover:bg-blue-600 transition-colors"
                 >
-          Approve & Send
+          Approve & Request Deposit
         </button>
         <button
           onClick={onEdit} data-testid="feed-dismiss-btn"

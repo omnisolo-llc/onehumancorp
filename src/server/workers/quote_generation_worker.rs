@@ -64,7 +64,7 @@ impl ResearcherLlmClient for AdapterLlm {
         let response_text = if let Some(response) = forced_response {
             response
         } else if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
+            r#"[{"description": "Kitchen Painting", "unit_price_cents": 60000, "quantity": 1, "is_optional": false, "service_item_id": null}, {"description": "Materials", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
         } else {
             crate::minimax::LocalLLMClient::new().reason(&prompt).await?
         };
