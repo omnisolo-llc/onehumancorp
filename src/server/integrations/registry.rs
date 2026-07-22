@@ -36,10 +36,10 @@ pub struct IntegrationsRegistry {
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
     taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>>>,
-    slack_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::slack::provider::SlackProvider>>>,
-    google_analytics_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_analytics::provider::GoogleAnalyticsProvider>>>,
-    github_api_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>>>,
-    outlook_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::outlook_calendar::provider::OutlookCalendarProvider>>>,
+//     slack_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::slack::provider::SlackProvider>>>,
+//     google_analytics_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_analytics::provider::GoogleAnalyticsProvider>>>,
+//     github_api_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>>>,
+//     outlook_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::outlook_calendar::provider::OutlookCalendarProvider>>>,
 
 }
 
@@ -84,10 +84,10 @@ impl IntegrationsRegistry {
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             taxjar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            slack_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_analytics_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            github_api_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            outlook_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+//             slack_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+//             google_analytics_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+//             github_api_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+//             outlook_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -133,11 +133,11 @@ impl IntegrationsRegistry {
                            tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
                       }
                   }
-                  "slack" => {
+//                   "slack" => {
                       if !creds.bot_token.is_empty() {
                           let channel_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                           let text = format!("[{}] {}", from_agent, content);
-                          let clients = self.slack_clients.read().unwrap();
+//                           let clients = self.slack_clients.read().unwrap();
                           if let Some(client) = clients.get(integration_id) {
                               let client = client.clone();
                               tokio::spawn(async move {
@@ -339,23 +339,23 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
-        if integration_id == "slack" {
-            let mut clients = self.slack_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::slack::provider::SlackProvider::new(creds.bot_token.clone())));
-        }
+//         if integration_id == "slack" {
+//             let mut clients = self.slack_clients.write().unwrap();
+//             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::slack::provider::SlackProvider::new(creds.bot_token.clone())));
+//         }
 
-        if integration_id == "google_analytics" {
-            let mut clients = self.google_analytics_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(creds.api_token.clone(), creds.chat_id.clone())));
-        }
-        if integration_id == "github_api" {
-            let mut clients = self.github_api_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::github_api::provider::GitHubProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "outlook_calendar" {
-            let mut clients = self.outlook_calendar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(creds.api_token.clone())));
-        }
+//         if integration_id == "google_analytics" {
+//             let mut clients = self.google_analytics_clients.write().unwrap();
+//             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(creds.api_token.clone(), creds.chat_id.clone())));
+//         }
+//         if integration_id == "github_api" {
+//             let mut clients = self.github_api_clients.write().unwrap();
+//             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::github_api::provider::GitHubProvider::new(creds.api_token.clone())));
+//         }
+//         if integration_id == "outlook_calendar" {
+//             let mut clients = self.outlook_calendar_clients.write().unwrap();
+//             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(creds.api_token.clone())));
+//         }
 
         Ok(inst)
     }

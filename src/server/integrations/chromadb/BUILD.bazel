@@ -32,9 +32,6 @@ rust_test(
     size = "small",
     crate = ":server_integrations_chromadb",
     edition = "2024",
-    proc_macro_deps = [
-        "@crates//:async-trait",
-    ],
     deps = [
         "@crates//:temp-env",
     ],
