@@ -167,22 +167,28 @@ impl ClaudeSubagentSpawner {
                 sub_config.project_trusted = true; // Typically worktrees require trust to commit.
                 sub_config.workspace_path = Some(worktree_dir.to_string_lossy().to_string());
 
-                let result = self.execute_and_summarize(task, &sub_config).await?;
+                let mut result = self.execute_and_summarize(task, &sub_config).await;
 
-                if *auto_merge_on_success {
+                if result.is_ok() && *auto_merge_on_success {
                     // Merge branch into main repo
                     let merge_output = Command::new("git")
                         .arg("merge")
                         .arg(branch_name)
                         .current_dir(base_repo_path)
                         .output()
-                        .await?;
-                    if !merge_output.status.success() {
-                        return Err(format!(
-                            "Failed to merge worktree branch: {}",
-                            String::from_utf8_lossy(&merge_output.stderr)
-                        )
-                        .into());
+                        .await;
+
+                    match merge_output {
+                        Ok(merge_out) if !merge_out.status.success() => {
+                            result = Err(format!(
+                                "Failed to merge worktree branch: {}",
+                                String::from_utf8_lossy(&merge_out.stderr)
+                            ).into());
+                        }
+                        Err(e) => {
+                            result = Err(format!("Failed to execute git merge: {}", e).into());
+                        }
+                        _ => {}
                     }
                 }
 
@@ -195,33 +201,46 @@ impl ClaudeSubagentSpawner {
                         .arg(&worktree_dir)
                         .current_dir(base_repo_path)
                         .output()
-                        .await?;
-                    if !cleanup_output.status.success() {
-                        return Err(format!(
-                            "Failed to cleanup worktree: {}",
-                            String::from_utf8_lossy(&cleanup_output.stderr)
-                        )
-                        .into());
-                    }
+                        .await;
 
-                    if *auto_merge_on_success {
-                        let branch_del_output = Command::new("git")
-                            .arg("branch")
-                            .arg("-D")
-                            .arg(branch_name)
-                            .current_dir(base_repo_path)
-                            .output()
-                            .await?;
-                        if !branch_del_output.status.success() {
-                            tracing::warn!(
-                                "Failed to delete worktree branch after cleanup: {}",
-                                String::from_utf8_lossy(&branch_del_output.stderr)
+                    match cleanup_output {
+                        Ok(clean_out) if !clean_out.status.success() => {
+                            tracing::error!(
+                                "Failed to cleanup worktree: {}",
+                                String::from_utf8_lossy(&clean_out.stderr)
                             );
                         }
+                        Err(e) => {
+                            tracing::error!("Failed to execute git worktree remove: {}", e);
+                        }
+                        _ => {}
+                    }
+
+                    // Only attempt to delete the branch if auto cleanup was requested and we attempted an auto-merge (or we just want to ensure clean state).
+                    // In Worktree mode, the branch might be left behind. Let's delete it.
+                    let branch_del_output = Command::new("git")
+                        .arg("branch")
+                        .arg("-D")
+                        .arg(branch_name)
+                        .current_dir(base_repo_path)
+                        .output()
+                        .await;
+
+                    match branch_del_output {
+                        Ok(del_out) if !del_out.status.success() => {
+                            tracing::warn!(
+                                "Failed to delete worktree branch after cleanup: {}",
+                                String::from_utf8_lossy(&del_out.stderr)
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to execute git branch -D: {}", e);
+                        }
+                        _ => {}
                     }
                 }
 
-                Ok(result)
+                result
             }
         }
     }
@@ -668,6 +687,112 @@ mod tests {
             .unwrap();
         let branches = String::from_utf8_lossy(&branch_check.stdout);
         assert!(!branches.contains("subagent-branch-auto"));
+    }
+
+    #[tokio::test]
+    async fn test_claude_subagent_worktree_cleanup_on_error() {
+        let parent_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+        let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
+
+        // Subagent errors out immediately
+        let sub_client = Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec!["error".to_string(), "error".to_string(), "error".to_string(), "error".to_string()]),
+        });
+        let _subagent = Arc::new(Agent::new(sub_client, vec![]));
+
+        // However, wait, our MockLlmClient doesn't error, it just returns "error". Let's create a failing mock client.
+        struct FailingLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for FailingLlmClient {
+            async fn chat(
+                &self,
+                _req: ohc_builtin_agent_core::types::ChatRequest,
+            ) -> Result<
+                ohc_builtin_agent_core::types::ChatResponse,
+                Box<dyn std::error::Error + Send + Sync>,
+            > {
+                Err("Intentional subagent failure".into())
+            }
+        }
+        let failing_subagent = Arc::new(Agent::new(Arc::new(FailingLlmClient), vec![]));
+
+        // Create a dummy git repo
+        let dir = tempfile::tempdir().unwrap();
+        let repo_dir = dir.path().join("test_repo_err");
+        fs::create_dir_all(&repo_dir).await.unwrap();
+
+        Command::new("git")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
+        Command::new("git")
+            .arg("add")
+            .arg(".")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.name")
+            .arg("Test")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("config")
+            .arg("user.email")
+            .arg("test@test.com")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        Command::new("git")
+            .arg("commit")
+            .arg("-m")
+            .arg("init")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+
+        let spawner = ClaudeSubagentSpawner::new(
+            parent_client.clone(),
+            failing_subagent,
+            ClaudeSubagentMode::Worktree {
+                base_repo_path: repo_dir.clone(),
+                branch_name: "subagent-branch-err".to_string(),
+                auto_cleanup: true,
+                auto_merge_on_success: true,
+            },
+        );
+
+        let config = AgentRunConfig::default();
+        let result = spawner.run_subagent("Do task", &[], &config).await;
+
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("Intentional subagent failure") || err_str.contains("subagent failed"));
+
+        // Verify worktree was created and cleaned up
+        let worktree_dir = dir.path().join("worktree_subagent-branch-err");
+        assert!(!worktree_dir.exists(), "Worktree should be cleaned up on error");
+
+        // Ensure branch is deleted
+        let branch_check = Command::new("git")
+            .arg("branch")
+            .current_dir(&repo_dir)
+            .output()
+            .await
+            .unwrap();
+        let branches = String::from_utf8_lossy(&branch_check.stdout);
+        assert!(!branches.contains("subagent-branch-err"), "Branch should be deleted on error");
     }
 
     #[tokio::test]
