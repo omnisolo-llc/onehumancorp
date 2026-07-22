@@ -7,6 +7,7 @@ export type ShellRoute = {
 const standardSubtitle = "Use this workspace from the dashboard navigation.";
 
 const pageOwnedExactRoutes = new Set([
+  "/aider-repomap",
   "/action-center",
   "/agent-activity",
   "/ai-usage-paywall",
@@ -62,6 +63,7 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/abandoned-cart": { title: "Abandoned Cart" },
   "/actor-model": { title: "Actor Model" },
   "/affiliate-badge-builder": { title: "Affiliate Badge Builder" },
+  "/aider-repomap": { title: "Aider RepoMap Explorer" },
   "/agent-marketplace": { title: "Agent Marketplace" },
   "/agent-protocol": {
     title: "Agent Protocol",

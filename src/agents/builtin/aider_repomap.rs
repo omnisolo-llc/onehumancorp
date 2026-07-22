@@ -71,6 +71,21 @@ impl RepoMap {
                         signatures.push(trimmed.to_string());
                     }
                 }
+                "py" => {
+                    if trimmed.starts_with("def ") || trimmed.starts_with("class ") {
+                        signatures.push(trimmed.to_string());
+                    }
+                }
+                "cpp" | "hpp" | "c" | "h" => {
+                    if trimmed.starts_with("class ")
+                        || trimmed.starts_with("struct ")
+                        || (trimmed.contains('(') && trimmed.contains(')') && !trimmed.contains("if") && !trimmed.contains("for") && !trimmed.contains("while"))
+                    {
+                        if trimmed.len() < 100 {
+                            signatures.push(trimmed.to_string());
+                        }
+                    }
+                }
                 _ => {}
             }
         }
@@ -249,6 +264,37 @@ mod tests {
             "    ├── export interface Config {}",
             "    ├── class App {}",
             "    └── function start() {",
+        ];
+
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
+        assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_extract_signatures_python_and_cpp() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_py = File::create(root.join("main.py")).unwrap();
+        main_py
+            .write_all(b"def hello():\n    pass\n\nclass PythonClass:\n    pass\n")
+            .unwrap();
+
+        let mut main_cpp = File::create(root.join("main.cpp")).unwrap();
+        main_cpp
+            .write_all(b"class CppClass {};\nvoid cpp_function() {}\n")
+            .unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        let expected_lines: Vec<&str> = vec![
+            "├── main.cpp",
+            "│   ├── class CppClass {};",
+            "│   └── void cpp_function() {}",
+            "└── main.py",
+            "    ├── def hello():",
+            "    └── class PythonClass:",
         ];
 
         let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();

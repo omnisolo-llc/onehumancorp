@@ -7608,6 +7608,7 @@ async fn create_ui_bom_item_handler(
 
         .route("/api/v1/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
+        .nest("/api/v1/aider-repomap", api::aider_repomap::router())
         .route(
             "/api/v1/rpc",
             axum::routing::post(proxy_agent_rpc_handler)
