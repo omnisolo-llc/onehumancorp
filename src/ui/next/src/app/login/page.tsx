@@ -119,18 +119,7 @@ function LoginForm() {
             </button>
           </form>
 
-          <div className="relative my-7 flex items-center" aria-hidden="true">
-            <div className="flex-grow border-t border-gray-300 dark:border-gray-600" />
-            <span className="mx-4 flex-shrink-0 text-sm text-gray-500">or</span>
-            <div className="flex-grow border-t border-gray-300 dark:border-gray-600" />
-          </div>
-
-          <Link
-            className="flex min-h-[52px] w-full items-center justify-center rounded-xl border border-[#0066FF]/30 bg-[#0066FF] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,102,255,0.25)] transition hover:bg-[#0052cc] active:scale-[0.99]"
-            href="/onboarding"
-          >
-            Start business setup
-          </Link>
+          <div className="min-h-6" />
         </section>
       </div>
     </main>
