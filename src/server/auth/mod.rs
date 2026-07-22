@@ -90,6 +90,75 @@ pub async fn strict_bearer_auth_middleware(
     req.extensions_mut().insert(claims);
     next.run(req).await
 }
+
+pub async fn api_key_auth_middleware(
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sha2::Digest;
+
+    let mut authorization_values = req
+        .headers()
+        .get_all(axum::http::header::AUTHORIZATION)
+        .iter();
+    let token = authorization_values
+        .next()
+        .filter(|_| authorization_values.next().is_none())
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .filter(|token| {
+            !token.is_empty()
+                && !token
+                    .chars()
+                    .any(|character| character.is_whitespace() || character.is_ascii_control())
+        });
+
+    let Some(token) = token else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let key_hash = format!("{:x}", sha2::Sha256::digest(token.as_bytes()));
+
+    let mut matched_member_id = None;
+    let mut matched_org_id = None;
+
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    if has_db {
+        let pool = crate::db::get_pool();
+        if let Ok(Some(row)) = sqlx::query("SELECT member_id, organization_id FROM api_keys WHERE key_hash = $1")
+            .bind(&key_hash)
+            .fetch_optional(&pool)
+            .await
+        {
+            use sqlx::Row;
+            let member_id: uuid::Uuid = row.get(0);
+            let organization_id: String = row.get(1);
+            matched_member_id = Some(member_id.to_string());
+            matched_org_id = Some(organization_id);
+        }
+    }
+
+    if matched_member_id.is_none() {
+        let keys = crate::http::get_in_memory_keys().lock().unwrap();
+        if let Some(key) = keys.iter().find(|k| k.key_hash == key_hash) {
+            matched_member_id = Some(key.member_id.clone());
+            matched_org_id = Some(key.organization_id.clone());
+        }
+    }
+
+    let (Some(member_id), Some(organization_id)) = (matched_member_id, matched_org_id) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    req.extensions_mut().insert(crate::orchestration::AuthInfo {
+        org_id: organization_id,
+        agent_id: member_id,
+        spiffe_id: "spiffe://onehumancorp.io/api-key".to_string(),
+    });
+
+    next.run(req).await
+}
 use std::sync::Arc;
 use std::sync::RwLock;
 

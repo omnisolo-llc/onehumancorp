@@ -36,11 +36,14 @@ pub struct IntegrationsRegistry {
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
     taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>>>,
+    #[cfg(not(ohc_bazel))]
     slack_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::slack::provider::SlackProvider>>>,
+    #[cfg(not(ohc_bazel))]
     google_analytics_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_analytics::provider::GoogleAnalyticsProvider>>>,
+    #[cfg(not(ohc_bazel))]
     github_api_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>>>,
+    #[cfg(not(ohc_bazel))]
     outlook_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::outlook_calendar::provider::OutlookCalendarProvider>>>,
-
 }
 
 impl IntegrationsRegistry {
@@ -84,9 +87,13 @@ impl IntegrationsRegistry {
             resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             taxjar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            #[cfg(not(ohc_bazel))]
             slack_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            #[cfg(not(ohc_bazel))]
             google_analytics_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            #[cfg(not(ohc_bazel))]
             github_api_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            #[cfg(not(ohc_bazel))]
             outlook_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
@@ -135,17 +142,20 @@ impl IntegrationsRegistry {
                   }
                   "slack" => {
                       if !creds.bot_token.is_empty() {
-                          let channel_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                          let text = format!("[{}] {}", from_agent, content);
-                          let clients = self.slack_clients.read().unwrap();
-                          if let Some(client) = clients.get(integration_id) {
-                              let client = client.clone();
-                              tokio::spawn(async move {
-                                  if let Err(e) = client.send_message(&channel_id, &text).await {
-                                      ::server_telemetry::record_error_signal("[bug] Failed to send Slack message");
-                                      tracing::warn!("Failed to send Slack message: {}", e);
-                                  }
-                              });
+                          #[cfg(not(ohc_bazel))]
+                          {
+                              let channel_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                              let text = format!("[{}] {}", from_agent, content);
+                              let clients = self.slack_clients.read().unwrap();
+                              if let Some(client) = clients.get(integration_id) {
+                                  let client = client.clone();
+                                  tokio::spawn(async move {
+                                      if let Err(e) = client.send_message(&channel_id, &text).await {
+                                          ::server_telemetry::record_error_signal("[bug] Failed to send Slack message");
+                                          tracing::warn!("Failed to send Slack message: {}", e);
+                                      }
+                                  });
+                              }
                           }
                       }
                   }
@@ -339,19 +349,23 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
+        #[cfg(not(ohc_bazel))]
         if integration_id == "slack" {
             let mut clients = self.slack_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::slack::provider::SlackProvider::new(creds.bot_token.clone())));
         }
 
+        #[cfg(not(ohc_bazel))]
         if integration_id == "google_analytics" {
             let mut clients = self.google_analytics_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(creds.api_token.clone(), creds.chat_id.clone())));
         }
+        #[cfg(not(ohc_bazel))]
         if integration_id == "github_api" {
             let mut clients = self.github_api_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::github_api::provider::GitHubProvider::new(creds.api_token.clone())));
         }
+        #[cfg(not(ohc_bazel))]
         if integration_id == "outlook_calendar" {
             let mut clients = self.outlook_calendar_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(creds.api_token.clone())));

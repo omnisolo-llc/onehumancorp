@@ -7510,6 +7510,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/v1/agents", api::agents::hire::router(hub.clone()))
+        .route("/api/v1/gateway/run", axum::routing::post(api::onboarding::gateway_run_handler)
+            .layer(axum::middleware::from_fn(::server_auth::api_key_auth_middleware))
+            .with_state(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone())))
+        )
         .nest("/api/v1/onboarding", api::onboarding::router(
             std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone())),
             http_auth_store.clone(),
