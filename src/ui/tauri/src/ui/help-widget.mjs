@@ -476,11 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="/help.html" style="display: block; padding: 12px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
             </div>
             <h4>Popular Articles</h4>
-            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
-            </ul>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list"></ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <div style="margin-bottom: 8px;">
                   <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
@@ -496,24 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div id="tab-tours" class="ohc-help-content">
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Set up your store</h4>
-                    <p>Learn how to add products and customize your storefront.</p>
-                </button>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Accept your first payment</h4>
-                    <p>Connect your account to start receiving money.</p>
-                </button>
-            </div>
-            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
-                <button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">
-                    <h4>Tour: Activate your AI Support Agent</h4>
-                    <p>Let AI handle customer queries for you.</p>
-                </button>
-            </div>
         </div>
 
                 <div id="tab-videos" class="ohc-help-content">
@@ -558,6 +536,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tab.classList.add('active');
             document.getElementById(tab.getAttribute("data-target")).classList.add("active");
+
+                        if (tab.getAttribute("data-target") === "tab-tours") {
+                fetch("/api/v1/walkthrough/dashboard").then(r => r.json()).then(data => {
+                    const tl = widget.querySelector("#tab-tours") || document.getElementById("tab-tours");
+                    tl.innerHTML = "";
+                    data.forEach(t => {
+                        tl.innerHTML += `<div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '${t.targetId}', title: '${t.title}', content: '${t.content}'}])">` +
+                            `<button style="background:none;border:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit;width:100%;">` +
+                            `<h4>${t.title}</h4>` +
+                            `<p>${t.content}</p>` +
+                            `</button></div>`;
+                    });
+                }).catch(e => {
+                    const tl = widget.querySelector("#tab-tours") || document.getElementById("tab-tours");
+                    if (tl) tl.innerHTML = "Error loading tours.";
+                });
+            }
+            if (tab.getAttribute("data-target") === "tab-articles") {
+                fetch("/api/v1/help").then(r => r.json()).then(data => {
+                    const tl = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+                    tl.innerHTML = "";
+                    data.forEach(t => {
+                        tl.innerHTML += `<li><a href="${t.link}" style="color: #2563eb; text-decoration: none; font-size: 14px;">${t.title}</a></li>`;
+                    });
+                }).catch(e => {
+                    const tl = widget.querySelector("#ohc-help-articles-list") || document.getElementById("ohc-help-articles-list");
+                    if (tl) tl.innerHTML = "Error loading articles.";
+                });
+            }
 
             if (tab.getAttribute("data-target") === "tab-videos") {
                 fetch("/api/v1/videos").then(r => r.json()).then(data => {

@@ -182,27 +182,7 @@ pub async fn get_tooltips(
         }
     }
 
-    if tooltips.is_empty() {
-        tooltips.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
-        tooltips.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
-        tooltips.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-        tooltips.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
-        tooltips.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
-        tooltips.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
-        tooltips.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
-        tooltips.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
-        tooltips.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
-        tooltips.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-        tooltips.insert("help-search-tooltip".to_string(), "Search for help articles and videos...".to_string());
-        tooltips.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
-        tooltips.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
-        tooltips.insert("total-sales-tooltip".to_string(), "Total revenue generated from your orders.".to_string());
-        tooltips.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
-        tooltips.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
-        tooltips.insert("help-advanced-toggle-tooltip".to_string(), "Show advanced developer options.".to_string());
-        tooltips.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-        tooltips.insert("checkout-pay-tooltip".to_string(), "Click to process your payment.".to_string());
-    }
+
 
     Ok(Json(tooltips))
 }

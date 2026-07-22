@@ -165,3 +165,42 @@ ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Insert Documentation and Help Seed Data
+INSERT INTO help_articles (tenant_id, category, title, desc_text, link) VALUES
+('e2e-tenant', 'Getting Started', 'Welcome to One Human Corp', 'Let''s get your business online in under 10 minutes.', '/help_article.html?id=getting-started-1'),
+('e2e-tenant', 'My Store', 'Setting up your storefront', 'Add products, track what''s in stock, and change how your store looks.', '/help_article.html?id=my-store-1'),
+('e2e-tenant', 'Payments', 'Accepting your first payment', 'Learn how to accept credit cards and manage your payouts.', '/help_article.html?id=payments-1'),
+('e2e-tenant', 'Advanced', 'API Documentation (for Advanced Users)', 'Interactive API reference for connecting external services.', 'api-docs.html');
+
+INSERT INTO video_tutorials (tenant_id, title, duration, video_url) VALUES
+('e2e-tenant', 'How to set up your first store easily', '1:20', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 'Connecting a bank account to accept payments', '0:45', 'https://www.w3schools.com/html/mov_bbb.mp4'),
+('e2e-tenant', 'Activating your AI Support Agent', '1:25', 'https://www.w3schools.com/html/mov_bbb.mp4');
+
+INSERT INTO tooltips (tenant_id, id, text) VALUES
+('e2e-tenant', 'dashboard-walkthrough-btn', 'Take a tour of the dashboard'),
+('e2e-tenant', 'api-docs-tooltip', 'Direct API access is only for custom integrations.'),
+('e2e-tenant', 'kairos-nav-link-tooltip', 'Click here to see what your AI helpers are working on and how they plan.'),
+('e2e-tenant', 'voice-assistant-tooltip', 'Hold to speak a command to your AI Assistant.'),
+('e2e-tenant', 'rate-limit-close-tooltip', 'Dismiss this warning.'),
+('e2e-tenant', 'dashboard-tooltip', 'View your daily sales and overall business health.'),
+('e2e-tenant', 'generate-link-btn', 'Click here to share access with a team member.'),
+('e2e-tenant', 'ask-ai-tooltip', 'Open AI Help Chat to get answers instantly.'),
+('e2e-tenant', 'settings-delivery-tooltip', 'Turn this on to offer local delivery to your customers.'),
+('e2e-tenant', 'help-btn-tooltip', 'Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.'),
+('e2e-tenant', 'help-search-tooltip', 'Search for help articles and videos...'),
+('e2e-tenant', 'inventory-tooltip', 'Manage your inventory, prices, and stock levels.'),
+('e2e-tenant', 'orders-tooltip', 'See what customers bought and track order fulfillment.'),
+('e2e-tenant', 'total-sales-tooltip', 'Total revenue generated from your orders.'),
+('e2e-tenant', 'recent-orders-tooltip', 'View the latest orders placed by your customers.'),
+('e2e-tenant', 'inbox-activity-tooltip', 'Keep track of recent customer messages.'),
+('e2e-tenant', 'help-advanced-toggle-tooltip', 'Show advanced developer options.'),
+('e2e-tenant', 'help-btn-tooltip-appshell', 'Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.'),
+('e2e-tenant', 'checkout-pay-tooltip', 'Click to process your payment.'),
+('e2e-tenant', 'leaderboard-link', 'Generate a gamified leaderboard for your website.') ON CONFLICT DO NOTHING;
+
+INSERT INTO walkthrough_steps (tenant_id, page, step_order, selector, title, text) VALUES
+('e2e-tenant', 'dashboard', 1, '#dashboard-title', 'Welcome', 'Business Analytics'),
+('e2e-tenant', 'dashboard', 2, '#operations-map', 'Operations Map', 'Operations Map'),
+('e2e-tenant', 'dashboard', 3, '#wrapped-summary', 'AI Savings', 'Here you can see the time and effort your agents have saved you.');
