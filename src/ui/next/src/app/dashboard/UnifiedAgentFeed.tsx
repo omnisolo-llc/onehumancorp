@@ -616,7 +616,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       return;
     }
 
-    const res = await fetch(`/api/v1/agent-feed/${id}`, {
+    const res = await fetch(`/api/v1/agent-feed/${id}/state`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -677,7 +677,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       aria-label="Unified Agent Feed"
     >
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
-        Action Required
+        Action Needed
       </h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">

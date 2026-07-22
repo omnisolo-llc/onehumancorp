@@ -170,7 +170,7 @@ export default function UnifiedFeed() {
         payload.edited_payload = editedPayload;
       }
 
-      const res = await fetch(`/api/v1/agent-feed/${itemId}`, {
+      const res = await fetch(`/api/v1/agent-feed/${itemId}/state`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
