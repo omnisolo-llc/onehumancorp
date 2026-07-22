@@ -47,7 +47,8 @@ export default function FeedPage() {
     fetchFeed();
   }, []);
 
-  const feedWsUrl = (() => {
+
+    const feedWsUrl = (() => {
     if (typeof window === 'undefined') return '';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -166,7 +167,9 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team." actions={[{ label: "New Sale", href: "/pos/terminal", primary: true }]}>
-      <div className="w-full max-w-full overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
+      <div className="w-full max-w-[375px] overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
+
+
 
         {loading && (
           <div className="flex justify-center items-center py-12">

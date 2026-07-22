@@ -4,6 +4,7 @@ test.describe('Agent Feed', () => {
   const tenantId = 'agent-feed-test-tenant';
 
   test('should receive event, show in feed, and resolve card', async ({ page, request }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     // 1. User logs in
     await page.goto('/');
 
@@ -23,7 +24,22 @@ test.describe('Agent Feed', () => {
 
     // The feed might be empty initially
     // 3. Inject event by clicking simulate button
-    await page.getByTestId('simulate-ambassador-btn').click();
+    await request.post('/api/v1/meta-webhook', {
+      data: {
+        object: 'instagram',
+        entry: [{
+          id: '123',
+          time: 123456789,
+          messaging: [{
+            sender: { id: 'test_sender_id' },
+            recipient: { id: 'test_recipient_id' },
+            message: {
+              text: 'Do you have any vegan cakes available?'
+            }
+          }]
+        }]
+      }
+    });
 
     // 4. Verify new card appears in UI
     const card = page.getByTestId('agent-feed-card').first();
