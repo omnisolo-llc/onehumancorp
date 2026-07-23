@@ -433,6 +433,16 @@ sh_test(
 )
 
 
+sh_test(
+    name = "no_chatwoot_residue_test",
+    srcs = ["tests/no_chatwoot_residue_test.sh"],
+    data = ["//:all_srcs"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
 sh_binary(
     name = "load_all_images",
     srcs = ["load_all_images.sh"],
