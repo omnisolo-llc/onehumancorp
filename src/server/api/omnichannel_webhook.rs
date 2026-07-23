@@ -192,8 +192,64 @@ pub async fn handle_omnichannel_webhook(
         };
     }
 
-    // 2. Persist Message into inbox_messages
-    let inbox_id = Uuid::new_v4().to_string();
+    // 2. Persist Message into native rust omnichannel data models
+    let parsed_tenant_id = Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::new_v4());
+    let parsed_customer_id = Uuid::parse_str(&customer_id).unwrap_or_else(|_| Uuid::new_v4());
+    let repo = crate::domain::repository::omnichannel_repo::OmniChannelRepo::new(std::sync::Arc::new(state.db.clone()));
+
+    // Resolve Contact
+    let contact = match repo.get_contact(parsed_tenant_id, customer_id.clone()).await {
+        Ok(Some(c)) => c,
+        _ => {
+            match repo.create_contact(parsed_tenant_id, customer_id.clone(), None).await {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Failed to create contact: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                }
+            }
+        }
+    };
+
+    // Find or create default inbox for channel
+    let inboxes = repo.get_inboxes(parsed_tenant_id).await.unwrap_or_default();
+    let inbox = if let Some(first) = inboxes.first() {
+        first.clone()
+    } else {
+        match repo.create_inbox(parsed_tenant_id, format!("{} Inbox", channel), true).await {
+            Ok(i) => i,
+            Err(e) => {
+                tracing::error!("Failed to create inbox: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+            }
+        }
+    };
+
+    // Find or create conversation
+    let convo = match repo.get_conversation_by_contact(parsed_tenant_id, inbox.id, contact.id).await {
+        Ok(Some(c)) => c,
+        _ => {
+            match repo.create_conversation(parsed_tenant_id, inbox.id, contact.id, "open".to_string()).await {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Failed to create conversation: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                }
+            }
+        }
+    };
+
+    let msg = match repo.create_message(parsed_tenant_id, convo.id, message.clone(), "contact".to_string()).await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!("Failed to create message: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+        }
+    };
+    let message_id = msg.id.to_string();
+
+    // Fallback: also write to legacy tables for now to avoid breaking other un-migrated components
+    let legacy_inbox_id = Uuid::new_v4().to_string();
     let intent_id = Uuid::new_v4().to_string();
     let _ = match &state.db.store {
         crate::db::DbStore::Postgres => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
@@ -219,7 +275,7 @@ pub async fn handle_omnichannel_webhook(
             let res = sqlx::query(
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, '', 'unread', $6, NOW())"
             )
-            .bind(&inbox_id)
+            .bind(&legacy_inbox_id)
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
@@ -232,7 +288,7 @@ pub async fn handle_omnichannel_webhook(
                 if let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
                 )
-                .bind(&inbox_id)
+                .bind(&legacy_inbox_id)
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
@@ -250,7 +306,7 @@ pub async fn handle_omnichannel_webhook(
             let res = sqlx::query(
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
             )
-            .bind(&inbox_id)
+            .bind(&legacy_inbox_id)
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
@@ -263,7 +319,7 @@ pub async fn handle_omnichannel_webhook(
                 if let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
                 )
-                .bind(&inbox_id)
+                .bind(&legacy_inbox_id)
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
@@ -287,7 +343,8 @@ pub async fn handle_omnichannel_webhook(
     // 3. Enqueue message_triage job
     let job_id = Uuid::new_v4().to_string();
     let payload_json = serde_json::json!({
-        "message_id": inbox_id,
+        "message_id": message_id,
+        "legacy_inbox_id": legacy_inbox_id,
         "source": channel,
         "content": message,
         "sender_id": sender_id,
@@ -333,7 +390,7 @@ pub async fn handle_omnichannel_webhook(
         let _ = orchestrator_clone.dispatch_event(event).await;
     });
 
-    (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(inbox_id) })).into_response()
+    (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(message_id) })).into_response()
 }
 
 #[cfg(test)]
