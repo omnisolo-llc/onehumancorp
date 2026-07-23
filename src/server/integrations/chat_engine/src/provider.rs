@@ -3,6 +3,13 @@ use crate::core::{Conversation, Message, MessageType, Contact};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::collections::HashMap;
+use server_integrations_core::IntegrationProvider;
+
+pub fn get_provider() -> IntegrationProvider {
+    IntegrationProvider {
+        metadata: chat_engine_metadata(),
+    }
+}
 
 pub struct ChatEngineProvider {
     conversations: Arc<Mutex<HashMap<String, Conversation>>>,

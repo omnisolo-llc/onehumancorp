@@ -2,12 +2,7 @@ pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
-        metadata_provider(
-            "chat_engine",
-            "Native Omnichannel Chat Engine",
-            "customer_support",
-            "internal://chat_engine".to_string(),
-        ),
+        ::chat_engine::provider::get_provider(),
 
         metadata_provider(
             "taxjar",
