@@ -121,4 +121,53 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
       // but ideally we'd expect some kind of AI state
     });
   });
+
+  test('Owner cannot send free-form reply after 24 hours WhatsApp session expires', async ({ page, request }) => {
+    // 1. Connect WhatsApp
+    await page.goto('/integrations');
+    const whatsappCard = page.locator('h3', { hasText: 'Twilio for WhatsApp' }).locator('..');
+    const actionBtn = whatsappCard.getByRole('button');
+    if (await actionBtn.textContent() !== 'Manage') {
+      await actionBtn.click();
+      await page.getByLabel('Account SID').fill('ACtestaccountsid');
+      await page.getByLabel('Auth Token').fill('testauthtoken');
+      await page.getByLabel('WhatsApp Phone Number').fill('+1987654321');
+      await page.getByRole('button', { name: /Save & Connect/i }).click();
+      await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
+    }
+
+    // 2. Receive an old WhatsApp message via webhook (simulated)
+    // To properly simulate, we need the webhook to set created_at more than 24 hours ago,
+    // or we can test this by mutating the DB. For an E2E test without a specific endpoint
+    // to "inject old message", we'll rely on the existing UI tests or mock.
+    // However, since we're using a real DB, we can just run a quick postgres query if needed,
+    // or use playwright route mocking to return a message with old created_at.
+
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // Inject a message using the internal mock/testing endpoint to ensure it arrives with 25 hours ago date
+    // No frontend API mocks used here to strictly test the actual backend -> frontend data flow
+    await request.post(`${apiBase}/api/v1/dev/mock-omni-inbox`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: JSON.stringify({
+        source: 'whatsapp',
+        sender_id: '+1987654321',
+        message: 'I need a cake please',
+        hours_ago: 25
+      })
+    });
+
+
+
+    await page.goto('/inbox');
+
+    // 3. Select the message and verify the warning is visible
+    await page.getByText(/I need a cake please/i).first().click();
+    await expect(page.getByText('⚠️ The 24-hour WhatsApp reply window has expired')).toBeVisible();
+
+    // 4. Verify reply button is disabled
+    await page.getByPlaceholder('Type your reply here...').fill('Sorry for the late reply!');
+    await expect(page.getByRole('button', { name: 'Send Reply' })).toBeDisabled();
+  });
+
 });

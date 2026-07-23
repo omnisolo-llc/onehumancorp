@@ -3785,13 +3785,6 @@ pub async fn update_ui_omni_inbox_action_handler(
         .into_response()
 }
 
-#[derive(serde::Deserialize)]
-pub struct MockOmniInboxPayload {
-    pub source: String,
-    pub sender_id: String,
-    pub message: String,
-}
-
 pub async fn simulate_ui_triage_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -4237,10 +4230,18 @@ pub async fn simulate_agent_feed_item_handler(
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": item_id }))).into_response()
 }
 
+#[derive(serde::Deserialize)]
+pub struct MockOmniInboxPayloadV2 {
+    pub source: String,
+    pub sender_id: String,
+    pub message: String,
+    pub hours_ago: Option<i32>,
+}
+
 pub async fn mock_omni_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    axum::extract::Json(payload): axum::extract::Json<MockOmniInboxPayload>,
+    axum::extract::Json(payload): axum::extract::Json<MockOmniInboxPayloadV2>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
@@ -4251,15 +4252,19 @@ pub async fn mock_omni_inbox_handler(
     // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
     let draft_reply = format!("Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?");
 
+    let hours_ago = payload.hours_ago.unwrap_or(0);
+
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW())")
-                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
+            let interval = format!("{} hours", hours_ago);
+            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW() - CAST($8 AS INTERVAL))")
+                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id).bind(&interval)
                 .execute(&db.pool).await;
         },
         crate::db::DbStore::Sqlite(pool) => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, CURRENT_TIMESTAMP)")
-                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
+            let interval = format!("-{} hours", hours_ago);
+            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, datetime('now', ?))")
+                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id).bind(&interval)
                 .execute(pool).await;
         }
     }
