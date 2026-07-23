@@ -329,7 +329,7 @@ mod chaos_tests {
         // Use a mock StateManager configuration
         let db = Arc::new(crate::db::DB {
             pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
-            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
         // Initialize state manager with the delayed mesh
@@ -508,7 +508,7 @@ mod chaos_tests {
 
         let db = Arc::new(crate::db::DB {
             pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
-            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
         // Use PartialFailureMesh directly with the StateManager
@@ -658,7 +658,7 @@ mod chaos_tests {
                 .acquire_timeout(std::time::Duration::from_millis(50))
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
                 .unwrap(),
-            store: DbStore::Sqlite(dummy_sqlite_pool),
+            store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
         let standalone_state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(standalone_db, latency_mesh.clone());
@@ -885,7 +885,7 @@ mod chaos_tests {
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
-            store: DbStore::Sqlite(dummy_sqlite_pool),
+            store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
         let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);

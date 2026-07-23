@@ -47,15 +47,15 @@ mod tests {
                 mission_log TEXT,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );"
-        ).execute(&sqlite_pool).await.unwrap();
+        ).execute(&sqlite_pool.clone()).await.unwrap();
 
         sqlx::query("INSERT INTO test_parity (id, mission_log) VALUES (?, ?)")
             .bind("1")
             .bind(None::<String>) // Inserting NULL
-            .execute(&sqlite_pool).await.unwrap();
+            .execute(&sqlite_pool.clone()).await.unwrap();
 
         let row: (String, Option<String>, chrono::DateTime<chrono::Utc>) = sqlx::query_as("SELECT id, mission_log, updated_at FROM test_parity WHERE id = '1'")
-            .fetch_one(&sqlite_pool)
+            .fetch_one(&sqlite_pool.clone())
             .await
             .unwrap();
 
@@ -219,7 +219,7 @@ mod tests {
 
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
-            store: DbStore::Sqlite(dummy_sqlite_pool),
+            store: DbStore::Sqlite(dummy_sqlite_pool.clone()),
         });
 
         let _state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
@@ -1398,7 +1398,7 @@ mod additional_chaos_tests {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect_lazy(&uri).unwrap();
         let db = std::sync::Arc::new(crate::db::DB {
             pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-            store: crate::db::DbStore::Sqlite(sqlite_pool),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
         });
         let res: Result<(), String> = db.execute_with_retry("sync_query", || {
             let fut = async {
@@ -1493,7 +1493,7 @@ mod parity_auditing_tests {
                 data TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );"
-        ).execute(&sqlite_pool).await.unwrap();
+        ).execute(&sqlite_pool.clone()).await.unwrap();
 
         // 2. Postgres Setup (if available)
         let mut pg_pool_opt = None;
@@ -1517,10 +1517,10 @@ mod parity_auditing_tests {
         // Test NULL handling
         sqlx::query("INSERT INTO parity_test (id, data) VALUES (?, NULL)")
             .bind("null_test")
-            .execute(&sqlite_pool).await.unwrap();
+            .execute(&sqlite_pool.clone()).await.unwrap();
 
         let sqlite_null: Option<String> = sqlx::query_scalar("SELECT data FROM parity_test WHERE id = 'null_test'")
-            .fetch_one(&sqlite_pool).await.unwrap();
+            .fetch_one(&sqlite_pool.clone()).await.unwrap();
         assert_eq!(sqlite_null, None, "SQLite should handle NULL correctly");
 
         if let Some((pg_pool, table_name)) = &pg_pool_opt {
