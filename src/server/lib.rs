@@ -931,6 +931,9 @@ pub mod services {
     pub mod sync;
     pub mod chat;
 
+    #[cfg(not(ohc_bazel))]
+    pub mod intake;
+
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
     #[cfg(not(ohc_bazel))]
