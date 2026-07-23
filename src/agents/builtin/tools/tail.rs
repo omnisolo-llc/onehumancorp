@@ -69,22 +69,24 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
 
             let chunk = &buffer[0..bytes_read];
 
-            // Count newlines from back to front
-            for (i, &b) in chunk.iter().enumerate().rev() {
-                if b == b'\n' {
-                    if current_pos as u64 + i as u64 == len - 1 {
-                        // ignore a trailing newline at the very end of file
-                        continue;
-                    }
-                    num_lines_found += 1;
-                    if num_lines_found == lines_to_read {
-                        let final_start = current_pos as u64 + i as u64 + 1;
-                        file.seek(std::io::SeekFrom::Start(final_start)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
-                        let mut final_content = String::new();
-                        file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
-                        return Ok(final_content.trim_end().to_string());
-                    }
+            // Count newlines from back to front using rposition for zero-allocation efficiency
+            let mut search_pos = chunk.len();
+            while let Some(i) = chunk[..search_pos].iter().rposition(|&b| b == b'\n') {
+                if current_pos as u64 + i as u64 == len - 1 {
+                    // ignore a trailing newline at the very end of file
+                    search_pos = i;
+                    continue;
                 }
+                num_lines_found += 1;
+                if num_lines_found == lines_to_read {
+                    let final_start = current_pos as u64 + i as u64 + 1;
+                    file.seek(std::io::SeekFrom::Start(final_start)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                    let mut final_content = String::new();
+                    file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                    return Ok(final_content.trim_end().to_string());
+                }
+                if i == 0 { break; }
+                search_pos = i;
             }
         }
 
