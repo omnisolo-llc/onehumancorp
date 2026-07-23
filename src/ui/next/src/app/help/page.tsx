@@ -110,7 +110,7 @@ export default function HelpCenterPage() {
                 window.dispatchEvent(event);
               }}
             >
-              Ask anything
+              Contact Support
             </button>
             </WithTooltip>
           </div>
