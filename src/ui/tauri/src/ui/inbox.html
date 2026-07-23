@@ -34,6 +34,44 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
+
+      .product-card {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 8px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+      .product-card-icon {
+        background: #0066FF;
+        color: white;
+        border-radius: 4px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-weight: bold;
+      }
+      .product-card-details {
+        flex: 1;
+      }
+      .product-card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin: 0;
+      }
+      .product-card-link {
+        font-size: 12px;
+        color: #0066FF;
+        text-decoration: none;
+        word-break: break-all;
+      }
     </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -160,6 +198,44 @@
         font-weight: 600;
         font-size: 14px;
       }
+
+      .product-card {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 8px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+      .product-card-icon {
+        background: #0066FF;
+        color: white;
+        border-radius: 4px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-weight: bold;
+      }
+      .product-card-details {
+        flex: 1;
+      }
+      .product-card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin: 0;
+      }
+      .product-card-link {
+        font-size: 12px;
+        color: #0066FF;
+        text-decoration: none;
+        word-break: break-all;
+      }
     </style>
   </head>
   <body>
@@ -247,6 +323,36 @@
 
             draftDiv.appendChild(draftLabel);
             draftDiv.appendChild(draftContent);
+
+            if (msg.checkout_link) {
+              const productCard = document.createElement('div');
+              productCard.className = 'product-card glassmorphism';
+
+              const productIcon = document.createElement('div');
+              productIcon.className = 'product-card-icon';
+              productIcon.textContent = '🛍️';
+
+              const productDetails = document.createElement('div');
+              productDetails.className = 'product-card-details';
+
+              const productTitle = document.createElement('p');
+              productTitle.className = 'product-card-title';
+              productTitle.textContent = msg.proposed_product_id ? `Product: ${msg.proposed_product_id}` : 'Checkout Link';
+
+              const productLink = document.createElement('a');
+              productLink.className = 'product-card-link';
+              productLink.href = msg.checkout_link;
+              productLink.target = '_blank';
+              productLink.textContent = msg.checkout_link;
+
+              productDetails.appendChild(productTitle);
+              productDetails.appendChild(productLink);
+              productCard.appendChild(productIcon);
+              productCard.appendChild(productDetails);
+
+              draftDiv.appendChild(productCard);
+            }
+
 
             const approveBtn = document.createElement('button');
             approveBtn.className = 'approve-btn';
