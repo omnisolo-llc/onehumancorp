@@ -26,8 +26,6 @@ test.describe('Dynamic Centralized Inventory & POS Sync', () => {
 
     const rows = await page.locator('[data-testid^="product-row-"]').all();
     if (rows.length === 0) {
-      console.log('No products found, test will exit gracefully or fail depending on seed setup.');
-      return;
       return;
     }
 
