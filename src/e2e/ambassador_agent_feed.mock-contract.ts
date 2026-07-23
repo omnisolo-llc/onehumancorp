@@ -40,7 +40,7 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
     // Ensure draft text contains "vegan" (from context) or at least basic draft
     await expect(feedCard).toContainText('vegan', { ignoreCase: true, timeout: 25000 });
 
-    // 5. Click "Send Draft"
+    // 5. Click "Approve"
     const approveBtn = feedCard.getByTestId('feed-approve-btn');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();

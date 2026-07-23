@@ -46,9 +46,9 @@ test.describe('Ambassador Agent Workflow', () => {
     await expect(textarea).not.toBeVisible();
     await expect(feedCard).toContainText('Yes we do! We have 3 left for this Saturday. I can set aside one for you.');
 
-    // 5. Click 'Approve & Send Draft'
+    // 5. Click 'Approve & Approve'
     const approveBtn = feedCard.getByTestId('feed-approve-btn');
-    await expect(approveBtn).toContainText('Send Draft');
+    await expect(approveBtn).toContainText('Approve');
     await approveBtn.click();
 
   });

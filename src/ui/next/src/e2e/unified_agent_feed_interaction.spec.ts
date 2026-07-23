@@ -108,7 +108,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
     const card = page.getByTestId('agent-feed-card').first();
     if (await card.isVisible()) {
-        const dismissBtn = card.locator('button', { hasText: 'Dismiss' });
+        const dismissBtn = card.locator('button', { hasText: 'Discard' });
         await dismissBtn.click();
         await expect(card).not.toBeVisible({ timeout: 5000 });
     }

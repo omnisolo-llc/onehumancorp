@@ -53,8 +53,8 @@ test.describe('AI Unified Inbox Differentiation & Omnichannel Customer Memory', 
     const replyLocator = page.locator('.app-panel-body .bg-white', { hasText: /Thank you|Vegan|Wait|We will get back/i }).first();
     await expect(replyLocator).toBeVisible();
 
-    // 6. 1-Tap Approve button should be visible (Send Draft)
-    const approveButton = page.locator('button:has-text("Send Draft")');
+    // 6. 1-Tap Approve button should be visible (Approve)
+    const approveButton = page.locator('button:has-text("Approve")');
     await expect(approveButton).toBeVisible();
 
     await approveButton.click();

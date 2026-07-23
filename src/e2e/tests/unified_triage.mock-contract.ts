@@ -76,7 +76,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     const triageCard = page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]', { hasText: 'WhatsApp' }).first();
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
-    const dismissBtn = triageCard.getByRole('button', { name: 'Dismiss' });
+    const dismissBtn = triageCard.getByRole('button', { name: 'Discard' });
     await expect(dismissBtn).toBeVisible();
     await dismissBtn.click();
 

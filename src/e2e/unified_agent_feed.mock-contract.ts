@@ -108,7 +108,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(marketingCard).not.toBeVisible();
   });
 
-  test("5. Tapping Dismiss on a draft proposal dismisses the card", async ({ page }) => {
+  test("5. Tapping Discard on a draft proposal dismisses the card", async ({ page }) => {
     await performLogin(page);
 
     await page.goto("/dashboard");
