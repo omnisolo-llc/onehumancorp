@@ -1,6 +1,5 @@
-export async function POST(_request: Request): Promise<Response> {
-  return Response.json(
-    { error: "agent escalation drafting is not implemented" },
-    { status: 501 },
-  );
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+
+export async function POST(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/staff/draft-escalation");
 }

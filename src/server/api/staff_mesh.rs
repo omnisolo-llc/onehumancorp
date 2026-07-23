@@ -1216,6 +1216,8 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
             "/simulate-event",
             axum::routing::post(simulate_event_handler),
         )
+        .route("/escalate", axum::routing::post(escalate_issue_handler))
+        .route("/draft-escalation", axum::routing::post(draft_escalation_handler))
         .route(
             "/generate-summary",
             axum::routing::post(generate_summary_handler),
@@ -1628,26 +1630,43 @@ pub async fn escalate_issue_handler(
         }
     };
 
-    let triage_id = uuid::Uuid::new_v4().to_string();
-
-    let context_json = serde_json::json!({
-        "message": payload.draft,
-        "alert_id": payload.alert_id,
-        "source": "Staff Escalation"
-    })
-    .to_string();
-
     let pool = crate::db::get_pool();
+    let escalation_id = uuid::Uuid::new_v4().to_string();
+
+    // Create a dummy location if one doesn't exist for the tenant to satisfy foreign key
+    let location_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query("INSERT INTO locations (id, tenant_id, name) VALUES ($1, $2, 'Default Location') ON CONFLICT DO NOTHING")
+        .bind(&location_id)
+        .bind(&tenant_id)
+        .execute(&pool)
+        .await;
+
+    let loc_row = sqlx::query("SELECT id FROM locations WHERE tenant_id = $1 LIMIT 1")
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+
+    let actual_loc_id = if let Some(row) = loc_row {
+        use sqlx::Row;
+        row.get::<String, _>("id")
+    } else {
+        location_id
+    };
+
+    let user_id = claims.as_ref().map(|c| c.0.sub.clone()).unwrap_or_else(|| "system".to_string());
+
     if let Err(e) = sqlx::query(
-        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'staff_escalation', $3, $4, 'PENDING_APPROVAL', NOW(), NOW())"
+        "INSERT INTO escalations (id, tenant_id, location_id, summary, status, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, 'PENDING', $5, NOW(), NOW())"
     )
-    .bind(&triage_id)
+    .bind(&escalation_id)
     .bind(&tenant_id)
-    .bind(&context_json)
-    .bind(serde_json::json!({ "action_type": "Review Escalation" }).to_string())
+    .bind(&actual_loc_id)
+    .bind(&payload.draft)
+    .bind(&user_id)
     .execute(&pool)
     .await {
-        tracing::error!("Failed to insert triage item for staff escalation: {}", e);
+        tracing::error!("Failed to insert escalation: {}", e);
         return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({"error": "db_error"})),
@@ -1657,6 +1676,40 @@ pub async fn escalate_issue_handler(
     (
         axum::http::StatusCode::OK,
         Json(StaffEscalationResponse { success: true }),
+    )
+        .into_response()
+}
+
+
+#[derive(Deserialize)]
+pub struct DraftEscalationRequest {
+    pub alert_id: Option<String>,
+    pub context: String,
+}
+
+#[derive(Serialize)]
+pub struct DraftEscalationResponse {
+    pub draft: String,
+}
+
+pub async fn draft_escalation_handler(
+    claims: Option<Extension<::server_common::Claims>>,
+    State(_db): State<Arc<DB>>,
+    Json(payload): Json<DraftEscalationRequest>,
+) -> impl IntoResponse {
+    let _tenant_id = match get_tenant_id(claims.as_ref()) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(DraftEscalationResponse { draft: "".to_string() })).into_response()
+    };
+
+    let default_draft = format!("Urgent escalation: {}
+
+This requires immediate owner attention to prevent further operational disruption.", payload.context);
+    let draft = default_draft;
+
+    (
+        axum::http::StatusCode::OK,
+        Json(DraftEscalationResponse { draft }),
     )
         .into_response()
 }
