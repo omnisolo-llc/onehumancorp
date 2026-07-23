@@ -66,10 +66,49 @@ where
 {
     Router::new()
         .route("/webhook", post(handle_omnichannel_webhook))
+        .route("/review-webhook", post(handle_review_webhook))
         .route("/conversations/{tenant_id}", axum::routing::get(get_conversations))
         .route("/messages/{tenant_id}/{conversation_id}", axum::routing::get(get_messages))
         .with_state(state)
 }
+
+#[derive(Deserialize)]
+pub struct ReviewWebhookPayload {
+    pub tenant_id: String,
+    pub platform: String,
+    pub reviewer_name: String,
+    pub rating: i32,
+    pub text: String,
+}
+
+pub async fn handle_review_webhook(
+    State(state): State<OmnichannelWebhookState>,
+    Json(payload): Json<ReviewWebhookPayload>,
+) -> impl IntoResponse {
+    // We ingest the review into the omnichannel_service which handles sentiment & drafting
+    let omnichannel_svc = crate::services::omnichannel_service::OmniChannelService::new(state.db.clone());
+
+    let json_payload = serde_json::json!({
+        "reviewer_name": payload.reviewer_name,
+        "rating": payload.rating,
+        "text": payload.text,
+        "platform": payload.platform
+    });
+
+    match omnichannel_svc.ingest_review(
+        &payload.tenant_id,
+        Some(payload.reviewer_name.clone()),
+        payload.platform.clone(),
+        json_payload
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, message_id: None })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to ingest review: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response()
+        }
+    }
+}
+
 
 pub async fn get_conversations(
     State(state): State<OmnichannelWebhookState>,

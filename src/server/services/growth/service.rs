@@ -70,8 +70,15 @@ impl GrowthService for MyGrowthService {
 
         let review_id = Uuid::new_v4().to_string();
 
+        let platform = if req.platform.is_empty() { "OHC".to_string() } else { req.platform.clone() };
+        let sentiment = if req.sentiment.is_empty() {
+            if req.rating >= 4 { "Positive".to_string() }
+            else if req.rating == 3 { "Neutral".to_string() }
+            else { "Negative".to_string() }
+        } else { req.sentiment.clone() };
+
         sqlx::query(
-            "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
+            "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment, platform, sentiment) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&review_id)
         .bind(&tenant_id)
@@ -79,6 +86,8 @@ impl GrowthService for MyGrowthService {
         .bind(&req.order_id)
         .bind(req.rating)
         .bind(&req.comment)
+        .bind(&platform)
+        .bind(&sentiment)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(format!("failed to insert review: {}", e)))?;
@@ -884,6 +893,8 @@ mod tests {
             order_id: "order_123".to_string(),
             rating: 5,
             comment: "Excellent!".to_string(),
+            platform: "OHC".to_string(),
+            sentiment: "Positive".to_string(),
         });
         req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
 

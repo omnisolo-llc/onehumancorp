@@ -29,7 +29,14 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
 
   return (
     <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col gap-3" data-testid="ambassador-reply-card">
-      <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-gray-900 dark:text-gray-100 font-bold">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
+        {payloadSource.sentiment && (
+           <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-[8px] ${payloadSource.sentiment === 'Positive' ? 'text-green-700 bg-green-100 border border-green-200' : payloadSource.sentiment === 'Negative' ? 'text-red-700 bg-red-100 border border-red-200' : 'text-yellow-700 bg-yellow-100 border border-yellow-200'}`}>
+              {payloadSource.sentiment}
+           </span>
+        )}
+      </div>
 
       {(pastOrders || contextUsed) && (
         <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30">
@@ -127,9 +134,9 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
                   onApprove();
                 }}
                 className="flex-[2] min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                aria-label="Send Draft" data-testid="feed-approve-btn"
+                aria-label="Approve Reply" data-testid="feed-approve-btn"
               >
-                Send Draft
+                Approve Reply
               </button>
             )}
             {onEdit && (

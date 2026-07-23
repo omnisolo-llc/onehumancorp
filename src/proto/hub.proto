@@ -1784,6 +1784,8 @@ message SubmitReviewRequest {
   string order_id = 2;
   int32 rating = 3;
   string comment = 4;
+  string platform = 5;
+  string sentiment = 6;
 }
 
 message SubmitReviewResponse {

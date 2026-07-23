@@ -48,6 +48,46 @@ impl OmniChannelService {
 
         Ok(work_item)
     }
+
+    pub async fn ingest_review(&self, tenant_id_str: &str, customer_name: Option<String>, platform: String, payload: Value) -> Result<WorkItem, String> {
+        let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|e| e.to_string())?;
+
+        let profile = self.repo.create_customer_profile(tenant_id, customer_name.clone())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let source = format!("{}_review", platform.to_lowercase());
+        let work_item = self.repo.create_work_item(tenant_id, profile.id, source, payload.clone())
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let rating = payload.get("rating").and_then(|v| v.as_i64()).unwrap_or(0);
+        let review_text = payload.get("text").and_then(|v| v.as_str()).unwrap_or("");
+
+        let sentiment = if rating >= 4 { "Positive" } else if rating == 3 { "Neutral" } else { "Negative" };
+
+        let prompt = format!(
+            "You are The Ambassador agent. Analyze the following {} review. \nTenant: {}\nCustomer: {:?}\nRating: {}\nReview: {}\nSentiment: {}\n\nPlease draft a polite, context-aware reply to this review.",
+            platform, tenant_id, customer_name, rating, review_text, sentiment
+        );
+
+        let prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+        let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            Ok("minimax") => {
+                let api_key = std::env::var("MINIMAX_API_KEY").map_err(|_| "MINIMAX_API_KEY required".to_string())?;
+                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+            }
+            _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+        };
+
+        if let Ok(draft_text) = llm_res {
+            let _ = self.repo.create_agent_draft(work_item.id, draft_text).await;
+        }
+
+        Ok(work_item)
+    }
 }
 
 #[cfg(test)]

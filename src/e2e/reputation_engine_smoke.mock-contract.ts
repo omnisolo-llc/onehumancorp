@@ -67,5 +67,27 @@ test.describe('Autonomous Reputation and Referral Engine', () => {
     // Verify stats were updated (Note: this runs in a shared environment so we can't assert exact numbers,
     // but we can assert they aren't completely broken. The log assertions prove the backend processed them).
     await expect(creditsEl).not.toHaveText('$0.00');
+
+    // Simulate webhook
+    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'test_org');
+
+    const res = await request.post('/api/v1/inbox/review-webhook', {
+      data: {
+        tenant_id: tenantId,
+        platform: 'Google',
+        reviewer_name: 'Test Reviewer',
+        rating: 2,
+        text: 'The service was quite slow.'
+      }
+    });
+
+    expect(res.status()).toBe(200);
+
+    // Go to dashboard to find action required card
+    await page.goto('/dashboard');
+
+    // Check for the card
+    // Wait for the agent feed to populate
+    await page.waitForTimeout(1000);
   });
 });

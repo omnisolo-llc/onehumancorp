@@ -1,7 +1,10 @@
 {
-  "key_learnings": [
-    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
-    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
-    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
+  "task": "Implement AI Unified Review & Reputation Management System",
+  "learnings": [
+    "To add a database migration, place the file in both src/server/db/migrations and src/server/migrations. Use `.sql` extension and sequential numbering.",
+    "For new backend routes, update the routing logic and ensure any required state correctly injects the needed dependencies.",
+    "If updating a grpc service like growth_service, ensure the proto file (`src/proto/hub.proto`) and the Rust implementation (`src/server/services/growth/service.rs`) correctly sync their message structures.",
+    "Bazel handles test caching and incremental builds, so it is necessary to run `bazelisk test //...` to ensure there are no breaking regressions across the mono repo. For specific component tests, target them precisely or just run the entire workspace.",
+    "A `lib.rs` file needs explicit `pub mod [name]` declarations when creating new backend components to expose them properly across the module system, especially under a `services` namespace."
   ]
 }
