@@ -4447,7 +4447,7 @@ mod security_tests_final {
                         }
                         #[cfg(not(unix))]
                         {
-                            let _ = fs::File::create(&db_path);
+                            let _ = fs::OpenOptions::new().create(true).read(true).write(true).open(&db_path);
                         }
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
@@ -4476,16 +4476,11 @@ mod security_tests_final {
                             let metadata = file
                                 .metadata()
                                 .expect("Database URL or operation failed in test");
-                            let mut perms = metadata.permissions();
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                file.set_permissions(perms)
-                                    .expect("Database URL or operation failed in test");
-                            }
+                            // Using OpenOptions with .mode(0o600) handles it securely
                         }
                         #[cfg(not(unix))]
                         {
-                            let _ = fs::File::create(&db_path);
+                            let _ = fs::OpenOptions::new().create(true).read(true).write(true).open(&db_path);
                         }
 
                         let parent_dir = db_path
