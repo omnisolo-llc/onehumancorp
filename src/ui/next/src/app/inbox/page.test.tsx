@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import '@testing-library/jest-dom';
 import InboxPage from './page';
 import mockRouter from 'next-router-mock';
+import '@testing-library/jest-dom';
 
 const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,

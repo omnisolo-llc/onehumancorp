@@ -84,7 +84,7 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
     !backend.hostname.includes(".") ||
     backend.hostname.endsWith(".cluster.local") ||
     backend.hostname.includes("onehumancorp");
-  if (backend.protocol !== "https:" && !(backend.protocol === "http:" && isInternalBackend)) {
+  if (backend.protocol !== "https:" && !(backend.protocol === "http:" && (isInternalBackend || localDev))) {
     throw new Error("backend origin must use HTTPS or loopback HTTP");
   }
 
