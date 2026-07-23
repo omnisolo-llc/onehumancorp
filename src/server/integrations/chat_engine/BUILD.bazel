@@ -1,0 +1,26 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "chat_engine",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    edition = "2024",
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "chat_engine_test",
+    crate = ":chat_engine",
+    edition = "2024",
+)
