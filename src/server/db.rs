@@ -464,19 +464,7 @@ impl DB {
                                 #[cfg(target_os = "macos")]
                                 opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                                let file = opts.open(&db_path)?;
-                                let metadata = file.metadata()?;
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o600 {
-                                    perms.set_mode(0o600);
-                                    if let Err(e) = file.set_permissions(perms) {
-                                        tracing::error!(
-                                            "Failed to securely update standalone database file permissions: {}",
-                                            e
-                                        );
-                                        return Err(e.into());
-                                    }
-                                }
+                                let _file = opts.open(&db_path)?;
 
                         // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
                         // to prevent them from inheriting the default umask (e.g. 0644).
@@ -526,7 +514,7 @@ impl DB {
                 #[cfg(not(unix))]
                 {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        let _ = std::fs::File::create(&db_path);
+                        let _ = std::fs::OpenOptions::new().create(true).read(true).write(true).open(&db_path);
                     }
                 }
 
@@ -554,17 +542,6 @@ impl DB {
                                 #[cfg(target_os = "macos")]
                                 options.custom_flags(0x0100); // O_NOFOLLOW
                             if let Ok(mut file) = options.open(&secret_path) {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
-                                        perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
-                                            std::process::exit(1);
-                                        }
-                                    }
-                                }
                                 use std::io::Read;
                                 let mut bytes = String::new();
                                 if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {

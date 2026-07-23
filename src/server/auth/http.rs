@@ -395,6 +395,8 @@ async fn generate_api_key(
 
     if has_db {
         let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string()).unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, &organization_id).await.map_err(|e| e.to_string()).unwrap();
         let insert_res = sqlx::query(
             "INSERT INTO api_keys (id, key_hash, name, member_id, organization_id) VALUES ($1, $2, $3, $4, $5)"
         )
@@ -403,8 +405,11 @@ async fn generate_api_key(
         .bind(&payload.name)
         .bind(member_id)
         .bind(&organization_id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await;
+        if insert_res.is_ok() {
+            let _ = tx.commit().await;
+        }
 
         if let Err(e) = insert_res {
             return no_store_json(
@@ -443,14 +448,17 @@ async fn list_api_keys(
         let pool = crate::db::get_pool();
         let member_id = get_member_uuid(&claims.sub);
         let organization_id = claims.organization_id.clone().unwrap_or_default();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string()).unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, &organization_id).await.map_err(|e| e.to_string()).unwrap();
 
         let query_res = sqlx::query(
             "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
         )
         .bind(member_id)
         .bind(&organization_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await;
+        let _ = tx.rollback().await;
 
         match query_res {
             Ok(rows) => {
@@ -513,6 +521,8 @@ async fn revoke_api_key(
         };
         let member_id = get_member_uuid(&claims.sub);
         let organization_id = claims.organization_id.clone().unwrap_or_default();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string()).unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, &organization_id).await.map_err(|e| e.to_string()).unwrap();
 
         let delete_res = sqlx::query(
             "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
@@ -520,8 +530,11 @@ async fn revoke_api_key(
         .bind(key_uuid)
         .bind(member_id)
         .bind(&organization_id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await;
+        if delete_res.is_ok() {
+            let _ = tx.commit().await;
+        }
 
         if let Err(e) = delete_res {
             return no_store_json(
@@ -573,6 +586,8 @@ async fn list_member_usage_analytics(
 
     if has_db {
         let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string()).unwrap();
+        ::server_common::auth_utils::set_org_context(&mut *tx, &organization_id).await.map_err(|e| e.to_string()).unwrap();
         let query_res = sqlx::query(
             "SELECT u.username, l.feature, SUM(l.tokens_used), CAST(SUM(l.computed_cost) AS double precision) \
              FROM user_usage_logs l \
@@ -581,8 +596,9 @@ async fn list_member_usage_analytics(
              GROUP BY u.username, l.feature"
         )
         .bind(&organization_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await;
+        let _ = tx.rollback().await;
 
         match query_res {
             Ok(rows) => {
