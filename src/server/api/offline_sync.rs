@@ -84,7 +84,7 @@ pub async fn offline_sync_handler(
 
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
-                let mut db_tx = db_clone.begin().await.unwrap();
+                let mut db_tx = match db_clone.begin().await { Ok(tx) => tx, Err(e) => return Err(e.to_string()) };
 
                 if let Some(ref mutation_id) = mutation.client_mutation_id {
                     let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
@@ -119,7 +119,7 @@ pub async fn offline_sync_handler(
                 }).to_string())
                 .execute(&mut *db_tx)
                 .await;
-                db_tx.commit().await.unwrap();
+                if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
                 Ok(None)
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
             continue;
@@ -198,7 +198,7 @@ pub async fn offline_sync_handler(
             };
 
 
-            let mut db_tx = db_clone.begin().await.unwrap();
+            let mut db_tx = match db_clone.begin().await { Ok(tx) => tx, Err(e) => return Err(e.to_string()) };
 
             if let Some(ref mutation_id) = mutation.client_mutation_id {
                 let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
@@ -306,7 +306,7 @@ pub async fn offline_sync_handler(
                              WHERE tenant_id = $2
                              AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
                         )
-                        .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                        .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap_or(serde_json::json!({}))]))
                         .bind(&tenant_id_clone)
                         .bind(&mutation.transaction_id)
                         .execute(&mut *db_tx)
@@ -358,7 +358,7 @@ pub async fn offline_sync_handler(
                         }
                     });
 
-                    db_tx.commit().await.unwrap();
+                    if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
 
                     // Publish mesh event
                     let event = ::server_ohc::orchestration::TeammateMeshEvent {
