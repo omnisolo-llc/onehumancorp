@@ -459,7 +459,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from SQLite");
             }
         }
 
@@ -471,7 +470,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from PostgreSQL");
             }
         }
 
@@ -502,7 +500,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue");
             }
         }
 
@@ -513,7 +510,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&sqlite_queued_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue");
             }
         }
 
@@ -525,7 +521,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue");
             }
         }
 
@@ -536,7 +531,6 @@ impl HybridSyncDaemon {
         if let Ok(res) = sqlx::query(&pg_queued_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue", res.rows_affected());
-                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue");
             }
         }
 

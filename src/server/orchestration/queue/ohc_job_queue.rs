@@ -169,7 +169,6 @@ impl OHCJobQueue {
         .map_err(|e| e.to_string())?;
 
         if stagnant_result.rows_affected() > 0 {
-            ::server_telemetry::record_error_signal("[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours");
         }
 
         tx.commit().await.map_err(|e| e.to_string())?;

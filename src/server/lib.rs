@@ -7961,20 +7961,16 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        ::server_telemetry::record_error_signal("[cleanup] failed to prune stale missions");
                         tracing::trace!("failed to prune stale missions: {}", e);
                     }
                     if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
-                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stagnant missions");
                         tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
-                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale ohc jobs");
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
                     if let Err(e) = ohc_job_queue_prune.cleanup_stale_jobs().await {
-                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale sub agent jobs");
                         tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
                 }

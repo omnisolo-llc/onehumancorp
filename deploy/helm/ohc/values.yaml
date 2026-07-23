@@ -2,9 +2,9 @@ backend:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   vpa:
     enabled: true
   headless: false
@@ -105,9 +105,9 @@ ohcCore:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   vpa:
     enabled: true
   enabled: true
@@ -128,9 +128,9 @@ powersync:
   autoscaling:
     enabled: true
     maxReplicas: 10
-    minReplicas: 1
-    targetCPUUtilizationPercentage: 85
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 80
   vpa:
     enabled: true
   enabled: true
