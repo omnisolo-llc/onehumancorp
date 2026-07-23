@@ -353,6 +353,7 @@ pub struct Agent {
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env:
         Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub hnsw_db: Option<Arc<tokio::sync::Mutex<crate::hnsw_memory::AgentDB>>>,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
     pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
     // SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state
@@ -411,6 +412,7 @@ impl Agent {
             durable_engine: Some(Arc::new(
                 crate::durable_execution::DurableExecutionEngine::new(),
             )),
+            hnsw_db: None,
             sona_matcher: None,
             skill_trace: Arc::new(tokio::sync::Mutex::new(
                 crate::expert_team::SkillTrace::new(),
@@ -949,7 +951,7 @@ impl Agent {
         let jit_retriever = self
             .memory_store
             .as_ref()
-            .map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
+            .map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id, self.hnsw_db.clone(), Some(self.llm.clone())));
 
         let mut processed_initial_message = initial_message.to_string();
         if let Some(retriever) = &jit_retriever {
@@ -1627,6 +1629,7 @@ impl Agent {
             durable_engine: Some(std::sync::Arc::new(
                 crate::durable_execution::DurableExecutionEngine::new(),
             )),
+            hnsw_db: self.hnsw_db.clone(),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         });
@@ -3053,6 +3056,7 @@ impl Agent {
             durable_engine: Some(std::sync::Arc::new(
                 crate::durable_execution::DurableExecutionEngine::new(),
             )),
+            hnsw_db: self.hnsw_db.clone(),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         };
@@ -3281,8 +3285,14 @@ impl Agent {
             }
         }
 
+        let mut dynamic_hnsw_db = self.hnsw_db.clone();
+        if cfg.enable_hnsw_memory && dynamic_hnsw_db.is_none() {
+            dynamic_hnsw_db = Some(Arc::new(tokio::sync::Mutex::new(crate::hnsw_memory::AgentDB::new())));
+        }
+
         if cfg.long_term_memory.is_some()
             || (cfg.enable_sona_patterns && self.sona_matcher.is_none())
+            || (cfg.enable_hnsw_memory && self.hnsw_db.is_none())
         {
             owned_agent = Agent {
                 event_stream: None,
@@ -3299,6 +3309,7 @@ impl Agent {
                 durable_engine: Some(std::sync::Arc::new(
                     crate::durable_execution::DurableExecutionEngine::new(),
                 )),
+                hnsw_db: dynamic_hnsw_db,
                 sona_matcher: dynamic_sona_matcher,
                 skill_trace: self.skill_trace.clone(),
             };

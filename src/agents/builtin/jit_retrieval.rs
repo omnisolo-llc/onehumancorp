@@ -11,13 +11,22 @@ use std::sync::Arc;
 pub struct JitContextRetriever {
     memory_store: Arc<dyn LongTermMemory>,
     session_id: String,
+    hnsw_db: Option<Arc<tokio::sync::Mutex<crate::hnsw_memory::AgentDB>>>,
+    llm: Option<Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
 }
 
 impl JitContextRetriever {
-    pub fn new(memory_store: Arc<dyn LongTermMemory>, session_id: String) -> Self {
+    pub fn new(
+        memory_store: Arc<dyn LongTermMemory>,
+        session_id: String,
+        hnsw_db: Option<Arc<tokio::sync::Mutex<crate::hnsw_memory::AgentDB>>>,
+        llm: Option<Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
+    ) -> Self {
         Self {
             memory_store,
             session_id,
+            hnsw_db,
+            llm,
         }
     }
 
@@ -166,6 +175,26 @@ impl JitContextRetriever {
             }
         }
 
+        // 4. Try to search via HNSW AgentDB for fast approximate nearest neighbor retrieval
+        if let (Some(db), Some(llm)) = (&self.hnsw_db, &self.llm) {
+            if let Ok(embedding) = llm.generate_embedding(&query).await {
+                let db_lock = db.lock().await;
+                let hnsw_results = db_lock.search(&embedding, 3);
+
+                if !hnsw_results.is_empty() {
+                    if !combined_context.is_empty() {
+                        combined_context.push('\n');
+                    }
+                    combined_context.push_str("Relevant HNSW Knowledge (JIT Retrieval):\n");
+                    for res in hnsw_results {
+                        // The metadata field in AgentDB often contains the raw snippet or document content
+                        combined_context.push_str(&res.metadata);
+                        combined_context.push_str("\n---\n");
+                    }
+                }
+            }
+        }
+
         if combined_context.trim().is_empty() {
             None
         } else {
@@ -226,7 +255,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_general() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         let messages = vec![Message::user("How do I write a fast server in Rust?")];
 
@@ -238,7 +267,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_session() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         let messages = vec![Message::user("I got an error when compiling")];
 
@@ -250,7 +279,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_empty() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         let messages = vec![Message::user("Hello")]; // Too short / no keywords
 
@@ -261,7 +290,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_keyword_scoring() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         // This prompt contains words starting with 'a' and 'b' that are long enough
         // but 'authentication' and 'architecture' should score higher than 'apple' due to length/frequency.
@@ -277,7 +306,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_code_snippets() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         let messages = vec![Message::user(
             "Can you explain what the function in main.rs does?",
@@ -291,7 +320,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_term_sorting_and_empty() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         // This prompt contains short words that should be filtered out
         let messages = vec![Message::user("It is an error the to of in on as at by be")];
@@ -304,7 +333,7 @@ mod tests {
     #[tokio::test]
     async fn test_jit_retrieval_all_empty() {
         let store = Arc::new(MockMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         // A prompt with words that have no matches in the mock store
         let messages = vec![Message::user(
@@ -348,7 +377,7 @@ mod additional_tests {
     #[tokio::test]
     async fn test_jit_retrieval_failing_store() {
         let store = Arc::new(FailingMemoryStore);
-        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+        let retriever = JitContextRetriever::new(store, "test_session".to_string(), None, None);
 
         let messages = vec![Message::user("Please review the code in main.rs")];
 
