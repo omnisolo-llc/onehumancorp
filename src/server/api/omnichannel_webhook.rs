@@ -195,7 +195,7 @@ pub async fn handle_omnichannel_webhook(
     // 2. Persist Message into native rust omnichannel data models
     let parsed_tenant_id = Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::new_v4());
     let parsed_customer_id = Uuid::parse_str(&customer_id).unwrap_or_else(|_| Uuid::new_v4());
-    let repo = crate::domain::repository::omnichannel_repo::OmniChannelRepo::new(std::sync::Arc::new(state.db.clone()));
+    let repo = crate::domain::repository::omnichannel_repo::OmniChannelRepo::new(state.db.clone());
 
     // Resolve Contact
     let contact = match repo.get_contact(parsed_tenant_id, customer_id.clone()).await {
