@@ -585,3 +585,75 @@ mod tests {
         );
     }
 }
+
+#[derive(serde::Deserialize)]
+pub struct WebhookPayload {
+    pub source: String,
+    pub content: String,
+}
+
+pub async fn webhook_ingest_handler(
+    headers: axum::http::HeaderMap,
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(tenant_id): axum::extract::Path<String>,
+    axum::extract::Json(payload): axum::extract::Json<WebhookPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    let auth_header = headers.get(axum::http::header::AUTHORIZATION).and_then(|h| h.to_str().ok()).unwrap_or("");
+    let expected_token = std::env::var("OHC_WEBHOOK_SECRET").unwrap_or_else(|_| "".to_string());
+    if expected_token.is_empty() {
+        tracing::error!("OHC_WEBHOOK_SECRET is not configured. Webhooks disabled.");
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    }
+    if auth_header != format!("Bearer {}", expected_token) {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    }
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
+            let id = format!("triage-{}", uuid::Uuid::new_v4());
+            let res = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, 'normal', $4, 'pending')"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&payload.source)
+            .bind(&payload.content)
+            .execute(&mut *tx).await;
+
+            if let Err(e) = res {
+                tracing::error!("Error inserting webhook triage item: {:?}", e);
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            let _ = tx.commit().await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": id }))).into_response()
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
+            let id = format!("triage-{}", uuid::Uuid::new_v4());
+            let res = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, 'normal', ?, 'pending')"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&payload.source)
+            .bind(&payload.content)
+            .execute(&mut *tx).await;
+
+            if let Err(e) = res {
+                tracing::error!("Error inserting webhook triage item: {:?}", e);
+                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+            let _ = tx.commit().await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": id }))).into_response()
+        }
+    }
+}

@@ -506,7 +506,7 @@
 
       <div class="app-grid">
         <section class="app-panel">
-          <div class="app-panel-header">Triage Queue</div>
+          <div class="app-panel-header" id="needs-attention-header">Needs Attention</div>
           <div id="triage-list" class="app-list">
             <div class="app-empty">Loading triage items...</div>
           </div>
@@ -637,6 +637,8 @@
       }
 
       function renderUI() {
+        const headerEl = document.getElementById("needs-attention-header");
+        if (headerEl) { headerEl.innerText = items.length + " Needs Attention"; }
         const activeCount = items.length;
         const activeBadge = document.getElementById("active-count-badge");
         if (activeBadge) {

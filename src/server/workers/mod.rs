@@ -10,6 +10,7 @@ pub mod pos_conflict_worker;
 pub mod invoice_followup_worker;
 pub mod proactive_analysis_job;
 pub mod message_triage_worker;
+pub mod triage_worker;
 pub mod pricing_analysis_worker;
 pub mod deposit_follow_up_worker;
 pub mod missed_lead_recovery_worker;

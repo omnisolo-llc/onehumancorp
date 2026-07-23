@@ -2984,6 +2984,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     booking_reengagement_job.start();
 
     // Start Message Triage Worker
+            tokio::spawn(crate::workers::triage_worker::start_triage_worker(db.clone()));
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     let customer_memory_worker = Arc::new(crate::workers::customer_memory_worker::CustomerMemoryWorker::new(db.clone()));
     customer_memory_worker.start();
@@ -6979,6 +6980,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/v1/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/v1/webhook/triage/:tenant_id", axum::routing::post(crate::api::work_triage::webhook_ingest_handler).with_state(db.clone()))
         .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/v1/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
