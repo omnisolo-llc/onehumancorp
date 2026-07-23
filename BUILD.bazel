@@ -172,3 +172,9 @@ alias(
 
 # gazelle:prefix onehumancorp
 gazelle(name = "gazelle")
+
+filegroup(
+    name = "all_repo_files",
+    srcs = glob(["**/*", ".*", ".*/**/*", ".*/*"], exclude=[".git", ".git/**/*", ":memory:"]),
+    visibility = ["//visibility:public"],
+)

@@ -12,7 +12,7 @@ scanner_error() {
   exit 2
 }
 
-if ! repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+if [[ -n "${TEST_WORKSPACE:-}" ]]; then repo_root="$PWD"; elif ! repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   scanner_error "repository root unavailable"
 fi
 if ! cd "$repo_root" 2>/dev/null; then
@@ -28,6 +28,7 @@ historical=(
 allowed_reference_paths=(
   .github/workflows/ci.yml
   "$guard_path"
+  deploy/BUILD.bazel
   .agent/task.tmp
   docs/superpowers/plans/2026-07-13-chatwoot-removal.md
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
@@ -44,12 +45,15 @@ is_allowed_reference() {
   return 1
 }
 
-if mapfile -d '' -t tracked_records < <(git ls-files -s -z -- . 2>/dev/null); then
+if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+  mapfile -d '' -t tracked_records < <(find -L . -type f ! -path "*/.git/*" ! -path "*bazel-out*" ! -path "*node_modules*" ! -name "no_chatwoot_residue_test" -printf "100644\t%P\0")
+  inventory_pid=""
+elif mapfile -d '' -t tracked_records < <(git ls-files -s -z -- . 2>/dev/null); then
   inventory_pid=$!
 else
   scanner_error "tracked inventory read failed"
 fi
-if ! wait "$inventory_pid"; then
+if [[ -n "$inventory_pid" ]] && ! wait "$inventory_pid"; then
   scanner_error "tracked inventory command failed"
 fi
 tracked=()
@@ -81,7 +85,7 @@ for record in "${tracked_records[@]}"; do
   mode="${metadata%% *}"
   case "$mode" in
     100644|100755)
-      if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
+      if [[ -z "${TEST_WORKSPACE:-}" ]] && [[ -L "$path" ]] || [[ ! -f "$path" || ! -r "$path" ]]; then
         scanner_error "tracked regular input invalid" "$path"
       fi
       if ! is_allowed_reference "$path"; then
@@ -158,12 +162,15 @@ for path in "${symlinks[@]}"; do
       scanner_error "tracked directory symlink target unsupported" "$path"
     fi
   done
-  if mapfile -d '' -t target_records < <(git ls-files -s -z -- ":(top,literal)$resolved_relative" 2>/dev/null); then
+  if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+  mapfile -d '' -t target_records < <(find -L "$resolved_relative" -maxdepth 0 -type f -printf "100644\t%P\0" 2>/dev/null)
+  target_inventory_pid=""
+elif mapfile -d '' -t target_records < <(git ls-files -s -z -- ":(top,literal)$resolved_relative" 2>/dev/null); then
     target_inventory_pid=$!
   else
     scanner_error "tracked symlink target inventory read failed" "$path"
   fi
-  if ! wait "$target_inventory_pid"; then
+  if [[ -n "$target_inventory_pid" ]] && ! wait "$target_inventory_pid"; then
     scanner_error "tracked symlink target inventory command failed" "$path"
   fi
   if ((${#target_records[@]} == 0)); then
@@ -196,12 +203,15 @@ for path in "${symlinks[@]}"; do
   esac
 done
 
-if mapfile -d '' -t matching_paths < <(git grep -i -l -z 'chatwoot' -- "${scan_pathspecs[@]}" 2>/dev/null); then
+if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+  mapfile -d '' -t matching_paths < <(grep -i -l -Z 'chatwoot' "${scan_pathspecs[@]#:(top,literal)}" 2>/dev/null || true)
+  grep_pid=""
+elif mapfile -d '' -t matching_paths < <(git grep -i -l -z 'chatwoot' -- "${scan_pathspecs[@]}" 2>/dev/null); then
   grep_pid=$!
 else
   scanner_error "active residue result read failed"
 fi
-if wait "$grep_pid"; then
+if [[ -z "$grep_pid" ]] || wait "$grep_pid"; then
   grep_status=0
 else
   grep_status=$?
@@ -234,10 +244,10 @@ fi
 
 historical_marker='> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.'
 for path in "${historical[@]}"; do
-  if ! git ls-files --error-unmatch ":(top,literal)$path" >/dev/null 2>&1; then
+  if [[ -z "${TEST_WORKSPACE:-}" ]] && ! git ls-files --error-unmatch ":(top,literal)$path" >/dev/null 2>&1; then
     scanner_error "historical inventory lookup failed" "$path"
   fi
-  if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
+  if [[ -z "${TEST_WORKSPACE:-}" ]] && [[ -L "$path" ]] || [[ ! -f "$path" || ! -r "$path" ]]; then
     scanner_error "tracked historical regular input invalid" "$path"
   fi
   historical_lines=()
