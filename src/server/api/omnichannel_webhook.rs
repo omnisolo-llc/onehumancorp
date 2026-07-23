@@ -58,25 +58,8 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
         return id;
     }
 
-    // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
-    // Assume sender_id might be a phone number or email depending on channel
-    let potential_customer_id: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
-                .fetch_optional(pool)
-                .await.ok().flatten()
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
-        }
-    };
+    // 2. If not found, try to resolve using the unified identity resolver
+    let potential_customer_id: Option<String> = crate::api::inbox::identity::resolve_identity(db, tenant_id, channel, sender_id).await;
 
     let id = if let Some(found_id) = potential_customer_id {
         found_id

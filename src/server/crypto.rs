@@ -11,11 +11,6 @@ fn get_crypto_key() -> [u8; 32] {
         .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
         .unwrap_or_else(|_| {
             if ::server_config::get().standalone {
-                tracing::warn!(
-                    "No OHC_SQLITE_KEY configured for standalone mode. \
-                     Generating ephemeral key. Data will NOT persist across restarts. \
-                     Set OHC_SQLITE_KEY for persistent encryption."
-                );
                 use std::time::{SystemTime, UNIX_EPOCH};
                 let ts = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
