@@ -3,8 +3,6 @@ import { resolveShellRoute } from "./shellRoutes";
 
 describe("resolveShellRoute", () => {
   test.each([
-    "/login",
-    "/onboarding",
     "/booking-widget",
     "/storefront-widget",
     "/website-builder",

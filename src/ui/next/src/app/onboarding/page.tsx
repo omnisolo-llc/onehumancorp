@@ -675,10 +675,10 @@ export default function OnboardingWizard() {
         aria-label="Loading onboarding"
         className="flex min-h-[50vh] items-center justify-center px-6"
       >
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+        <div className="flex items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] px-5 py-4 text-[#1D1D1F] dark:text-[#F5F5F7] glass-control translucent-glass-light dark:translucent-glass-dark">
           <span
             aria-hidden="true"
-            className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-[#0f766e]"
+            className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-[#0066FF]"
           />
           <span className="text-sm font-medium">Preparing your setup…</span>
         </div>
@@ -812,7 +812,7 @@ export default function OnboardingWizard() {
         <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
           {step === -2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-[#0066FF]"
                   fill="none"
@@ -1109,7 +1109,7 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg
                   className="w-8 h-8 text-[#0066FF]"
                   fill="none"

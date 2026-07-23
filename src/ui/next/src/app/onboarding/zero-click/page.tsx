@@ -27,10 +27,10 @@ export default function ZeroClickBuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-[#0066FF]/20 selection:text-[#1D1D1F] dark:selection:text-[#F5F5F7]">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center p-3 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 rounded-[16px] mb-4">
             <span className="text-3xl">✨</span>
           </div>
           <h1 className="text-4xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-3">
@@ -44,9 +44,9 @@ export default function ZeroClickBuilderPage() {
         {!generatedStore ? (
           <OnboardingChatAgent onComplete={handleChatComplete} />
         ) : (
-          <div className="glassmorphism  p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="glassmorphism translucent-glass-light dark:translucent-glass-dark p-8 mb-8 rounded-[16px] animate-in fade-in slide-in-from-bottom-4 duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-[#34C759]/10 dark:bg-[#34C759]/20 text-green-600 rounded-full mb-4">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                 </svg>
