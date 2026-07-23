@@ -107,10 +107,17 @@ where
         .route("/", get(list_feed_items).post(create_feed_item))
         .route("/{id}/state", put(update_feed_item_state))
         .route("/ws", get(ws_feed_handler))
+        .route("/sync", get(sync_feed_handler))
+}
+
+#[derive(Deserialize)]
+pub struct WsFeedQuery {
+    pub last_sequence_id: Option<String>,
 }
 
 pub async fn ws_feed_handler(
     ws: WebSocketUpgrade,
+    Query(query): Query<WsFeedQuery>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
@@ -118,56 +125,122 @@ pub async fn ws_feed_handler(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    ws.on_upgrade(move |socket| handle_feed_socket(socket, tenant_id))
+    let last_sequence_id = query.last_sequence_id.clone().unwrap_or_else(|| "$".to_string());
+    ws.on_upgrade(move |socket| handle_feed_socket(socket, tenant_id, last_sequence_id))
 }
 
-async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
+pub async fn sync_feed_handler(
+    Query(query): Query<WsFeedQuery>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let client = get_redis_client();
+    let mut conn = match client.get_multiplexed_async_connection().await {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Failed to get redis connection for sync: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({}))).into_response();
+        }
+    };
+
+    let topic = format!("agent_feed_stream:{}", tenant_id);
+    let last_sequence_id = query.last_sequence_id.unwrap_or_else(|| "0-0".to_string());
+
+    let result: Result<redis::streams::StreamReadReply, _> = redis::cmd("XREAD")
+        .arg("COUNT").arg(100)
+        .arg("STREAMS")
+        .arg(&topic)
+        .arg(&last_sequence_id)
+        .query_async(&mut conn).await;
+
+    match result {
+        Ok(reply) => {
+            let mut items = Vec::new();
+            if let Some(stream_reply) = reply.keys.first() {
+                for id in &stream_reply.ids {
+                    if let Some(redis::Value::BulkString(payload_bytes)) = id.map.get("payload") {
+                        if let Ok(payload_str) = std::str::from_utf8(payload_bytes) {
+                            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                                items.push(serde_json::json!({
+                                    "sequence_id": id.id,
+                                    "item": parsed,
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+            Json(serde_json::json!({ "items": items })).into_response()
+        }
+        Err(e) => {
+            tracing::error!("XREAD failed for sync: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({}))).into_response()
+        }
+    }
+}
+
+async fn handle_feed_socket(socket: WebSocket, tenant_id: String, mut last_sequence_id: String) {
     let (mut sender, mut receiver) = socket.split();
 
     let client = get_redis_client();
 
-    let mut pubsub_conn = match client.get_async_pubsub().await {
-        Ok(conn) => conn,
+    let mut conn = match client.get_async_connection().await {
+        Ok(c) => c,
         Err(e) => {
-            tracing::error!("Failed to get async pubsub for ws: {}", e);
-            let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to connect to pubsub\"}".into())).await;
+            tracing::error!("Failed to get redis connection for ws: {}", e);
+            let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to connect to redis\"}".into())).await;
             return;
         }
     };
 
-    let topic = format!("agent_feed:{}", tenant_id);
-    if let Err(e) = pubsub_conn.subscribe(&topic).await {
-        tracing::error!("Failed to subscribe to topic {}: {}", topic, e);
-        let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to subscribe\"}".into())).await;
-        return;
-    }
+    let topic = format!("agent_feed_stream:{}", tenant_id);
 
-    let mut stream = pubsub_conn.into_on_message();
-
-    // Bounded buffer with drop-oldest semantics (256 capacity)
-    let buffer: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::with_capacity(256)));
+    // Bounded buffer with drop-oldest semantics (1024 capacity)
+    let buffer: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::with_capacity(1024)));
     let notify = Arc::new(Notify::new());
 
     // Task 1: Redis subscriber → buffer (non-blocking, drops oldest on full)
     let buf_producer = buffer.clone();
     let notify_producer = notify.clone();
     let pubsub_task = tokio::spawn(async move {
-        while let Some(msg) = stream.next().await {
-            let payload: String = match msg.get_payload() {
-                Ok(p) => p,
-                Err(e) => {
-                    tracing::error!("Failed to get pubsub payload: {}", e);
-                    continue;
+        loop {
+            let result: Result<redis::streams::StreamReadReply, _> = redis::cmd("XREAD")
+                .arg("COUNT").arg(100)
+                .arg("BLOCK").arg(5000)
+                .arg("STREAMS").arg(&topic).arg(&last_sequence_id)
+                .query_async(&mut conn).await;
+
+            match result {
+                Ok(reply) => {
+                    if let Some(stream_reply) = reply.keys.first() {
+                        for id in &stream_reply.ids {
+                            last_sequence_id = id.id.clone();
+                            if let Some(redis::Value::BulkString(payload_bytes)) = id.map.get("payload") {
+                                if let Ok(payload_str) = std::str::from_utf8(payload_bytes) {
+                                    let mut q = buf_producer.lock().await;
+                                    if q.len() >= 1024 {
+                                        q.pop_front(); // drop oldest
+                                    }
+                                    let wrapped_payload = serde_json::json!({
+                                        "sequence_id": last_sequence_id,
+                                        "item": serde_json::from_str::<serde_json::Value>(payload_str).unwrap_or(serde_json::json!({})),
+                                    }).to_string();
+                                    q.push_back(wrapped_payload);
+                                }
+                            }
+                        }
+                        notify_producer.notify_one();
+                    }
                 }
-            };
-            {
-                let mut q = buf_producer.lock().await;
-                if q.len() >= 256 {
-                    q.pop_front(); // drop oldest
+                Err(_e) => {
+                    // Timeout (nil) is not an error; other issues trigger a small wait
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
-                q.push_back(payload);
             }
-            notify_producer.notify_one();
         }
     });
 
@@ -632,12 +705,12 @@ mod tests {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let topic = "agent_feed:test_batch_tenant";
+                let topic = "agent_feed_stream:test_batch_tenant";
 
                 // Publish 5 messages rapidly — they should be batched
                 for i in 0..5 {
                     let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                    let _: () = redis::cmd("XADD").arg(topic).arg("MAXLEN").arg("~").arg(1000).arg("*").arg("payload").arg(payload).query_async(&mut conn).await.unwrap();
                 }
 
                 let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())
@@ -653,7 +726,10 @@ mod tests {
                 let items = parsed["items"].as_array().expect("items not an array");
                 assert_eq!(items.len(), 5);
                 for i in 0..5 {
-                    assert_eq!(items[i], format!("{{\"seq\":{}}}", i));
+                    let item_str = items[i].as_str().expect("not a string");
+                    let parsed_item: serde_json::Value = serde_json::from_str(item_str).unwrap();
+                    let inner_item = parsed_item.get("item").unwrap();
+                    assert_eq!(inner_item["seq"], i);
                 }
             }
         }

@@ -4143,9 +4143,9 @@ pub async fn simulate_agent_feed_item_handler(
     let cache_key_mobile = format!("ui_unified_agent_feed:{}:mobile:true", tenant_id);
     let _ = cache.invalidate(&cache_key_mobile).await;
 
-    // Also publish to pubsub so SSE picks it up
+    // Also publish to stream so SSE/Sync picks it up
     if let Some(client) = get_redis_client() {
-        let topic = format!("agent_feed:{}", tenant_id);
+        let topic = format!("agent_feed_stream:{}", tenant_id);
         let item_json = serde_json::json!({
             "id": item_id.clone(),
             "tenant_id": tenant_id,
@@ -4156,7 +4156,7 @@ pub async fn simulate_agent_feed_item_handler(
         });
         if let Ok(payload_str) = serde_json::to_string(&item_json) {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_str).query_async(&mut conn).await;
+                let _: Result<(), _> = redis::cmd("XADD").arg(topic).arg("MAXLEN").arg("~").arg(1000).arg("*").arg("payload").arg(payload_str).query_async(&mut conn).await;
             }
         }
     }
@@ -4181,9 +4181,9 @@ pub async fn simulate_agent_feed_item_handler(
     let cache = crate::api::agent_feed::get_agent_feed_cache();
     cache.invalidate_by_tag(&format!("agent_feed_tenant:{}", tenant_id)).await;
 
-    // Publish to Redis Pub/Sub for WebSockets
+    // Publish to Redis Stream for WebSockets/Sync
     if let Some(client) = get_redis_client() {
-        let topic = format!("agent_feed:{}", tenant_id);
+        let topic = format!("agent_feed_stream:{}", tenant_id);
         let payload_json = serde_json::json!({
             "id": item_id,
             "tenant_id": tenant_id,
@@ -4197,7 +4197,7 @@ pub async fn simulate_agent_feed_item_handler(
 
         tokio::spawn(async move {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_json).query_async(&mut conn).await;
+                let _: Result<(), _> = redis::cmd("XADD").arg(topic).arg("MAXLEN").arg("~").arg(1000).arg("*").arg("payload").arg(payload_json).query_async(&mut conn).await;
             }
         });
     }
