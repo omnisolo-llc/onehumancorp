@@ -5,8 +5,18 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use axum::response::IntoResponse;
 use ::server_common::Claims;
 use serde::{Deserialize, Serialize};
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::db::DB;
+use std::sync::Arc;
+
+#[derive(Clone)]
+pub struct LocalSeoState {
+    pub db: DB,
+    pub orchestrator: Arc<DepartmentOrchestrator>,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LocalReview {
@@ -218,9 +228,94 @@ pub async fn approve_and_reply(
     }
 }
 
-pub async fn webhook_ingest(Json(_payload): Json<serde_json::Value>) -> Json<serde_json::Value> {
-    // In a real implementation, we parse the webhook payload, insert to `ohc_local_reviews` and trigger AI
-    Json(serde_json::json!({ "status": "received" }))
+#[derive(serde::Deserialize)]
+pub struct GoogleBusinessWebhookPayload {
+    pub tenant_id: String,
+    pub review_id: String,
+    pub reviewer_name: String,
+    pub star_rating: i32,
+    pub comment: Option<String>,
+}
+
+pub async fn webhook_ingest(
+    axum::extract::State(state): axum::extract::State<LocalSeoState>,
+    Json(payload): Json<GoogleBusinessWebhookPayload>,
+) -> axum::response::Response {
+    let tenant_id = &payload.tenant_id;
+    let reviewer = &payload.reviewer_name;
+    let stars = payload.star_rating;
+    let comment_str = payload.comment.as_deref().unwrap_or("No comment provided");
+
+    let mut customer_id = String::new();
+    match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            if let Ok(Some(existing_id)) = sqlx::query_scalar::<_, String>("SELECT id FROM customers WHERE tenant_id = $1 AND name = $2 LIMIT 1")
+                .bind(tenant_id).bind(reviewer).fetch_optional(&state.db.pool).await {
+                customer_id = existing_id;
+            }
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            if let Ok(Some(existing_id)) = sqlx::query_scalar::<_, String>("SELECT id FROM customers WHERE tenant_id = ? AND name = ? LIMIT 1")
+                .bind(tenant_id).bind(reviewer).fetch_optional(sqlite_pool).await {
+                customer_id = existing_id;
+            }
+        }
+    };
+
+    if customer_id.is_empty() {
+        customer_id = uuid::Uuid::new_v4().to_string();
+        let insert_res_err = match &state.db.store {
+            crate::db::DbStore::Postgres => sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES ($1, $2, $3)")
+                .bind(&customer_id).bind(tenant_id).bind(reviewer).execute(&state.db.pool).await.err(),
+            crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES (?, ?, ?)")
+                .bind(&customer_id).bind(tenant_id).bind(reviewer).execute(sqlite_pool).await.err(),
+        };
+        if let Some(e) = insert_res_err {
+            tracing::error!("Failed to insert new customer for review: {}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "status": "error", "message": "Failed to create customer record" }))).into_response();
+        }
+    }
+
+    let formatted_message = format!("Google Business Review ({} Stars): {}", stars, comment_str);
+    let inbox_id = uuid::Uuid::new_v4().to_string();
+
+    let insert_msg_err = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, 'Google Business', $3, $4, 'English', '', 'unread', $5, $6, NOW())")
+                .bind(&inbox_id).bind(tenant_id).bind(&formatted_message).bind(&formatted_message).bind(reviewer).bind(&customer_id).execute(&state.db.pool).await.err()
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, 'Google Business', ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)")
+                .bind(&inbox_id).bind(tenant_id).bind(&formatted_message).bind(&formatted_message).bind(reviewer).bind(&customer_id).execute(sqlite_pool).await.err()
+        }
+    };
+
+    if let Some(e) = insert_msg_err {
+        tracing::error!("Failed to insert review into omni_inbox_messages: {}", e);
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "status": "error", "message": "Failed to ingest review" }))).into_response();
+    }
+
+    let payload_json = serde_json::json!({
+        "message_id": inbox_id,
+        "source": "Google Business",
+        "content": formatted_message,
+        "sender_id": reviewer,
+        "customer_id": customer_id,
+        "message": formatted_message
+    });
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.omnichannel.message.received".to_string(),
+        payload: payload_json,
+    };
+
+    if let Err(e) = state.orchestrator.dispatch_event(event).await {
+        tracing::error!("Failed to dispatch event: {}", e);
+    }
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "status": "received", "message_id": inbox_id }))).into_response()
 }
 
 #[derive(serde::Serialize)]
@@ -265,7 +360,7 @@ pub async fn get_discovery_report(
     Json(reports)
 }
 
-pub fn router() -> Router {
+pub fn router() -> Router<LocalSeoState> {
     Router::new()
         .route("/connect", post(connect_google_business))
         .route("/status", get(get_connection_status))
@@ -367,10 +462,75 @@ mod tests {
 
     #[tokio::test]
     async fn test_webhook_ingest() {
-        let payload = Json(serde_json::json!({
-            "review": "test"
-        }));
-        let Json(response) = webhook_ingest(payload).await;
-        assert_eq!(response["status"], "received");
+        use axum::extract::State;
+        use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+        use sqlx::SqlitePool;
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let schema = r#"
+            CREATE TABLE customers (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email TEXT,
+                phone TEXT
+            );
+            CREATE TABLE omni_inbox_messages (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                source TEXT NOT NULL,
+                original_content TEXT NOT NULL,
+                translated_content TEXT NOT NULL,
+                target_language TEXT NOT NULL,
+                draft_reply TEXT,
+                status TEXT NOT NULL,
+                sender_id TEXT,
+                customer_id TEXT,
+                created_at TEXT
+            );
+            CREATE TABLE departments (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                department_type TEXT NOT NULL,
+                status TEXT NOT NULL
+            );
+            CREATE TABLE agent_profiles (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                department_type TEXT NOT NULL,
+                agent_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                configuration TEXT NOT NULL
+            );
+        "#;
+        sqlx::query(schema).execute(&pool).await.unwrap();
+
+        let db = crate::db::DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        };
+
+        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(std::sync::Arc::new(db.clone()), mesh));
+
+        let state = LocalSeoState {
+            db,
+            orchestrator,
+        };
+
+        let payload = GoogleBusinessWebhookPayload {
+            tenant_id: "test_tenant".to_string(),
+            review_id: "rev123".to_string(),
+            reviewer_name: "John Doe".to_string(),
+            star_rating: 5,
+            comment: Some("Great!".to_string()),
+        };
+
+        let _response = webhook_ingest(State(state), Json(payload)).await;
+
+        let msg_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM omni_inbox_messages WHERE tenant_id = 'test_tenant'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(msg_count, 1);
     }
 }
