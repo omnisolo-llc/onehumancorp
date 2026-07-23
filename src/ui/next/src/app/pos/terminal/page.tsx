@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
@@ -9,7 +9,7 @@ import { MutationService } from '../../../lib/sync/MutationService';
 
 const t = (text: string) => text;
 
-export default function POSTerminal() {
+function POSTerminalInner() {
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [walkthroughSteps, setWalkthroughSteps] = useState([]);
 
@@ -695,4 +695,8 @@ export default function POSTerminal() {
       `}} />
     </div>
   );
+}
+
+export default function POSTerminal() {
+  return <Suspense fallback={<div>Loading POS Terminal...</div>}><POSTerminalInner /></Suspense>;
 }
