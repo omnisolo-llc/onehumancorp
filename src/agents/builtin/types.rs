@@ -94,7 +94,7 @@ pub struct ToolResult {
 pub fn format_llm_recoverable_error(tool_name: &str, msg: &str) -> String {
     format!("LLM-Recoverable Tool Error ({}): {}
 
-SOTA Recovery Protocol:\n1. Analyze this validation/execution error deeply.\n2. Review the tool\'s strict Pydantic JSON schema in your context.\n3. Identify exactly which fields were missing, incorrectly typed, or semantically invalid.\n4. Issue a corrected ToolMessage with the exact same tool name and fixed arguments. Do not give up until you successfully correct the payload.", tool_name, msg)
+SOTA Recovery Protocol:\n1. Analyze this validation/execution error deeply.\n2. Review the tool's strict Pydantic JSON schema in your context.\n3. Identify exactly which fields were missing, incorrectly typed, or semantically invalid.\n4. Issue a corrected ToolMessage with the exact same tool name and fixed arguments. Do not give up until you successfully correct the payload.", tool_name, msg)
 }
 
 impl ToolResult {
