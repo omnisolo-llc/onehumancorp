@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>,
     pub db: Arc<DB>,
 }
 
@@ -194,8 +195,8 @@ async fn generate_draft_reply(
     }
 }
 
-pub fn router(db: Arc<DB>) -> Router {
-    let state = AppState { db };
+pub fn router(db: Arc<DB>, orchestrator: Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>) -> Router {
+    let state = AppState { db, orchestrator };
     Router::new()
         .route(
             "/api/v1/webhooks/unified_inbox",
@@ -387,6 +388,25 @@ pub async fn handle_unified_webhook(
                 .bind(&action_payload)
                 .execute(sqlite_pool).await;
         }
+    }
+
+    // Trigger the Ambassador agent by dispatching the tenant.omnichannel.message.received event
+    let payload_json = serde_json::json!({
+        "message_id": message_id,
+        "inbox_message_id": message_id,
+        "source": payload.source,
+        "content": payload.message,
+        "sender_id": payload.identifier,
+        "customer_id": customer_id
+    });
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.omnichannel.message.received".to_string(),
+        payload: payload_json,
+    };
+    if let Err(e) = state.orchestrator.dispatch_event(event).await {
+        tracing::error!("Failed to dispatch omnichannel message event: {}", e);
     }
 
     (

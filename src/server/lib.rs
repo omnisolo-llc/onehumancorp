@@ -7822,7 +7822,7 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(protect_internal_ingress(
-            api::unified_inbox_webhook::router(db.clone()),
+            api::unified_inbox_webhook::router(db.clone(), dept_orchestrator.clone()),
             http_auth_store.clone(),
         ))
         .merge(health_router)

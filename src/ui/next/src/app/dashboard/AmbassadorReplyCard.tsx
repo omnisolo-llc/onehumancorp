@@ -127,9 +127,9 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
                   onApprove();
                 }}
                 className="flex-[2] min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                aria-label="Send Draft" data-testid="feed-approve-btn"
+                aria-label="1-Tap Approve" data-testid="feed-approve-btn"
               >
-                Send Draft
+                1-Tap Approve
               </button>
             )}
             {onEdit && (
