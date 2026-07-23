@@ -93,6 +93,9 @@ playwright_spec_workspace_name() {
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
+    /app/src/ui/next/src/e2e/*.spec.ts|/app/src/e2e/*.spec.ts)
+      printf 'src/playwright_ui/next/%s\n' "${rel#/app/src/ui/next/}"
+      ;;
     *)
       echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
       return 1
