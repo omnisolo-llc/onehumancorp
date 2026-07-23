@@ -88,7 +88,7 @@ pub async fn connect_whatsapp_cloud_api(
          // but log it.
     }
 
-    (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (StatusCode::OK, axum::Json(serde_json::json!({"success": true, "status": "connected", "usable": true}))).into_response()
 }
 
 pub async fn connect_whatsapp_twilio(
@@ -163,5 +163,5 @@ pub async fn connect_whatsapp_twilio(
          tracing::error!("Failed to register WhatsApp Twilio in memory: {}", e);
     }
 
-    (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (StatusCode::OK, axum::Json(serde_json::json!({"success": true, "status": "connected", "usable": true}))).into_response()
 }
