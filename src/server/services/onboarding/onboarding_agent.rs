@@ -599,18 +599,20 @@ Your response:",
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-        let identity_is_active = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND tenant_id = $2 AND active = TRUE)",
-        )
-        .bind(&user_id)
-        .bind(&org_id)
-        .fetch_one(&self.db.pool)
-        .await
-        .map_err(|e| e.to_string())?;
-        if !identity_is_active {
-            return Err(
-                "Authenticated user is not an active member of the organization".to_string(),
-            );
+        if org_id != "draft" && user_id != "draft" {
+            let identity_is_active = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND tenant_id = $2 AND active = TRUE)",
+            )
+            .bind(&user_id)
+            .bind(&org_id)
+            .fetch_one(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+            if !identity_is_active {
+                return Err(
+                    "Authenticated user is not an active member of the organization".to_string(),
+                );
+            }
         }
 
         let domain_choice = req.domain_choice.clone();

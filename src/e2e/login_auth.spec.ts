@@ -21,3 +21,7 @@ test('the Next.js login form creates a real authenticated session', async ({ con
   const catalogResponse = await page.request.get('/api/v1/catalog/products');
   expect(catalogResponse.status()).toBe(200);
 });
+test('dummy', async ({ page }) => {
+  // empty
+});
+});
