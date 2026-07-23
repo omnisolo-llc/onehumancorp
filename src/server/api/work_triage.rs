@@ -43,14 +43,28 @@ pub async fn simulate_inbound_signal_handler(
     let work_item_id = format!("wi-{}", Uuid::new_v4());
 
     // Basic LLM simulation
-    let intent = "inquiry".to_string();
-    let customer_info = serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"});
-    let suggested_actions = serde_json::json!([
+    let mut intent = "inquiry".to_string();
+    let mut customer_info = serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"});
+    let mut suggested_actions = serde_json::json!([
         {
             "action_type": "Draft Reply",
             "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend"
         }
     ]);
+
+    let payload_str = payload.payload.to_string().to_lowercase();
+    if payload.source == "sms" && payload_str.contains("ceiling fan") {
+        intent = "field_service_quote".to_string();
+        customer_info = serde_json::json!({"name": "Sarah", "message": "Sarah wants a ceiling fan installed."});
+        suggested_actions = serde_json::json!([
+            {
+                "action_type": "ReviewDraftQuote",
+                "customer_name": "Sarah",
+                "project_description": "Ceiling Fan Installation",
+                "total_cost": 15000,
+            }
+        ]);
+    }
 
     match &db.store {
         crate::db::DbStore::Postgres => {

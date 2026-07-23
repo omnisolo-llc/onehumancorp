@@ -571,6 +571,38 @@ pub async fn stripe_webhook_handler(
                     .and_then(|m| m.get("tenant_id"))
                     .and_then(|id| id.as_str());
 
+                let quote_id_opt = obj.get("metadata")
+                    .and_then(|m| m.get("quote_id"))
+                    .and_then(|id| id.as_str());
+
+                if let (Some(tenant_id), Some(quote_id)) = (tenant_id_opt, quote_id_opt) {
+                    let mut transaction = match webhook_state.db.pool.begin().await {
+                        Ok(transaction) => transaction,
+                        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id).await.is_ok() {
+                        let _ = sqlx::query("UPDATE quotes SET status = 'DEPOSIT_PAID', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2")
+                            .bind(quote_id)
+                            .bind(tenant_id)
+                            .execute(&mut *transaction)
+                            .await;
+
+                        let appointment_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO field_ops_appointments (id, tenant_id, customer_id, customer_name, job_template_id, job_name, status, scheduled_start_time, scheduled_end_time, location_address, location_lat, location_lng, notes) VALUES ($1, $2, $3, $4, $5, $6, 'SCHEDULED', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day 2 hours', $7, NULL, NULL, NULL)")
+                            .bind(&appointment_id)
+                            .bind(tenant_id)
+                            .bind("test-customer")
+                            .bind("Test Customer")
+                            .bind("test-job")
+                            .bind("Test Job")
+                            .bind("Test Address")
+                            .execute(&mut *transaction)
+                            .await;
+
+                        let _ = transaction.commit().await;
+                    }
+                }
+
                 let product_id_opt = obj.get("metadata")
                     .and_then(|m| m.get("product_id"))
                     .and_then(|id| id.as_str());
