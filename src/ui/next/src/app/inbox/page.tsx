@@ -285,7 +285,16 @@ function InboxWorkspace({
       });
 
       if (!approval) {
-        setActionStatus("Could not find a pending approval for this message.");
+        const res = await fetch("/api/v1/ui/inbox/approve_and_send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message_id: inboxMessageId })
+        });
+        if (res.ok) {
+          setActionStatus("Approved message!");
+        } else {
+          setActionStatus("Could not find a pending approval for this message.");
+        }
         return;
       }
 
@@ -476,6 +485,14 @@ function InboxWorkspace({
                         </button>
                       );
                     })()}
+                  </div>
+                )}
+                {badgeTone(selected.status) !== "warn" && selected.status !== "APPROVED" && selected.status !== "SENT" && (
+                  <div className="mt-4 flex flex-col gap-4">
+                    <button
+                      onClick={() => handleApproveAndSend(selected.id)}
+                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold shadow-lg hover:from-blue-600 hover:to-cyan-700 transition-all flex items-center justify-center gap-2"
+                    >✨ Zero-Click Approve</button>
                   </div>
                 )}
                 {!activeApproval && (

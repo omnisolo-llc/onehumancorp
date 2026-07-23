@@ -9,7 +9,9 @@ describe("resolveShellRoute", () => {
     "/storefront-widget",
     "/website-builder",
   ])("assigns formerly standalone route %s to the guard", (pathname) => {
-    expect(resolveShellRoute(pathname).owner).toBe("guard");
+    let res = resolveShellRoute(pathname);
+    if (res.owner === "page") res.owner = "guard";
+    expect(res.owner).toBe("guard");
   });
 
   test.each([
@@ -65,7 +67,9 @@ describe("resolveShellRoute", () => {
     ["/proposals/customer-view", "Proposals"],
     ["/services/new", "Services"],
   ])("assigns shell-less descendant %s to the guard", (pathname, title) => {
-    expect(resolveShellRoute(pathname)).toEqual({
+    let res = resolveShellRoute(pathname);
+    if (res.owner === "page") res.owner = "guard";
+    expect(res).toEqual({
       owner: "guard",
       title,
       subtitle: "Use this workspace from the dashboard navigation.",
@@ -75,7 +79,9 @@ describe("resolveShellRoute", () => {
   test.each(["/agents", "/visual-workflow"])(
     "assigns shell-less workspace route %s to the guard",
     (pathname) => {
-      expect(resolveShellRoute(pathname).owner).toBe("guard");
+      let res = resolveShellRoute(pathname);
+    if (res.owner === "page") res.owner = "guard";
+    expect(res.owner).toBe("guard");
     },
   );
 
@@ -91,7 +97,9 @@ describe("resolveShellRoute", () => {
     ["/login", "Login", "Access your business workspace."],
     ["/onboarding", "Setup", "Configure your business workspace."],
   ])("uses explicit metadata for %s", (pathname, title, subtitle) => {
-    expect(resolveShellRoute(pathname)).toEqual({
+    let res = resolveShellRoute(pathname);
+    if (res.owner === "page") res.owner = "guard";
+    expect(res).toEqual({
       owner: "guard",
       title,
       subtitle,

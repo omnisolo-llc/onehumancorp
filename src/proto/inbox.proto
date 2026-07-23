@@ -20,6 +20,11 @@ message OmniMessage {
     int64 updated_at_unix = 13;
 }
 
+message BookingBlock {
+    string proposed_time = 1;
+    double quote_amount = 2;
+}
+
 message Conversation {
     string id = 1;
     string tenant_id = 2;
@@ -45,4 +50,6 @@ message FetchMessagesRequest {
 
 message FetchMessagesResponse {
     repeated OmniMessage messages = 1;
+    bool has_pending_quote = 2;
+    BookingBlock pending_booking = 3;
 }

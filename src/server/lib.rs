@@ -6398,6 +6398,57 @@ async fn list_ui_bookings_handler(
     }
 }
 
+pub async fn approve_and_send_handler(
+    db: axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    store: axum::extract::State<std::sync::Arc<server_auth::Store>>,
+    headers: axum::http::HeaderMap,
+    payload: axum::extract::Json<serde_json::Value>,
+) -> impl axum::response::IntoResponse {
+    use axum::response::IntoResponse;
+    let mut token_opt = None;
+    let mut authorization_values = headers.get_all(axum::http::header::AUTHORIZATION).iter();
+    let token = authorization_values
+        .next()
+        .filter(|_| authorization_values.next().is_none())
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "));
+    if let Some(t) = token {
+        token_opt = Some(t.to_string());
+    }
+    if token_opt.is_none() {
+        return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+    let token_str = token_opt.unwrap();
+    let claims = match store.validate_token(&token_str).await {
+        Ok(c) => c,
+        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+    };
+    let tenant_id = claims.organization_id.unwrap_or_default();
+    if tenant_id.is_empty() {
+        return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+    }
+
+    let message_id = match payload.get("message_id").and_then(|v| v.as_str()) {
+        Some(id) => id.to_string(),
+        None => return (axum::http::StatusCode::BAD_REQUEST, "Missing message_id").into_response(),
+    };
+
+    if let crate::db::DbStore::Postgres = db.store {
+        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'APPROVED' WHERE id = $1 AND tenant_id = $2")
+            .bind(&message_id)
+            .bind(&tenant_id)
+            .execute(&db.pool)
+            .await;
+    } else if let crate::db::DbStore::Sqlite(ref pool) = db.store {
+        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'APPROVED' WHERE id = ? AND tenant_id = ?")
+            .bind(&message_id)
+            .bind(&tenant_id)
+            .execute(pool)
+            .await;
+    }
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "approved"}))).into_response()
+}
+
 async fn list_ui_inbox_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -6971,6 +7022,11 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
+        .route("/api/v1/ui/inbox/approve_and_send", axum::routing::post({
+            let db = db.clone();
+            let store = http_auth_store.clone();
+            move |headers: axum::http::HeaderMap, axum::extract::Json(payload): axum::extract::Json<serde_json::Value>| async move { approve_and_send_handler(axum::extract::State(db), axum::extract::State(store), headers, axum::extract::Json(payload)).await }
+        }))
         .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/v1/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/v1/dev/simulate-invoice-followup", axum::routing::post(simulate_invoice_followup_handler).with_state(db.clone()))
