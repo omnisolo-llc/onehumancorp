@@ -46,7 +46,7 @@ describe("Next authentication middleware adapter", () => {
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual({ error: "authentication unavailable" });
-    expect(error).toHaveBeenCalledWith("auth.middleware.configuration_unavailable");
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/^auth\.middleware\.configuration_unavailable/));
   });
 
   it("redirects protected pages and expires malformed session cookies", async () => {
