@@ -1,0 +1,24 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_whatsapp",
+    srcs = glob(["*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_whatsapp_test",
+    crate = ":server_integrations_whatsapp",
+    deps = [
+        "@crates//:tower",
+    ],
+)
