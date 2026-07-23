@@ -968,6 +968,7 @@ rust_test(
         "@crates//:hmac",
         "@crates//:sha2",
         "@crates//:temp-env",
+        "@crates//:tracing",
     ],
 )
 
