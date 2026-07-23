@@ -5,6 +5,8 @@ exports_files(
     [
         "booking.rs",
         "mod.rs",
+        "saga/mod.rs",
+        "saga/tests.rs",
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
@@ -21,6 +23,8 @@ rust_library(
         "bazel_lib.rs",
         "booking.rs",
         "mod.rs",
+        "saga/mod.rs",
+        "saga/tests.rs",
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
