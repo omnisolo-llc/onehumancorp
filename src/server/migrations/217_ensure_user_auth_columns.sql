@@ -1,4 +1,10 @@
 -- Migration 217: Ensure user authentication columns and TEXT id format exist regardless of table creation order
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
 ALTER TABLE user_sessions DROP CONSTRAINT IF EXISTS fk_rails_9fa262d742;
 ALTER TABLE users ALTER COLUMN id TYPE TEXT USING id::text;
 
