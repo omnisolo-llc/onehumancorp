@@ -75,3 +75,74 @@ pub async fn condense_summary_llm(
 
     Ok(current_text)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use ohc_builtin_agent_core::types::{ChatRequest, Message, Role};
+use crate::types::{ChatResponse, Usage};
+    use crate::llm::LlmClient;
+
+    struct MockLlmClient {
+        fail_to_reduce: bool,
+    }
+
+    #[async_trait]
+    impl LlmClient for MockLlmClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let msg = &req.messages[0].content;
+            let response_content = if self.fail_to_reduce {
+                msg.clone()
+            } else {
+                "condensed".to_string()
+            };
+            Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: response_content,
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                response_id: Some("mock_id".to_string()),
+                stop_reason: "mock_reason".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_condense_summary_short() {
+        let llm = MockLlmClient { fail_to_reduce: false };
+        let input = "short text".to_string();
+        let res = condense_summary_llm(&input, &llm, "test-model").await.unwrap();
+        assert_eq!(res, "short text");
+    }
+
+    #[tokio::test]
+    async fn test_condense_summary_needs_one_pass() {
+        let llm = MockLlmClient { fail_to_reduce: false };
+        let input = "a".repeat(1500);
+        let res = condense_summary_llm(&input, &llm, "test-model").await.unwrap();
+        assert_eq!(res, "condensed");
+    }
+
+    #[tokio::test]
+    async fn test_condense_summary_needs_loop() {
+        let llm = MockLlmClient { fail_to_reduce: false };
+        let input = "a".repeat(25000);
+        let res = condense_summary_llm(&input, &llm, "test-model").await.unwrap();
+        assert_eq!(res, "condensed\n\ncondensed");
+    }
+
+    #[tokio::test]
+    async fn test_condense_summary_fail_to_reduce() {
+        let llm = MockLlmClient { fail_to_reduce: true };
+        let input = "a".repeat(10000);
+        let res = condense_summary_llm(&input, &llm, "test-model").await.unwrap();
+        assert!(res.contains("[Output truncated. Subagent failed to condense summary.]"));
+        assert!(res.starts_with(&"a".repeat(8000)));
+    }
+}
