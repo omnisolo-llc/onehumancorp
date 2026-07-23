@@ -46,3 +46,8 @@ message FetchMessagesRequest {
 message FetchMessagesResponse {
     repeated OmniMessage messages = 1;
 }
+
+service Inbox {
+    rpc FetchConversations(FetchConversationsRequest) returns (FetchConversationsResponse);
+    rpc FetchMessages(FetchMessagesRequest) returns (FetchMessagesResponse);
+}

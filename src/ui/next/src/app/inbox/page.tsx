@@ -22,7 +22,7 @@ type Message = {
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
-  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
 }
@@ -426,12 +426,14 @@ function InboxWorkspace({
                     <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
                   </div>
                 </div>
-                <div className="mb-4">
-                  <div className="app-metric-label">Draft Reply</div>
-                  <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
+                {selected.draft_reply && (
+                  <div className="mb-4">
+                    <div className="app-metric-label">Draft Reply</div>
+                    <div className="mt-2 rounded-md border border-gray-200/50 bg-[#FFD700]/10 backdrop-blur-md p-3 text-sm leading-6 text-gray-800">
+                      <div>{renderMessageContent(selected.draft_reply)}</div>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="app-card">
                     <div className="app-metric-label">Status</div>
@@ -442,7 +444,7 @@ function InboxWorkspace({
                     <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
                   </div>
                 </div>
-                {badgeTone(selected.status) === "warn" && (
+                {["open", "pending", "pending_approval", ""].includes((selected.status || "").toLowerCase()) && (
                   <div className="mt-6">
                     {(() => {
                       let buttonText = "✨ Approve & Send Draft";

@@ -128,3 +128,7 @@ pub mod invoice {
 pub mod inventory {
     pub use crate::ohc::inventory::*;
 }
+
+pub mod inbox {
+    pub use inbox_proto::ohc::inbox::*;
+}

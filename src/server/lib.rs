@@ -951,6 +951,7 @@ pub mod services {
     pub mod inventory;
     pub mod agent_feed;
     pub mod customer_memory_graph;
+    pub mod inbox;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -8023,6 +8024,11 @@ async fn create_ui_bom_item_handler(
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
     let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client());
+    let inbox_service = crate::services::inbox::server::InboxService::new(db.pool.clone());
+    let inbox_nats_listener = crate::services::inbox::nats_listener::InboxNatsListener::new(db.pool.clone());
+    tokio::spawn(async move {
+        inbox_nats_listener.start().await;
+    });
 
     let mut grpc_server = Server::builder();
     if let Some(tls_config) = grpc_tls_config {
@@ -8051,6 +8057,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::inbox::inbox_server::InboxServer::with_interceptor(inbox_service, spiffe_interceptor))
 
         .serve(addr)
         .await?;

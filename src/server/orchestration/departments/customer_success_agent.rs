@@ -972,6 +972,11 @@ impl Department for CustomerSuccessAgent {
                         .orchestrator
                         .update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied")
                         .await;
+                } else {
+                    let _ = self
+                        .orchestrator
+                        .update_inbox_message_status(inbox_id, &event.tenant_id, "PENDING_APPROVAL")
+                        .await;
                 }
             }
 
