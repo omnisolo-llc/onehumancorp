@@ -129,20 +129,10 @@ impl Hub {
 
     async fn invalidate_agent_cache(&self) {
         *self.agent_cache.write().await = None;
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL").arg("hub:agents").query_async(&mut conn).await;
-            }
-        }
     }
 
     async fn invalidate_meetings_cache(&self) {
         *self.meetings_cache.write().await = None;
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL").arg("hub:meetings").query_async(&mut conn).await;
-            }
-        }
     }
 
     pub fn get_cost_auditor(&self) -> Arc<CostAuditor> {
@@ -189,19 +179,6 @@ impl Hub {
             }
         }
 
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            let res: Option<Arc<Vec<Agent>>> = async {
-                let mut conn = pool.get_async_connection().await.ok()?;
-                use redis::AsyncCommands;
-                let data: Option<String> = conn.get("hub:agents").await.ok()?;
-                let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
-                Some(Arc::new(agents))
-            }.await;
-            if let Some(arc) = res {
-                *self.agent_cache.write().await = Some(Arc::clone(&arc));
-                return arc;
-            }
-        }
 
         let agents = self.agents.read().await;
         let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
@@ -210,13 +187,6 @@ impl Hub {
         let arc = Arc::new(agents_vec);
         *self.agent_cache.write().await = Some(Arc::clone(&arc));
 
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            let json = serde_json::to_string(&*arc).unwrap_or_default();
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                use redis::AsyncCommands;
-                let _: Result<(), _> = conn.set_ex("hub:agents", json, 3600u64).await;
-            }
-        }
 
         arc
     }
@@ -390,19 +360,6 @@ impl Hub {
             }
         }
 
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            let res: Option<Arc<Vec<MeetingRoom>>> = async {
-                let mut conn = pool.get_async_connection().await.ok()?;
-                use redis::AsyncCommands;
-                let data: Option<String> = conn.get("hub:meetings").await.ok()?;
-                let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
-                Some(Arc::new(meetings))
-            }.await;
-            if let Some(arc) = res {
-                *self.meetings_cache.write().await = Some(Arc::clone(&arc));
-                return arc;
-            }
-        }
 
         let meetings = self.meetings.read().await;
         let meetings_vec: Vec<MeetingRoom> = meetings.values().cloned().collect();
@@ -411,13 +368,6 @@ impl Hub {
         let arc = Arc::new(meetings_vec);
         *self.meetings_cache.write().await = Some(Arc::clone(&arc));
 
-        if let Some(pool) = crate::redis_pool::get_redis_pool() {
-            let json = serde_json::to_string(&*arc).unwrap_or_default();
-            if let Ok(mut conn) = pool.get_async_connection().await {
-                use redis::AsyncCommands;
-                let _: Result<(), _> = conn.set_ex("hub:meetings", json, 5u64).await;
-            }
-        }
 
         arc
     }
