@@ -21,3 +21,4 @@ pub mod throttling;
 pub mod approvals_test;
 #[cfg(test)]
 pub mod flow_test;
+pub mod knowledge_agent;
