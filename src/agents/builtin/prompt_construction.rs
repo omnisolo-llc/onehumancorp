@@ -78,23 +78,18 @@ impl PromptBuilder {
         let mut successes = Vec::new();
         let mut successful_ids = std::collections::HashSet::new();
 
-        // Step 1: Collect successful tool call IDs from Tool messages
-        for msg in messages.iter().rev().take(10) {
+        // Single backward pass to map successful tool call IDs and extract names
+        for msg in messages.iter().rev().take(15) {
             if msg.role == crate::types::Role::Tool {
                 for tr in &msg.tool_results {
                     if tr.error.is_empty()
                         && !tr.content.is_empty()
                         && !tr.content.starts_with("[Observation Masked")
                     {
-                        successful_ids.insert(&tr.tool_call_id);
+                        successful_ids.insert(tr.tool_call_id.clone());
                     }
                 }
-            }
-        }
-
-        // Step 2: Find tool names for those IDs from Assistant messages
-        for msg in messages.iter().rev().take(15) {
-            if msg.role == crate::types::Role::Assistant {
+            } else if msg.role == crate::types::Role::Assistant {
                 for tc in msg.tool_calls.iter().rev() {
                     if successful_ids.contains(&tc.id) && !successes.contains(&tc.name) {
                         successes.push(tc.name.clone());
