@@ -70,7 +70,7 @@ export default function HelpCenterPage() {
                 placeholder="Search for help articles and videos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
+                className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-3xl saturate-200 bg-white/65 dark:bg-[#16161a]/70 border border-white/50 dark:border-white/10 shadow-xl hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
               />
               <svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -80,7 +80,7 @@ export default function HelpCenterPage() {
         </div>
 
         {isLoading ? (<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div></div>) : isError ? (
-          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
+          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-3xl saturate-200 bg-white/65 dark:bg-[#16161a]/70 border border-white/50 dark:border-white/10 shadow-xl rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
             <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-red-500 mb-6 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -92,7 +92,7 @@ export default function HelpCenterPage() {
             </p>
           </div>
         ) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
+          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-3xl saturate-200 bg-white/65 dark:bg-[#16161a]/70 border border-white/50 dark:border-white/10 shadow-xl rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
             <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-gray-400 mb-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
