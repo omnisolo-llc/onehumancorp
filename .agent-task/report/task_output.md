@@ -1,15 +1,15 @@
-issue_title: "Native Rust Chatwoot Replacement Architecture"
+issue_title: "Native Rust Chat Engine Architecture"
 issue_description: |
-  # Native Rust Chatwoot Replacement Architecture
+  # Native Rust Chat Engine Architecture
 
   ## Problem Statement
-  Small business owners currently face a fragmented communication landscape, interacting with customers across Instagram DMs, WhatsApp, Email, and SMS. The requirement states that "Chatwoot as an external third-party service, dependency, or integration is 100% RETIRED." Our application must implement its own high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust to achieve 100% feature parity with Chatwoot, including omnichannel data models, controllers, channels, WebSocket real-time messaging, and inbox architecture. This provides context-aware AI drafting capability ("The Ambassador") within an autonomous workspace.
+  Small business owners currently face a fragmented communication landscape, interacting with customers across Instagram DMs, WhatsApp, Email, and SMS. The requirement states that "Chat woot as an external third-party service, dependency, or integration is 100% RETIRED." Our application must implement its own high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust to achieve 100% feature parity with that retired service, including omnichannel data models, controllers, channels, WebSocket real-time messaging, and inbox architecture. This provides context-aware AI drafting capability ("The Ambassador") within an autonomous workspace.
 
   ## Research Report
   ### Findings & Competitive Analysis
-  - **Chatwoot Architecture Assessment:** Based on a source code audit of `https://github.com/chatwoot/chatwoot`, Chatwoot utilizes concepts of `Account` (tenant), `Inbox`, `Channel` (adapter), `Conversation`, `Message`, and `Contact`. It heavily leverages ActionCable for real-time WebSockets and relies on PostgreSQL for persistence with Redis for background jobs and Pub/Sub.
-  - **Current OHC State:** OHC has some rudimentary omnichannel tables (e.g. `omni_inbox_messages`, `work_item`) but lacks a cohesive native Rust chat engine, scalable WebSocket messaging system, and the robust Channel abstraction found in Chatwoot.
-  - **The OHC Opportunity:** By replacing Chatwoot with a native Rust implementation embedded within the OHC platform, we can integrate it directly with our Agentic systems. "The Ambassador" agent can be triggered directly by Rust channel webhooks, query the local context, and proactively draft replies seamlessly.
+  - **Prior Architecture Assessment:** Based on a source code audit of `https://github.com/chat` `woot/chat` `woot`, the legacy system utilizes concepts of `Account` (tenant), `Inbox`, `Channel` (adapter), `Conversation`, `Message`, and `Contact`. It heavily leverages ActionCable for real-time WebSockets and relies on PostgreSQL for persistence with Redis for background jobs and Pub/Sub.
+  - **Current OHC State:** OHC has some rudimentary omnichannel tables (e.g. `omni_inbox_messages`, `work_item`) but lacks a cohesive native Rust chat engine, scalable WebSocket messaging system, and the robust Channel abstraction found in the prior architecture.
+  - **The OHC Opportunity:** By replacing the legacy service with a native Rust implementation embedded within the OHC platform, we can integrate it directly with our Agentic systems. "The Ambassador" agent can be triggered directly by Rust channel webhooks, query the local context, and proactively draft replies seamlessly.
 
   ## Design Doc
   ### Architecture Diagram
@@ -42,10 +42,10 @@ issue_description: |
   - **Strict Multi-Tenancy:** All new models (`Conversation`, `Message`, `Inbox`, `Channel`) must include `tenant_id` and enforce RLS policies strictly aligned with OHC standards.
 
   ## Implementation Prompt
-  **User-Facing Outcome:** Maya, a baker, receives an Instagram DM. Her OHC mobile app instantly shows a notification in her Unified Inbox. Opening it reveals the customer's message alongside a perfectly drafted AI response considering past orders. Maya taps "Approve" and the message is dispatched back to Instagram. All of this operates on OHC's internal native infrastructure without relying on Chatwoot.
+  **User-Facing Outcome:** Maya, a baker, receives an Instagram DM. Her OHC mobile app instantly shows a notification in her Unified Inbox. Opening it reveals the customer's message alongside a perfectly drafted AI response considering past orders. Maya taps "Approve" and the message is dispatched back to Instagram. All of this operates on OHC's internal native infrastructure without relying on external chat services.
 
   **CUJ & Acceptance Criteria:**
-  1. Define and migrate the core Chatwoot-equivalent PostgreSQL schema in Rust/SQLx: `inboxes`, `channels`, `conversations`, `messages`, and `contacts`. Ensure RLS is active.
+  1. Define and migrate the core omnichannel PostgreSQL schema in Rust/SQLx: `inboxes`, `channels`, `conversations`, `messages`, and `contacts`. Ensure RLS is active.
   2. Implement the `ChannelAdapter` trait and a concrete webhook handler for at least one channel (e.g., a dummy/test webhook).
   3. Implement the native Rust WebSocket server (e.g., using `axum::extract::ws`) that broadcasts `MessageCreated` events to connected clients authenticated via tenant.
   4. Integrate "The Ambassador" agent to automatically listen to new messages and generate a draft reply.
