@@ -10,7 +10,10 @@ fn get_crypto_key() -> [u8; 32] {
     let key = std::env::var("OHC_SQLITE_KEY")
         .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
         .unwrap_or_else(|_| {
-            if ::server_config::get().standalone {
+            let is_standalone = ::server_config::get().standalone
+                || std::env::var("OHC_STANDALONE_MODE").map(|v| v == "true").unwrap_or(false)
+                || std::env::var("OHC_STANDALONE").map(|v| v == "true").unwrap_or(false);
+            if is_standalone {
                 tracing::warn!(
                     "No OHC_SQLITE_KEY configured for standalone mode. \
                      Generating ephemeral key. Data will NOT persist across restarts. \
@@ -141,7 +144,18 @@ mod tests {
 
     #[test]
     fn test_standalone_mode_generates_ephemeral_key() {
-        // Skip ephemeral key test since global config is not standalone in tests by default
+        temp_env::with_vars(vec![
+            ("OHC_SQLITE_KEY", None::<&str>),
+            ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+            ("OHC_STANDALONE_MODE", Some("true")),
+        ], || {
+            // Ephemeral key includes PID+timestamp, so each call generates a different key.
+            // We just verify it doesn't panic and produces valid 32-byte keys.
+            let key1 = get_crypto_key();
+            let key2 = get_crypto_key();
+            assert_eq!(key1.len(), 32);
+            assert_eq!(key2.len(), 32);
+        });
     }
 
     #[test]
