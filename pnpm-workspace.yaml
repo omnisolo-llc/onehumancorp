@@ -1,8 +1,9 @@
 packages:
-  - "."
-  - "src/ui/next"
-  - "src/proto"
-  - "src/cli"
+  - .
+  - src/ui/next
+  - src/proto
+  - src/cli
+
 allowBuilds:
   '@journeyapps/wa-sqlite': true
   '@scarf/scarf': true
@@ -12,6 +13,12 @@ allowBuilds:
   sharp: true
   tree-sitter: true
   tree-sitter-json: true
+
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.61.0'
+  - playwright-core@1.61.0
+  - playwright@1.61.0
+
 onlyBuiltDependencies:
   - '@journeyapps/wa-sqlite'
   - '@scarf/scarf'
@@ -21,16 +28,29 @@ onlyBuiltDependencies:
   - sharp
   - tree-sitter
   - tree-sitter-json
-minimumReleaseAgeExclude:
-  - '@playwright/test@1.61.0'
-  - playwright-core@1.61.0
-  - playwright@1.61.0
+
 overrides:
+  '@hono/node-server@<2.0.5': '>=2.0.5'
   '@modelcontextprotocol/sdk': 1.29.0
+  axios@>=1.0.0 <1.18.0: '>=1.18.0'
+  axios@>=1.13.0 <1.18.0: '>=1.18.0'
+  axios@>=1.15.0 <1.18.0: '>=1.18.0'
+  axios@>=1.15.1 <1.18.0: '>=1.18.0'
+  axios@>=1.15.2 <1.18.0: '>=1.18.0'
+  axios@>=1.7.0 <1.18.0: '>=1.18.0'
   brace-expansion: 5.0.7
-  'esbuild@0.28.0': 0.28.1
+  dompurify@<=3.4.11: '>=3.4.12'
+  esbuild@0.28.0: 0.28.1
+  fast-uri@>=3.0.0 <=3.1.3: '>=3.1.4'
   form-data: 4.0.6
+  immutable@<4.3.9: '>=4.3.9'
   js-yaml: 4.3.0
+  next@>=12.0.0 <15.5.21: '>=15.5.21'
+  next@>=13.0.0 <15.5.21: '>=15.5.21'
+  next@>=14.1.1 <15.5.21: '>=15.5.21'
+  next@>=15.5.0 <15.5.21: '>=15.5.21'
+  next@>=16.0.0 <16.2.11: '>=16.2.11'
   postcss: 8.5.15
+  sharp@<0.35.0: '>=0.35.0'
   undici: 7.28.0
-  'ws@>=6.0.0 <6.2.4': 6.2.4
+  ws@>=6.0.0 <6.2.4: 6.2.4
