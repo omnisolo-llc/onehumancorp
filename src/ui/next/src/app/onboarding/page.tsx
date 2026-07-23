@@ -54,10 +54,11 @@ export default function OnboardingWizard() {
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (step === 4) {
       setLoadingProgress(0);
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         setLoadingProgress((prev) => {
           // Fast to 90%, then very slow to 99%
           const increment = prev < 90 ? Math.random() * 5 + 2 : Math.random() * 0.5 + 0.1;
@@ -68,8 +69,8 @@ export default function OnboardingWizard() {
           return next;
         });
       }, 100);
-      return () => clearInterval(interval);
     }
+    return () => clearInterval(interval);
   }, [step]);
 
   useEffect(() => {
