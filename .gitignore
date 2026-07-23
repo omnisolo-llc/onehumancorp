@@ -139,3 +139,4 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+superpowers-main/
