@@ -235,3 +235,24 @@ mod tests {
         assert_eq!(results3.len(), 0);
     }
 }
+
+#[async_trait::async_trait]
+impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemory {
+    async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
+        self.read_topic(topic_name).await.map_err(|e| e.to_string())?.ok_or_else(|| "Topic not found".to_string())
+    }
+    async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        self.search_transcripts(query, limit).await.map_err(|e| e.to_string())
+    }
+    async fn search_cross_session_messages(&self, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String> {
+        let results = self.search_transcripts(query, limit).await.map_err(|e| e.to_string())?;
+        if summarize {
+             Ok(vec![format!("Summarized results for '{}': {}", query, results.join("\n"))])
+        } else {
+             Ok(results)
+        }
+    }
+    async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
+        self.write_topic(topic_name, content).await.map_err(|e| e.to_string())
+    }
+}
