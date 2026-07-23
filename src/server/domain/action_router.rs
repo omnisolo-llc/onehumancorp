@@ -20,6 +20,42 @@ pub async fn dispatch_action(
         }
         "supply_order" => {
             tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id); // pii-safe
+
+            let quantity = payload.get("suggested_reorder_quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let vendor_id = uuid::Uuid::new_v4().to_string(); // In a real scenario, get from payload
+            let po_id = uuid::Uuid::new_v4().to_string();
+            let intent_id = payload.get("intent_id").and_then(|v| v.as_str());
+
+            // Dummy vendor
+            let _ = sqlx::query(
+                "INSERT INTO vendors (id, tenant_id, name, contact_info) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING"
+            )
+            .bind(&vendor_id)
+            .bind(tenant_id)
+            .bind("Default Supplier")
+            .bind("supplier@example.com")
+            .execute(pool)
+            .await;
+
+            let _ = sqlx::query(
+                "INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost)
+                 VALUES ($1, $2, $3, 'APPROVED', $4)"
+            )
+            .bind(&po_id)
+            .bind(tenant_id)
+            .bind(&vendor_id)
+            .bind(quantity as f64 * 10.0) // Dummy cost
+            .execute(pool)
+            .await;
+
+            if let Some(i_id) = intent_id {
+                 let _ = sqlx::query("UPDATE agent_reorder_intents SET status = 'APPROVED' WHERE id = $1 AND tenant_id = $2")
+                     .bind(i_id)
+                     .bind(tenant_id)
+                     .execute(pool)
+                     .await;
+            }
+
             // Simulating outbound communication to vendor via omnichannel dispatcher
             if let Some(_msg) = payload.get("draft_message").and_then(|v| v.as_str()) {
                 tracing::info!("Omnichannel Dispatcher sent: [REDACTED]");

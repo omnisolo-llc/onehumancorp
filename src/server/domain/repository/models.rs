@@ -483,3 +483,27 @@ pub struct ShiftSummary {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DepletionModel {
+    pub id: String,
+    pub tenant_id: String,
+    pub raw_material_id: String,
+    pub burn_rate_per_day: f64,
+    pub confidence_score: f64,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AgentReorderIntent {
+    pub id: String,
+    pub tenant_id: String,
+    pub raw_material_id: String,
+    pub suggested_quantity: i32,
+    pub vendor_id: Option<String>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

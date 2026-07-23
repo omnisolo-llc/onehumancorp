@@ -2977,6 +2977,28 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+
+                    CREATE TABLE IF NOT EXISTS depletion_models (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        raw_material_id TEXT NOT NULL,
+                        burn_rate_per_day REAL NOT NULL DEFAULT 0.0,
+                        confidence_score REAL NOT NULL DEFAULT 0.0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_reorder_intents (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        raw_material_id TEXT NOT NULL,
+                        suggested_quantity INTEGER NOT NULL,
+                        vendor_id TEXT,
+                        status TEXT NOT NULL DEFAULT 'DRAFT',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS waitlist_campaigns (
                         id TEXT PRIMARY KEY ,
                         tenant_id TEXT NOT NULL,

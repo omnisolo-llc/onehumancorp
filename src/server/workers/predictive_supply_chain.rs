@@ -26,6 +26,11 @@ impl PredictiveSupplyChainWorker {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
+
+                if let Err(e) = Self::check_subscription_runouts(&db).await {
+                    tracing::error!("PredictiveSupplyChainWorker subscription runout error: {}", e);
+                }
+
                 if let Err(e) = Self::run_analysis(&db).await {
                     ::server_telemetry::record_error_signal("[bug] PredictiveSupplyChainWorker analysis error");
                     tracing::error!("PredictiveSupplyChainWorker analysis error: {}", e);
@@ -47,6 +52,139 @@ impl PredictiveSupplyChainWorker {
     }
 
     // This simulates analyzing sales velocity and generating predictions
+
+    pub async fn check_subscription_runouts(db: &Arc<DB>) -> Result<(), String> {
+        let pool = &db.pool;
+
+        let runout_query = r#"
+            SELECT rm.id, rm.tenant_id, rm.name, rm.current_quantity, SUM(bi.quantity_required) as needed
+            FROM subscriptions s
+            JOIN products p ON s.plan_id = p.id
+            JOIN bom_items bi ON p.id = bi.finished_good_id
+            JOIN raw_materials rm ON bi.raw_material_id = rm.id
+            WHERE s.status = 'active'
+            AND s.current_period_end <= NOW() + INTERVAL '7 days'
+            GROUP BY rm.id, rm.tenant_id, rm.name, rm.current_quantity
+            HAVING rm.current_quantity < SUM(bi.quantity_required)
+        "#;
+
+        let sqlite_runout_query = r#"
+            SELECT rm.id, rm.tenant_id, rm.name, rm.current_quantity, SUM(bi.quantity_required) as needed
+            FROM subscriptions s
+            JOIN products p ON s.plan_id = p.id
+            JOIN bom_items bi ON p.id = bi.finished_good_id
+            JOIN raw_materials rm ON bi.raw_material_id = rm.id
+            WHERE s.status = 'active'
+            AND s.current_period_end <= datetime('now', '+7 days')
+            GROUP BY rm.id, rm.tenant_id, rm.name, rm.current_quantity
+            HAVING rm.current_quantity < SUM(bi.quantity_required)
+        "#;
+
+        let runouts = match &db.store {
+            crate::db::DbStore::Postgres => sqlx::query(runout_query).fetch_all(pool).await.map_err(|e| e.to_string())?,
+            crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query(sqlite_runout_query).fetch_all(sqlite_pool).await.map_err(|e| e.to_string())?,
+        };
+
+        for row in runouts {
+            use sqlx::Row;
+            let material_id: String = row.get("id");
+            let tenant_id: String = row.get("tenant_id");
+            let material_name: String = row.get("name");
+            let current_qty: i32 = row.try_get("current_quantity").unwrap_or(0);
+
+            // Needed could be stored as i64 in sqlite SUM, handle safely
+            let needed: i32 = match row.try_get::<i32, _>("needed") {
+                Ok(v) => v,
+                Err(_) => row.try_get::<i64, _>("needed").unwrap_or(0) as i32
+            };
+
+            let reorder_quantity = needed * 2; // Simple buffer logic
+
+            let existing: i64 = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar("SELECT COUNT(*) FROM agent_reorder_intents WHERE raw_material_id = $1 AND tenant_id = $2 AND status = 'DRAFT'")
+                        .bind(&material_id)
+                        .bind(&tenant_id)
+                        .fetch_one(pool)
+                        .await
+                        .unwrap_or(0)
+                }
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    sqlx::query_scalar("SELECT COUNT(*) FROM agent_reorder_intents WHERE raw_material_id = ? AND tenant_id = ? AND status = 'DRAFT'")
+                        .bind(&material_id)
+                        .bind(&tenant_id)
+                        .fetch_one(sqlite_pool)
+                        .await
+                        .unwrap_or(0)
+                }
+            };
+
+            if existing > 0 {
+                continue;
+            }
+
+            let intent_id = Uuid::new_v4().to_string();
+
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query("INSERT INTO agent_reorder_intents (id, tenant_id, raw_material_id, suggested_quantity, status) VALUES ($1, $2, $3, $4, 'DRAFT')")
+                        .bind(&intent_id)
+                        .bind(&tenant_id)
+                        .bind(&material_id)
+                        .bind(reorder_quantity)
+                        .execute(pool)
+                        .await;
+                }
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let _ = sqlx::query("INSERT INTO agent_reorder_intents (id, tenant_id, raw_material_id, suggested_quantity, status) VALUES (?, ?, ?, ?, 'DRAFT')")
+                        .bind(&intent_id)
+                        .bind(&tenant_id)
+                        .bind(&material_id)
+                        .bind(reorder_quantity)
+                        .execute(sqlite_pool)
+                        .await;
+                }
+            }
+
+            let payload = json!({
+                "feature_type": "supply_order",
+                "product_id": material_id,
+                "product_name": material_name,
+                "remaining_stock": current_qty,
+                "est_runout_days": 7, // Due within 7 days
+                "suggested_reorder_quantity": reorder_quantity,
+                "vendor_name": "Default Supplier",
+                "intent_id": intent_id,
+                "draft_message": format!("Please restock {} units of {} for upcoming subscriptions.", reorder_quantity, material_name),
+                "message": format!("Upcoming subscriptions require {} {}, but only {} are in stock.", needed, material_name, current_qty)
+            });
+
+            let job_id = Uuid::new_v4().to_string();
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', $3, $4::jsonb, 'operations_agent', 'operations', NOW(), NOW())")
+                        .bind(&job_id)
+                        .bind(&tenant_id)
+                        .bind(&material_id)
+                        .bind(&payload)
+                        .execute(pool)
+                        .await;
+                }
+                crate::db::DbStore::Sqlite(sqlite_pool) => {
+                    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload, source, agent_type, created_at, updated_at) VALUES (?, ?, 'Reorder', 'Pending', ?, ?, 'operations_agent', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&job_id)
+                        .bind(&tenant_id)
+                        .bind(&material_id)
+                        .bind(payload.to_string())
+                        .execute(sqlite_pool)
+                        .await;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn run_analysis(db: &Arc<DB>) -> Result<(), String> {
         let pool = &db.pool;
 
