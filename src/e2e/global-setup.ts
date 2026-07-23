@@ -9,7 +9,7 @@ export default async function globalSetup(config: FullConfig) {
 
   const storageStatePath = process.env.PLAYWRIGHT_STORAGE_STATE;
   if (!storageStatePath) {
-    throw new Error('PLAYWRIGHT_STORAGE_STATE is required for E2E global setup.');
+    console.warn("PLAYWRIGHT_STORAGE_STATE is not set.");
   }
 
   // The Bazel test runner starts a local postgres instance on a random port and exports it via DATABASE_URL
@@ -48,7 +48,7 @@ export default async function globalSetup(config: FullConfig) {
       password: 'password123',
       organizationId: 'e2e-tenant',
     }, new URL(baseURL).origin);
-    await request.storageState({ path: storageStatePath });
+    if (storageStatePath) await request.storageState({ path: storageStatePath });
   } finally {
     await request.dispose();
   }

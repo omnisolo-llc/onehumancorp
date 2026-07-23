@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import StripeTerminalClient from '../terminal/StripeTerminalClient';
 import { useSearchParams } from 'next/navigation';
 
-export default function POSTerminalMobile() {
+function POSTerminalMobileContent() {
   const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>([]);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -154,4 +154,12 @@ export default function POSTerminalMobile() {
       )}
     </div>
   );
+}
+
+export default function POSTerminalMobile() {
+  return (
+    <Suspense fallback={<div>Loading mPOS...</div>}>
+      <POSTerminalMobileContent />
+    </Suspense>
+  )
 }
