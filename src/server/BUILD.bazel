@@ -205,6 +205,8 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:identity_resolution_test.rs",
     "//src/server/orchestration:mod.rs",
     "//src/server/orchestration:orchestration_test.rs",
+        "//src/server/orchestration:saga.rs",
+        "//src/server/orchestration:saga_test.rs",
     "//src/server/orchestration:sandbox.rs",
     "//src/server/orchestration:sandbox_ask.rs",
     "//src/server/orchestration:shared_tasks.rs",
