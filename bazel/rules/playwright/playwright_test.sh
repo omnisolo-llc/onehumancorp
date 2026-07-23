@@ -82,20 +82,34 @@ playwright_spec_workspace_name() {
       break
     fi
   done
+  # Strip everything before src/e2e or src/ui/next/
+  if [[ "$rel" == *"src/e2e/"* && "$rel" != *"src/ui/next/"* ]]; then
+    rel="src/e2e/${rel#*src/e2e/}"
+  elif [[ "$rel" == *"src/ui/next/src/e2e/"* ]]; then
+    rel="src/ui/next/src/e2e/${rel#*src/ui/next/src/e2e/}"
+  elif [[ "$rel" == *"src/ui/next/e2e/"* ]]; then
+    rel="src/ui/next/e2e/${rel#*src/ui/next/e2e/}"
+  fi
+
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts)
+    src/e2e/**/*.spec.ts|src/e2e/*.spec.ts|*/src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/**/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
-      printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
+      printf 'src/playwright_ui_next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
+      # Only process top-level e2e files to avoid recursive duplication
+      if [[ "$rel" == *".spec.ts" && ! "$rel" == *"node_modules"* && ! "$rel" == *".next"* && ! "$rel" == *"out"* ]]; then
+          printf '%s\n' "$rel"
+      else
+          echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
+          return 1
+      fi
       ;;
   esac
 }
@@ -369,7 +383,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -387,7 +401,7 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16; then
       docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
@@ -662,8 +676,17 @@ tar -C "$NEXT_APP_ROOT" \
   --exclude='./.next' \
   --exclude='./out' \
   --exclude='./test-results' \
-  -cf - . | tar -C "$NEXT_WORK_DIR" -xf -
+  -chf - . | tar -C "$NEXT_WORK_DIR" -xf -
 ln -s "$NEXT_APP_ROOT/node_modules" "$NEXT_WORK_DIR/node_modules"
+
+# Delete the inner duplicate playwright instance to prevent the double require error.
+# This prevents Next.js from finding a duplicate Playwright context inside the app.
+if [[ -d "$NEXT_WORK_DIR/node_modules/@playwright" ]]; then
+    rm -rf "$NEXT_WORK_DIR/node_modules/@playwright"
+fi
+if [[ -d "$NEXT_WORK_DIR/node_modules/playwright" ]]; then
+    rm -rf "$NEXT_WORK_DIR/node_modules/playwright"
+fi
 
 NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
