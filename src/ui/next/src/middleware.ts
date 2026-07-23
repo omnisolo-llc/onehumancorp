@@ -33,7 +33,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     dependencies = await liveDependencies;
   } catch (error) {
     const msg = error instanceof Error ? error.stack || error.message : String(error);
-    console.error("auth.middleware.configuration_unavailable: " + msg);
+    console.error("auth.middleware.configuration_unavailable");
+    console.error(msg);
     return new NextResponse(JSON.stringify({ error: "authentication unavailable" }), {
       status: 503,
       headers: {
