@@ -182,6 +182,7 @@ SERVER_RS_SRCS = [
     "//src/server/integrations/meta:client.rs",
     "//src/server/integrations/meta:mod.rs",
     "//src/server/integrations/meta:provider.rs",
+    "//src/server/integrations/meta:whatsapp.rs",
     "//src/server/integrations/stripe:client.rs",
     "//src/server/integrations/stripe:mod.rs",
     "//src/server/integrations/stripe:payout_batcher.rs",
