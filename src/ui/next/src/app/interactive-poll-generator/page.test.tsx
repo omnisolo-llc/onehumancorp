@@ -106,6 +106,23 @@ describe('Interactive Poll Generator UI', () => {
     expect(screen.getAllByText('View Pro Plans').length).toBeGreaterThan(0);
   });
 
+  test('dismisses paywall when Share on X is clicked', () => {
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+    localStorage.setItem('has_pro', 'false');
+    render(<InteractivePollGeneratorPage />);
+
+    const removeBrandingCheckbox = screen.getAllByRole('checkbox')[1];
+    fireEvent.click(removeBrandingCheckbox);
+
+    expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
+    const shareButton = screen.getByText('Share on X');
+    fireEvent.click(shareButton);
+
+    expect(screen.queryByText('Upgrade to Pro')).toBeNull();
+    expect(window.open).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
+    expect((removeBrandingCheckbox as HTMLInputElement).checked).toBe(true);
+  });
+
   test('allows removing branding with pro', async () => {
     // Just force the internal state of the component without relying on window/localStorage mocking quirks
     // The issue here is the event propagation inside Vitest. We'll simulate a correct state directly.

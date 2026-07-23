@@ -20,6 +20,7 @@ export default function ViralCountdownWidgetPage() {
 
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const [removeBrandingOverride, setRemoveBrandingOverride] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [origin, setOrigin] = useState('https://ohc.app');
 
@@ -35,6 +36,13 @@ export default function ViralCountdownWidgetPage() {
     document.title = "Countdown Widget | OHC";
   }, []);
 
+  const claimTrialExtension = () => {
+    const text = `I'm using an OHC Countdown widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    setRemoveBrandingOverride(true);
+    setShowPaywall(false);
+  };
+
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro) {
       e.preventDefault();
@@ -42,7 +50,8 @@ export default function ViralCountdownWidgetPage() {
     }
   };
 
-  const embedUrl = `${origin}/api/v1/growth/viral-countdown-widget/embed?tenant=${encodeURIComponent(tenant)}&theme=${encodeURIComponent(theme)}&event=${encodeURIComponent(eventName)}&target=${encodeURIComponent(targetDate)}&branding=${!hasPro}`;
+  const isBrandingRemoved = hasPro || removeBrandingOverride;
+  const embedUrl = `${origin}/api/v1/growth/viral-countdown-widget/embed?tenant=${encodeURIComponent(tenant)}&theme=${encodeURIComponent(theme)}&event=${encodeURIComponent(eventName)}&target=${encodeURIComponent(targetDate)}&branding=${!isBrandingRemoved}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="220" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -76,7 +85,7 @@ export default function ViralCountdownWidgetPage() {
                 <input
                     type="checkbox"
                     id="removeBranding"
-                    checked={hasPro}
+                    checked={isBrandingRemoved}
                     onChange={handleRemoveBranding}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
@@ -141,6 +150,13 @@ export default function ViralCountdownWidgetPage() {
                style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
              >
                Upgrade to Pro
+             </button>
+             <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+             <button
+               onClick={claimTrialExtension}
+               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
+             >
+               Share on X
              </button>
              <button
                onClick={() => setShowPaywall(false)}

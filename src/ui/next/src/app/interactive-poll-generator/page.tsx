@@ -74,6 +74,13 @@ export default function InteractivePollGeneratorPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const claimTrialExtension = () => {
+    const text = `I'm using an OHC Interactive Poll widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    setRemoveBranding(true);
+    setShowSoftPaywall(false);
+  };
+
   const handleRemoveBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro && e.target.checked) {
       setShowSoftPaywall(true);
@@ -330,9 +337,16 @@ export default function InteractivePollGeneratorPage() {
               >
                 View Pro Plans
               </button>
+              <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+              <button
+                onClick={claimTrialExtension}
+                className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
+              >
+                Share on X
+              </button>
               <button
                 onClick={() => setShowSoftPaywall(false)}
-                className="w-full bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-600 dark:text-gray-400 font-medium py-3 px-6 rounded-xl transition-colors"
+                className="mt-2 text-gray-500 hover:text-gray-700 font-medium text-sm w-full bg-transparent"
               >
                 Keep Branding for Now
               </button>

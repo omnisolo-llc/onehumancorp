@@ -63,6 +63,23 @@ describe('ViralCountdownWidgetPage', () => {
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
   });
 
+  it('dismisses paywall when Share on X is clicked', () => {
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<ViralCountdownWidgetPage />);
+
+    const removeBrandingCheckbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/i);
+    fireEvent.click(removeBrandingCheckbox);
+
+    expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
+
+    const shareButton = screen.getByText('Share on X');
+    fireEvent.click(shareButton);
+
+    expect(screen.queryByText('Upgrade to Remove Branding')).toBeNull();
+    expect(window.open).toHaveBeenCalledWith(expect.stringContaining('twitter.com/intent/tweet'), '_blank');
+    expect((removeBrandingCheckbox as HTMLInputElement).checked).toBe(true);
+  });
+
   it('allows removing branding if the plan API reports pro', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
