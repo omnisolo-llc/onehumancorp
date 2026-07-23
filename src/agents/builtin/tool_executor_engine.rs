@@ -281,3 +281,63 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod guardrail_tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+    use ohc_builtin_agent_tools::{Tool, ToolExecutor};
+    use std::sync::Arc;
+    use serde_json::json;
+    use crate::agent::AgentRunConfig;
+    use crate::guardrails::{GuardrailRegistry, ToolGuardrail};
+
+    struct DummyExecutor;
+    #[async_trait::async_trait]
+    impl ToolExecutor for DummyExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Ok("success".to_string())
+        }
+    }
+
+    struct FailingToolGuardrail;
+    impl ToolGuardrail for FailingToolGuardrail {
+        fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+            if tc.name == "forbidden_tool" {
+                Err("Tool forbidden by guardrail".to_string())
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_execute_tool_guardrail_tripwire() {
+        let mut registry = GuardrailRegistry::new();
+        registry.tool_guardrails.push(Arc::new(FailingToolGuardrail));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+
+        let tool = Tool {
+            name: "forbidden_tool".to_string(),
+            description: "A forbidden tool".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyExecutor),
+        };
+
+        let tc = ToolCall {
+            id: "call_123".to_string(),
+            name: "forbidden_tool".to_string(),
+            arguments: json!({}),
+        };
+
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::Fatal(msg) => assert!(msg.contains("Tool forbidden by guardrail")),
+            _ => panic!("Expected Fatal error from guardrail failure"),
+        }
+    }
+}
