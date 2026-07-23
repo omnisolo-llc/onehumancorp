@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use ohc_builtin_agent_core::types::{Message, ChatRequest};
 use crate::llm::LlmClient;
 
-/// Master Catalog: Chatwoot Retirement & Native Rust Omnichannel Chat Integration
-/// External Chatwoot dependencies are 100% RETIRED. The builtin AI agent microservice
+/// Master Catalog: ThirdParty Chat Retirement & Native Rust Omnichannel Chat Integration
+/// External ThirdParty dependencies are 100% RETIRED. The builtin AI agent microservice
 /// connects directly via high-performance Rust IPC/gRPC to OHC's native Rust Chat Engine.
 /// Replicates matching native AI auto-responder, copilot response drafting, intent classification,
 /// and human agent handoff features in Rust.
