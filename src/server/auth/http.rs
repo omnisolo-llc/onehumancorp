@@ -349,7 +349,7 @@ struct ApiKeyMetadata {
 
 fn get_member_uuid(sub: &str) -> uuid::Uuid {
     uuid::Uuid::parse_str(sub)
-        .unwrap_or_else(|_| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, sub.as_bytes()))
+        .unwrap_or_else(|_| uuid::Uuid::new_v4())
 }
 
 #[derive(Clone)]

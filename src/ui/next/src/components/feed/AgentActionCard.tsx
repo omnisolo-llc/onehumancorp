@@ -231,7 +231,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                onDismiss={() =>
+                onDiscard={() =>
                   wrapDecision(
                     approval.id,
                     false,
@@ -400,7 +400,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                onDismiss={() =>
+                onDiscard={() =>
                   wrapDecision(
                     approval.id,
                     false,
@@ -418,7 +418,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 onApprove={async (id, content) => {
                   await wrapDecision(approval.id, true, content, "review");
                 }}
-                onDismiss={async (id) => {
+                onDiscard={async (id) => {
                   await wrapDecision(approval.id, false, undefined, "review");
                 }}
               />

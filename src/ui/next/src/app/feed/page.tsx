@@ -255,7 +255,7 @@ export default function FeedPage() {
                     onCancelEdit={() => cancelEdit()}
                     onSaveEdit={() => saveEdit(item.id)}
                     onApprove={() => handleAction(item.id, 'APPROVED')}
-                    onDismiss={() => handleAction(item.id, 'DISMISSED')}
+                    onDiscard={() => handleAction(item.id, 'DISMISSED')}
                    />
                 ) : editingId === item.id ? (
                   <>

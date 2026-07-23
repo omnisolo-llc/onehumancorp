@@ -244,7 +244,8 @@ pub async fn handle_unified_webhook(
         }
     }
 
-    let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
+    let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
+    let resolved_customer = resolver.resolve_or_create_customer(tenant_id, &payload.identifier, &payload.source).await.ok();
     let customer_id = resolved_customer.unwrap_or_else(|| format!("cust-{}", Uuid::new_v4()));
 
     let intent_id = Uuid::new_v4().to_string();

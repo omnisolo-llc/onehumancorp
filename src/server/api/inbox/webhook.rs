@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentEvent;
 use crate::db::DB;
-use super::identity::resolve_identity;
+
 
 #[derive(Clone)]
 pub struct OmnichannelWebhookState {
@@ -193,7 +193,9 @@ pub async fn handle_omnichannel_webhook(
         )
             .into_response();
     }
-    let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
+    let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
+    let customer_id_result = resolver.resolve_or_create_customer(&payload.tenant_id, &payload.sender_id, &payload.source).await;
+    let customer_id = customer_id_result.ok();
 
     let id = Uuid::new_v4().to_string();
     let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());

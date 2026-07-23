@@ -31,113 +31,6 @@ pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
-pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> String {
-    let pool = &db.pool;
-
-    // 1. Check if identity exists in customer_identities
-    let existing_identity: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = $1 AND channel = $2 AND channel_identity = $3")
-                .bind(tenant_id)
-                .bind(channel)
-                .bind(sender_id)
-                .fetch_optional(pool)
-                .await.ok().flatten()
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
-                .bind(tenant_id)
-                .bind(channel)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
-        }
-    };
-
-    if let Some(id) = existing_identity {
-        return id;
-    }
-
-    // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
-    // Assume sender_id might be a phone number or email depending on channel
-    let potential_customer_id: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
-                .fetch_optional(pool)
-                .await.ok().flatten()
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
-        }
-    };
-
-    let id = if let Some(found_id) = potential_customer_id {
-        found_id
-    } else {
-        let new_id = Uuid::new_v4().to_string();
-        let email = if sender_id.contains('@') { sender_id } else { "" };
-        let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_digit(10)) { sender_id } else { "" };
-        let name = "Unknown Customer";
-
-        match &db.store {
-            crate::db::DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ($1, $2, $3, $4, $5)")
-                    .bind(&new_id)
-                    .bind(tenant_id)
-                    .bind(name)
-                    .bind(if email.is_empty() { None } else { Some(email) })
-                    .bind(if phone.is_empty() { None } else { Some(phone) })
-                    .execute(pool)
-                    .await;
-            },
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES (?, ?, ?, ?, ?)")
-                    .bind(&new_id)
-                    .bind(tenant_id)
-                    .bind(name)
-                    .bind(if email.is_empty() { None } else { Some(email) })
-                    .bind(if phone.is_empty() { None } else { Some(phone) })
-                    .execute(sqlite_pool)
-                    .await;
-            }
-        };
-        new_id
-    };
-
-    // Cache this new identity link
-    let identity_id = Uuid::new_v4().to_string();
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let _ = sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                .bind(&identity_id)
-                .bind(tenant_id)
-                .bind(&id)
-                .bind(channel)
-                .bind(sender_id)
-                .execute(pool)
-                .await;
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let _ = sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
-                .bind(&identity_id)
-                .bind(tenant_id)
-                .bind(&id)
-                .bind(channel)
-                .bind(sender_id)
-                .execute(sqlite_pool)
-                .await;
-        }
-    };
-
-    id
-}
 
 pub fn router(state: AppState) -> Router {
     Router::new()
@@ -163,7 +56,8 @@ pub async fn handle_omnichannel_webhook(
     let message = &payload.message;
 
     // 1. Resolve Identity
-    let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id).await;
+    let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
+    let customer_id = resolver.resolve_or_create_customer(tenant_id, sender_id, channel).await.unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
 
     // Create ServiceLead if applicable
     let service_lead_id = uuid::Uuid::new_v4().to_string();
@@ -343,63 +237,4 @@ mod tests {
 
     use sqlx::SqlitePool;
 
-    #[tokio::test]
-    async fn test_resolve_identity() {
-        // We use sqlite in memory for tests
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-
-        let schema = r#"
-            CREATE TABLE customers (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                email TEXT,
-                phone TEXT
-            );
-            CREATE TABLE customer_identities (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                customer_id TEXT NOT NULL,
-                channel TEXT NOT NULL,
-                channel_identity TEXT NOT NULL,
-                UNIQUE(tenant_id, channel, channel_identity)
-            );
-        "#;
-        sqlx::query(schema).execute(&pool).await.unwrap();
-
-        let db = DB {
-            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(), // Dummy pg pool, won't be used since store is Sqlite
-            store: crate::db::DbStore::Sqlite(pool.clone()),
-        };
-
-        // 1. Insert a test customer
-        sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ('cust-1', 'tenant-1', 'Test User', 'test@example.com', '+1234567890')")
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        // 2. Test resolution by email
-        let resolved_id = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
-        assert_eq!(resolved_id, "cust-1".to_string());
-
-        // 3. Test that it was cached in customer_identities
-        let cached_id: String = sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = 'tenant-1' AND channel = 'email' AND channel_identity = 'test@example.com'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(cached_id, "cust-1");
-
-        // 4. Test resolution by phone
-        let resolved_id2 = resolve_identity(&db, "tenant-1", "whatsapp", "+1234567890").await;
-        assert_eq!(resolved_id2, "cust-1".to_string());
-
-        // 5. Test resolution from cache directly (another call to same email)
-        let resolved_id3 = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
-        assert_eq!(resolved_id3, "cust-1".to_string());
-
-        // 6. Test unknown identity creates a new customer and returns id
-        let resolved_id4 = resolve_identity(&db, "tenant-1", "instagram", "unknown_handle").await;
-        assert!(!resolved_id4.is_empty());
-        assert_ne!(resolved_id4, "cust-1");
-    }
 }

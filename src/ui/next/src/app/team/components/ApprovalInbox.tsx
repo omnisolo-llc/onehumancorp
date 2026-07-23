@@ -705,7 +705,7 @@ export default function ApprovalInbox({
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"
                         : req.payload?.feature_type === "ambassador_reply"
-                        ? "Send Draft"
+                        ? "Approve"
                         : "Approve"}
                     </button>
                   </div>
@@ -833,7 +833,7 @@ export default function ApprovalInbox({
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                   data-testid="modal-approve-btn"
                 >
-                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
+                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Approve"}
                 </button>
               </div>
             </div>
