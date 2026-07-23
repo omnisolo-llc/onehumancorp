@@ -9,6 +9,7 @@ exports_files([
     "app.proto",
     "billing.proto",
     "campaign.proto",
+    "chat.proto",
     "common.proto",
     "docs.proto",
     "hub.proto",
@@ -18,6 +19,21 @@ exports_files([
     "invoice.proto",
     "inbox.proto",
 ], visibility = ["//visibility:public"])
+
+# ── Chat ───────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "chat_proto",
+    srcs = ["chat.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "chat",
+    proto = ":chat_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
 

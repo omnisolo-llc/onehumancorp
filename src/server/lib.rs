@@ -8023,6 +8023,7 @@ async fn create_ui_bom_item_handler(
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
     let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client());
+    let chat_engine_service = crate::services::chat::service::ChatEngineService::new(db.pool.clone());
 
     let mut grpc_server = Server::builder();
     if let Some(tls_config) = grpc_tls_config {
@@ -8048,6 +8049,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, spiffe_interceptor))
+        .add_service(::server_ohc::chat::omnichannel_chat_service_server::OmnichannelChatServiceServer::with_interceptor(chat_engine_service, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))

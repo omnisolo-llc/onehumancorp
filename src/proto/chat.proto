@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package ohc.chat;
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+}
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string email = 4;
+    string phone = 5;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string inbox_id = 3;
+    string contact_id = 4;
+    string status = 5;
+}
+
+message Message {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string content = 4;
+    string sender_type = 5;
+    string source = 6;
+}
+
+message CreateInboxRequest {
+    string tenant_id = 1;
+    string name = 2;
+}
+
+message CreateInboxResponse {
+    Inbox inbox = 1;
+}
+
+message GetInboxRequest {
+    string tenant_id = 1;
+    string id = 2;
+}
+
+message GetInboxResponse {
+    Inbox inbox = 1;
+}
+
+message CreateConversationRequest {
+    string tenant_id = 1;
+    string inbox_id = 2;
+    string contact_id = 3;
+}
+
+message CreateConversationResponse {
+    Conversation conversation = 1;
+}
+
+message GetConversationRequest {
+    string tenant_id = 1;
+    string id = 2;
+}
+
+message GetConversationResponse {
+    Conversation conversation = 1;
+}
+
+message WebhookPayload {
+    string tenant_id = 1;
+    string inbox_id = 2;
+    string contact_id = 3;
+    string content = 4;
+    string source = 5;
+}
+
+message ProcessWebhookRequest {
+    WebhookPayload payload = 1;
+}
+
+message ProcessWebhookResponse {
+    Message message = 1;
+}
+
+service OmnichannelChatService {
+    rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
+    rpc GetInbox(GetInboxRequest) returns (GetInboxResponse);
+    rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+    rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+    rpc ProcessWebhook(ProcessWebhookRequest) returns (ProcessWebhookResponse);
+}

@@ -37,6 +37,8 @@ rust_library(
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
+        "//src/proto:chat_tonic",
+        "//src/proto:chat_prost",
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
         "//src/server/config:server_config",
