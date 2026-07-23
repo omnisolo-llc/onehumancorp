@@ -251,7 +251,7 @@ struct LoginRequest {
     username: Option<String>,
     email: Option<String>,
     password: String,
-    organization_id: Option<String>,
+    tenant_id: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -273,7 +273,7 @@ struct LoginUser {
     username: String,
     email: String,
     roles: Vec<String>,
-    organization_id: String,
+    tenant_id: String,
 }
 
 #[derive(Serialize)]
@@ -363,7 +363,7 @@ pub struct InMemoryApiKey {
     pub key_hash: String,
     pub name: String,
     pub member_id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub created_at: String,
 }
 
@@ -389,20 +389,20 @@ async fn generate_api_key(
     let created_at = chrono::Utc::now().to_rfc3339();
     let key_id = uuid::Uuid::new_v4().to_string();
     let member_id = get_member_uuid(&claims.sub);
-    let organization_id = claims.organization_id.clone().unwrap_or_default();
+    let tenant_id = claims.tenant_id.clone().unwrap_or_default();
 
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
         let insert_res = sqlx::query(
-            "INSERT INTO api_keys (id, key_hash, name, member_id, organization_id) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO api_keys (id, key_hash, name, member_id, tenant_id) VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(uuid::Uuid::parse_str(&key_id).unwrap_or_default())
         .bind(&key_hash)
         .bind(&payload.name)
         .bind(member_id)
-        .bind(&organization_id)
+        .bind(&tenant_id)
         .execute(&pool)
         .await;
 
@@ -420,7 +420,7 @@ async fn generate_api_key(
         key_hash,
         name: payload.name.clone(),
         member_id: claims.sub.clone(),
-        organization_id,
+        tenant_id,
         created_at: created_at.clone(),
     });
 
@@ -442,13 +442,13 @@ async fn list_api_keys(
     if has_db {
         let pool = crate::db::get_pool();
         let member_id = get_member_uuid(&claims.sub);
-        let organization_id = claims.organization_id.clone().unwrap_or_default();
+        let tenant_id = claims.tenant_id.clone().unwrap_or_default();
 
         let query_res = sqlx::query(
-            "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
+            "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND tenant_id = $2"
         )
         .bind(member_id)
-        .bind(&organization_id)
+        .bind(&tenant_id)
         .fetch_all(&pool)
         .await;
 
@@ -478,9 +478,9 @@ async fn list_api_keys(
         }
     } else {
         let keys = get_in_memory_keys().lock().unwrap();
-        let org_id = claims.organization_id.clone().unwrap_or_default();
+        let org_id = claims.tenant_id.clone().unwrap_or_default();
         for k in keys.iter() {
-            if k.member_id == claims.sub && k.organization_id == org_id {
+            if k.member_id == claims.sub && k.tenant_id == org_id {
                 api_keys.push(ApiKeyMetadata {
                     id: k.id.clone(),
                     name: k.name.clone(),
@@ -512,14 +512,14 @@ async fn revoke_api_key(
             }
         };
         let member_id = get_member_uuid(&claims.sub);
-        let organization_id = claims.organization_id.clone().unwrap_or_default();
+        let tenant_id = claims.tenant_id.clone().unwrap_or_default();
 
         let delete_res = sqlx::query(
-            "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
+            "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND tenant_id = $3"
         )
         .bind(key_uuid)
         .bind(member_id)
-        .bind(&organization_id)
+        .bind(&tenant_id)
         .execute(&pool)
         .await;
 
@@ -551,7 +551,7 @@ struct InMemoryUsageLog {
     feature: String,
     tokens_used: i32,
     computed_cost: f64,
-    organization_id: String,
+    tenant_id: String,
 }
 
 static IN_MEMORY_USAGE_LOGS: OnceLock<Mutex<Vec<InMemoryUsageLog>>> = OnceLock::new();
@@ -569,7 +569,7 @@ async fn list_member_usage_analytics(
 
     let mut analytics = Vec::new();
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
-    let organization_id = claims.organization_id.clone().unwrap_or_default();
+    let tenant_id = claims.tenant_id.clone().unwrap_or_default();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -577,10 +577,10 @@ async fn list_member_usage_analytics(
             "SELECT u.username, l.feature, SUM(l.tokens_used), CAST(SUM(l.computed_cost) AS double precision) \
              FROM user_usage_logs l \
              JOIN users u ON l.user_id = u.id \
-             WHERE l.organization_id = $1 \
+             WHERE l.tenant_id = $1 \
              GROUP BY u.username, l.feature"
         )
-        .bind(&organization_id)
+        .bind(&tenant_id)
         .fetch_all(&pool)
         .await;
 
@@ -611,7 +611,7 @@ async fn list_member_usage_analytics(
     } else {
         let logs = get_in_memory_usage_logs().lock().unwrap();
         for l in logs.iter() {
-            if l.organization_id == organization_id {
+            if l.tenant_id == tenant_id {
                 analytics.push(MemberUsageAggregate {
                     username: l.username.clone(),
                     feature: l.feature.clone(),
@@ -697,7 +697,7 @@ async fn register(
         return error(StatusCode::BAD_REQUEST, "invalid request");
     }
 
-    let organization_id = uuid::Uuid::new_v4().to_string();
+    let tenant_id = uuid::Uuid::new_v4().to_string();
 
     let create_result = state
         .store
@@ -706,7 +706,7 @@ async fn register(
             email.to_string(),
             payload.password,
             vec![super::ROLE_ADMIN.to_string()],
-            organization_id,
+            tenant_id,
         )
         .await;
 
@@ -722,7 +722,7 @@ async fn register(
         username: user.username.clone(),
         email: user.email.clone(),
         roles: user.roles.clone(),
-        organization_id: user.organization_id.clone().unwrap_or_default(),
+        tenant_id: user.tenant_id.clone().unwrap_or_default(),
     };
 
     let (token, expires_at) = match state.store.issue_token_with_expiry(&user) {
@@ -793,11 +793,11 @@ async fn login(
     };
     let default_tenant = std::env::var("OHC_DEFAULT_TENANT_ID").ok();
     let organization = resolve_organization(
-        payload.organization_id.as_deref(),
+        payload.tenant_id.as_deref(),
         default_tenant.as_deref(),
         state.cloud,
     );
-    let organization_id = match &organization {
+    let tenant_id = match &organization {
         TenantResolution::Authenticate(value) => value.as_str(),
         TenantResolution::DummyDeny => "",
     };
@@ -805,7 +805,7 @@ async fn login(
         || identifier.len() > MAX_IDENTIFIER_BYTES
         || payload.password.is_empty()
         || payload.password.len() > MAX_PASSWORD_BYTES
-        || organization_id.len() > MAX_ORGANIZATION_BYTES
+        || tenant_id.len() > MAX_ORGANIZATION_BYTES
     {
         emit_audit(AuditEvent::LoginDenied, &request_id, source.class);
         return error(StatusCode::BAD_REQUEST, "invalid request");
@@ -814,7 +814,7 @@ async fn login(
     let source_key = keyed_hash(&state.hash_key, source.ip.to_string().as_bytes());
     let normalized_account = format!(
         "{}\0{}",
-        organization_id.to_lowercase(),
+        tenant_id.to_lowercase(),
         identifier.to_lowercase()
     );
     let account_key = keyed_hash(&state.hash_key, normalized_account.as_bytes());
@@ -837,7 +837,7 @@ async fn login(
         TenantResolution::Authenticate(_) => {
             state
                 .store
-                .authenticate(identifier, &payload.password, organization_id)
+                .authenticate(identifier, &payload.password, tenant_id)
                 .await
         }
         TenantResolution::DummyDeny => state.store.authenticate_dummy(&payload.password).await,
@@ -861,7 +861,7 @@ async fn login(
         username: user.username.clone(),
         email: user.email.clone(),
         roles: user.roles.clone(),
-        organization_id: user.organization_id.clone().unwrap_or_default(),
+        tenant_id: user.tenant_id.clone().unwrap_or_default(),
     };
     if !bounded_login_user(&response_user, state.cloud) || !Store::user_access_token_fits(&user) {
         emit_audit(AuditEvent::LoginUnavailable, &request_id, source.class);
@@ -985,8 +985,8 @@ fn bounded_login_user(user: &LoginUser, cloud: bool) -> bool {
         && user.username.len() <= MAX_USERNAME_BYTES
         && !user.email.is_empty()
         && user.email.len() <= MAX_EMAIL_BYTES
-        && (!cloud || !user.organization_id.is_empty())
-        && user.organization_id.len() <= MAX_ORGANIZATION_BYTES
+        && (!cloud || !user.tenant_id.is_empty())
+        && user.tenant_id.len() <= MAX_ORGANIZATION_BYTES
         && user.roles.len() <= MAX_ROLES
         && user
             .roles
@@ -1193,7 +1193,7 @@ mod tests {
             Request::post("/api/v1/auth/login")
                 .header("content-type", "text/plain")
                 .body(Body::from(
-                    r#"{"username":"admin","password":"admin","organization_id":"tenant"}"#,
+                    r#"{"username":"admin","password":"admin","tenant_id":"tenant"}"#,
                 ))
                 .unwrap(),
             IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -1211,7 +1211,7 @@ mod tests {
         let (app, _, _) = app_with_user().await;
         let request = json_request(
             "/api/v1/auth/login",
-            r#"{"email":"alice@example.test","password":"correct horse","organization_id":"tenant-7"}"#,
+            r#"{"email":"alice@example.test","password":"correct horse","tenant_id":"tenant-7"}"#,
         );
 
         let response = app.oneshot(request).await.unwrap();
@@ -1229,16 +1229,16 @@ mod tests {
                 .is_some_and(|token| !token.is_empty())
         );
         assert_eq!(body["user"]["username"], "Alice");
-        assert_eq!(body["user"]["organization_id"], "tenant-7");
+        assert_eq!(body["user"]["tenant_id"], "tenant-7");
     }
 
     #[tokio::test]
     async fn login_rejects_unknown_fields_missing_tenant_and_oversized_bodies_generically() {
         let bodies = [
-            r#"{"username":"admin","password":"admin","organization_id":"tenant","extra":true}"#
+            r#"{"username":"admin","password":"admin","tenant_id":"tenant","extra":true}"#
                 .to_string(),
             format!(
-                r#"{{"username":"admin","password":"{}","organization_id":"tenant"}}"#,
+                r#"{{"username":"admin","password":"{}","tenant_id":"tenant"}}"#,
                 "p".repeat(MAX_PASSWORD_BYTES + 1)
             ),
         ];
@@ -1266,8 +1266,8 @@ mod tests {
     async fn login_uses_the_same_generic_denial_for_unknown_user_and_wrong_password() {
         let (app, _, _) = app_with_user().await;
         for body in [
-            r#"{"username":"nobody","password":"wrong","organization_id":"tenant-7"}"#,
-            r#"{"username":"Alice","password":"wrong","organization_id":"tenant-7"}"#,
+            r#"{"username":"nobody","password":"wrong","tenant_id":"tenant-7"}"#,
+            r#"{"username":"Alice","password":"wrong","tenant_id":"tenant-7"}"#,
         ] {
             let response = app
                 .clone()
@@ -1324,7 +1324,7 @@ mod tests {
             Request::post("/api/v1/auth/login")
                 .header("content-type", "application/json")
                 .body(Body::from(
-                    r#"{"username":" Alice ","password":"wrong","organization_id":" Tenant-7 "}"#,
+                    r#"{"username":" Alice ","password":"wrong","tenant_id":" Tenant-7 "}"#,
                 ))
                 .unwrap(),
             "192.0.2.1".parse().unwrap(),
@@ -1338,7 +1338,7 @@ mod tests {
             Request::post("/api/v1/auth/login")
                 .header("content-type", "application/json")
                 .body(Body::from(
-                    r#"{"username":"alice","password":"wrong","organization_id":"tenant-7"}"#,
+                    r#"{"username":"alice","password":"wrong","tenant_id":"tenant-7"}"#,
                 ))
                 .unwrap(),
             "192.0.2.2".parse().unwrap(),
@@ -1438,7 +1438,7 @@ mod tests {
             username: "u".repeat(MAX_USERNAME_BYTES),
             email: "e".repeat(MAX_EMAIL_BYTES),
             roles: vec!["r".repeat(MAX_ROLE_BYTES); MAX_ROLES],
-            organization_id: "o".repeat(MAX_ORGANIZATION_BYTES),
+            tenant_id: "o".repeat(MAX_ORGANIZATION_BYTES),
         };
         assert!(bounded_login_user(&exact, true));
         let mut over = exact;
@@ -1448,7 +1448,7 @@ mod tests {
         over.roles.push("role".into());
         assert!(!bounded_login_user(&over, true));
         over.roles.truncate(MAX_ROLES);
-        over.organization_id.clear();
+        over.tenant_id.clear();
         assert!(bounded_login_user(&over, false));
         assert!(!bounded_login_user(&over, true));
 
@@ -1525,7 +1525,7 @@ mod tests {
         let response = app
             .oneshot(json_request(
                 "/api/v1/auth/login",
-                r#"{"username":"Alice","password":"correct horse","organization_id":"tenant-7"}"#,
+                r#"{"username":"Alice","password":"correct horse","tenant_id":"tenant-7"}"#,
             ))
             .await
             .unwrap();
@@ -1594,7 +1594,7 @@ mod tests {
         let response = router_with_state(HttpAuthState::new(store, HashSet::new()))
             .oneshot(json_request(
                 "/api/v1/auth/login",
-                r#"{"username":"Alice","password":"correct horse","organization_id":"tenant-7"}"#,
+                r#"{"username":"Alice","password":"correct horse","tenant_id":"tenant-7"}"#,
             ))
             .await
             .unwrap();
@@ -1782,7 +1782,7 @@ mod tests {
             assert_eq!(body["user"]["username"], "newuser");
             assert_eq!(body["user"]["email"], "newuser@example.com");
             assert_eq!(body["user"]["roles"], serde_json::json!(["ADMIN"]));
-            assert!(!body["user"]["organization_id"].as_str().unwrap().is_empty());
+            assert!(!body["user"]["tenant_id"].as_str().unwrap().is_empty());
         })
         .await;
     }
@@ -1811,7 +1811,7 @@ mod tests {
             let response = app.clone().oneshot(request).await.unwrap();
             assert_eq!(response.status(), StatusCode::CREATED);
 
-            // 3. Since we generated a new UUID for organization_id, we can register the same username again.
+            // 3. Since we generated a new UUID for tenant_id, we can register the same username again.
             // But let's check password length requirement!
             let short_pw = json_request(
                 "/api/v1/auth/register",
@@ -1891,7 +1891,7 @@ mod tests {
             .clone()
             .oneshot(json_request(
                 "/api/v1/auth/login",
-                r#"{"username":"Alice","password":"wrong","organization_id":"tenant-7"}"#,
+                r#"{"username":"Alice","password":"wrong","tenant_id":"tenant-7"}"#,
             ))
             .await
             .unwrap();
@@ -1906,7 +1906,7 @@ mod tests {
             password_hash: String::new(),
             roles: vec![],
             active: true,
-            organization_id: Some("tenant-7".into()),
+            tenant_id: Some("tenant-7".into()),
             created_at: Utc::now(),
             updated_at: Utc::now(),
             oidc_subject: None,
@@ -2091,7 +2091,7 @@ mod tests {
                 feature: "gateway_run".to_string(),
                 tokens_used: 1250,
                 computed_cost: 0.0025,
-                organization_id: "tenant-7".to_string(),
+                tenant_id: "tenant-7".to_string(),
             });
         }
 
