@@ -957,6 +957,7 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:tracing",
         "@crates//:libc",
 
         "//src/proto:mcp_proxy_prost",
