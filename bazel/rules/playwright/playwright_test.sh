@@ -84,6 +84,16 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
+    /app/src/ui/next/e2e/*.spec.ts|/app/src/ui/next/src/e2e/*.spec.ts)
+      local trim_rel="${rel#/app/}"
+      printf 'src/playwright_ui/next/%s\n' "${trim_rel#src/ui/next/}"
+      ;;
+    /app/src/e2e/*.spec.ts)
+      printf '%s\n' "${rel#/app/}"
+      ;;
+    app/src/e2e/*.spec.ts)
+      printf '%s\n' "${rel#app/}"
+      ;;
     src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
@@ -94,7 +104,7 @@ playwright_spec_workspace_name() {
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
+      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file (rel=$rel)" >&2
       return 1
       ;;
   esac
