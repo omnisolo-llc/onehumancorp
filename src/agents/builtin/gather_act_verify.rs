@@ -78,13 +78,57 @@ impl GatherActVerifyHarness {
             all_tools.extend(act_tools.clone());
             all_tools.extend(verify_tools.clone());
 
+            let mut long_term_memory_content = String::new();
+            let mut lightweight_index_vec: Option<Vec<String>> = None;
+
+            if let Some(store) = &config.long_term_memory {
+                match store.retrieve(&task, 5).await {
+                    Ok(memories) => {
+                        if !memories.is_empty() {
+                            long_term_memory_content.push_str("\n\n[Long-Term Memory Context]\n");
+                            for mem in memories {
+                                long_term_memory_content.push_str(&format!("- {}\n", mem));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to retrieve long term memory: {}", e);
+                    }
+                }
+
+                // Anthropic Mechanic: 3-Tier Memory Store implementation. Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
+                if let Ok(index_content) = store.get_lightweight_index().await {
+                    if !index_content.trim().is_empty() {
+                        let mut lines = Vec::new();
+                        for line in index_content.lines() {
+                            let l = line.trim();
+                            if !l.is_empty() {
+                                let content = if l.starts_with("- ") {
+                                    l.trim_start_matches("- ").to_string()
+                                } else {
+                                    l.to_string()
+                                };
+                                lines.push(content);
+                            }
+                        }
+                        if !lines.is_empty() {
+                            lightweight_index_vec = Some(lines);
+                        }
+                    }
+                }
+            }
+
             let prompt_builder = crate::prompt_construction::StrictHierarchicalPromptBuilder::new(
                 &config,
                 &all_tools,
                 None, // cascading_agents_md
-                None, // lightweight_memory_index
+                lightweight_index_vec,
             );
-            let built_system_prompt = prompt_builder.build();
+            let mut built_system_prompt = prompt_builder.build();
+
+            if !long_term_memory_content.is_empty() {
+                built_system_prompt.push_str(&long_term_memory_content);
+            }
 
             let mut messages = vec![
                 Message::system(built_system_prompt.clone()),
@@ -1133,4 +1177,92 @@ mod tests {
         assert_eq!(restored_count.load(Ordering::SeqCst), 1);
     }
 
+    #[tokio::test]
+    async fn test_gather_act_verify_anthropic_memory_injection() {
+        struct MockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+            received_prompt: tokio::sync::Mutex<String>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlm {
+            async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if *count == 1 {
+                    let mut prompt = self.received_prompt.lock().await;
+                    *prompt = req.system.clone();
+                }
+
+                Ok(ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant("Done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                })
+            }
+            fn provider(&self) -> String { "mock".to_string() }
+            fn model(&self) -> String { "mock".to_string() }
+        }
+
+        let llm = Arc::new(MockLlm {
+            call_count: tokio::sync::Mutex::new(0),
+            received_prompt: tokio::sync::Mutex::new(String::new()),
+        });
+
+        struct MockMemoryStore {}
+
+        #[async_trait::async_trait]
+        impl crate::memory_store::LongTermMemory for MockMemoryStore {
+            async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+                Ok(vec!["A very important memory".to_string()])
+            }
+
+            async fn store(&self, _content: &str, _tags: Vec<String>) -> Result<(), String> {
+                Ok(())
+            }
+
+            async fn get_lightweight_index(&self) -> Result<String, String> {
+                Ok("- topic1: description1\n- topic2: description2\n".to_string())
+            }
+
+            async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
+                Ok("".to_string())
+            }
+
+            async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+                Ok(vec![])
+            }
+
+            fn as_anthropic_accessor(
+                &self,
+            ) -> Option<Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
+                None
+            }
+        }
+
+        let harness = GatherActVerifyHarness::new(llm.clone(), vec![], vec![], vec![]);
+        let mut config = AgentRunConfig::default();
+        config.long_term_memory = Some(Arc::new(MockMemoryStore {}));
+        config.server_system_message = "Base instructions".to_string();
+
+        let mut rx = harness.query(config, "test_task".to_string());
+        while let Some(event) = rx.recv().await {
+            match event {
+                AgentEvent::TaskError { .. } | AgentEvent::Done { .. } => break,
+                _ => {}
+            }
+        }
+
+        let prompt = llm.received_prompt.lock().await;
+
+        // Assert the long term memory retrieved context was appended
+        assert!(prompt.contains("[Long-Term Memory Context]"));
+        assert!(prompt.contains("A very important memory"));
+
+        // Assert the lightweight index was inserted by the StrictHierarchicalPromptBuilder
+        assert!(prompt.contains("<system_memory_index>"));
+        assert!(prompt.contains("- topic1: description1"));
+        assert!(prompt.contains("- topic2: description2"));
+    }
 }
