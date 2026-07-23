@@ -67,3 +67,5 @@ pub mod whatsapp_cloud;
 
 #[cfg(ohc_bazel)]
 pub use ::chat_engine as chat_engine;
+#[cfg(not(ohc_bazel))]
+pub mod chat_engine;

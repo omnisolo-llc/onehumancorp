@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 /// Native Rust Omnichannel Chat System
-/// Replicates core Chatwoot data models and features without relying on the external service.
+/// Replicates core ChatEngine data models and features without relying on the external service.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contact {
