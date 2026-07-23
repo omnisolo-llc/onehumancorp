@@ -228,7 +228,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-3xl saturate-[210%] border border-white/50 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -290,8 +290,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm saturate-[210%] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-white/20"
-                      : "bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
+                      ? "bg-blue-600/90 backdrop-blur-3xl saturate-[210%] text-white rounded-br-sm border border-white/20"
+                      : "bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-3xl saturate-[210%] border border-white/50 dark:border-white/10 text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
                   }`}
                   dangerouslySetInnerHTML={createMarkup(msg.text)}
                 />
@@ -329,7 +329,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex gap-2 items-center"
+            className="p-3 bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-3xl saturate-[210%] border-t border-white/50 dark:border-white/10 flex gap-2 items-center"
           >
             <WalkthroughTarget id="ohc-help-input-area" className="flex-1 flex">
             <input
@@ -345,7 +345,7 @@ export function HelpChat() {
               autoFocus={true}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
+              className="flex-1 bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-3xl border border-white/50 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
             />
             </WalkthroughTarget>
             <button

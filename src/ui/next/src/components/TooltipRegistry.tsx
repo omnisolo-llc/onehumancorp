@@ -101,7 +101,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] pointer-events-none w-auto max-w-[calc(100vw-32px)] md:max-w-xs mx-4 text-center leading-relaxed"
+          className="fixed z-[100] backdrop-blur-3xl backdrop-saturate-[210%] bg-white/70 dark:bg-[#16161a]/70 border border-white/50 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-xl pointer-events-none w-auto max-w-[calc(100vw-32px)] md:max-w-xs mx-4 text-center leading-relaxed"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
@@ -109,7 +109,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 dark:border-t-black/80 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-[30px] backdrop-saturate-[210%] bg-white/65 dark:bg-[#16161a]/70"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 dark:border-t-black/80 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-3xl backdrop-saturate-[210%] bg-white/70 dark:bg-[#16161a]/70"></div>
         </motion.div>
       )}
       </AnimatePresence>
