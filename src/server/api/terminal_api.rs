@@ -46,6 +46,7 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/intent/capture", axum::routing::post(capture_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
+        .route("/edge_sync", axum::routing::post(sync_edge_ledger_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
         .route("/session/start", axum::routing::post(start_terminal_session_handler))
@@ -333,6 +334,137 @@ pub struct SyncOfflineTransactionsResponse {
     pub synced_count: i32,
     pub failed_transaction_ids: Vec<String>,
     pub pending_reconciliation: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct EdgeLedgerTransaction {
+    pub transaction_id: String,
+    pub amount_cents: i64,
+    pub currency: String,
+    pub status: String,
+    pub device_signature: Option<String>,
+    pub payload: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SyncEdgeLedgerTransactionsRequest {
+    pub transactions: Vec<EdgeLedgerTransaction>,
+}
+
+#[derive(serde::Serialize)]
+pub struct SyncEdgeLedgerTransactionsResponse {
+    pub success: bool,
+    pub synced_count: i32,
+    pub failed_transaction_ids: Vec<String>,
+}
+
+pub async fn sync_edge_ledger_transactions_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<SyncEdgeLedgerTransactionsRequest>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return (
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
+                )
+                    .into_response();
+            } else {
+                auth.org_id.clone()
+            }
+        }
+        None => {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()) {
+                tenant_override.to_string()
+            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+                id
+            } else {
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+            }
+        }
+    };
+
+    let pool = crate::db::get_pool();
+    let mut failed_ids = Vec::new();
+    let mut synced_count = 0;
+
+    if !req_data.transactions.is_empty() {
+        let mut db_tx = match pool.begin().await {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction: {}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Internal server error" })),
+                ).into_response();
+            }
+        };
+
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
+            tracing::error!("Failed to set org context: {}", e);
+            let _ = db_tx.rollback().await;
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Internal server error" })),
+            ).into_response();
+        }
+
+        let mut query_builder = sqlx::QueryBuilder::new(
+            "INSERT INTO edge_ledger_transactions (id, tenant_id, transaction_id, amount_cents, currency, status, device_signature, payload, synced_at) "
+        );
+
+        let tenant_id_clone = tenant_id.clone();
+        query_builder.push_values(req_data.transactions.iter(), |mut b, tx| {
+            let id = uuid::Uuid::new_v4().to_string();
+            let transaction_id = tx.transaction_id.clone();
+            let amount_cents = tx.amount_cents;
+            let currency = tx.currency.clone();
+            let status = tx.status.clone();
+            let device_signature = tx.device_signature.clone();
+            let payload_str = tx.payload.clone();
+
+            b.push_bind(id)
+             .push_bind(tenant_id_clone.clone())
+             .push_bind(transaction_id)
+             .push_bind(amount_cents)
+             .push_bind(currency)
+             .push_bind(status)
+             .push_bind(device_signature)
+             .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
+             .push_bind(sqlx::types::chrono::Utc::now());
+        });
+
+        query_builder.push(" ON CONFLICT (tenant_id, transaction_id) DO NOTHING");
+
+        match query_builder.build().execute(&mut *db_tx).await {
+            Ok(result) => {
+                synced_count = result.rows_affected() as i32;
+                if let Err(e) = db_tx.commit().await {
+                    tracing::error!("Failed to commit edge ledger transaction: {}", e);
+                    for tx in &req_data.transactions {
+                        failed_ids.push(tx.transaction_id.clone());
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to insert edge ledger transactions: {}", e);
+                for tx in &req_data.transactions {
+                    failed_ids.push(tx.transaction_id.clone());
+                }
+                let _ = db_tx.rollback().await;
+            }
+        }
+    }
+
+    Json(SyncEdgeLedgerTransactionsResponse {
+        success: failed_ids.is_empty(),
+        synced_count,
+        failed_transaction_ids: failed_ids,
+    }).into_response()
 }
 
 pub async fn sync_offline_transactions_handler(
