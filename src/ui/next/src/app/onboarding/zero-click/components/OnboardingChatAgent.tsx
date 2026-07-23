@@ -20,12 +20,19 @@ interface OnboardingChatAgentProps {
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: "Hi there! I'm your OHC setup assistant. What kind of business do you want to build or manage today?" }
+    { role: 'assistant', content: "What do you sell and what's your business name?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [provisionStep, setProvisionStep] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const provisionSteps = [
+    "Registering name...",
+    "Setting up products...",
+    "Configuring payments..."
+  ];
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -41,6 +48,15 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     scrollToBottom();
   }, [messages, isLoading, isProvisioning]);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isProvisioning) {
+      interval = setInterval(() => {
+        setProvisionStep((prev) => (prev < 2 ? prev + 1 : prev));
+      }, 1500);
+    }
+    return () => clearInterval(interval);
+  }, [isProvisioning]);
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -129,11 +145,11 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       // Complete immediately in tests to avoid timeout issues
       if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
          setIsProvisioning(false);
-         onComplete(provisionedData);
+         onComplete({ ...provisionedData, firstProductUrl: '/products/deposit' });
       } else {
         setTimeout(() => {
           setIsProvisioning(false);
-          onComplete(provisionedData);
+          onComplete({ ...provisionedData, firstProductUrl: '/products/deposit' });
         }, 1500);
       }
 
@@ -145,14 +161,14 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   };
 
   const predefinedChips = [
+    "I sell custom vegan cakes in Austin, called Maya's Bakery",
     "I'm a local baker selling custom cakes",
     "I run a neighborhood handyman service",
-    "I am an online music tutor",
-    "I manage 15 long-term apartment rentals"
+    "I am an online music tutor"
   ];
 
   return (
-    <div className="flex flex-col min-h-[50vh] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-[16px] w-full max-w-2xl mx-auto">
+    <div className="flex flex-col min-h-[50vh] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-[16px] w-full max-w-[375px] mx-auto">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
@@ -195,26 +211,24 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       {isProvisioning && (
         <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-[16px]">
           <div className="w-16 h-16 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin mb-6"></div>
-          <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 animate-pulse">
+          <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
             Building Your Business...
           </h3>
-          <p className="text-sm text-gray-500 font-medium">Provisioning workspace, products, and agents.</p>
+          <p className="text-sm text-gray-500 font-medium animate-pulse">{provisionSteps[provisionStep]}</p>
         </div>
       )}
 
       {/* Input Area */}
       <div className="p-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-transparent">
         {messages.length === 1 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto whitespace-nowrap pb-2">
             {predefinedChips.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => {
                   setInput(chip);
-                  // Optional: auto send after setting
-                  // setTimeout(() => handleSend(), 0);
                 }}
-                className="text-xs font-medium min-h-[44px] px-4 py-2 flex items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] rounded-full text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
+                className="text-xs font-medium min-h-[44px] px-4 py-2 inline-flex items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] rounded-full text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
               >
                 {chip}
               </button>
@@ -229,7 +243,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
-            placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
+            placeholder="e.g. I sell custom vegan cakes in Austin."
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button

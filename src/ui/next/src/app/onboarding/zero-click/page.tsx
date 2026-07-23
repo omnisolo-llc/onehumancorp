@@ -27,9 +27,9 @@ export default function ZeroClickBuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900">
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-10">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+      <div className="w-full max-w-2xl flex flex-col items-center">
+        <div className="text-center mb-10 w-full max-w-[375px]">
           <div className="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
             <span className="text-3xl">✨</span>
           </div>
@@ -44,7 +44,7 @@ export default function ZeroClickBuilderPage() {
         {!generatedStore ? (
           <OnboardingChatAgent onComplete={handleChatComplete} />
         ) : (
-          <div className="glassmorphism  p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="glassmorphism p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full max-w-[375px]">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,27 +69,34 @@ export default function ZeroClickBuilderPage() {
               </div>
 
               <div className="flex flex-col gap-4 pt-4">
+                <a
+                  href={`/builder?tenant=${generatedStore.organization_id}`}
+                  className="w-full flex items-center justify-center gap-2 bg-[#F2F2F7] dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-white hover:bg-[#E5E5EA] dark:hover:bg-[#2C2C2E] min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] border border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]"
+                >
+                  🔗 View Storefront URL
+                </a>
+
+                <a
+                  href={generatedStore.firstProductUrl || `/products/deposit`}
+                  className="w-full flex items-center justify-center gap-2 bg-[#34C759] hover:bg-[#32B350] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+                >
+                  💰 View Deposit Product Link
+                </a>
+
                 <button
                   onClick={() => {
                     router.push('/dashboard');
                   }}
                   className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
                 >
-                  🚀 Launch My Store
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
-                >
-                  🐦 Share on X (Twitter)
+                  🚀 Launch Dashboard
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 w-full max-w-[375px]">
           <p className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">
             <span id="dashboard-footer-viral-link">⚡ Powered by OHC</span>
             {!hasPro && (

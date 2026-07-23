@@ -140,3 +140,62 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
   });
 });
+
+  test('User completes zero click conversational onboarding successfully via dedicated page', async ({ page }) => {
+    // Navigate to the onboarding zero-click page
+    await page.goto('http://localhost:3000/onboarding/zero-click');
+
+    // Wait for the chat to be visible
+    await expect(page.locator('text="What do you sell and what\'s your business name?"')).toBeVisible();
+
+    // Fill in the prompt
+    await page.fill('input[placeholder="e.g. I sell custom vegan cakes in Austin."]', "I sell custom vegan cakes in Austin, called Maya's Bakery");
+
+    // Intercept the chat request
+    await page.route('**/api/v1/onboarding/chat*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          is_complete: true,
+          reply: "[COMPLETE] Give me a minute... I'm building your business.",
+          intake_data: {
+            business_name: "Maya's Bakery",
+            business_type: "Bakery",
+            categories: ["food"],
+            location: "Austin, TX",
+            initial_products: [
+              { name: "Custom Vegan Cake", price: "45.00", description: "Delicious cake", variants: [] }
+            ]
+          }
+        })
+      });
+    });
+
+    // Intercept the start request
+    await page.route('**/api/v1/onboarding/start*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          organization_id: "test-org-123",
+          user_id: "test-user-123",
+          message: "Success"
+        })
+      });
+    });
+
+    // Click the send button
+    await page.click('[data-testid="generate-storefront-btn"]');
+
+    // Wait for the loading overlay to appear
+    await expect(page.locator('text="Registering name..."').or(page.locator('text="Building Your Business..."'))).toBeVisible();
+
+    // Verify success screen
+    await expect(page.locator('text="Your business is live!"')).toBeVisible();
+
+    // Verify links are visible
+    await expect(page.locator('text="🔗 View Storefront URL"')).toBeVisible();
+    await expect(page.locator('text="💰 View Deposit Product Link"')).toBeVisible();
+  });
+});

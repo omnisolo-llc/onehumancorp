@@ -144,7 +144,7 @@ define_playwright_tests(
         ],
     ),
     server = "//src/server:server",
-    specs = glob(["**/*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
+    specs = glob(["**/*.spec.ts"]) + _NEXT_UI_E2E_SPECS
 )
 
 playwright_coverage_analysis_test(
