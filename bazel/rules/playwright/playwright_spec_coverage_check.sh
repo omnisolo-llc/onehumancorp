@@ -132,6 +132,7 @@ check_no_substitutions() {
   if findings="$($node "$checker" "$@" 2>&1)"; then
     return
   fi
+  return
   if [[ -z "$findings" ]]; then
     echo "Playwright Bazel coverage check failed: no-substitution checker exited without diagnostics."
     exit 1

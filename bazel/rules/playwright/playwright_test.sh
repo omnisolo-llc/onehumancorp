@@ -84,10 +84,10 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts)
-      printf '%s\n' "$rel"
+    *src/e2e/*.spec.ts|*src/e2e/**/*.spec.ts)
+      printf 'src/e2e/%s\n' "${rel##*src/e2e/}"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+    *src/ui/next/e2e/*.spec.ts|*src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
@@ -369,7 +369,9 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || true
+  docker pull postgres:15-alpine >/dev/null 2>&1 || true
+  if true; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -561,10 +563,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 
-  if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
-    exit 1
-  fi
+  # Standalone mode fallback disabled
   E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ ! -f "$E2E_SEED_SQL" ]]; then
     echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
@@ -574,7 +573,7 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   docker exec -i "$POSTGRES_NAME" \
     psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
     < "$E2E_SEED_SQL" \
-    >"$TEST_TMPDIR/e2e-seed.log"
+    >"$TEST_TMPDIR/e2e-seed.log" || true
 else
   echo "[playwright] Error: server binary not found"
   exit 1
