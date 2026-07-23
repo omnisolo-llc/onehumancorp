@@ -111,6 +111,7 @@ rust_library(
         "guardrails/openai_hooks.rs",
     "ruflo_plugins.rs",
         "agentic_seek.rs",
+    "goose_mcp.rs",
         "pi.rs",
         "scalable_multi_agent.rs",
         "service.rs",
