@@ -7,7 +7,7 @@ test.describe('My Plan Page Loop', () => {
     await page.goto('/plan');
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
-    await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
     await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
     await expect(page.locator('h2', { hasText: 'Estimated Next Bill' })).toBeVisible();

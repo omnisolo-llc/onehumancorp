@@ -13,7 +13,7 @@ test.describe('Pricing Page Loop', () => {
   test('Pricing page displays My Plan usage statistics', async ({ page }) => {
       await page.goto('/pricing');
       await expect(page.locator('h2', { hasText: 'My Plan: Free' })).toBeVisible();
-      await expect(page.locator('p', { hasText: 'AI Actions Used' })).toBeVisible();
+      await expect(page.locator('p', { hasText: 'AI actions used this month' })).toBeVisible();
       await expect(page.locator('p', { hasText: 'Storage Used' })).toBeVisible();
       await expect(page.locator('p', { hasText: 'Estimated Next Bill' })).toBeVisible();
       await expect(page.locator('button', { hasText: 'Manage Plan & Billing' })).toBeVisible();

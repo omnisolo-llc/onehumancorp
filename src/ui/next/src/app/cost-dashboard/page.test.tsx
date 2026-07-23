@@ -126,7 +126,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('My Plan')).toBeDefined();
     expect(screen.getByText('Back to My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
-    // AI Actions Used: 150 / 1000. Text split.
+    // AI actions used this month: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
     // Storage Used

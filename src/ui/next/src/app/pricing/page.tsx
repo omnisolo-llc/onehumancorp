@@ -126,7 +126,7 @@ export default function PricingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
-                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI Actions Used</p>
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI actions used this month</p>
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.ai_actions_used || 0}
                         <span className="text-sm font-normal text-gray-500 ml-1">/ {planDetails?.ai_actions_limit || '∞'}</span>
