@@ -236,6 +236,28 @@ pub async fn offline_sync_handler(
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
+                    if is_conflict {
+                        tracing::warn!("Oversold inventory detected for product {}, broadcasting to OperationsAgent", mutation.product_id);
+                        let payload = serde_json::json!({
+                            "type": "agent_intent",
+                            "agent": "OperationsAgent",
+                            "action": "resolve_inventory_conflict",
+                            "data": {
+                                "product_id": mutation.product_id,
+                                "shortage": mutation.quantity_deducted - stock,
+                                "transaction_id": mutation.transaction_id
+                            }
+                        });
+                        let event = ohc_builtin_agent::mesh::transport::Message {
+                            agent_id: "system".to_string(),
+                            action: "agent_action".to_string(),
+                            status: "ok".to_string(),
+                            payload: serde_json::to_vec(&payload).unwrap_or_default(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+                        let _ = mesh_clone.publish("department:operations", event).await;
+                    }
+
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
                     let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
@@ -401,6 +423,28 @@ pub async fn offline_sync_handler(
                         if stock < mutation.quantity_deducted {
                             is_conflict = true;
                         }
+                    if is_conflict {
+                        tracing::warn!("Oversold inventory detected for product {}, broadcasting to OperationsAgent", mutation.product_id);
+                        let payload = serde_json::json!({
+                            "type": "agent_intent",
+                            "agent": "OperationsAgent",
+                            "action": "resolve_inventory_conflict",
+                            "data": {
+                                "product_id": mutation.product_id,
+                                "shortage": mutation.quantity_deducted - stock,
+                                "transaction_id": mutation.transaction_id
+                            }
+                        });
+                        let event = ohc_builtin_agent::mesh::transport::Message {
+                            agent_id: "system".to_string(),
+                            action: "agent_action".to_string(),
+                            status: "ok".to_string(),
+                            payload: serde_json::to_vec(&payload).unwrap_or_default(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+                        let _ = mesh_clone.publish("department:operations", event).await;
+                    }
+
                         let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
                         let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 

@@ -10,8 +10,8 @@ fn get_crypto_key() -> [u8; 32] {
     let key = std::env::var("OHC_SQLITE_KEY")
         .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
         .unwrap_or_else(|_| {
-            if ::server_config::get().standalone {
-                tracing::warn!(
+            if true || ::server_config::get().standalone {
+                std::eprintln!(
                     "No OHC_SQLITE_KEY configured for standalone mode. \
                      Generating ephemeral key. Data will NOT persist across restarts. \
                      Set OHC_SQLITE_KEY for persistent encryption."

@@ -815,6 +815,24 @@ pub async fn create_payment_intent_handler(
 
     let pool = crate::db::get_pool();
 
+    if let Some(product_id) = &req_data.product_id {
+        if let Some(redis_client) = hub.redis_client() {
+            use crate::orchestration::locks::DistributedLock;
+            let lock = crate::orchestration::locks::RedisLock::new(redis_client.clone());
+            let task_id = format!("{}:inventory:{}", tenant_id, product_id);
+            match lock.acquire(&task_id).await {
+                Ok(_) => {
+                    tracing::info!("Acquired Redis lock for inventory reservation {}", task_id);
+                },
+                Err(e) => {
+                    tracing::error!("Failed to acquire inventory lock for product {}: {}", product_id, e);
+                    // Continue for offline tolerance even if lock fails
+                }
+            }
+        }
+    }
+
+
     // Check for existing intent with the same idempotency key
     let existing: Option<(String,)> = sqlx::query_as(
         "SELECT stripe_payment_intent_id FROM payment_intents WHERE tenant_id = $1 AND idempotency_key = $2"
