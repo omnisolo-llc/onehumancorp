@@ -83,7 +83,7 @@ export default function InvoiceGeneratorPage() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Acme Corp"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full glassmorphism border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -95,7 +95,7 @@ export default function InvoiceGeneratorPage() {
                 onChange={(e) => setProjectDetails(e.target.value)}
                 placeholder="e.g. Website Redesign and SEO Optimization"
                 rows={4}
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full glassmorphism border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -108,7 +108,7 @@ export default function InvoiceGeneratorPage() {
                   value={baseCurrency}
                   onChange={(e) => setBaseCurrency(e.target.value)}
                   placeholder="e.g. USD"
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full glassmorphism border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
@@ -118,7 +118,7 @@ export default function InvoiceGeneratorPage() {
                   value={transactionCurrency}
                   onChange={(e) => setTransactionCurrency(e.target.value)}
                   placeholder="e.g. EUR"
-                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full glassmorphism border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function InvoiceGeneratorPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 1500.00"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full glassmorphism border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -158,7 +158,7 @@ export default function InvoiceGeneratorPage() {
                               placeholder="e.g. Sarah (Artist)"
                               value={splitContact}
                               onChange={(e) => setSplitContact(e.target.value)}
-                              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                              className="w-full glassmorphism border border-gray-200 rounded-lg px-3 py-2 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                           />
                       </div>
                       <div className="mb-4">
@@ -198,7 +198,7 @@ export default function InvoiceGeneratorPage() {
                   type="text"
                   readOnly
                   value={shareLink}
-                  className="flex-1 bg-white border border-indigo-200 rounded-lg px-4 py-3 text-sm text-gray-600"
+                  className="flex-1 glassmorphism border border-indigo-200 rounded-lg px-4 py-3 text-sm text-gray-600"
                 />
                 <button
                   onClick={handleCopy}
@@ -209,7 +209,7 @@ export default function InvoiceGeneratorPage() {
                 <Link
                   href={shareLink}
                   target="_blank"
-                  className="px-6 py-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold rounded-lg transition-colors text-sm whitespace-nowrap text-center"
+                  className="px-6 py-3 glassmorphism border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold rounded-lg transition-colors text-sm whitespace-nowrap text-center"
                 >
                   Preview Invoice
                 </Link>

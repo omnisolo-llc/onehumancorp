@@ -156,14 +156,14 @@ function CheckoutContent() {
         {pageStatus === "loading" && <p className="text-sm text-gray-600">Loading verified checkout details…</p>}
         {pageStatus === "error" && <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">{pageError}</p>}
         {pageStatus === "ready" && paidOrder && (
-          <section className="app-card rounded-3xl border border-green-200 bg-white/70 p-8 text-center shadow-lg">
+          <section className="app-card rounded-3xl border border-green-200 glassmorphism p-8 text-center shadow-lg">
             <h2 className="font-outfit text-2xl font-bold">Payment confirmed</h2>
             <p className="mt-3 text-gray-600">Order {paidOrder.id} has a confirmed payment.</p>
             <button onClick={() => router.push("/orders")} className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-3 font-medium text-white">View Orders</button>
           </section>
         )}
         {pageStatus === "ready" && !paidOrder && (tier || product) && (
-          <section className="app-card rounded-3xl border border-gray-200 bg-white/70 p-6 shadow-lg md:p-8">
+          <section className="app-card rounded-3xl border border-gray-200 glassmorphism p-6 shadow-lg md:p-8">
             <div className="flex items-center justify-between border-b border-gray-200 pb-5">
               <div>
                 <h2 className="font-outfit text-xl font-bold">{tier ? `OHC ${tier} Plan` : product?.title}</h2>
