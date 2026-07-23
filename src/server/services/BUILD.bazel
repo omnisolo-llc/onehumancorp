@@ -105,6 +105,8 @@ rust_library(
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
         "//src/server/services/syndication:mod.rs",
+        "//src/server/services/syndication:engine.rs",
+        "//src/server/services/syndication:engine_test.rs",
         "//src/server/services/subscription:mod.rs",
         "//src/server/services/subscription:service.rs",
             "//src/server/services/ledger:mod.rs",
