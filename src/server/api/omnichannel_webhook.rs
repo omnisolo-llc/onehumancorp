@@ -139,9 +139,27 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
     id
 }
 
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ReviewPayload {
+    pub tenant_id: String,
+    pub source: String,
+    pub sender_id: String,
+    pub rating: i32,
+    pub comment: Option<String>,
+    pub order_id: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ReviewWebhookResponse {
+    pub success: bool,
+    pub review_id: Option<String>,
+}
+
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/", post(handle_omnichannel_webhook))
+        .route("/review-webhook", post(handle_review_webhook))
         .with_state(state)
 }
 
@@ -334,6 +352,52 @@ pub async fn handle_omnichannel_webhook(
     });
 
     (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(inbox_id) })).into_response()
+}
+
+
+pub async fn handle_review_webhook(
+    State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<ReviewPayload>,
+) -> impl IntoResponse {
+    if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ReviewWebhookResponse { success: false, review_id: None }),
+        )
+            .into_response();
+    }
+    let tenant_id = &payload.tenant_id;
+    let source = &payload.source;
+    let sender_id = &payload.sender_id;
+
+    // 1. Resolve Identity
+    let customer_id = resolve_identity(&state.db, tenant_id, source, sender_id).await;
+
+    let review_id = Uuid::new_v4().to_string();
+    let payload_json = serde_json::json!({
+        "review_id": review_id,
+        "source": source,
+        "rating": payload.rating,
+        "comment": payload.comment.clone().unwrap_or_default(),
+        "sender_id": sender_id,
+        "customer_id": customer_id,
+        "order_id": payload.order_id.clone().unwrap_or_default()
+    });
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.review.received".to_string(),
+        payload: payload_json,
+    };
+
+    let orchestrator_clone = state.orchestrator.clone();
+    tokio::spawn(async move {
+        let _ = orchestrator_clone.dispatch_event(event).await;
+    });
+
+    (StatusCode::OK, Json(ReviewWebhookResponse { success: true, review_id: Some(review_id) })).into_response()
 }
 
 #[cfg(test)]

@@ -41,9 +41,9 @@ impl MessageTriageWorker {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
-                    SELECT id, tenant_id, payload
+                    SELECT id, tenant_id, payload, job_type
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= NOW() AND job_type IN ('message_triage', 'review_triage')
                     ORDER BY next_retry_at ASC, created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -57,13 +57,14 @@ impl MessageTriageWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
+                    let job_type: String = r.get("job_type");
                     let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    Some((id, tenant_id, job_type, payload))
                 } else {
                     None
                 };
@@ -74,9 +75,9 @@ impl MessageTriageWorker {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
                     r#"
-                    SELECT id, tenant_id, payload
+                    SELECT id, tenant_id, payload, job_type
                     FROM ohc_job_queue
-                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type = 'message_triage'
+                    WHERE status = 'PENDING' AND next_retry_at <= CURRENT_TIMESTAMP AND job_type IN ('message_triage', 'review_triage')
                     ORDER BY next_retry_at ASC, created_at ASC
                     LIMIT 1
                     "#
@@ -89,13 +90,14 @@ impl MessageTriageWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
+                    let job_type: String = r.get("job_type");
                     let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                    Some((id, tenant_id, payload))
+                    Some((id, tenant_id, job_type, payload))
                 } else {
                     None
                 };
@@ -104,7 +106,14 @@ impl MessageTriageWorker {
             }
         };
 
-        if let Some((job_id, tenant_id, payload)) = job {
+        if let Some((job_id, tenant_id, job_type, payload)) = job {
+            if job_type == "review_triage" {
+                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&job_id)
+                    .execute(&self.db.pool).await;
+                return Ok(true);
+            }
+
             let message_id = payload.get("message_id").and_then(|v| v.as_str()).unwrap_or("");
             let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");

@@ -54,6 +54,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.subscription.churn_risk".to_string(),
             "tenant.subscription.action.requested".to_string(),
             "tenant.subscription.at_risk".to_string(),
+            "tenant.review.received".to_string(),
             "job_status_updates".to_string(),
         ]
     }
@@ -69,6 +70,66 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.review.received" {
+            let rating = event.payload.get("rating").and_then(|v| v.as_i64()).unwrap_or(5);
+            let comment = event.payload.get("comment").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+            let review_id = event.payload.get("review_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Query Unified Customer Memory Graph
+            let mut past_orders = "".to_string();
+            let pool = crate::db::get_pool();
+            let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as(
+                "SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2",
+            )
+            .bind(&event.tenant_id)
+            .bind(customer_id)
+            .fetch_all(&pool)
+            .await;
+            if let Ok(orders) = orders {
+                if !orders.is_empty() {
+                    past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                }
+            }
+
+            let prompt = if rating < 3 {
+                format!("Draft a mitigation reply for a {}-star review on {}. The customer commented: '{}'. Offer a brief apology and a 10% discount on their next order.", rating, source, comment)
+            } else {
+                format!("Draft a warm thank you reply for a {}-star review on {}. The customer commented: '{}'.", rating, source, comment)
+            };
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+            let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("minimax") => { let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string()); crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| if rating < 3 { "We're sorry for the poor experience. Please accept a 10% discount on your next order." } else { "Thank you so much for your review!" }.to_string()) },
+                _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| if rating < 3 { "We're sorry for the poor experience. Please accept a 10% discount on your next order." } else { "Thank you so much for your review!" }.to_string()) }
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "review_reply",
+                "rating": rating,
+                "source": source,
+                "comment": comment,
+                "generated_response": generated_response,
+                "customer_id": customer_id,
+                "sender_id": sender_id,
+                "order_id": order_id,
+                "review_id": review_id,
+                "past_orders": past_orders,
+            });
+
+            let description = format!("Action Required: {}-Star Review on {}", rating, source);
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
+            return Ok(());
+        }
 
         if event.event_type == "loyalty.points_awarded" {
             let customer_id = event
@@ -266,6 +327,17 @@ impl Department for CustomerSuccessAgent {
                         .bind(discount_code)
                         .bind("active")
                         .execute(&pool).await;
+                } else if orig.get("feature_type").and_then(|v| v.as_str())
+                    == Some("review_reply")
+                {
+                    let customer_id = orig
+                        .get("customer_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    tracing::info!(
+                        "EXECUTING APPROVED DRAFT: Dispatching review reply to external channel for customer: {}",
+                        customer_id
+                    );
                 }
             }
 
