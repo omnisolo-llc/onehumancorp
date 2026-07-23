@@ -1229,12 +1229,161 @@ pub struct CalendlyEvent {
     pub payload: serde_json::Value,
 }
 
+
+
+
+#[derive(Debug, serde::Deserialize)]
+pub struct WebhookQuery {
+    pub tenant_id: Option<String>,
+}
+
 pub async fn calendly_webhook_handler(
-    axum::extract::State(__webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<CalendlyEvent>,
+    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::Query(query): axum::extract::Query<WebhookQuery>,
+    axum::Json(payload): axum::Json<CalendlyEvent>,
 ) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+
+    if payload.event == "invitee.created" {
+        let invitee = payload.payload.get("invitee").or_else(|| Some(&payload.payload)).unwrap_or(&serde_json::Value::Null);
+
+        let email = invitee.get("email").and_then(|v| v.as_str()).unwrap_or("unknown@example.com");
+        let name = invitee.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+        let start_time = invitee.get("start_time").and_then(|v| v.as_str()).unwrap_or_default();
+        let end_time = invitee.get("end_time").and_then(|v| v.as_str()).unwrap_or_default();
+
+        let signal_id = format!("sig-{}", uuid::Uuid::new_v4());
+        let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+        let work_item_id = format!("wi-{}", uuid::Uuid::new_v4());
+
+        let customer_info = serde_json::json!({
+            "name": name,
+            "email": email,
+            "start_time": start_time,
+            "end_time": end_time,
+            "source": "calendly"
+        });
+
+        // 1. Notify the agent explicitly (this bridges the webhook logic to the AI agent system)
+        let _ = webhook_state.orchestrator.dispatch_event(
+            crate::orchestration::departments::types::DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: tenant_id.clone(),
+                event_type: "calendly.booking_created".to_string(),
+                payload: serde_json::json!({
+                    "booking_id": booking_id,
+                    "customer_email": email,
+                    "customer_name": name,
+                    "start_time": start_time,
+                }),
+            }
+        ).await;
+
+        match &webhook_state.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = match webhook_state.db.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(e) => {
+                        tracing::error!("Failed to begin transaction: {}", e);
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                };
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES ($1, $2, $3, $4, 'PROCESSED')"
+                )
+                .bind(&signal_id)
+                .bind(&tenant_id)
+                .bind("calendly")
+                .bind(sqlx::types::Json(&payload.payload))
+                .execute(&mut *tx).await {
+                    tracing::error!("Failed to insert inbound_signal: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')"
+                )
+                .bind(&work_item_id)
+                .bind(&tenant_id)
+                .bind(&signal_id)
+                .bind("new_booking")
+                .bind(sqlx::types::Json(&customer_info))
+                .execute(&mut *tx).await {
+                    tracing::error!("Failed to insert daily_work_item: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                let start_time_parsed = chrono::DateTime::parse_from_rfc3339(start_time)
+                    .map(|dt| dt.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now());
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, status) VALUES ($1, $2, $3, $4, $5, 'confirmed')"
+                )
+                .bind(&booking_id)
+                .bind(&tenant_id)
+                .bind(email)
+                .bind("calendly_booking")
+                .bind(start_time_parsed)
+                .execute(&mut *tx).await {
+                    tracing::error!("Failed to insert booking: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                if let Err(e) = tx.commit().await {
+                    tracing::error!("Failed to commit transaction: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES (?, ?, ?, ?, 'PROCESSED')"
+                )
+                .bind(&signal_id)
+                .bind(&tenant_id)
+                .bind("calendly")
+                .bind(serde_json::to_string(&payload.payload).unwrap_or_else(|_| "{}".to_string()))
+                .execute(pool).await {
+                    tracing::error!("Failed to insert inbound_signal: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, status) VALUES (?, ?, ?, ?, ?, 'PENDING')"
+                )
+                .bind(&work_item_id)
+                .bind(&tenant_id)
+                .bind(&signal_id)
+                .bind("new_booking")
+                .bind(serde_json::to_string(&customer_info).unwrap_or_else(|_| "{}".to_string()))
+                .execute(pool).await {
+                    tracing::error!("Failed to insert daily_work_item: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, status) VALUES (?, ?, ?, ?, ?, 'confirmed')"
+                )
+                .bind(&booking_id)
+                .bind(&tenant_id)
+                .bind(email)
+                .bind("calendly_booking")
+                .bind(start_time)
+                .execute(pool).await {
+                    tracing::error!("Failed to insert booking: {}", e);
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
+        }
+    }
+
     axum::http::StatusCode::OK.into_response()
 }
+
+
+
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MailchimpEvent {
