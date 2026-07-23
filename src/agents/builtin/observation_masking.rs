@@ -21,62 +21,85 @@ impl JetBrainsObservationMasker {
         }
     }
 
-    fn mask_json_value(
+    pub fn mask_json_value(
         val: &mut Value,
         size_limit: usize,
         element_limit: usize,
-        depth: usize,
+        _depth: usize,
     ) -> bool {
         let mut modified = false;
 
-        // Prevent extremely deep recursion that could blow up the stack
-        if depth > 10 {
-            match val {
-                Value::Array(arr) => {
-                    let len = arr.len();
-                    *val = Value::String(format!(
-                        "[Masked array: {} elements truncated due to depth limit]",
-                        len
-                    ));
-                    return true;
+        // Iterative stack-based approach for masking JSON to avoid stack overflow on deep nesting.
+        let mut stack = vec![(val, 0_usize)];
+
+        while let Some((current_val, current_depth)) = stack.pop() {
+            // Prevent extremely deep processing by masking at limit directly
+            if current_depth > 100 {
+                match current_val {
+                    Value::Array(arr) => {
+                        let len = arr.len();
+                        *current_val = Value::String(format!(
+                            "[Masked array: {} elements truncated due to depth limit]",
+                            len
+                        ));
+                        modified = true;
+                    }
+                    Value::Object(obj) => {
+                        let len = obj.len();
+                        *current_val = Value::String(format!(
+                            "[Masked object: {} keys truncated due to depth limit]",
+                            len
+                        ));
+                        modified = true;
+                    }
+                    _ => {
+                        *current_val = Value::String("[Masked: depth limit exceeded]".to_string());
+                        modified = true;
+                    }
                 }
-                Value::Object(obj) => {
-                    let len = obj.len();
-                    *val = Value::String(format!(
-                        "[Masked object: {} keys truncated due to depth limit]",
-                        len
-                    ));
-                    return true;
-                }
-                _ => {
-                    *val = Value::String("[Masked: depth limit exceeded]".to_string());
-                    return true;
-                }
+                continue;
             }
-        }
 
-        match val {
-            Value::String(s) => {
-                let bytes = s.len();
-                if bytes > size_limit || s.lines().count() > 10 {
-                    let line_count = s.lines().count();
-                    if line_count > 10 {
-                        let keep_lines = 5;
-                        let lines: Vec<&str> = s.lines().collect();
-                        let start_preview = lines[0..keep_lines].join("\n");
-                        let end_preview = lines[line_count - keep_lines..line_count].join("\n");
-                        let masked_lines = line_count - (keep_lines * 2);
+            match current_val {
+                Value::String(s) => {
+                    let bytes = s.len();
+                    if bytes > size_limit || s.lines().count() > 10 {
+                        let line_count = s.lines().count();
+                        if line_count > 10 {
+                            let keep_lines = 5;
+                            let lines: Vec<&str> = s.lines().collect();
+                            let start_preview = lines[0..keep_lines].join("\n");
+                            let end_preview = lines[line_count - keep_lines..line_count].join("\n");
+                            let masked_lines = line_count - (keep_lines * 2);
 
-                        // Enforce size_limit so we don't blow up the context window if lines are extremely long
-                        if start_preview.len() + end_preview.len() <= size_limit {
-                            *s = format!(
-                                "{}\n[... {} lines masked ...]\n{}",
-                                start_preview, masked_lines, end_preview
-                            );
+                            // Enforce size_limit so we don't blow up the context window if lines are extremely long
+                            if start_preview.len() + end_preview.len() <= size_limit {
+                                *s = format!(
+                                    "{}\n[... {} lines masked ...]\n{}",
+                                    start_preview, masked_lines, end_preview
+                                );
+                                modified = true;
+                            } else {
+                                let preview_chars = std::cmp::max(0, size_limit / 4);
+                                let char_count = s.chars().count();
+                                if preview_chars > 0 && char_count > preview_chars * 2 {
+                                    let start_preview: String = s.chars().take(preview_chars).collect();
+                                    let end_preview: String =
+                                        s.chars().skip(char_count - preview_chars).collect();
+                                    *s = format!(
+                                        "[Masked string: {} bytes. Preview: {}...{}]",
+                                        bytes, start_preview, end_preview
+                                    );
+                                    modified = true;
+                                } else if bytes > size_limit {
+                                    *s = format!("[Masked string: {} bytes]", bytes);
+                                    modified = true;
+                                }
+                            }
                         } else {
-                            let preview_chars = std::cmp::max(10, size_limit / 4);
+                            let preview_chars = std::cmp::max(0, size_limit / 4);
                             let char_count = s.chars().count();
-                            if char_count > preview_chars * 2 {
+                            if preview_chars > 0 && char_count > preview_chars * 2 {
                                 let start_preview: String = s.chars().take(preview_chars).collect();
                                 let end_preview: String =
                                     s.chars().skip(char_count - preview_chars).collect();
@@ -84,33 +107,19 @@ impl JetBrainsObservationMasker {
                                     "[Masked string: {} bytes. Preview: {}...{}]",
                                     bytes, start_preview, end_preview
                                 );
-                            } else {
+                                modified = true;
+                            } else if bytes > size_limit {
                                 *s = format!("[Masked string: {} bytes]", bytes);
+                                modified = true;
                             }
                         }
-                    } else {
-                        let preview_chars = std::cmp::max(10, size_limit / 4);
-                        let char_count = s.chars().count();
-                        if char_count > preview_chars * 2 {
-                            let start_preview: String = s.chars().take(preview_chars).collect();
-                            let end_preview: String =
-                                s.chars().skip(char_count - preview_chars).collect();
-                            *s = format!(
-                                "[Masked string: {} bytes. Preview: {}...{}]",
-                                bytes, start_preview, end_preview
-                            );
-                        } else {
-                            *s = format!("[Masked string: {} bytes]", bytes);
-                        }
                     }
-                    modified = true;
                 }
-            }
             Value::Array(arr) => {
                 let original_len = arr.len();
 
                 // Adaptive element limit based on depth - deeper structures get truncated more aggressively
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+                    let current_limit = std::cmp::max(1, element_limit.saturating_sub(current_depth * 5));
 
                 if original_len > current_limit {
                     // Try to keep a mix of the beginning and end of the array
@@ -135,9 +144,7 @@ impl JetBrainsObservationMasker {
                 }
 
                 for item in arr.iter_mut() {
-                    if Self::mask_json_value(item, size_limit, element_limit, depth + 1) {
-                        modified = true;
-                    }
+                        stack.push((item, current_depth + 1));
                 }
             }
             Value::Object(obj) => {
@@ -146,7 +153,7 @@ impl JetBrainsObservationMasker {
                 let mut removed_count = 0;
 
                 // Adaptive element limit based on depth
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+                    let current_limit = std::cmp::max(1, element_limit.saturating_sub(current_depth * 5));
 
                 if original_len > current_limit {
                     // Master Catalog B.4: Context Management: JetBrains Observation Masking.
@@ -178,40 +185,79 @@ impl JetBrainsObservationMasker {
                         }
                     }
                     regular_to_keep.sort();
+                    priority_to_keep.sort_by_key(|k| {
+                        let k_lower = k.to_lowercase();
+                        priority_keys.iter().position(|&p| p == k_lower.as_str()).unwrap_or(999)
+                    });
+
+                    let mut keys_to_remove: Vec<String> = Vec::new();
+                    let mut final_priority_to_keep = Vec::new();
+                    let mut final_regular_to_keep = Vec::new();
+
                     let num_priority = priority_to_keep.len();
-                    let mut keys_to_remove = Vec::new();
-                    if num_priority >= current_limit {
-                        keys_to_remove = regular_to_keep;
+                    if num_priority > current_limit {
+                        for i in 0..current_limit {
+                            final_priority_to_keep.push(priority_to_keep[i].clone());
+                        }
+                        for i in current_limit..num_priority {
+                            keys_to_remove.push(priority_to_keep[i].clone());
+                        }
+                        keys_to_remove.extend(regular_to_keep.clone());
+                    } else if num_priority == current_limit {
+                        final_priority_to_keep = priority_to_keep.clone();
+                        keys_to_remove.extend(regular_to_keep.clone());
                     } else {
-                        let slots_left = current_limit - num_priority;
-                        if regular_to_keep.len() > slots_left {
-                            keys_to_remove = regular_to_keep.split_off(slots_left);
+                        final_priority_to_keep = priority_to_keep.clone();
+                        let remaining_limit = current_limit - num_priority;
+                        if regular_to_keep.len() > remaining_limit {
+                            for i in 0..remaining_limit {
+                                final_regular_to_keep.push(regular_to_keep[i].clone());
+                            }
+                            for i in remaining_limit..regular_to_keep.len() {
+                                keys_to_remove.push(regular_to_keep[i].clone());
+                            }
+                        } else {
+                            final_regular_to_keep = regular_to_keep.clone();
                         }
                     }
 
-                    removed_count = keys_to_remove.len();
-                    for k in &keys_to_remove {
-                        obj.remove(k);
+                    let mut final_keys_to_keep = std::collections::HashSet::new();
+                    for k in final_priority_to_keep {
+                        final_keys_to_keep.insert(k);
                     }
+                    for k in final_regular_to_keep {
+                        final_keys_to_keep.insert(k);
+                    }
+
+                    let all_keys: Vec<String> = obj.keys().cloned().collect();
+                    for k in all_keys {
+                        if !final_keys_to_keep.contains(&k) {
+                            if obj.remove(&k).is_some() {
+                                removed_count += 1;
+                            }
+                        }
+                    }
+
                     if removed_count > 0 {
                         truncated = true;
                         modified = true;
                     }
                 }
-                for (_, value) in obj.iter_mut() {
-                    if Self::mask_json_value(value, size_limit, element_limit, depth + 1) {
-                        modified = true;
-                    }
-                }
+
                 if truncated {
                     obj.insert(
                         "_masked_keys".to_string(),
-                        Value::String(format!("[Masked object: {} keys truncated]", removed_count)),
+                        Value::String(format!("[{} keys truncated]", removed_count)),
                     );
+                }
+
+                for (_, value) in obj.iter_mut() {
+                    stack.push((value, current_depth + 1));
                 }
             }
 
             _ => {}
+        }
         }
         modified
     }
