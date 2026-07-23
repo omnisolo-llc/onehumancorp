@@ -3,7 +3,7 @@ use tokio::process::Command;
 use async_trait::async_trait;
 use crate::sandbox::session::ShellSession;
 
-/// Master Catalog Harness Innovation: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercal Sandbox
+/// Master Catalog Harness Innovation: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercel Sandbox
 #[async_trait]
 pub trait TerminalBackend: Send + Sync {
     async fn execute_command(&self, command: &str) -> Result<String, String>;

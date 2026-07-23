@@ -34,11 +34,11 @@ impl SandboxedCommandRunner {
             .to_lowercase()
     }
 
-    // Hermes Agent Unique Harness Innovations: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercal Sandbox
+    // Hermes Agent Unique Harness Innovations: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercel Sandbox
     pub(crate) fn should_use_container_backend(backend_env: &str, execution_mode: &str) -> bool {
         matches!(
             backend_env,
-            "container" | "docker" | "podman" | "ssh" | "singularity" | "modal" | "daytona" | "vercal"
+            "container" | "docker" | "podman" | "ssh" | "singularity" | "modal" | "daytona" | "vercel"
         ) || matches!(execution_mode, "cluster" | "cloud")
     }
 
@@ -49,7 +49,7 @@ impl SandboxedCommandRunner {
             "singularity" => vec!["singularity"],
             "modal" => vec!["modal"],
             "daytona" => vec!["daytona"],
-            "vercal" => vec!["vercal"],
+            "vercel" => vec!["vercel"],
             _ => vec!["docker", "podman"],
         };
 
@@ -141,7 +141,7 @@ impl SandboxedCommandRunner {
                 exec_args.push(format!("{}{}", env_prefix, command));
                 exec_args
             },
-            "vercal" => {
+            "vercel" => {
                 let mut exec_args = vec!["sandbox".to_string(), "exec".to_string()];
                 for (key, value) in envs {
                     exec_args.push("-e".to_string());
@@ -413,9 +413,9 @@ mod tests {
     }
 
     #[test]
-    fn test_container_args_vercal() {
+    fn test_container_args_vercel() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "vercal"
+            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "vercel"
         );
         assert_eq!(args[0], "sandbox");
         assert_eq!(args[1], "exec");
