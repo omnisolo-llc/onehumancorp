@@ -46,6 +46,10 @@ describe("CheckoutPage", () => {
     expect(global.fetch).toHaveBeenCalledWith("/api/v1/catalog/products");
     expect(document.body.textContent).not.toContain("Service Deposit");
     expect(document.body.textContent).not.toContain("20% discount");
+    // Verify translucent glass styling
+    const card = screen.getByText("Seeded Product").closest("section");
+    expect(card).toHaveClass("backdrop-blur-[30px]");
+    expect(card).toHaveClass("saturate-[210%]");
   });
 
   it("fails closed without an explicit valid product", async () => {

@@ -147,7 +147,7 @@ function CheckoutContent() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-[#F8F9FA] text-gray-900">
-      <header className="app-panel-header sticky top-0 z-50 flex items-center justify-between px-4 py-4 shadow-sm md:px-6">
+      <header className="app-panel-header sticky top-0 z-50 flex items-center justify-between px-4 py-4 shadow-sm md:px-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-b border-white/40 dark:border-white/10">
         <WithTooltip id="checkout-title-tooltip" defaultText="Review verified checkout details before paying.">
           <h1 className="font-outfit text-2xl font-bold">{heading}</h1>
         </WithTooltip>
@@ -156,14 +156,14 @@ function CheckoutContent() {
         {pageStatus === "loading" && <p className="text-sm text-gray-600">Loading verified checkout details…</p>}
         {pageStatus === "error" && <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">{pageError}</p>}
         {pageStatus === "ready" && paidOrder && (
-          <section className="app-card rounded-3xl border border-green-200 bg-white/70 p-8 text-center shadow-lg">
+          <section className="app-card rounded-3xl border border-green-200/40 dark:border-green-800/40 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-8 text-center shadow-lg">
             <h2 className="font-outfit text-2xl font-bold">Payment confirmed</h2>
             <p className="mt-3 text-gray-600">Order {paidOrder.id} has a confirmed payment.</p>
             <button onClick={() => router.push("/orders")} className="mt-6 w-full rounded-lg bg-gray-900 px-4 py-3 font-medium text-white">View Orders</button>
           </section>
         )}
         {pageStatus === "ready" && !paidOrder && (tier || product) && (
-          <section className="app-card rounded-3xl border border-gray-200 bg-white/70 p-6 shadow-lg md:p-8">
+          <section className="app-card rounded-3xl border border-white/40 dark:border-white/10 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-6 shadow-lg md:p-8">
             <div className="flex items-center justify-between border-b border-gray-200 pb-5">
               <div>
                 <h2 className="font-outfit text-xl font-bold">{tier ? `OHC ${tier} Plan` : product?.title}</h2>
