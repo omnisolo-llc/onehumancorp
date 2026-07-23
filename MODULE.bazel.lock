@@ -774,7 +774,7 @@
           "FILE:@@//src/server/integrations/nylas/Cargo.toml a3b0e76ed255df4fed794bb92f61c9fe9899e7c43a7cf7c009cd5b5f63672b79",
           "FILE:@@//src/server/integrations/calendly/Cargo.toml 1e8efdf70cf980be2d7f150b26f806315cb164fd55bb68a06564c0adf836d4f0",
           "FILE:@@//src/server/integrations/pubsub/Cargo.toml 80032c67df3a8b00fa622d4e572137aaf4c51c243c1189a8b3642e77cef19573",
-          "FILE:@@//src/agents/builtin/Cargo.toml e6576760f10b2cd01abeeaef6c495db8b404f368987b0dad9698aa7cd6bb84e5",
+          "FILE:@@//src/agents/builtin/Cargo.toml 051af15c9b840e9635b5c6aa72158c5482133699bf458b16a0086159cf887bba",
           "FILE:@@//src/agents/builtin/core/Cargo.toml 8e6cf4efd61027bacef2da94d13c7f21aad1bbc3b43c40de32f600cc68d24f86",
           "FILE:@@//src/agents/builtin/llm/Cargo.toml 1b3f11d7171e6d4097aec49cf80ddce0d932858341e99842fff2de7a1570be65",
           "FILE:@@//src/agents/builtin/tools/Cargo.toml 3757f58a7851f8daf3385bb50807916c95371ecd424afca22cf411a97ab7ada5",

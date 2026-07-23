@@ -23,14 +23,9 @@ impl Vector {
 
     /// Computes the cosine similarity. If the norms are 0, it returns 0.0.
     pub fn cosine_similarity(&self, other: &Vector) -> f32 {
-        let dot_product: f32 = self
-            .values
-            .iter()
-            .zip(other.values.iter())
-            .map(|(a, b)| a * b)
-            .sum();
-        let norm_a: f32 = self.values.iter().map(|a| a * a).sum::<f32>().sqrt();
-        let norm_b: f32 = other.values.iter().map(|b| b * b).sum::<f32>().sqrt();
+        let dot_product: f32 = self.values.iter().zip(other.values.iter()).fold(0.0, |acc, (a, b)| acc + a * b);
+        let norm_a: f32 = self.values.iter().fold(0.0, |acc, a| acc + a * a).sqrt();
+        let norm_b: f32 = other.values.iter().fold(0.0, |acc, b| acc + b * b).sqrt();
         if norm_a == 0.0 || norm_b == 0.0 {
             0.0
         } else {
@@ -432,5 +427,34 @@ mod tests {
         let results = db_restored.search(&vec![1.0, 0.5, 0.0], 1);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "persist_1");
+    }
+
+    #[test]
+    fn test_zero_vector_similarity() {
+        let v1 = Vector::new("1".to_string(), vec![0.0, 0.0], "".to_string());
+        let v2 = Vector::new("2".to_string(), vec![1.0, 1.0], "".to_string());
+        assert_eq!(v1.cosine_similarity(&v2), 0.0);
+    }
+
+    #[test]
+    fn test_distnode_ordering() {
+        let n1 = DistNode { dist: 1.0, id: "1".to_string() };
+        let n2 = DistNode { dist: 2.0, id: "2".to_string() };
+        let n3 = DistNode { dist: 1.0, id: "3".to_string() };
+
+        assert_eq!(n1.cmp(&n2), Ordering::Greater); // For min-heap logic
+        assert_eq!(n2.cmp(&n1), Ordering::Less);
+        assert_eq!(n1.cmp(&n3), Ordering::Equal);
+    }
+
+    #[test]
+    fn test_maxdistnode_ordering() {
+        let n1 = MaxDistNode { dist: 1.0, id: "1".to_string() };
+        let n2 = MaxDistNode { dist: 2.0, id: "2".to_string() };
+        let n3 = MaxDistNode { dist: 1.0, id: "3".to_string() };
+
+        assert_eq!(n1.cmp(&n2), Ordering::Less); // For max-heap logic
+        assert_eq!(n2.cmp(&n1), Ordering::Greater);
+        assert_eq!(n1.cmp(&n3), Ordering::Equal);
     }
 }
