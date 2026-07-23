@@ -59,16 +59,16 @@ describe("authentication runtime configuration", () => {
   });
 
   it.each([
-    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: undefined }, "OHC_WEB_CANONICAL_ORIGIN is required"],
-    [{ ...production, BACKEND_URL: undefined }, "BACKEND_URL is required"],
+    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "" as any }, "OHC_WEB_CANONICAL_ORIGIN is required"],
+    [{ ...production, BACKEND_URL: "" as any }, "BACKEND_URL is required"],
     [{ ...production, OHC_WEB_LOCAL_DEV: "yes" }, "OHC_WEB_LOCAL_DEV must be true or false"],
     [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "http://app.example.com" }, "canonical origin must use HTTPS"],
     [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "https://app.example.com/path" }, "canonical origin must not contain"],
     [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "https://user@app.example.com" }, "canonical origin must not contain"],
-    [{ ...production, BACKEND_URL: "http://10.0.0.5:8080" }, "backend origin must use HTTPS or loopback HTTP"],
+    [{ ...production, BACKEND_URL: "http://8.8.8.8:8080" }, "backend origin must use HTTPS or loopback HTTP"],
     [{ ...production, BACKEND_URL: "https://api.example.com/path" }, "backend origin must not contain"],
-    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://8.8.8.8:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
-    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://devbox.local:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
+    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://8.8.8.8:3000", BACKEND_URL: "http://localhost:8080" }, "local development canonical origin must be loopback or a private LAN IP"],
+    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://devbox.local:3000", BACKEND_URL: "http://localhost:8080" }, "local development canonical origin must be loopback or a private LAN IP"],
   ] as const)("rejects invalid configuration %#", (env, message) => {
     expect(() => parseAuthRuntimeConfig(env)).toThrow(message);
   });

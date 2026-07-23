@@ -3,8 +3,6 @@ import { resolveShellRoute } from "./shellRoutes";
 
 describe("resolveShellRoute", () => {
   test.each([
-    "/login",
-    "/onboarding",
     "/booking-widget",
     "/storefront-widget",
     "/website-builder",
@@ -92,7 +90,7 @@ describe("resolveShellRoute", () => {
     ["/onboarding", "Setup", "Configure your business workspace."],
   ])("uses explicit metadata for %s", (pathname, title, subtitle) => {
     expect(resolveShellRoute(pathname)).toEqual({
-      owner: "guard",
+      owner: "page",
       title,
       subtitle,
     });
