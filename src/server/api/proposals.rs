@@ -405,6 +405,7 @@ async fn approve_proposal(
             amount_usd,
             None,
             None,
+            None,
         )
         .await
     {
