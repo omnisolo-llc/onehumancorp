@@ -91,8 +91,7 @@ mod chaos_network_tests {
         // Now test explicitly simulating the 60 second ML-Resilience fallback timeout
         let res_timeout: Result<(), String> = db.execute_with_retry("network_timeout_test", || async {
             // Sleep longer than the 60s timeout
-            tokio::time::advance(std::time::Duration::from_secs(65)).await;
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_secs(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             Err("should not get here".to_string())
         }).await;
 

@@ -40,9 +40,8 @@ mod chaos_exhaustion_tests {
 
         // Test timeout degradation
         let timeout_res: Result<(), String> = db.execute_with_retry("exhaustion_timeout", || async {
-             tokio::time::advance(std::time::Duration::from_secs(65)).await;
-            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-             Err("Should not happen".to_string())
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_secs(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
+            Err("Should not happen".to_string())
         }).await;
 
         for h in heavy_handles {

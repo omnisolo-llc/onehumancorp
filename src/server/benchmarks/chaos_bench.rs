@@ -128,7 +128,7 @@ mod tests {
         // guarantees the underlying bounded logic without network drift.
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
         let result = timeout(Duration::from_millis(500), async {
-            std::future::pending::<()>().await;
+            tokio::spawn(async { tokio::time::advance(std::time::Duration::from_millis(501)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             "ok"
         }).await;
         assert!(result.is_err()); // Timeout triggers

@@ -166,7 +166,7 @@ mod chaos_db_tests {
         // Test the actual execute_with_retry timeout logic
         let res: Result<(), String> = db.execute_with_retry("slow_query", || async {
             // Simulate a query that takes longer than the timeout
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_secs(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             Ok(())
         }).await;
 

@@ -1029,7 +1029,7 @@ mod tests {
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            std::future::pending::<()>().await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_secs(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             Ok::<(), String>(())
         }).await;
 
@@ -1042,7 +1042,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let inference_future = async {
-            std::future::pending::<()>().await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_millis(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             Ok::<&str, String>("")
         };
 

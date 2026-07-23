@@ -1095,7 +1095,7 @@ mod tests {
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            std::future::pending::<()>().await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_secs(65)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             Ok::<(), String>(())
         })
         .await;
@@ -1107,7 +1107,7 @@ mod tests {
     async fn test_chaos_degradation_network() {
         let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
         let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
-            std::future::pending::<()>().await;
+            tokio::spawn(async move { tokio::time::advance(std::time::Duration::from_millis(2005)).await; tokio::task::yield_now().await; }); std::future::pending::<()>().await;
             "data"
         })
         .await;
