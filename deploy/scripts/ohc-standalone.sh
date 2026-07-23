@@ -55,7 +55,7 @@ find "${OHC_RUNTIME_DIR}" -type f -exec chmod 600 {} \+
 find "${OHC_RUNTIME_DIR}" -type d -exec chmod 700 {} \+
 
 if [ -z "$OHC_SQLITE_KEY" ]; then
-  KEY_FILE="${OHC_RUNTIME_DIR}/.sqlite_key"
+  KEY_FILE="${OHC_RUNTIME_DIR}/.ohc_sqlite_key"
   if [ ! -f "$KEY_FILE" ]; then
     (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
