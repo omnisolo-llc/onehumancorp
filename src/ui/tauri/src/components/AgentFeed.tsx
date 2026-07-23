@@ -90,7 +90,7 @@ export const AgentFeed: React.FC = () => {
         return (
             <div className="w-full max-w-[375px] mx-auto p-4 flex flex-col items-center">
                 <h2 className="text-xl font-semibold mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] self-start">Agent Feed</h2>
-                <div className="w-full bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-[16px] shadow-sm flex flex-col gap-2">
+                <div className="w-full bg-[#FF3B30]/10 border border-[#FF3B30]/20 text-[#FF3B30] p-4 rounded-[16px] shadow-sm flex flex-col gap-2">
                     <span className="font-medium">Failed to load feed</span>
                     <span className="text-sm opacity-80">{error}</span>
                     <button onClick={fetchDrafts} className="mt-2 text-sm underline hover:opacity-80 self-start">Try again</button>

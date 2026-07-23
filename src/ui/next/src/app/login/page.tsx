@@ -111,7 +111,7 @@ function LoginForm() {
             </div>
 
             <button
-              className="min-h-[54px] w-full rounded-xl bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
+              className="min-h-[44px] w-full rounded-xl bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
               disabled={pending}
               type="submit"
             >
