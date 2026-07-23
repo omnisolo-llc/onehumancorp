@@ -42,6 +42,8 @@ export default function SettingsPage() {
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
   const [twilioStatus, setTwilioStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [usageLogs, setUsageLogs] = useState<any[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const handleConnectWhatsApp = async () => {
     try {
@@ -128,6 +130,21 @@ export default function SettingsPage() {
     ]).finally(() => {
       setIsLoading(false);
     });
+
+    fetch("/api/v1/ui/admin/usage")
+      .then(res => {
+        if (res.ok) {
+          setIsAdmin(true);
+          return res.json();
+        }
+        return [];
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setUsageLogs(data);
+        }
+      })
+      .catch(e => console.error("Failed to load usage logs", e));
   }, []);
 
   const handleDeliverySettingChange = async (key: string, value: any) => {
@@ -654,6 +671,46 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {/* Member Analytics Section */}
+        {isAdmin && (
+          <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+            <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+              <div>
+                <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Member Analytics</div>
+                <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Expose corporate and token usage costs across your workspace members.</div>
+              </div>
+            </div>
+            <div className="app-panel-body p-6">
+              {usageLogs.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4 font-outfit">No workspace member usage logged yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm font-outfit">
+                    <thead>
+                      <tr className="text-xs font-bold uppercase tracking-wider text-gray-400 text-left">
+                        <th className="pb-3 pr-4">Username</th>
+                        <th className="pb-3 px-4">Feature</th>
+                        <th className="pb-3 px-4 text-right">Tokens Used</th>
+                        <th className="pb-3 pl-4 text-right">Computed Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                      {usageLogs.map((log, index) => (
+                        <tr key={index} className="text-gray-700 dark:text-gray-300">
+                          <td className="py-3 pr-4 font-semibold">{log.username}</td>
+                          <td className="py-3 px-4 text-xs font-mono bg-gray-50 dark:bg-gray-800/30 rounded inline-block my-1">{log.feature}</td>
+                          <td className="py-3 px-4 text-right font-mono">{log.tokens_used.toLocaleString()}</td>
+                          <td className="py-3 pl-4 text-right font-mono text-green-600 dark:text-green-400">${log.computed_cost.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Advanced Section */}
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
