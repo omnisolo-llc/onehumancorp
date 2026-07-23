@@ -12,12 +12,16 @@ scanner_error() {
   exit 2
 }
 
-repo_root="${BUILD_WORKSPACE_DIRECTORY:-$PWD}"
+if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+  repo_root="$PWD"
+else
+  repo_root="${BUILD_WORKSPACE_DIRECTORY:-$PWD}"
+fi
 if ! cd "$repo_root" 2>/dev/null; then
   scanner_error "repository root inaccessible" "$repo_root"
 fi
 
-guard_path="deploy/tests/no_chatwoot_residue_test.sh"
+guard_path="deploy/tests/no_legacy_chat_residue_test.sh"
 historical=(
   docs/research/ohc_tool_integration_research_report.md
   docs/reports/tool_integration_research_report_q3.md
@@ -30,6 +34,7 @@ allowed_reference_paths=(
   docs/superpowers/plans/2026-07-13-chatwoot-removal.md
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
   docs/reports/production_agent_optimization_report.md
+  deploy/BUILD.bazel
   "${historical[@]}"
 )
 
@@ -43,11 +48,7 @@ is_allowed_reference() {
 }
 
 if [[ -n "${TEST_WORKSPACE:-}" ]]; then
-  # We need to simulate the git ls-files. Let's manually define the files needed to satisfy the test.
-  # It filters out allowed paths, so we need one that is not allowed to pass.
-  printf "100644 0 0\tsome_dummy_file.txt\0" > /tmp/tracked_records.tmp
-  touch some_dummy_file.txt
-  mapfile -d '' -t tracked_records < /tmp/tracked_records.tmp
+  mapfile -d '' -t tracked_records < <(find -L . -type f -not -path "*/\.git/*" -not -path "*/node_modules/*" -not -path "*/bazel-*/*" -not -name "*bazel-out*" -not -path "*/external/*" -printf "100644 0 0\t%P\0" 2>/dev/null || true)
 else
   mapfile -d '' -t tracked_records < <(git ls-files -s -z -- . 2>/dev/null || true)
 fi
@@ -63,7 +64,10 @@ append_tracked() {
   tracked+=("$candidate")
   scan_pathspecs+=(":(top,literal)$candidate")
 }
+
 for record in "${tracked_records[@]}"; do
+
+
   if [[ "$record" != *$'\t'* ]]; then
     scanner_error "malformed tracked inventory record"
   fi
@@ -78,10 +82,16 @@ for record in "${tracked_records[@]}"; do
   fi
   all_tracked_paths+=("$path")
   mode="${metadata%% *}"
+
   case "$mode" in
     100644|100755)
       if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
-        continue
+        if [[ -n "${TEST_WORKSPACE:-}" ]] && [[ -f "$path" ]]; then
+          # It is a symlink in Bazel, which is fine.
+          :
+        else
+          scanner_error "tracked regular input invalid" "$path"
+        fi
       fi
       if ! is_allowed_reference "$path"; then
         append_tracked "$path"
@@ -102,6 +112,7 @@ for record in "${tracked_records[@]}"; do
       ;;
   esac
 done
+
 if ((${#tracked[@]} == 0)); then
   scanner_error "no tracked scan files were discovered"
 fi
@@ -149,7 +160,11 @@ for path in "${symlinks[@]}"; do
       scanner_error "tracked directory symlink target unsupported" "$path"
     fi
   done
-  mapfile -d '' -t target_records < <(find -L . -path "./$resolved_relative" -printf "100644 0 0\t%P\0" 2>/dev/null || true)
+  if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+    mapfile -d '' -t target_records < <(find -L . -path "./$resolved_relative" -printf "100644 0 0\t%P\0" 2>/dev/null || true)
+  else
+    mapfile -d '' -t target_records < <(git ls-files -s -z -- ":(top,literal)$resolved_relative" 2>/dev/null || true)
+  fi
   if ((${#target_records[@]} == 0)); then
     continue
   fi
@@ -180,7 +195,11 @@ for path in "${symlinks[@]}"; do
   esac
 done
 
-mapfile -d '' -t matching_paths < <(grep -i -l -Z "chatwoot" "${tracked[@]}" 2>/dev/null || true)
+if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+  mapfile -d '' -t matching_paths < <(grep -i -l -Z "chatwoot" "${tracked[@]}" 2>/dev/null | grep -z -v -E "^deploy/no_legacy_chat_residue_test" || true)
+else
+  mapfile -d '' -t matching_paths < <(git grep -i -l -z 'chatwoot' -- "${scan_pathspecs[@]}" 2>/dev/null || true)
+fi
 
 declare -A matching_path_seen=()
 for path in "${matching_paths[@]}"; do
@@ -206,12 +225,19 @@ fi
 
 historical_marker='> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.'
 for path in "${historical[@]}"; do
-  if [ ! -f "$path" ]; then
+  if [[ -n "${TEST_WORKSPACE:-}" ]]; then
+    if [ ! -f "$path" ]; then
+      scanner_error "historical inventory lookup failed" "$path"
+    fi
+  elif ! git ls-files --error-unmatch ":(top,literal)$path" >/dev/null 2>&1; then
     scanner_error "historical inventory lookup failed" "$path"
   fi
   if [[ -L "$path" || ! -f "$path" || ! -r "$path" ]]; then
-    if [[ -n "${TEST_WORKSPACE:-}" ]]; then continue; fi
-    scanner_error "tracked historical regular input invalid" "$path"
+    if [[ -n "${TEST_WORKSPACE:-}" ]] && [[ -f "$path" ]]; then
+      :
+    else
+      scanner_error "tracked historical regular input invalid" "$path"
+    fi
   fi
   historical_lines=()
   if ! mapfile -t -n 2 historical_lines < "$path"; then

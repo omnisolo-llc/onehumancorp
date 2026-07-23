@@ -175,6 +175,6 @@ gazelle(name = "gazelle")
 
 filegroup(
     name = "all_srcs",
-    srcs = glob(["**/*"], exclude=[".git/**/*", "bazel-*/**/*", "node_modules/**/*", ":memory:"]),
+    srcs = glob(["**/*", ".github/**/*", ".agent/**/*"], exclude=[".git/**/*", "bazel-*/**/*", "node_modules/**/*", ":memory:"]),
     visibility = ["//visibility:public"],
 )

@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
 
       - name: Reject active Chatwoot residue
-        run: bash deploy/tests/no_chatwoot_residue_test.sh
+        run: pnpm exec bazelisk test //deploy:no_legacy_chat_residue_test
 
       - name: Check if only markdown files changed
         id: check
