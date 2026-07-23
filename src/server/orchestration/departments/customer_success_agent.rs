@@ -45,6 +45,7 @@ impl Department for CustomerSuccessAgent {
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
+            "reputation.review_received".to_string(),
             "tenant.order.fulfillment_ready".to_string(),
             "loyalty.points_awarded".to_string(),
             "tenant.message.received".to_string(),
@@ -70,6 +71,46 @@ impl Department for CustomerSuccessAgent {
             ActionRisk::DraftForReview
         };
 
+        if event.event_type == "reputation.review_received" {
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let rating = event.payload.get("rating").and_then(|v| v.as_i64()).unwrap_or(5);
+            let review_text = event.payload.get("review_text").and_then(|v| v.as_str()).unwrap_or("");
+            let platform = event.payload.get("platform").and_then(|v| v.as_str()).unwrap_or("Google");
+            let review_id = event.payload.get("review_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let prompt = format!(
+                "You are The Ambassador for tenant {}. You received a {}-star review on {} from {}: \"{}\". Draft a professional, context-aware reply. If it is 4 or 5 stars, thank them. If it is 3 stars or below, apologize, ask for another chance, and optionally suggest a 10% discount.",
+                event.tenant_id, rating, platform, customer_name, review_text
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
+                Ok("minimax") => { let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string()); crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your feedback!".to_string()) },
+                _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your feedback!".to_string()) }
+            };
+            let mitigation_action = if rating <= 3 { Some("10% Discount Code") } else { None };
+            let description = if rating >= 4 { format!("New {}-star Review", rating) } else { format!("Action Required: {}-Star Review on {}", rating, platform) };
+            let action_payload = serde_json::json!({
+                "feature_type": "reputation_review",
+                "original_message": review_text,
+                "rating": rating,
+                "platform": platform,
+                "generated_response": generated_response,
+                "mitigation_action": mitigation_action,
+                "inbox_message_id": review_id,
+                "source": platform.to_lowercase(),
+                "original_content": review_text,
+                "sender_id": customer_name,
+                "customer_id": customer_id,
+            });
+            let _approval_req = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                description,
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
+            return Ok(());
+        }
         if event.event_type == "loyalty.points_awarded" {
             let customer_id = event
                 .payload
@@ -1121,6 +1162,7 @@ mod tests {
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
         let agent = CustomerSuccessAgent::new(orchestrator);
         let events = agent.subscribed_events();
+        assert!(events.contains(&"reputation.review_received".to_string()));
         assert!(events.contains(&"tenant.message.received".to_string()));
         assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
         assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));

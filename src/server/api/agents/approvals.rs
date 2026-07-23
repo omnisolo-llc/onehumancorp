@@ -127,6 +127,7 @@ where
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
         .route("/simulate-promoter-draft", post(simulate_promoter_draft))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
+        .route("/simulate-review-received", post(simulate_review_received))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
@@ -238,6 +239,42 @@ async fn simulate_smart_pricing(
     }
 }
 
+async fn simulate_review_received(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+    let payload = serde_json::json!({
+        "feature_type": "reputation_review",
+        "original_message": "The service was terrible and 2 days late.",
+        "rating": 2,
+        "platform": "Yelp",
+        "generated_response": "I sincerely apologize for the delay. We would love to make it right. I have issued a 10% discount for your next order.",
+        "mitigation_action": "10% Discount Code",
+        "inbox_message_id": "msg_simulated_review_123",
+        "source": "yelp",
+        "original_content": "The service was terrible and 2 days late.",
+        "sender_id": "Sarah",
+        "customer_id": "cust_simulated_review_123",
+        "past_orders": "Sarah's order was delayed by 2 days",
+    });
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+        "Action Required: 2-Star Review on Yelp.".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate review received: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
 async fn simulate_dispute_resolution(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Extension(claims): Extension<Claims>,

@@ -2475,6 +2475,65 @@
           }
 
 
+          function escapeHtml(unsafe) {
+              return (unsafe || '').toString()
+                   .replace(/&/g, "&amp;")
+                   .replace(/</g, "&lt;")
+                   .replace(/>/g, "&gt;")
+                   .replace(/"/g, "&quot;")
+                   .replace(/'/g, "&#039;");
+            }
+          if (item.proposed_action?.feature_type === 'reputation_review' || item.context_payload?.feature_type === 'reputation_review') {
+            const reviewPayload = item.proposed_action || item.context_payload;
+            const isPositive = reviewPayload.rating >= 4;
+            const ratingColor = isPositive ? '#34C759' : '#FF3B30';
+            const ratingBg = isPositive ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)';
+            const headerText = isPositive ? `New ${reviewPayload.rating}-star Review` : `Action Required: ${reviewPayload.rating}-Star Review on ${reviewPayload.platform || 'Platform'}`;
+            const approveText = isPositive ? 'Approve Thank You Reply' : 'Review & Mitigate';
+
+            return `
+              <div class="triage-item glassmorphism" data-testid="agent-feed-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid ${ratingColor}; box-shadow: 0 4px 16px ${ratingBg}; width: 100%; box-sizing: border-box; margin-bottom: 16px;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
+                  <div style="display: flex; flex-direction: column;">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: ${ratingBg}; color: ${ratingColor}; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px; width: fit-content; margin-bottom: 8px;">${isPositive ? 'PROMOTER' : 'AMBASSADOR'}</div>
+                    <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: ${ratingColor};">${headerText}</div>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: ${ratingColor};">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${escapeHtml(item.context_payload?.description || headerText)}</div>
+
+                <div id="triage-view-${item.id}" style="margin-top: 16px;">
+                  <div style="background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0, 0, 0, 0.05); padding: 16px; border-radius: 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 13px; color: #1D1D1F; font-weight: 500;">"${escapeHtml(reviewPayload.original_message)}"</div>
+                    ${reviewPayload.past_orders ? `<div style="font-size: 11px; color: #86868b; display: flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>${escapeHtml(reviewPayload.past_orders)}</div>` : ''}
+                  </div>
+
+                  <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">DRAFTED REPLY</div>
+                    <div style="font-size: 14px; color: #1D1D1F; line-height: 1.5;">${escapeHtml(reviewPayload.generated_response)}</div>
+                    ${!isPositive && reviewPayload.mitigation_action ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0, 102, 255, 0.1); display: flex; align-items: center; gap: 6px; font-size: 12px; color: #0066FF; font-weight: 600;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Issue ${escapeHtml(reviewPayload.mitigation_action)}</div>` : ''}
+                  </div>
+
+                  <div class="triage-controls" style="display: flex; gap: 8px; flex-direction: column;">
+                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-approve-resolve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; width: 100%;">${approveText}</button>
+                    <div style="display: flex; gap: 8px;">
+                      <button class="triage-btn-dismiss" data-testid="feed-edit-btn" onclick="document.getElementById('triage-view-${item.id}').style.display='none'; document.getElementById('triage-edit-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px;">Edit</button>
+                      <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px;">Discard</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="triage-edit-${item.id}" style="display: none; margin-top: 16px;">
+                  <textarea id="triage-input-${item.id}" style="width: 100%; min-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.9); font-size: 14px; margin-bottom: 12px; font-family: inherit; resize: vertical;" data-testid="feed-edit-input">${escapeHtml(reviewPayload.generated_response)}</textarea>
+                  <div class="triage-controls" style="display: flex; gap: 8px;">
+                    <button class="triage-btn-approve min-h-[44px] min-w-[44px]" data-testid="feed-save-edit-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px;">Save & Approve</button>
+                    <button class="triage-btn-dismiss" data-testid="feed-cancel-edit-btn" onclick="document.getElementById('triage-edit-${item.id}').style.display='none'; document.getElementById('triage-view-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px;">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
           if (item.event_source === 'Simulated Webhook' || item.context_payload?.description === 'A new simulated event needs your attention.') {
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
