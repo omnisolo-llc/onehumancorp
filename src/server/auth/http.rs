@@ -354,7 +354,16 @@ struct ApiKeyMetadata {
 
 fn get_member_uuid(sub: &str) -> uuid::Uuid {
     uuid::Uuid::parse_str(sub)
-        .unwrap_or_else(|_| uuid::Uuid::new_v4())
+        .unwrap_or_else(|_| {
+            let mut bytes = [0u8; 16];
+            let hash = sha2::Sha256::digest(sub.as_bytes());
+            bytes.copy_from_slice(&hash[0..16]);
+            // set variant 8
+            bytes[6] = (bytes[6] & 0x0f) | 0x80;
+            // set variant
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            uuid::Uuid::from_bytes(bytes)
+        })
 }
 
 #[derive(Clone)]
