@@ -354,29 +354,66 @@ function InboxWorkspace({
                 {selected && selected.status !== "resolved" && selected.status !== "dismissed" && (
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="app-metric-label mb-2">Manual Reply</div>
-                    <textarea
-                      className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 mb-3"
-                      placeholder="Type your reply here..."
-                      value={manualReply}
-                      onChange={(e) => setManualReply(e.target.value)}
-                    />
-                    <div className="flex gap-3 mt-4 flex-wrap">
-                      <button
-                        onClick={() => handleSendManualReply(selected.id)}
-                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
-                        disabled={!manualReply.trim()}
-                      >
-                        Send Reply
-                      </button>
-                      <button
-                        onClick={handleAttachPhoto}
-                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                        Attach Photo
-                      </button>
-                      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelected} />
-                    </div>
+                    {(() => {
+                      const isWhatsApp = selected.source?.toLowerCase().includes("whatsapp");
+                      let is24HourWindowOpen = true;
+                      let hoursRemaining = 0;
+                      let minutesRemaining = 0;
+
+                      if (isWhatsApp && selected.created_at) {
+                        const messageDate = new Date(selected.created_at);
+                        const now = new Date();
+                        const hoursSinceMessage = Math.abs(now.getTime() - messageDate.getTime()) / 36e5;
+                        is24HourWindowOpen = hoursSinceMessage < 24;
+                        hoursRemaining = Math.max(0, Math.floor(24 - hoursSinceMessage));
+                        minutesRemaining = Math.max(0, Math.floor((24 - hoursSinceMessage) * 60) % 60);
+                      }
+
+                      return (
+                        <>
+                          {isWhatsApp && (
+                            <div className={`mb-3 text-sm font-semibold flex items-center gap-2 ${is24HourWindowOpen ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {is24HourWindowOpen ? (
+                                <>
+                                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                  WhatsApp Session Active (Closes in {hoursRemaining}h {minutesRemaining}m)
+                                </>
+                              ) : (
+                                <>
+                                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                  WhatsApp 24-hour session window closed. Please use a pre-approved template.
+                                </>
+                              )}
+                            </div>
+                          )}
+                          <textarea
+                            className={`w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 mb-3 ${(!is24HourWindowOpen && isWhatsApp) ? 'opacity-50 cursor-not-allowed bg-gray-50' : ''}`}
+                            placeholder="Type your reply here..."
+                            value={manualReply}
+                            onChange={(e) => setManualReply(e.target.value)}
+                            disabled={!is24HourWindowOpen && isWhatsApp}
+                          />
+                          <div className="flex gap-3 mt-4 flex-wrap">
+                            <button
+                              onClick={() => handleSendManualReply(selected.id)}
+                              className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
+                              disabled={!manualReply.trim() || (!is24HourWindowOpen && isWhatsApp)}
+                            >
+                              Send Reply
+                            </button>
+                            <button
+                              onClick={handleAttachPhoto}
+                              className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
+                              disabled={!is24HourWindowOpen && isWhatsApp}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                              Attach Photo
+                            </button>
+                            <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelected} disabled={!is24HourWindowOpen && isWhatsApp} />
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
           </section>

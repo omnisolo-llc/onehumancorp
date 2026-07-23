@@ -121,4 +121,73 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
       // but ideally we'd expect some kind of AI state
     });
   });
+
+  test('Owner sees 24-hour window warning and disabled reply for old WhatsApp messages', async ({ page, request }) => {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // 1. Manually insert a mock message into the DB via a dedicated endpoint or using DB queries.
+    // For this test, since it's E2E and we don't have direct DB access in the browser,
+    // we use the local PowerSync query mock or just intercept the graphql/powersync request.
+
+    // Instead, since the page fetches using `useQuery` via PowerSync, we can't easily intercept a standard REST call.
+    // The most robust way to test this in E2E without adding backend test endpoints is to simulate the timing.
+    // However, we can't wait 24 hours.
+    // We will intercept the PowerSync hook data if possible, or we just trust the unit tests.
+    // To make this E2E test work for the UI, we can evaluate a script on the page to override Date for this specific component
+    // or we can test it at the component level.
+
+    // Let's modify the Date object in the browser context for the page evaluation of the 24 hour window.
+    await page.goto('/inbox');
+
+    // Send a message now
+    const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      data: 'From=whatsapp%3A%2B14155238886&To=whatsapp%3A%2B1987654321&Body=Old+mock+message',
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await expect(page.getByText(/Old mock message/i).first()).toBeVisible({ timeout: 15000 });
+
+    await page.getByRole('button', { name: /Old mock message/i }).first().click();
+
+    // Fast forward time by overriding Date.now and new Date()
+    await page.evaluate(() => {
+      const originalDate = window.Date;
+      const futureTime = new originalDate().getTime() + (25 * 60 * 60 * 1000); // 25 hours later
+
+      class MockDate extends originalDate {
+        constructor(...args: any[]) {
+          if (args.length === 0) {
+            super(futureTime);
+          } else {
+            // @ts-ignore
+            super(...args);
+          }
+        }
+        static now() {
+          return futureTime;
+        }
+      }
+
+      // @ts-ignore
+      window.Date = MockDate;
+    });
+
+    // We need to trigger a re-render. We can do this by clicking away and back.
+    await page.getByRole('button', { name: /Dashboard/i }).click();
+    await page.goto('/inbox');
+    await page.getByRole('button', { name: /Old mock message/i }).first().click();
+
+    // 5. Verify the warning appears
+    await expect(page.getByText(/WhatsApp 24-hour session window closed/i)).toBeVisible({ timeout: 15000 });
+
+    // 6. Verify the reply button and textarea are disabled
+    const textarea = page.getByPlaceholder(/Type your reply here/i);
+    await expect(textarea).toBeDisabled();
+
+    const sendBtn = page.getByRole('button', { name: /Send Reply/i });
+    await expect(sendBtn).toBeDisabled();
+  });
 });
