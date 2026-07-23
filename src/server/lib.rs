@@ -3375,15 +3375,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
-    let omnichannel_webhook_state = api::omnichannel_webhook::AppState {
-        orchestrator: dept_orchestrator.clone(),
-        db: db.clone(),
-    };
-    let omnichannel_webhook_router = axum::Router::new()
-        .route("/api/v1/omnichannel/webhook", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
-        .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
-        .with_state(omnichannel_webhook_state);
-
     let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
@@ -7804,13 +7795,9 @@ async fn create_ui_bom_item_handler(
         )))
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
-            omnichannel_webhook_router,
+            inbox_webhook_router,
             http_auth_store.clone(),
         ))
-        .nest(
-            "/api/v1/inbox",
-            protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
-        )
         .nest(
             "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),

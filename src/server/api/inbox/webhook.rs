@@ -65,9 +65,11 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/webhook", post(handle_omnichannel_webhook))
-        .route("/conversations/{tenant_id}", axum::routing::get(get_conversations))
-        .route("/messages/{tenant_id}/{conversation_id}", axum::routing::get(get_messages))
+        .route("/api/v1/inbox/webhook", post(handle_omnichannel_webhook))
+        .route("/api/v1/omnichannel/webhook", post(handle_omnichannel_webhook))
+        .route("/api/v1/webhooks/omnichannel", post(handle_omnichannel_webhook))
+        .route("/api/v1/inbox/conversations/{tenant_id}", axum::routing::get(get_conversations))
+        .route("/api/v1/inbox/messages/{tenant_id}/{conversation_id}", axum::routing::get(get_messages))
         .with_state(state)
 }
 
