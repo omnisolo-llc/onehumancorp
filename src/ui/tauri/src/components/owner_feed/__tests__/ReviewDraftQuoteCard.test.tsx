@@ -65,6 +65,14 @@ describe('ReviewDraftQuoteCard', () => {
 
     const editButton = screen.getByRole('button', { name: 'Edit' });
     fireEvent.click(editButton);
+
+    // In edit mode
+    const textarea = screen.getByTestId('feed-edit-textarea');
+    fireEvent.change(textarea, { target: { value: 'New quote' } });
+
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    fireEvent.click(saveButton);
+    expect(mockOnEdit).toHaveBeenCalledWith('New quote');
     expect(mockOnEdit).toHaveBeenCalledTimes(1);
   });
 });

@@ -146,7 +146,7 @@ export const AgentFeed: React.FC = () => {
                                 projectDescription={parsedPayload.project_description || 'Project'}
                                 totalCost={parsedPayload.total_cost || 0}
                                 onApprove={() => handleApprove(draft.draft_id)}
-                                onEdit={() => handleEdit(draft.draft_id, "Edited quote placeholder")}
+                                onEdit={(newQuote: string) => handleEdit(draft.draft_id, newQuote)}
                             />
                         </div>
                     );
