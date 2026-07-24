@@ -299,7 +299,7 @@ mod tests {
     use super::*;
 
     // Testing the "typed dictionary" aspect of the mechanic.
-    #[derive(Clone, Default)]
+    #[derive(Clone, Default, Debug)]
     pub struct TypedAgentState {
         pub messages: Vec<String>,
         pub has_tool_calls: bool,
@@ -527,6 +527,28 @@ mod tests {
         let final_state_b = compiled.run(initial_state_b).await.unwrap();
         assert_eq!(final_state_b.messages.len(), 2);
         assert_eq!(final_state_b.messages[1], "Path B executed");
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_error_handling() {
+        let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer));
+
+        graph.add_node("failing_node", |_state| async move {
+            Err("Simulated node failure".to_string())
+        });
+
+        graph.set_entry_point("failing_node");
+
+        let initial_state = TypedAgentState {
+            messages: vec![],
+            has_tool_calls: false,
+        };
+
+        let compiled = graph.compile().unwrap();
+        let result = compiled.run(initial_state).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Simulated node failure");
     }
 
     #[tokio::test]
