@@ -19,7 +19,7 @@
     "google-protobuf": "^3.21.4",
     "isomorphic-dompurify": "^3.18.0",
     "marked": "^18.0.5",
-    "next": "^16.2.7",
+    "next": "16.2.11",
     "pg": "8.21.0",
     "react": "^19.2.5",
     "react-icons": "^5.6.0",
@@ -61,7 +61,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "next": "16.2.11"
   },
   "overrides": {
     "@modelcontextprotocol/sdk": "1.29.0",
@@ -74,6 +75,17 @@
       "esbuild": "0.28.1"
     },
     "undici": "7.28.0",
-    "ws@6.2.3": "6.2.4"
+    "ws@6.2.3": "6.2.4",
+    "@hono/node-server": ">=2.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "axios": ">=1.18.0",
+      "immutable": ">=4.3.9",
+      "dompurify": ">=3.4.12",
+      "sharp": ">=0.35.0",
+      "@hono/node-server": ">=2.0.5",
+      "next": ">=16.2.11"
+    }
   }
 }
