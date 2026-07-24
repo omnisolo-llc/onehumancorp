@@ -198,7 +198,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: bitnami/postgresql:16
+    image: pgvector/pgvector:pg16
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:

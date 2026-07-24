@@ -58,7 +58,7 @@ for script in "$kind_script" "$compose_script"; do
   fi
 done
 
-grep -Fq 'ensure_image_loaded_in_kind bitnami/postgresql:16' "$kind_script" || {
+grep -Fq 'ensure_image_loaded_in_kind pgvector/pgvector:pg16' "$kind_script" || {
   echo "Kind E2E must load the same canonical pgvector image that CI pre-pulls." >&2
   exit 1
 }
