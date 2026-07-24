@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Multi-Tenant Omnichannel Unified Inbox
 
   ## Problem Statement
-  OHC requires a high-performance, natively-integrated multi-tenant omnichannel unified inbox. Currently, Chatwoot as an external service is 100% retired. Small business owners like Maya, Carlos, and Fatima receive demand via multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat) and they need a unified, lightning-fast "Work Triage" view to coordinate these conversations. Without a native solution, OHC cannot provide the deep AI-agent integration necessary for autonomous customer relationships and cart recovery operations. We need a native Rust implementation that achieves feature parity with Chatwoot while adhering to our zero-trust, multi-tenant architectural constraints.
+  OHC requires a high-performance, natively-integrated multi-tenant omnichannel unified inbox. Currently, the legacy external chat service is 100% retired. Small business owners like Maya, Carlos, and Fatima receive demand via multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat) and they need a unified, lightning-fast "Work Triage" view to coordinate these conversations. Without a native solution, OHC cannot provide the deep AI-agent integration necessary for autonomous customer relationships and cart recovery operations. We need a native Rust implementation that achieves feature parity with the legacy external chat service while adhering to our zero-trust, multi-tenant architectural constraints.
 
   ## Research Report & Feature Benchmarking
-  An exhaustive audit of the `chatwoot/chatwoot` source code was conducted to extract the core conversational data model and functional invariants:
+  An exhaustive audit of the original upstream source code was conducted to extract the core conversational data model and functional invariants:
   - **Conversations & Messages:** Central entity linking an Account (tenant), Inbox, Assignee, and Contact. Messages belong to Conversations.
   - **Inboxes & Channels:** Inboxes act as routing targets, backed by specific Channel models (e.g., WhatsApp, Email, Web Widget, API).
   - **Real-Time WebSocket Sync:** Real-time event propagation via WebSocket (ActionCable in Ruby, needing a Tokio/Axum WebSocket replacement in Rust).
