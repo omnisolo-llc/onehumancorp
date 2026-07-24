@@ -10,7 +10,9 @@ const DEFAULT_CATALOG = [
   { id: 'prod_2', name: 'Pastry', price: 3.00 }
 ];
 
-export default function POSTerminalMobile() {
+import { Suspense } from "react";
+
+function POSTerminalMobileContent() {
   const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>(DEFAULT_CATALOG);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -158,5 +160,14 @@ export default function POSTerminalMobile() {
         </div>
       )}
     </div>
+  );
+}
+
+
+export default function POSTerminalMobile() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <POSTerminalMobileContent />
+    </Suspense>
   );
 }
