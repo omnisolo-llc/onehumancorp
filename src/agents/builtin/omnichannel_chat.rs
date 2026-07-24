@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard
+/// External Retirement & Custom Rust Omnichannel Chat System Standard
 /// Native AI auto-responder, copilot response drafting, intent classification, and human agent handoff features in Rust.
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
