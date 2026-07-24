@@ -90,6 +90,29 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
+        // Handle required_deposit_cents specifically for Instagram DMs and Social Commerce Checkouts
+        let required_deposit_cents = payload.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+        if required_deposit_cents > 0 {
+            tracing::info!("Generating Stripe Payment Link for deposit: {} cents", required_deposit_cents);
+            // Use the actual required deposit rather than the full price for the checkout session link
+            if payload.get("stripe_payment_link").is_none() {
+                match stripe_client.create_checkout_session(
+                    &format!("Deposit for: {}", scope),
+                    client_id,
+                    (required_deposit_cents as f64) / 100.0,
+                    None,
+                    None
+                ).await {
+                    Ok(link) => {
+                        tracing::info!("Generated deposit payment link: {}", link);
+                        // Will use this link as the stripe_payment_link below
+                    }
+                    Err(err) => tracing::error!("Failed to generate deposit link: {}", err),
+                }
+            }
+        }
+
         let mut stripe_payment_link = payload.get("stripe_payment_link")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())

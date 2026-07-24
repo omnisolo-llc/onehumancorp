@@ -118,7 +118,7 @@ Message from {}: '{}'
 Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
-If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
+If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}), and 'draft_reply' (a friendly message to the customer that will include the payment link).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
 You have access to the following Staff Availability Data (Simulated):
 Shift ID 'shift_123' belongs to 'sam_890'.
@@ -400,6 +400,7 @@ Output JSON format:
                     let total_amount_cents = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                     let required_deposit_cents = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                     let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
+                    let draft_reply_text = quote_data.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("Here is your quote and deposit link:");
 
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
@@ -443,6 +444,7 @@ Output JSON format:
                                 let _ = tx.commit().await;
 
                                 modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                                modified_quote_data["draft_reply"] = serde_json::json!(draft_reply_text);
                                 if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                     let mut scope = String::new();
                                     for item in items {
@@ -492,6 +494,7 @@ Output JSON format:
                             }
 
                             modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                            modified_quote_data["draft_reply"] = serde_json::json!(draft_reply_text);
                             if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                 let mut scope = String::new();
                                 for item in items {
@@ -602,7 +605,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" && action_type == "Draft Quote" { "quote_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
                         "action_payload": action_payload
                     }))
                     .execute(&self.db.pool).await {
@@ -731,7 +734,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" && action_type == "Draft Quote" { "quote_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
                         "action_payload": action_payload
                     }).to_string())
                     .execute(&*sqlite_pool).await {

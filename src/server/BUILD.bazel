@@ -543,6 +543,7 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
+        "@crates//:tracing",
 
         "@crates//:serde_json",
         "@crates//:sqlx",
@@ -965,6 +966,7 @@ rust_test(
         "@crates//:hmac",
         "@crates//:sha2",
         "@crates//:temp-env",
+        "@crates//:tracing",
     ],
 )
 

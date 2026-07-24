@@ -6,7 +6,16 @@ type InstagramDMCardProps = {
   approval: any;
 };
 
+function formatCurrency(cents: number | undefined) {
+  if (cents === undefined || isNaN(cents)) return '';
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onApprove, onDismiss }) => {
+  const payload = approval.proposed_action || approval.context_payload;
+  const draftReply = payload?.draft_reply || payload?.generated_response;
+  const isQuote = payload?.feature_type === 'quote_draft' || payload?.action_type === 'Draft Quote' || payload?.total_amount_cents !== undefined;
+
   return (
     <div className="mb-4 p-4 max-w-[375px] w-full mx-auto bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm" data-testid="instagram-dm-card">
       <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
@@ -16,11 +25,27 @@ export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onAp
         <strong className="font-outfit tracking-wide">Instagram DM</strong>
       </div>
       <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
-        Customer: <div className="triage-context inline break-words">{(approval.proposed_action || approval.context_payload)?.customer_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.description}</div>
+        Customer: <div className="triage-context inline break-words">{payload?.customer_message || payload?.original_message || payload?.description}</div>
       </div>
       <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm">
         <div className="font-semibold text-xs uppercase mb-1 block">Draft Reply:</div>
-        <div className="whitespace-pre-wrap">{(approval.proposed_action || approval.context_payload)?.draft_reply || (approval.proposed_action || approval.context_payload)?.generated_response}</div>
+        <div className="whitespace-pre-wrap">{draftReply}</div>
+
+        {isQuote && payload?.total_amount_cents !== undefined && (
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center text-xs font-semibold mb-1">
+              <span className="text-gray-500 dark:text-gray-400">Quote Total:</span>
+              <span>{formatCurrency(payload.total_amount_cents)}</span>
+            </div>
+            {payload.required_deposit_cents > 0 && (
+              <div className="flex justify-between items-center text-xs font-semibold text-pink-600">
+                <span>Required Deposit:</span>
+                <span>{formatCurrency(payload.required_deposit_cents)}</span>
+              </div>
+            )}
+            <div className="text-[10px] text-gray-400 mt-2 italic">A Stripe payment link will be automatically generated and appended to your reply.</div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">

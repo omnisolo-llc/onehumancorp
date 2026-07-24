@@ -144,6 +144,7 @@ mod tests {
         temp_env::with_vars(vec![
             ("OHC_SQLITE_KEY", None::<&str>),
             ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+            ("OHC_STANDALONE", Some("1")),
         ], || {
             // Ephemeral key includes PID+timestamp, so each call generates a different key.
             // We just verify it doesn't panic and produces valid 32-byte keys.
