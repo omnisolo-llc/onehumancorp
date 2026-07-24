@@ -215,13 +215,16 @@ describe('PricingPage', () => {
         resolveFetch = resolve;
     }));
 
-    render(<PricingPage />);
+    await act(async () => { render(<PricingPage />); });
 
     // Test that the loading button appears
     expect(screen.getAllByText('Loading...').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /loading/i }).length).toBe(4);
 
-    resolveFetch({ ok: true, json: async () => ({ current_plan: 'Free' }) });
+    await act(async () => {
+        resolveFetch({ ok: true, json: async () => ({ current_plan: 'Free' }) });
+    });
+
   });
 
   it('handles manage billing portal errors gracefully', async () => {
