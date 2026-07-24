@@ -1755,7 +1755,7 @@
               if (!res.ok) return;
 
               const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
+
               document.getElementById('referral-tier-widget').style.display = 'block';
 
               let statusText = `You are on the <strong>${data.current_tier}</strong> Tier.`;

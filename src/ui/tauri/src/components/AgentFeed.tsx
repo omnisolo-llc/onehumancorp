@@ -50,8 +50,8 @@ export const AgentFeed: React.FC = () => {
             // Update the draft in the UI optimistically
             setDrafts(drafts.map(d => d.draft_id === id ? { ...d, response: newResponse } : d));
 
-            const response = await fetch(`/api/v1/inbox/action_required/${id}`, {
-                method: 'PATCH',
+            const response = await fetch(`/api/v1/inbox/action_required/${id}/edit`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
