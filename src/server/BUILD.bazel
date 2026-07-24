@@ -74,6 +74,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:agent_feed.rs",
     "//src/server/api:agent_stream.rs",
     "//src/server/api:unified_ws.rs",
+    "//src/server/api:custom_chat.rs",
     "//src/server/api:incidents.rs",
     "//src/server/api:audio_command.rs",
     "//src/server/api:invoice.rs",

@@ -7819,6 +7819,13 @@ async fn create_ui_bom_item_handler(
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
         )
         .nest(
+            "/api/v1/custom-chat",
+            protect_internal_ingress(
+                api::custom_chat::router(db.clone()),
+                http_auth_store.clone(),
+            ),
+        )
+        .nest(
             "/api/v1/inbox/action_required",
             api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
         )
