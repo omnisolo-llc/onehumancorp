@@ -53,6 +53,9 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+    // The admin pool is limited to max_connections=1. We must run the migration
+    // and the lock using the SAME acquired connection, or else run() will deadlock
+    // trying to acquire a connection while we hold the only one.
     let mut lock_conn = admin_pool.acquire().await.map_err(|e| format!("acquire lock conn: {e}"))?;
     sqlx::query("SELECT pg_advisory_lock(987654321)")
         .execute(&mut *lock_conn)
@@ -60,10 +63,11 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .map_err(|e| format!("acquire advisory lock: {e}"))?;
 
     let migration_result = MIGRATOR
-        .run(&admin_pool)
+        .run(&mut *lock_conn)
         .await;
 
     sqlx::query("SELECT pg_advisory_unlock(987654321)").execute(&mut *lock_conn).await.ok();
+    drop(lock_conn);
 
     migration_result.map_err(|error| format!("run src/server/migrations: {error}"))?;
 
