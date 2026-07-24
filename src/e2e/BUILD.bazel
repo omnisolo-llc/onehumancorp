@@ -38,6 +38,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/api-docs.spec.ts",
     "//src/ui/next:src/e2e/approval_inbox.spec.ts",
     "//src/ui/next:src/e2e/viral-agent-paywall.spec.ts",
+    "//src/ui/next:src/e2e/omnichannel_native_rust_chat.spec.ts",
     "//src/ui/next:src/e2e/plan.spec.ts",
     "//src/ui/next:src/e2e/zero-click-builder.spec.ts",
 
