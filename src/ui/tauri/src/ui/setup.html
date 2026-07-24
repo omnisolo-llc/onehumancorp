@@ -43,7 +43,7 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
+      .step { display: none; }
       .step.active { display: block; }
       .next-step-btn {
         width: 100%;
@@ -94,7 +94,7 @@
 
       <div id="step-context" class="step">
         <h2>Context</h2>
-        <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label>
+        <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label><label class="context-card" data-testid="context-agency"><input type="radio" name="context" value="Agency or Studio"> Agency or Studio</label>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
       </div>
 
@@ -102,7 +102,7 @@
         <h2>Categories</h2>
         <select data-testid="business-categories" id="business-categories">
           <option value="">Select...</option>
-          <option value="Home Baker">Home Baker</option>
+          <option value="Home Baker">Home Baker</option><option value="Design">Design</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
       </div>
@@ -116,9 +116,9 @@
 
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
-        <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
+        <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label><label class="team-support-card toggle-row"><input type="checkbox" id="team-operations" name="team-operations" data-testid="team-operations" value="Team Operations"> Team Operations</label>
         <select data-testid="assistant-tone">
-          <option value="Friendly">Friendly</option>
+          <option value="Friendly">Friendly</option><option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
@@ -309,7 +309,7 @@
 
             // Assume success means we transition to launched
             localStorage.removeItem('onboardingState');
-            document.body.innerHTML = '<h1>You\'re Live!</h1>';
+            window.location.href="dashboard.html";
           } catch (e) {
             instantError.innerText = e.message || 'Error occurred';
             instantError.style.display = 'block';
@@ -393,7 +393,7 @@
             document.getElementById('submit-error').innerText = data.error || 'Error occurred'; document.getElementById('submit-error').style.display = 'block'; document.getElementById('submit-error').style.visibility = 'visible'; document.getElementById('submit-error').style.opacity = '1';
           } else {
             localStorage.removeItem('onboardingState');
-            document.body.innerHTML = '<h1>You\'re Live!</h1>';
+            window.location.href="dashboard.html";
           }
         } catch (e) {
           document.getElementById('submit-error').innerText = 'Backend is broken'; document.getElementById('submit-error').style.display = 'block'; document.getElementById('submit-error').style.visibility = 'visible'; document.getElementById('submit-error').style.opacity = '1';
