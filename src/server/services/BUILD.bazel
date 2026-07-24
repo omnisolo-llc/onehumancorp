@@ -6,6 +6,7 @@ exports_files(
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
+        "core_inbox_service.rs",
 
         "cache_invalidator.rs",
         "wizard.rs",
@@ -26,6 +27,7 @@ rust_library(
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
+        "core_inbox_service.rs",
 
         "cache_invalidator.rs",
         "wizard.rs",
