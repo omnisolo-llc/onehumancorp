@@ -109,7 +109,6 @@ async fn handle_rpc(
         return Json(resp);
     }
 
-
     if payload.method == "aider_repomap" {
         let path = payload
             .params
@@ -119,7 +118,9 @@ async fn handle_rpc(
             .unwrap_or(".");
 
         let repomap = crate::aider_repomap::RepoMap::new(path);
-        let result = repomap.generate_map().unwrap_or_else(|e| format!("Error: {}", e));
+        let result = repomap
+            .generate_map()
+            .unwrap_or_else(|e| format!("Error: {}", e));
 
         return Json(JsonRpcResponse {
             jsonrpc: "2.0".to_string(),
