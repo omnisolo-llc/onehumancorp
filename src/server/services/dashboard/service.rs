@@ -448,12 +448,94 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let agents = s.fetch_agents(&o, mobile_optimized).await?;
+                    let mut final_statuses = Vec::new();
+                    let mut original_prompts_len = 0;
+                    let mut compressed_prompts_len = 0;
+                    let mut status_map = std::collections::HashMap::new();
+
+                    let final_agents_payload = agents
+                        .iter()
+                        .map(|a| {
+                            let status_val = match a.status.to_uppercase().as_str() {
+                                "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                                "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                                "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                                "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                                _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                            };
+
+                            let role_val = match a.role.to_uppercase().as_str() {
+                                "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                                "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                                "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
+                                _ => ::server_ohc::common::Role::Unspecified as i32,
+                            };
+
+                            let orig_len = a.name.len();
+                            let name = if mobile_optimized {
+                                String::new()
+                            } else {
+                                original_prompts_len += orig_len;
+                                let compressed = a.name.clone();
+                                if orig_len > 0 {
+                                    compressed_prompts_len += compressed.len();
+                                }
+                                compressed
+                            };
+
+                            if !mobile_optimized {
+                                *status_map.entry(a.status.clone()).or_insert(0) += 1;
+                            }
+
+                            ::server_ohc::agent::Agent {
+                                id: a.id.clone(),
+                                name,
+                                role: role_val,
+                                status: status_val,
+                                organization_id: if mobile_optimized { String::new() } else { a.organization_id.clone() },
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    if !mobile_optimized {
+                        final_statuses = status_map
+                            .into_iter()
+                            .map(|(status, count)| StatusCount { status, count })
+                            .collect();
+                    }
+                    Ok::<(Vec<::server_ohc::agent::Agent>, Vec<StatusCount>, usize, usize), String>((final_agents_payload, final_statuses, original_prompts_len, compressed_prompts_len))
+                })
             },
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let meetings = s.fetch_meetings(&o, mobile_optimized).await?;
+                    let final_meetings = meetings.iter().map(|m| {
+                        let transcript = if mobile_optimized {
+                            Vec::new()
+                        } else {
+                            m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
+                                id: msg.id.clone(),
+                                from_agent_id: msg.from_agent.clone(),
+                                to_agent_id: msg.to_agent.clone(),
+                                message_type: msg.r#type.clone(),
+                                content: msg.content.clone(),
+                                meeting_id: m.id.clone(),
+                                occurred_at_unix: msg.occurred_at_unix,
+                            }).collect()
+                        };
+
+                        ::server_ohc::app::MeetingRoom {
+                            id: m.id.clone(),
+                            participants: m.participants.clone(),
+                            transcript,
+                        }
+                    }).collect::<Vec<_>>();
+                    Ok::<Vec<::server_ohc::app::MeetingRoom>, String>(final_meetings)
+                })
             },
             {
                 if mobile_optimized {
@@ -482,108 +564,45 @@ impl DashboardService for MyDashboardService {
             {
                 let s = self.clone();
                 let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
+                tokio::spawn(async move {
+                    let mut org = s.fetch_org(&o, mobile_optimized).await?;
+                    let mut original_org_prompt_len = 0;
+                    let mut compressed_org_prompt_len = 0;
+
+                    if let Some(ref mut o) = org {
+                        if mobile_optimized {
+                            o.domain = String::new();
+                            o.members = vec![];
+                            o.role_profiles = vec![];
+                            o.ceo_id = String::new();
+                            o.created_at_unix = 0;
+                        } else {
+                            let prompt = &o.name;
+                            let orig_len = prompt.len();
+                            if orig_len > 0 {
+                                original_org_prompt_len += orig_len;
+                                compressed_org_prompt_len += orig_len; // prompt.clone().len() is same
+                            }
+                        }
+                    }
+                    Ok::<(Option<::server_ohc::organization::Organization>, usize, usize), String>((org, original_org_prompt_len, compressed_org_prompt_len))
+                })
             }
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (final_agents_payload, final_statuses, original_agents_len, compressed_agents_len) = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let final_meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (org, original_org_len, compressed_org_len) = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
-        let final_meetings = _meetings.iter().map(|m| {
-            let transcript = if req.mobile_optimized {
-                Vec::new()
-            } else {
-                m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
-                    id: msg.id.clone(),
-                    from_agent_id: msg.from_agent.clone(),
-                    to_agent_id: msg.to_agent.clone(),
-                    message_type: msg.r#type.clone(),
-                    content: msg.content.clone(),
-                    meeting_id: m.id.clone(),
-                    occurred_at_unix: msg.occurred_at_unix,
-                }).collect()
-            };
-
-            ::server_ohc::app::MeetingRoom {
-                id: m.id.clone(),
-                participants: m.participants.clone(),
-                transcript,
-            }
-        }).collect::<Vec<_>>();
         let mut final_cost_summary = None;
-        let mut final_statuses = Vec::new();
-        if req.mobile_optimized { final_statuses.clear(); }
-
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
-
-        let final_agents_payload = agents
-            .iter()
-            .map(|a| {
-                let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
-                };
-
-                let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    "OPERATIONS_MANAGER" => ::server_ohc::common::Role::OperationsManager as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
-                };
-
-                let orig_len = a.name.len();
-                if orig_len > 0 && !req.mobile_optimized {
-                    original_prompts_len += orig_len;
-                }
-
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    let compressed = a.name.clone();
-                    if orig_len > 0 {
-                        compressed_prompts_len += compressed.len();
-                    }
-                    compressed
-                };
-
-                ::server_ohc::agent::Agent {
-                    id: a.id.clone(),
-                    name,
-                    role: role_val,
-                    status: status_val,
-                    organization_id: if req.mobile_optimized { String::new() } else { a.organization_id.clone() },
-                }
-            })
-            .collect::<Vec<_>>();
 
         if !req.mobile_optimized {
-            let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
-                *status_map.entry(a.status.clone()).or_insert(0) += 1;
-            }
-            final_statuses = status_map
-                .into_iter()
-                .map(|(status, count)| StatusCount { status, count })
-                .collect();
-
-            if let Some(ref o) = org {
-                let prompt = &o.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-                    let compressed = prompt.clone();
-                    compressed_prompts_len += compressed.len();
-                }
-            }
+            let original_prompts_len = original_agents_len + original_org_len;
+            let compressed_prompts_len = compressed_agents_len + compressed_org_len;
 
             let mut optimized_total_tokens = total_tokens;
             if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
@@ -591,7 +610,7 @@ impl DashboardService for MyDashboardService {
                 optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
             }
 
-            let mut agent_summaries = Vec::new();
+            let mut agent_summaries = Vec::with_capacity(_agent_costs_data.len());
             for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
                 agent_summaries.push(::server_ohc::billing::AgentCostSummary {
                     agent_id,
@@ -611,22 +630,7 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
-
-
         }
-
-        let org = if req.mobile_optimized {
-            org.map(|mut o| {
-                o.domain = String::new();
-                o.members = vec![];
-                o.role_profiles = vec![];
-                o.ceo_id = String::new();
-                o.created_at_unix = 0;
-                o
-            })
-        } else {
-            org
-        };
 
         let result = DashboardSnapshot {
             organization: org,
