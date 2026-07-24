@@ -91,7 +91,7 @@ pub async fn handle_webhook(
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
     // Process incoming webhook payload
-    tracing::info!("Received WhatsApp webhook: {:?}", payload);
+    tracing::info!("Received WhatsApp webhook");
 
     // Send a 200 OK response to acknowledge receipt
     StatusCode::OK

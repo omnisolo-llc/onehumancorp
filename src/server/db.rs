@@ -438,11 +438,13 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal(
-                                    "[bug] Failed to create DB directory",
-                                );
-                                tracing::error!("Failed to create DB directory: {}", e);
-                                return Err(e.into());
+                                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                                    ::server_telemetry::record_error_signal(
+                                        "[bug] Failed to create DB directory",
+                                    );
+                                    tracing::error!("Failed to create DB directory: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
 
@@ -4469,7 +4471,12 @@ mod security_tests_final {
                         let parent_dir = db_path
                             .parent()
                             .expect("Database URL or operation failed in test");
-                        let _ = fs::create_dir_all(parent_dir);
+                        if let Err(e) = fs::create_dir_all(parent_dir) {
+                            if e.kind() != std::io::ErrorKind::AlreadyExists {
+                                tracing::error!("Failed to securely create DB directory for test: {}", e);
+                                return;
+                            }
+                        }
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
                         #[cfg(unix)]
@@ -4494,7 +4501,12 @@ mod security_tests_final {
                         let parent_dir = db_path
                             .parent()
                             .expect("Database URL or operation failed in test");
-                        let _ = fs::create_dir_all(parent_dir);
+                        if let Err(e) = fs::create_dir_all(parent_dir) {
+                            if e.kind() != std::io::ErrorKind::AlreadyExists {
+                                tracing::error!("Failed to securely create DB directory for test: {}", e);
+                                return;
+                            }
+                        }
 
                         // Securely create the database file with restricted permissions initially to avoid TOCTOU
                         #[cfg(unix)]

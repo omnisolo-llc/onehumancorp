@@ -34,7 +34,7 @@ impl SubscriptionHealthWorker {
                             Ok(transaction) => transaction,
                             Err(error) => {
                                 tracing::warn!(
-                                    "subscription health worker failed to begin transaction: {}",
+                                    "subscription worker failed to begin transaction: {}",
                                     error
                                 );
                                 continue;
@@ -45,7 +45,7 @@ impl SubscriptionHealthWorker {
                             .await
                         {
                             tracing::warn!(
-                                "subscription health worker failed to set bypass role: {}",
+                                "subscription worker failed to set bypass role: {}",
                                 error
                             );
                             continue;
@@ -167,7 +167,7 @@ impl SubscriptionHealthWorker {
 
                 if let Some(transaction) = postgres_transaction {
                     if let Err(error) = transaction.commit().await {
-                        tracing::warn!("subscription health worker failed to commit: {}", error);
+                        tracing::warn!("subscription worker failed to commit: {}", error);
                     }
                 }
             }
