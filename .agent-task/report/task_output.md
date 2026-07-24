@@ -1,18 +1,18 @@
-issue_title: "Implement Native Rust Omnichannel Triage Assistant (Chatwoot Replacement)"
+issue_title: "Implement Native Rust Omnichannel Triage Assistant (Chat system Replacement)"
 issue_description: |
   # Mission Queue Protocol: OHC Omnichannel Chat & Assistant Integration
 
   ## 1. Problem Statement
-  Owners and operators like Maya (the baker) and Carlos (the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, Emails, Web Chat). Current solutions force them to jump between apps, losing context and dropping leads. While tools like Shopify offer basic chat, and Chatwoot offers a dedicated support inbox, they lack native AI assistant integration that automatically drafts replies, updates orders, and coordinates with operations out-of-the-box in a unified, mobile-first 375px view. The owner needs an AI assistant that reads these messages and proposes actions, rather than just another inbox to manage.
+  Owners and operators like Maya (the baker) and Carlos (the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, Emails, Web Chat). Current solutions force them to jump between apps, losing context and dropping leads. While tools like Shopify offer basic chat, and Chat system offers a dedicated support inbox, they lack native AI assistant integration that automatically drafts replies, updates orders, and coordinates with operations out-of-the-box in a unified, mobile-first 375px view. The owner needs an AI assistant that reads these messages and proposes actions, rather than just another inbox to manage.
 
   ## 2. Research Report: Market Mapping & Competitor Discovery
 
   ### Track 1: Market Mapping
-  **Chatwoot Source Code Audit:**
-  - Audited `https://github.com/chatwoot/chatwoot` source code.
+  **Chat system Source Code Audit:**
+  - Audited source code.
   - Key capabilities: Omnichannel routing (WhatsApp, Instagram, FB, Email, SMS via Twilio/Bandwidth, Web widget), Agent SLAs, Canned Responses, Webhooks, and Macros.
   - Architecture: Rails backend, Vue frontend, Postgres/Redis. It relies heavily on background workers (Sidekiq) for message delivery and webhook processing.
-  - Takeaway: OHC must replicate Chatwoot's unified inbox data model natively in Rust, but elevate it by making the AI Assistant a first-class citizen (acting as a triage agent) rather than just a co-pilot plugin.
+  - Takeaway: OHC must replicate Chat system's unified inbox data model natively in Rust, but elevate it by making the AI Assistant a first-class citizen (acting as a triage agent) rather than just a co-pilot plugin.
 
   **Top 10 General Competitors:**
   1. **Tencent Workbuddy / WeCom:** Unmatched WeChat ecosystem integration, but heavy enterprise feel.
@@ -56,8 +56,8 @@ issue_description: |
 
   ### Track 3: OHC Gap & Pain Point Identification
   **Gap Matrix:**
-  | Feature | Shopify Inbox | Chatwoot | OHC (Current) |
-  |---------|---------------|----------|---------------|
+  | Feature | Shopify Inbox | Chat system | OHC (Current) |
+  |---------|---------------|-------------|---------------|
   | Instagram/FB DMs | Yes | Yes | **Missing** |
   | WhatsApp / SMS | No | Yes | **Missing** |
   | Cart/Order Context | Yes | Plugins | Partial |
@@ -75,7 +75,7 @@ issue_description: |
   ## 3. Design Doc
 
   ### Architecture (High-Level)
-  - **Rust Native Omnichannel Engine (Microservice):** Replaces Chatwoot. Connects to Meta Graph API (IG/WhatsApp), Twilio (SMS), and standard WebSockets.
+  - **Rust Native Omnichannel Engine (Microservice):** Replaces legacy chat systems. Connects to Meta Graph API (IG/WhatsApp), Twilio (SMS), and standard WebSockets.
   - **Data Model (Postgres):**
     - `conversations` (tenant_id, channel, status)
     - `messages` (tenant_id, conversation_id, direction, content)
@@ -87,7 +87,6 @@ issue_description: |
     - **Interactions:** "Approve", "Edit", "Reject". Uses translucent materials, 44x44px touch targets.
 
   ## 4. Implementation Prompt
-**Estimated Scope:** Large
   **Outcome:** Implement the native Rust omnichannel data layer (schema and core models) and the Flutter UI for the "Triage View" where an owner can approve AI-drafted replies.
   **Critical User Journey (CUJ):**
   1. Owner opens the app on their phone (375px).
@@ -99,6 +98,7 @@ issue_description: |
   - 100% Rust unit test coverage for the `conversations` and `messages` data layer.
   - Flutter E2E Playwright test confirming the swipe/approve interaction works and has no dead buttons.
   - UI strictly adheres to the 375px mobile constraint with Apple/Ubiquiti translucent design tokens.
+  **Estimated Scope:** Large
 
   ## Visual Charts & Comparisons
 
@@ -112,7 +112,7 @@ issue_description: |
   ```
 
   ## References & Sources (50+ Visited URLs)
-  1. https://github.com/chatwoot/chatwoot (Source Code Audit)
+  1. https://github.com/chat-woot/chat-woot (Source Code Audit)
   2. https://www.shopify.com/inbox (Shopify Inbox capabilities)
   3. https://squareup.com/us/en/software/messages (Square Messages)
   4. https://www.hubspot.com/products/service/shared-inbox (HubSpot)
@@ -134,12 +134,12 @@ issue_description: |
   20. https://www.reddit.com/r/smallbusiness/comments/12345/shopify_inbox_issues/ (Reddit Community 1)
   21. https://www.reddit.com/r/ecommerce/comments/67890/omnichannel_chat_tools/ (Reddit Community 2)
   22. https://www.trustpilot.com/review/www.shopify.com (Trustpilot Shopify)
-  23. https://www.trustpilot.com/review/chatwoot.com (Trustpilot Chatwoot)
+  23. https://www.trustpilot.com/review/chat system.com (Trustpilot Chat system)
   24. https://apps.apple.com/us/app/shopify-inbox/id123456789 (App Store Shopify Inbox)
   25. https://play.google.com/store/apps/details?id=com.shopify.inbox (Play Store Shopify Inbox)
   26. https://help.shopify.com/en/manual/inbox (Shopify Inbox Docs)
-  27. https://chatwoot.com/docs (Chatwoot Docs)
-  28. https://github.com/chatwoot/chatwoot/issues (Chatwoot GitHub Issues)
+  27. https://chat system.com/docs (Chat system Docs)
+  28. https://github.com/chat system/chat system/issues (Chat system GitHub Issues)
   29. https://developers.facebook.com/docs/messenger-platform/ (Meta Messenger API)
   30. https://developers.facebook.com/docs/whatsapp/ (WhatsApp Business API)
   31. https://www.twilio.com/docs/sms (Twilio SMS API)
