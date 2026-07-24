@@ -51,7 +51,7 @@ pub use ::server_integrations_manychat as manychat;
 pub use ::server_integrations_task_scheduler as task_scheduler;
 pub use ::server_integrations_restic as restic;
 pub use ::server_integrations_resend as resend;
-pub use ::server_integrations_ohc_chat as ohc_chat;
+pub use ::ohc_chat as ohc_chat;
 
 #[cfg(not(ohc_bazel))]
 pub mod google_analytics;
