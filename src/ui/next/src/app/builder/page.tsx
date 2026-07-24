@@ -790,7 +790,7 @@ export default function BuilderPage() {
         {/* Upgrade Modal */}
         {showUpgradeModal && (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%] z-[60] flex flex-col justify-end">
-            <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-[30px] saturate-[210%] w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
+            <div className="glassmorphism w-full !rounded-b-none !border-b-0 p-6 shadow-2xl animate-slide-up pb-10">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
                   👑
