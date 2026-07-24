@@ -312,6 +312,17 @@ where
                 }
             } else {
                 if local.len() >= self.inner.max_local_capacity {
+                    let mut items: Vec<_> = local.iter().map(|item| (item.key().clone(), item.access_count.load(Ordering::Relaxed))).collect();
+                    items.sort_by_key(|(_, count)| *count);
+                    let to_remove = std::cmp::max(1, local.len() / 10);
+                    for i in 0..to_remove {
+                        if let Some((k, _)) = items.get(i) {
+                            if Some(k) != least_accessed_key.as_ref() {
+                                local.remove(k);
+                                removed_keys.push(k.clone());
+                            }
+                        }
+                    }
                     if let Some(key_to_remove) = least_accessed_key {
                         local.remove(&key_to_remove);
                         removed_keys.push(key_to_remove);
