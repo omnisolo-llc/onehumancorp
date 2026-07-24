@@ -152,7 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_missing_restic_password_returns_error() {
-        temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
+        temp_env::async_with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -169,15 +169,15 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
     async fn test_cloud_mode_returns_error() {
-        temp_env::with_vars(vec![
+        temp_env::async_with_vars(vec![
             ("RESTIC_PASSWORD", Some("test_pass")),
             ("OHC_EXECUTION_MODE", Some("cloud")),
-        ], || {
+        ], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -194,12 +194,14 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
+    async fn test_password_is_not_hardcoded() {
         let source = include_str!("restic.rs");
-        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
+        let pattern = format!("{}{}", "dummy_", "password");
+        let count = source.matches(&pattern).count();
+        assert_eq!(count, 0, "Hardcoded dummy password should have been removed");
     }
 }

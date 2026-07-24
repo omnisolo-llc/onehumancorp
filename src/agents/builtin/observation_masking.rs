@@ -21,6 +21,63 @@ impl JetBrainsObservationMasker {
         }
     }
 
+    fn detect_and_mask_binary(s: &mut String) -> bool {
+        let trimmed: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+        let len = trimmed.len();
+        if len < 64 {
+            return false;
+        }
+
+        // Avoid masking uniform placeholder/filler strings (e.g. "AAAA...") as binary
+        if let Some(first) = trimmed.chars().next() {
+            if trimmed.chars().all(|c| c == first) {
+                return false;
+            }
+        }
+
+        // 1. Check if it's purely hexadecimal
+        let is_hex = len % 2 == 0 && trimmed.chars().all(|c| c.is_ascii_hexdigit());
+        if is_hex {
+            *s = format!("[Masked binary/encoded hex data: {} bytes]", len / 2);
+            return true;
+        }
+
+        // 2. Check if it's purely base64
+        let mut chars_iter = trimmed.chars();
+        let mut valid_base64 = true;
+        let mut padding_started = false;
+        let mut char_count = 0;
+
+        while let Some(c) = chars_iter.next() {
+            char_count += 1;
+            if c == '=' {
+                padding_started = true;
+                if len - char_count > 1 {
+                    valid_base64 = false;
+                    break;
+                }
+            } else if padding_started {
+                valid_base64 = false;
+                break;
+            } else {
+                let is_b64_char = c.is_ascii_alphanumeric() || c == '+' || c == '/';
+                if !is_b64_char {
+                    valid_base64 = false;
+                    break;
+                }
+            }
+        }
+
+        if valid_base64 && len % 4 == 0 {
+            let padding_len = trimmed.chars().rev().take(2).filter(|&c| c == '=').count();
+            let decoded_len = (len / 4) * 3 - padding_len;
+            *s = format!("[Masked binary/encoded base64 data: {} bytes]", decoded_len);
+            return true;
+        }
+
+        false
+    }
+
     fn mask_json_value(
         val: &mut Value,
         size_limit: usize,
@@ -58,6 +115,9 @@ impl JetBrainsObservationMasker {
         match val {
             Value::String(s) => {
                 let bytes = s.len();
+                if Self::detect_and_mask_binary(s) {
+                    return true;
+                }
                 if bytes > size_limit || s.lines().count() > 10 {
                     let line_count = s.lines().count();
                     if line_count > 10 {
@@ -834,5 +894,50 @@ mod tests2 {
         let s = val.get("output").unwrap().as_str().unwrap();
         assert!(s.contains("[Masked string:"));
         assert!(!s.contains("[... 5 lines masked ...]"));
+    }
+
+    #[test]
+    fn test_mask_hex_binary_data() {
+        let mut obj = serde_json::Map::new();
+        // A 64-character purely hexadecimal string (32 bytes of hex data)
+        let hex_data = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+        assert_eq!(hex_data.len(), 64);
+        obj.insert("hex_val".to_string(), Value::String(hex_data.to_string()));
+
+        let mut val = Value::Object(obj);
+        JetBrainsObservationMasker::mask_json_value(&mut val, 1000, 10, 0);
+
+        let s = val.get("hex_val").unwrap().as_str().unwrap();
+        assert!(s.contains("[Masked binary/encoded hex data: 32 bytes]"));
+    }
+
+    #[test]
+    fn test_mask_base64_binary_data() {
+        let mut obj = serde_json::Map::new();
+        // A 64-character purely base64 string
+        let b64_data = "SGVsbG8gd29ybGQhIFRoaXMgaXMgYSB2ZXJ5IGxvbmcgc3RyaW5nIHRvIGJlIG1hc2tlZA==";
+        assert_eq!(b64_data.len(), 72); // multiple of 4, valid b64
+        obj.insert("b64_val".to_string(), Value::String(b64_data.to_string()));
+
+        let mut val = Value::Object(obj);
+        JetBrainsObservationMasker::mask_json_value(&mut val, 1000, 10, 0);
+
+        let s = val.get("b64_val").unwrap().as_str().unwrap();
+        assert!(s.contains("[Masked binary/encoded base64 data: 52 bytes]"));
+    }
+
+    #[test]
+    fn test_do_not_mask_short_base64_or_hex() {
+        let mut obj = serde_json::Map::new();
+        let short_hex = "a1b2c3d4e5f6";
+        let short_b64 = "SGVsbG8=";
+        obj.insert("hex_val".to_string(), Value::String(short_hex.to_string()));
+        obj.insert("b64_val".to_string(), Value::String(short_b64.to_string()));
+
+        let mut val = Value::Object(obj);
+        JetBrainsObservationMasker::mask_json_value(&mut val, 1000, 10, 0);
+
+        assert_eq!(val.get("hex_val").unwrap().as_str().unwrap(), short_hex);
+        assert_eq!(val.get("b64_val").unwrap().as_str().unwrap(), short_b64);
     }
 }
