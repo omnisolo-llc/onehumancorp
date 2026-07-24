@@ -6,35 +6,66 @@ use std::path::PathBuf;
 /// Automatically reads project-level grounding (AGENTS.md / CLAUDE.md)
 /// and injects it into task context.
 
+use std::sync::RwLock;
+use std::time::{Instant, Duration};
+
+struct CacheEntry {
+    content: Option<String>,
+    timestamp: Instant,
+}
+
 pub struct OmniContextRouter {
     context_root: PathBuf,
+    cached_grounding: RwLock<Option<CacheEntry>>,
+    ttl: Duration,
 }
 
 impl OmniContextRouter {
     pub fn new(context_root: impl Into<PathBuf>) -> Self {
         Self {
             context_root: context_root.into(),
+            cached_grounding: RwLock::new(None),
+            ttl: Duration::from_secs(5), // 5 seconds TTL
         }
     }
 
     /// Reads AGENTS.md or CLAUDE.md (prioritizing AGENTS.md)
     /// Returns the content with the [SYSTEM GROUNDING] prefix.
     pub fn get_system_grounding(&self) -> Option<String> {
+        // Check cache first (read lock)
+        if let Ok(cache) = self.cached_grounding.read() {
+            if let Some(entry) = &*cache {
+                if entry.timestamp.elapsed() < self.ttl {
+                    return entry.content.clone();
+                }
+            }
+        }
+
+        let mut grounding_content = None;
+
         let agents_path = self.context_root.join("AGENTS.md");
-        if agents_path.exists()
-            && let Ok(content) = fs::read_to_string(&agents_path)
-        {
-            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        if agents_path.exists() {
+            if let Ok(content) = fs::read_to_string(&agents_path) {
+                grounding_content = Some(format!("[SYSTEM GROUNDING]\n{}", content));
+            }
+        } else {
+            let claude_path = self.context_root.join("CLAUDE.md");
+            if claude_path.exists() {
+                if let Ok(content) = fs::read_to_string(&claude_path) {
+                    grounding_content = Some(format!("[SYSTEM GROUNDING]\n{}", content));
+                }
+            }
         }
 
-        let claude_path = self.context_root.join("CLAUDE.md");
-        if claude_path.exists()
-            && let Ok(content) = fs::read_to_string(&claude_path)
-        {
-            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        // Update cache (write lock)
+        if let Ok(mut cache) = self.cached_grounding.write() {
+            *cache = Some(CacheEntry {
+                content: grounding_content.clone(),
+                timestamp: Instant::now(),
+            });
         }
 
-        None
+        grounding_content
     }
 }
 
