@@ -577,7 +577,7 @@
                 document.getElementById('cost-dashboard-llm').innerText = formatCents(costData.llm_cost || 0);
                 document.getElementById('cost-dashboard-storage').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('cost-dashboard-payment-fees').innerText = formatCents(costData.payment_fees || 0);
-                document.getElementById('cost-dashboard-total-savings').innerText = formatCents(costData.bandwidth_savings || 0);
+                document.getElementById('cost-dashboard-total-savings').innerText = "-" + formatCents(costData.bandwidth_savings || 0);
                 document.getElementById('cost-dashboard-compute').innerText = formatCents(costData.compute_cost || 0);
                 document.getElementById('cost-dashboard-network').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('cost-dashboard-email').innerText = formatCents(costData.email_cost || 0);
