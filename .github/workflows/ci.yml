@@ -35,8 +35,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Bazelisk
+        run: npm install -g @bazel/bazelisk
+
       - name: Reject active Chatwoot residue
-        run: pnpm exec bazelisk test //deploy:no_legacy_chat_residue_test
+        run: bazelisk test //deploy:no_legacy_chat_residue_test
 
       - name: Check if only markdown files changed
         id: check
