@@ -11,6 +11,6 @@ impl WhatsAppCloudApi {
     }
 
     pub async fn send_reply(&self, to: &str, body: &str) -> Result<(), String> {
-        self.client.send_message("whatsapp", to, body).await
+        self.client.send_message("whatsapp", None, to, body).await
     }
 }

@@ -431,7 +431,7 @@ mod tests {
             message: "Hello".into(),
         };
 
-        let res = handle_omnichannel_webhook(State(app_state), Json(payload)).await.into_response();
+        let res = handle_omnichannel_webhook(State(app_state), axum::extract::Extension(::server_common::Claims { organization_id: Some("t-1".to_string()), sub: "u1".into(), exp: 0, iat: 0, username: "".into(), email: "".into(), roles: vec![], session_id: None, jti: "".into() }), Json(payload)).await.into_response();
 
         assert_eq!(res.status(), StatusCode::OK);
     }
