@@ -275,6 +275,10 @@ rust_test(
         "@rules_rust//tools/runfiles",
         "@crates//:axum",
         "@crates//:tokio",
+
+        "@crates//:tower-0.4.13",
+
+
         "@crates//:sqlx",
         "@crates//:serde",
         "@crates//:serde_json",
