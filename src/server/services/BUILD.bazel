@@ -5,6 +5,9 @@ exports_files(
     [
         "booking.rs",
         "omnichannel_service.rs",
+        "custom_chat/api.rs",
+        "custom_chat/mod.rs",
+        "custom_chat/models.rs",
         "mod.rs",
 
         "cache_invalidator.rs",
@@ -25,6 +28,9 @@ rust_library(
         "bazel_lib.rs",
         "booking.rs",
         "omnichannel_service.rs",
+        "custom_chat/api.rs",
+        "custom_chat/mod.rs",
+        "custom_chat/models.rs",
         "mod.rs",
 
         "cache_invalidator.rs",
