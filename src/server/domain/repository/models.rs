@@ -483,3 +483,15 @@ pub struct ShiftSummary {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TerminalSession {
+    pub id: String,
+    pub tenant_id: String,
+    pub location_id: Option<String>,
+    pub reader_id: Option<String>,
+    pub status: String,
+    pub pos_session_data: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

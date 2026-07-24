@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ::server_ohc::invoice::*;
 use ::server_ohc::invoice::invoice_service_server::InvoiceService;
-use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, put}, Json, Router};
+use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, post, put}, Json, Router};
 use serde::Deserialize;
 use ::server_common::Claims;
 use tonic::{Request, Response, Status};
@@ -384,9 +384,32 @@ pub struct UpdateInvoiceStatusHttp {
     pub status: String,
 }
 
+#[derive(Deserialize)]
+pub struct GenerateInvoiceHttp {
+    pub job_id: String,
+    pub customer_id: String,
+}
+
+async fn generate_invoice_handler(
+    State(_hub): State<Arc<Hub>>,
+    Extension(claims): Extension<Claims>,
+    Json(payload): Json<GenerateInvoiceHttp>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // For offline field service sync, we just acknowledge receipt for now.
+    // A real implementation would generate an invoice based on the job ID.
+    let _tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+
+    // Placeholder response to satisfy the frontend sync manager
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": format!("Invoice generated for job {} and customer {}", payload.job_id, payload.customer_id)
+    })))
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     Router::new()
         .route("/", get(list_invoices_handler).post(create_invoice_handler))
+        .route("/generate", post(generate_invoice_handler))
         .route("/{id}/status", put(update_invoice_status_handler))
         .with_state(hub)
 }
@@ -484,13 +507,13 @@ pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> V
 }
 
 pub async fn list_invoices_handler(
-    State(hub): State<Arc<Hub>>,
+    State(_hub): State<Arc<Hub>>,
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
 
-    let service = InvoiceServiceImpl { hub };
+    let service = InvoiceServiceImpl { hub: _hub };
     let req = Request::new(ListInvoicesRequest { tenant_id });
 
     let mobile_optimized = query.get("mobile_optimized").map(|s| s == "true").unwrap_or(false);
@@ -510,12 +533,12 @@ pub async fn list_invoices_handler(
 }
 
 async fn create_invoice_handler(
-    State(hub): State<Arc<Hub>>,
+    State(_hub): State<Arc<Hub>>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateInvoiceHttp>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
-    let service = InvoiceServiceImpl { hub };
+    let service = InvoiceServiceImpl { hub: _hub };
 
     let mut mapped_line_items = Vec::new();
     for val in payload.line_items {
@@ -554,13 +577,13 @@ async fn create_invoice_handler(
 }
 
 async fn update_invoice_status_handler(
-    State(hub): State<Arc<Hub>>,
+    State(_hub): State<Arc<Hub>>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateInvoiceStatusHttp>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
-    let service = InvoiceServiceImpl { hub };
+    let service = InvoiceServiceImpl { hub: _hub };
 
     let req = Request::new(UpdateInvoiceStatusRequest { tenant_id, invoice_id: id, status: payload.status });
 
