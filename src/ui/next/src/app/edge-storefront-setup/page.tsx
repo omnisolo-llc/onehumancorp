@@ -25,7 +25,7 @@ export default function EdgeStorefrontSetupPage() {
         <button
           aria-label="Go back"
           onClick={() => router.push('/dashboard')}
-          className="mb-4 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="mb-4 min-h-[44px] min-w-[44px] inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
           &larr; Back
         </button>
@@ -41,7 +41,7 @@ export default function EdgeStorefrontSetupPage() {
             <button
               id="start-setup-btn"
               onClick={handleStartSetup}
-              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="w-full min-h-[44px] py-2 px-4 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
             >
               Start Setup
             </button>
@@ -61,7 +61,7 @@ export default function EdgeStorefrontSetupPage() {
               <button
                 id="select-custom-cakes-btn"
                 onClick={() => setSelectedOption('custom-cakes')}
-                className={`w-full text-left px-4 py-3 rounded-lg border ${
+                className={`w-full min-h-[44px] text-left px-4 py-3 rounded-lg border ${
                   selectedOption === 'custom-cakes'
                     ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
@@ -72,7 +72,7 @@ export default function EdgeStorefrontSetupPage() {
 
               <button
                 onClick={() => setSelectedOption('ready-to-buy')}
-                className={`w-full text-left px-4 py-3 rounded-lg border ${
+                className={`w-full min-h-[44px] text-left px-4 py-3 rounded-lg border ${
                   selectedOption === 'ready-to-buy'
                     ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
@@ -86,7 +86,7 @@ export default function EdgeStorefrontSetupPage() {
               id="generate-storefront-btn"
               onClick={handleGenerate}
               disabled={!selectedOption}
-              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              className="w-full min-h-[44px] py-2 px-4 bg-[#0071E3] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
             >
               Generate & Publish
             </button>
@@ -110,7 +110,7 @@ export default function EdgeStorefrontSetupPage() {
               </span>
               <button
                 id="copy-link-btn"
-                className="ml-2 px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="ml-2 min-h-[44px] min-w-[44px] px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 onClick={() => {}}
               >
                 Copy
@@ -119,13 +119,13 @@ export default function EdgeStorefrontSetupPage() {
 
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium"
+              className="w-full min-h-[44px] py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium"
             >
               Back to Dashboard
             </button>
 
             <div className="mt-4">
-              <a href="/dashboard" className="text-[#0071E3] hover:underline text-sm ">
+              <a href="/dashboard" className="min-h-[44px] min-w-[44px] inline-flex items-center text-[#0071E3] hover:underline text-sm ">
                 Back to Dashboard
               </a>
             </div>

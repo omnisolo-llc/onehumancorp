@@ -63,7 +63,7 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
       }, 1500);
 
     } catch (err: any) {
-      console.error(err);
+      if (process.env.NODE_ENV !== "test") console.error(err);
       setStatus('error');
       setErrorMessage(err.message || 'An unexpected error occurred.');
     }
