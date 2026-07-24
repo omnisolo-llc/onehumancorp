@@ -359,7 +359,7 @@ pub struct SyncEdgeLedgerTransactionsResponse {
 }
 
 pub async fn sync_edge_ledger_transactions_handler(
-    _headers: HeaderMap,
+    _headers: axum::http::HeaderMap,
     State(_hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<SyncEdgeLedgerTransactionsRequest>,
