@@ -76,6 +76,9 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
+      .invalid-input { border-color: #FF3B30 !important; }
+      .toggle-row input[type="radio"], .toggle-row input[type="checkbox"] { width: auto; margin-right: 8px; }
+      .toggle-row { display: flex; align-items: center; margin-bottom: 12px; }
     </style>
   </head>
   <body>
@@ -116,9 +119,14 @@
 
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
-        <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
-        <select data-testid="assistant-tone">
+        <label class="team-support-card toggle-row" data-testid="team-operations"><input type="radio" name="team-support" value="Team Operations"> Team Operations</label>
+
+        <label class="toggle-row"><input type="checkbox" id="cap-draft" data-testid="cap-draft" checked> Cap Draft</label>
+        <label class="toggle-row"><input type="checkbox" id="cap-schedule" data-testid="cap-schedule" checked> Cap Schedule</label>
+
+        <select id="assistant-tone" data-testid="assistant-tone" class="glass-control glassmorphism" style="width: 100%; margin-bottom: 12px;">
           <option value="Friendly">Friendly</option>
+          <option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
@@ -331,12 +339,15 @@
           if (e.target.dataset.next) {
             const currentStep = e.target.closest('.step').id;
             if (currentStep === 'step-name') {
-              const nameVal = document.getElementById('business-name').value.trim();
+              const nameInput = document.getElementById('business-name');
+              const nameVal = nameInput.value.trim();
               if (!nameVal) {
                 document.getElementById('name-error').style.display = 'block';
+                nameInput.classList.add('invalid-input');
                 return; // Stop transition
               }
               document.getElementById('name-error').style.display = 'none';
+              nameInput.classList.remove('invalid-input');
             }
             goToStep(e.target.dataset.next);
           }
@@ -345,6 +356,10 @@
 
       const nameInputEl = document.getElementById('business-name');
       if (nameInputEl) {
+        nameInputEl.addEventListener('input', () => {
+          document.getElementById('name-error').style.display = 'none';
+          nameInputEl.classList.remove('invalid-input');
+        });
         nameInputEl.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
