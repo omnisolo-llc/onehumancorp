@@ -83,11 +83,3 @@ ALTER TABLE omnichannel_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_omnichannel_messages ON omnichannel_messages
     USING (tenant_id = current_setting('app.current_tenant', true))
     WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
-
--- +goose Down
-DROP TABLE IF EXISTS omnichannel_messages CASCADE;
-DROP TABLE IF EXISTS omnichannel_conversations CASCADE;
-DROP TABLE IF EXISTS omnichannel_contact_identities CASCADE;
-DROP TABLE IF EXISTS omnichannel_contacts CASCADE;
-DROP TABLE IF EXISTS omnichannel_channel_connections CASCADE;
-DROP TABLE IF EXISTS omnichannel_inboxes CASCADE;
