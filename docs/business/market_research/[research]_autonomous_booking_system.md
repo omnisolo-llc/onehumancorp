@@ -12,30 +12,45 @@ Service-based small business owners (e.g., Leo the Music Tutor, Carlos the Handy
   - *Calendly*: Excellent scheduling but detached from the primary business storefront and customer relationship management.
 
 ## 3. Design Doc
-### Data Model (PostgreSQL)
+### Architecture Diagram
+```mermaid
+graph TD
+    A[Customer UI] -->|Selects Slot| B(Availability API)
+    B --> C{Operations Agent}
+    C -->|Checks| D[(Central Ledger/Postgres)]
+    C -->|Reserves| E[(Redis Redlock)]
+    D --> F[Sales/CS Agent]
+    F -->|Follow-ups| G[Notification/Communication Layer]
+```
+
+### Data Model & Invariants
 - `Service`: The type of appointment (duration, price, deposit required).
 - `Resource`: The provider (e.g., Leo) or physical space.
 - `AvailabilityBlock`: Recurring or specific time blocks when the resource is available.
 - `Booking`: The actual appointment, linked to a Customer, Service, and Resource, with state (pending, confirmed, completed, cancelled).
+- **Multi-Tenant Rule**: Row-level isolation using `tenant_id`. Lock key pattern `ohc:lock:{tenant_id}:booking:{resource_id}`.
 
 ### AI Integration
 - **Operations Agent**: Monitors the calendar, handles rescheduling requests, and generates dynamic availability based on existing blocks and external calendar sync (Google Calendar).
 - **Sales/Customer Success Agent**: Automatically identifies customers who haven't booked a follow-up (e.g., a music student missing a week) and drafts a re-engagement message with a direct booking link.
 
 ### Mobile UX Flow (375px)
-1. **Customer View**: A clean, touch-friendly calendar view. Customers select a date, see available slots (large touch targets), and proceed to a deposit payment flow (Stripe).
-2. **Owner View (Dashboard)**: The owner sees a unified feed of upcoming bookings and new requests. They receive push notifications for new bookings or AI-drafted follow-up suggestions.
+1. **Customer View**: A clean, touch-friendly calendar view. Customers select a date, see available slots (large touch targets, at least 44x44px), and proceed to a deposit payment flow via Stripe Checkout.
+2. **Owner View (Dashboard)**: The owner sees a unified feed of upcoming bookings and new requests. They receive push notifications for new bookings or AI-drafted follow-up suggestions in a clean Apple/Ubiquiti-style interface.
 
 ## 4. Implementation Prompt
-**Feature Name**: OHC Native Agentic Booking System
-**Target Persona**: Leo the Music Tutor
-**Outcome**: Leo can offer monthly lesson packages with an integrated booking calendar. The system handles deposit payments, syncs with his personal calendar, and automatically follows up with students who haven't booked in a while.
+**Goal:** Build the Native Booking System backend and frontend to support seamless appointment booking and AI-driven re-engagement for service-based SMBs.
+**CUJ:**
+1. Owner configures a Service and sets their Availability.
+2. Customer visits the mobile-first storefront, selects a time block, and completes the deposit payment.
+3. The Operations Agent correctly processes the reservation and notifies the owner.
+4. The Sales Agent successfully identifies an overdue follow-up and suggests a drafted re-engagement message.
+**Acceptance Criteria:**
+- Robust schema with Row-Level Security for `tenant_id`.
+- Redis distributed locking correctly prevents double-booking for the same `resource_id` at the same time.
+- E2E Playwright test simulating a customer booking and owner verifying the appointment on a 375px viewport.
+- 100% backend unit test coverage for new domains.
+- All UI elements follow the translucent glass design system.
 
-**Next Actions**:
-1. Implement the core Data Models (`Service`, `AvailabilityBlock`, `Booking`) with strict multi-tenant isolation.
-2. Develop the Customer Booking Flow UI (mobile-first calendar and slot selection) and integrate it with the existing Stripe payment system for deposits.
-3. Create the Operations Agent capability to parse natural language rescheduling requests and manage calendar availability.
-4. Develop the Owner Dashboard view to manage bookings and view AI-suggested follow-ups.
-
-**Priority**: P1
-**Estimated Scope**: Large
+## Estimated Scope
+Large

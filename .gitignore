@@ -139,3 +139,6 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+node_modules/
+dist/
+.pnpm-store/

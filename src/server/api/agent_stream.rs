@@ -21,7 +21,7 @@ where
 {
     axum::Router::new()
         .route(
-            "/api/v1/agents/{id}/stream",
+            "/api/v1/agents/:id/stream",
             axum::routing::get(stream_agent),
         )
         .with_state(hub)

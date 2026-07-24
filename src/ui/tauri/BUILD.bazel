@@ -129,7 +129,11 @@ CTX_EOF
 
 rust_library(
     name = "app_lib",
-    srcs = ["src/lib.rs"],
+    srcs = ["src/lib.rs",
+        "src/offline/mod.rs",
+        "src/offline/queue.rs",
+        "src/offline/db.rs",
+        "src/offline/sync.rs",],
     compile_data = [
         ":tauri_context",
     ],
