@@ -1,0 +1,29 @@
+[package]
+name = "server_ohc_chat"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+server_config = { path = "../config" }
+server_common = { path = "../common" }
+server_auth = { path = "../auth" }
+tokio = { workspace = true, features = ["full"] }
+axum = { version = "0.8.1", features = ["ws", "multipart"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+chrono = { workspace = true, features = ["serde"] }
+tracing = "0.1"
+futures-util = "0.3.32"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+temp-env = "0.3.6"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)', 'cfg(ohc_bazel_tauri_context)'] }

@@ -8,5 +8,9 @@ server_config = { path = "../config" }
 serde = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 
+[dev-dependencies]
+tempfile = "3.27.0"
+temp-env = "0.3.6"
+
 [lib]
 path = "mod.rs"

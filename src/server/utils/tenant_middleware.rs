@@ -19,7 +19,7 @@ fn is_multitenant_mode() -> bool {
 pub fn is_auth_bypass_path(path: &str) -> bool {
     matches!(
         path,
-        "/api/v1/auth/login" | "/health" | "/healthz" | "/readyz" | "/metrics"
+        "/api/v1/auth/login" | "/health" | "/healthz" | "/readyz" | "/metrics" | "/api/v1/chat/ws"
     )
 }
 

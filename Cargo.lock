@@ -5691,6 +5691,7 @@ dependencies = [
  "server_integrations_twilio",
  "server_integrations_zoom",
  "server_ohc",
+ "server_ohc_chat",
  "server_oidc",
  "server_pricing",
  "server_telemetry",
@@ -8506,6 +8507,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -9171,6 +9174,27 @@ dependencies = [
  "serde",
  "tonic 0.12.3",
  "tonic-build",
+]
+
+[[package]]
+name = "server_ohc_chat"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.9",
+ "chrono",
+ "futures-util",
+ "redis",
+ "serde",
+ "serde_json",
+ "server_auth",
+ "server_common",
+ "server_config",
+ "sqlx",
+ "temp-env",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

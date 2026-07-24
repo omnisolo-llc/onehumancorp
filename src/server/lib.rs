@@ -7609,6 +7609,7 @@ async fn create_ui_bom_item_handler(
             ),
         )
         .nest("/api/v1/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .nest("/api/v1/chat", ::server_ohc_chat::router(db.pool.clone()))
 
 
 
