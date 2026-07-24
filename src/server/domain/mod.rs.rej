@@ -1,0 +1,10 @@
+--- mod.rs
++++ mod.rs
+@@ -10,6 +10,7 @@
+ pub mod invoice;
+ pub mod model;
+ pub mod money;
++pub mod omnichannel;
+ pub mod organization;
+ pub mod quotes;
+ pub mod repository;

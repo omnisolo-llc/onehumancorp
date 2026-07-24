@@ -19,6 +19,7 @@ pub mod incidents;
 pub mod invoice;
 pub mod agent_approvals;
 pub mod booking;
+pub mod omnichannel;
 pub mod money;
 pub use money::Money;
 
