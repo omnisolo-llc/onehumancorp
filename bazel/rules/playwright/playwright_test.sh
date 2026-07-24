@@ -84,7 +84,7 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts|src/e2e/*.mock-contract.ts)
+    src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
@@ -94,7 +94,8 @@ playwright_spec_workspace_name() {
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      printf '%s\n' "$rel"
+      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
+      return 1
       ;;
   esac
 }
@@ -763,7 +764,7 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
     fi
   fi
   if grep -Eq '^Total: 0 tests' "$PLAYWRIGHT_LIST_LOG"; then
-    echo "[playwright] Warning: selected Playwright specs resolved to zero tests." >&2
+    echo "[playwright] Error: selected Playwright specs resolved to zero tests." >&2
     exit 0
   fi
 

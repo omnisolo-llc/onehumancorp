@@ -79,7 +79,6 @@ test.describe('Viral Share to Unlock Loop', () => {
 
     await publicPage.close();
   });
-});
 test.describe('Viral Share-to-Unlock Dashboard Widget', () => {
   test('Dashboard displays the new Viral Share-to-Unlock widget with paywall', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
@@ -117,3 +116,4 @@ test.describe('Viral Share-to-Unlock Dashboard Widget', () => {
     await expect(pricingScreen).toBeVisible();
   });
 });
+>>>>>>> b3102758d (🚀 Nova: Viral Share-to-Unlock Dashboard Widget)
