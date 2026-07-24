@@ -42,7 +42,7 @@ describe('HelpCenterPage', () => {
           json: () => Promise.resolve(results)
         });
       }
-      if (url === '/api/v1/videos') {
+      if (typeof url === 'string' && url.includes('/api/v1/videos')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
