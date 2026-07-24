@@ -174,11 +174,36 @@ pub fn optimize_image_tiered(data: &[u8], max_dim: u32, tier: &crate::rate_limit
         img
     };
 
+    // Pre-process image color quantization/posterization to implement quality-tiered compression for lossless WebP
+    let quality = tier.image_compression_quality();
+    let processed = if quality < 100 {
+        let mut rgba = resized.to_rgba8();
+        let step = match quality {
+            85 => 4,
+            80 => 8,
+            70 => 16,
+            q => {
+                if q <= 70 { 16 }
+                else if q <= 80 { 8 }
+                else if q <= 90 { 4 }
+                else { 2 }
+            }
+        };
+        for pixel in rgba.pixels_mut() {
+            for c in 0..3 { // Quantize color channels to increase pattern redundancy for lossless WebP
+                pixel.0[c] = ((pixel.0[c] / step) * step).min(255);
+            }
+        }
+        image::DynamicImage::ImageRgba8(rgba)
+    } else {
+        resized
+    };
+
     let mut webp_data = Vec::new();
     let mut cursor = Cursor::new(&mut webp_data);
 
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
-    resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
+    processed.write_with_encoder(encoder).map_err(|e| e.to_string())?;
 
     Ok((webp_data, "image/webp".to_string()))
 }
@@ -338,6 +363,44 @@ mod tests {
             "Free tier size ({}) must be smaller than Pro tier size ({})",
             free_data.len(),
             pro_data.len()
+        );
+    }
+
+    #[test]
+    fn test_optimize_image_quality_reduction() {
+        use image::{ImageBuffer, Rgb};
+
+        // Create a 512x512 gradient image
+        let mut img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(512, 512);
+        for (x, y, pixel) in img.enumerate_pixels_mut() {
+            let r = (x ^ y) as u8;
+            let g = (x.wrapping_add(y)) as u8;
+            let b = (x.wrapping_mul(y) / 512) as u8;
+            *pixel = Rgb([r, g, b]);
+        }
+
+        let mut png_data = Vec::new();
+        let mut cursor = Cursor::new(&mut png_data);
+        img.write_to(&mut cursor, image::ImageFormat::Png).expect("failed to write PNG");
+
+        // We optimize at max_dim 512 so dimension limits (512 vs 2048) do NOT cause any dimension difference.
+        // Therefore, any file size difference is entirely caused by quantization quality-tiered compression settings!
+        let (free_data, _) = optimize_image_tiered(&png_data, 512, &crate::rate_limit::PlanTier::Free).unwrap();
+        let (pro_data, _) = optimize_image_tiered(&png_data, 512, &crate::rate_limit::PlanTier::Pro).unwrap();
+        let (business_data, _) = optimize_image_tiered(&png_data, 512, &crate::rate_limit::PlanTier::Business).unwrap();
+
+        // Business tier (quality 100) > Pro tier (quality 85) > Free tier (quality 70)
+        assert!(
+            free_data.len() < pro_data.len(),
+            "Free tier size ({}) must be smaller than Pro tier size ({}) due to quality quantization",
+            free_data.len(),
+            pro_data.len()
+        );
+        assert!(
+            pro_data.len() < business_data.len(),
+            "Pro tier size ({}) must be smaller than Business tier size ({}) due to quality quantization",
+            pro_data.len(),
+            business_data.len()
         );
     }
 
