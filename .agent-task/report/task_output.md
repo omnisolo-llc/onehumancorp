@@ -23,6 +23,48 @@ issue_description: |
   - **Real-time:** WebSocket connections managed via Redis Pub/Sub for scale.
   - **Integration:** The `Work Triage` agent consumes a stream of incoming messages and drafts replies, stored as pending drafts in the omnichannel database.
 
+  ```mermaid
+  erDiagram
+    TENANT ||--o{ INBOX : has
+    TENANT ||--o{ CONTACT : has
+    INBOX ||--o{ CONVERSATION : contains
+    CONTACT ||--o{ CONVERSATION : initiates
+    CONVERSATION ||--o{ MESSAGE : contains
+    CHANNEL ||--o{ INBOX : linked
+
+    TENANT {
+      uuid id PK
+      string name
+    }
+    INBOX {
+      uuid id PK
+      uuid tenant_id FK
+      string name
+    }
+    CONTACT {
+      uuid id PK
+      uuid tenant_id FK
+      string email
+      string phone
+    }
+    CONVERSATION {
+      uuid id PK
+      uuid inbox_id FK
+      uuid contact_id FK
+      string status
+    }
+    MESSAGE {
+      uuid id PK
+      uuid conversation_id FK
+      string content
+      string status
+    }
+    CHANNEL {
+      uuid id PK
+      string provider_type
+    }
+  ```
+
   ### Mobile UX Flow (375px First)
   - **Unified Inbox:** A single scrollable list of conversations, distinctively badged by channel (IG, WA, Email).
   - **Conversation View:** Standard chat interface with quick-action buttons for AI-drafted replies ("Approve & Send", "Edit").
@@ -45,6 +87,7 @@ issue_description: |
   - Multi-tenant data isolation is enforced at the database level.
   - 100% test coverage.
 
+  **Estimated Scope:** Large
 issue_priority: P0
 issue_category: research
 issue_type: task
