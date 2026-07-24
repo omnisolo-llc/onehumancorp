@@ -9,9 +9,11 @@ use std::sync::{Arc, OnceLock};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use dashmap::DashMap;
+use sqlx::{Row};
+use chrono::{DateTime, Utc};
 use futures::{sink::SinkExt, stream::StreamExt};
 use crate::db::DB;
-use ::server_ohc::domain::chat::models::{ChatDbPool, Inbox, ChannelAdapter, Contact, Conversation, Message};
+use ::server_ohc::domain::chat::models::{Inbox, ChannelAdapter, Contact, Conversation, Message};
 
 #[derive(Clone)]
 pub struct CustomChatState {
@@ -58,6 +60,235 @@ pub struct CreateMessageRequest {
 #[derive(Deserialize)]
 pub struct CustomWsQuery {
     pub conversation_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum ChatDbPool {
+    Postgres(sqlx::PgPool),
+    Sqlite(sqlx::SqlitePool),
+}
+
+impl ChatDbPool {
+    pub async fn create_inbox(&self, tenant_id: &str, name: &str) -> Result<Inbox, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("INSERT INTO inboxes (id, tenant_id, name) VALUES ($1, $2, $3)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(name)
+                    .execute(pool)
+                    .await?;
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("INSERT INTO inboxes (id, tenant_id, name) VALUES (?, ?, ?)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(name)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        Ok(Inbox {
+            id,
+            tenant_id: tenant_id.to_string(),
+            name: name.to_string(),
+        })
+    }
+
+    pub async fn create_channel_adapter(&self, tenant_id: &str, inbox_id: &str, type_: &str, credentials: &str) -> Result<ChannelAdapter, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("INSERT INTO channel_adapters (id, tenant_id, inbox_id, type, credentials) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(inbox_id)
+                    .bind(type_)
+                    .bind(credentials)
+                    .execute(pool)
+                    .await?;
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("INSERT INTO channel_adapters (id, tenant_id, inbox_id, type, credentials) VALUES (?, ?, ?, ?, ?)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(inbox_id)
+                    .bind(type_)
+                    .bind(credentials)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        Ok(ChannelAdapter {
+            id,
+            tenant_id: tenant_id.to_string(),
+            inbox_id: inbox_id.to_string(),
+            type_: type_.to_string(),
+            credentials: credentials.to_string(),
+        })
+    }
+
+    pub async fn create_contact(&self, tenant_id: &str, name: &str, identifier: &str) -> Result<Contact, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("INSERT INTO contacts (id, tenant_id, name, identifier) VALUES ($1, $2, $3, $4)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(name)
+                    .bind(identifier)
+                    .execute(pool)
+                    .await?;
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("INSERT INTO contacts (id, tenant_id, name, identifier) VALUES (?, ?, ?, ?)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(name)
+                    .bind(identifier)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        Ok(Contact {
+            id,
+            tenant_id: tenant_id.to_string(),
+            name: name.to_string(),
+            identifier: identifier.to_string(),
+        })
+    }
+
+    pub async fn create_conversation(&self, tenant_id: &str, inbox_id: &str, contact_id: &str, status: &str) -> Result<Conversation, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("INSERT INTO conversations (id, tenant_id, inbox_id, contact_id, status) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(inbox_id)
+                    .bind(contact_id)
+                    .bind(status)
+                    .execute(pool)
+                    .await?;
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("INSERT INTO conversations (id, tenant_id, inbox_id, contact_id, status) VALUES (?, ?, ?, ?, ?)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(inbox_id)
+                    .bind(contact_id)
+                    .bind(status)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        Ok(Conversation {
+            id,
+            tenant_id: tenant_id.to_string(),
+            inbox_id: inbox_id.to_string(),
+            contact_id: contact_id.to_string(),
+            status: status.to_string(),
+        })
+    }
+
+    pub async fn create_message(&self, tenant_id: &str, conversation_id: &str, content: &str, sender_type: &str) -> Result<Message, sqlx::Error> {
+        let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now();
+        match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("INSERT INTO messages (id, tenant_id, conversation_id, content, sender_type, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(conversation_id)
+                    .bind(content)
+                    .bind(sender_type)
+                    .bind(created_at)
+                    .execute(pool)
+                    .await?;
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("INSERT INTO messages (id, tenant_id, conversation_id, content, sender_type, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+                    .bind(&id)
+                    .bind(tenant_id)
+                    .bind(conversation_id)
+                    .bind(content)
+                    .bind(sender_type)
+                    .bind(created_at)
+                    .execute(pool)
+                    .await?;
+            }
+        }
+        Ok(Message {
+            id,
+            tenant_id: tenant_id.to_string(),
+            conversation_id: conversation_id.to_string(),
+            content: content.to_string(),
+            sender_type: sender_type.to_string(),
+            created_at,
+        })
+    }
+
+    pub async fn list_conversations(&self, tenant_id: &str) -> Result<Vec<Conversation>, sqlx::Error> {
+        let rows = match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("SELECT id, tenant_id, inbox_id, contact_id, status FROM conversations WHERE tenant_id = $1 ORDER BY created_at DESC")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await?
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("SELECT id, tenant_id, inbox_id, contact_id, status FROM conversations WHERE tenant_id = ? ORDER BY created_at DESC")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await?
+            }
+        };
+
+        let conversations = rows.into_iter().map(|row| {
+            Conversation {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                inbox_id: row.get("inbox_id"),
+                contact_id: row.get("contact_id"),
+                status: row.get("status"),
+            }
+        }).collect();
+
+        Ok(conversations)
+    }
+
+    pub async fn list_messages(&self, tenant_id: &str, conversation_id: &str) -> Result<Vec<Message>, sqlx::Error> {
+        let rows = match self {
+            ChatDbPool::Postgres(pool) => {
+                sqlx::query("SELECT id, tenant_id, conversation_id, content, sender_type, created_at FROM messages WHERE tenant_id = $1 AND conversation_id = $2 ORDER BY created_at ASC")
+                    .bind(tenant_id)
+                    .bind(conversation_id)
+                    .fetch_all(pool)
+                    .await?
+            }
+            ChatDbPool::Sqlite(pool) => {
+                sqlx::query("SELECT id, tenant_id, conversation_id, content, sender_type, created_at FROM messages WHERE tenant_id = ? AND conversation_id = ? ORDER BY created_at ASC")
+                    .bind(tenant_id)
+                    .bind(conversation_id)
+                    .fetch_all(pool)
+                    .await?
+            }
+        };
+
+        let messages = rows.into_iter().map(|row| {
+            Message {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                conversation_id: row.get("conversation_id"),
+                content: row.get("content"),
+                sender_type: row.get("sender_type"),
+                created_at: row.get("created_at"),
+            }
+        }).collect();
+
+        Ok(messages)
+    }
 }
 
 fn get_chat_db_pool(db: &crate::db::DB) -> ChatDbPool {
@@ -175,8 +406,7 @@ pub async fn create_message(
         Ok(msg) => {
             // Broadcast the message content in real-time to WebSocket clients
             if let Ok(serialized) = serde_json::to_string(&msg) {
-                let tx = get_conversation_sender(&payload.conversation_id);
-                let _ = tx.send(serialized);
+                let _ = get_conversation_sender(&payload.conversation_id).send(serialized);
             }
             (StatusCode::CREATED, Json(msg)).into_response()
         }
