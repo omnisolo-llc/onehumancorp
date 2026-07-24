@@ -736,7 +736,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//Cargo.lock eebdc25e583580cc4c540be20b222f9a931770d5745fc46d950dc4d943c13879",
+          "FILE:@@//Cargo.lock 5eb2400c9b12ed5ed9831f1bf28336c13c6fea176ffa15be03020342707aa511",
           "FILE:@@//Cargo.toml 214ca49345b04c007a03c86a193c6a99ff8a5199cc1d5ef1f3f1f9e69e1c1112",
           "FILE:@@//src/server/integrations/twilio/Cargo.toml 0b844e21da462f26931e5cd748780679576031f13904526d0aae009774abba03",
           "FILE:@@//src/server/integrations/core/Cargo.toml eafe72b50cce37ffa026a47a89e02d1ea7a64cfe9d5fdc7cfb0dea8d3cbcbfbf",

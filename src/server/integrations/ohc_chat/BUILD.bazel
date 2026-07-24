@@ -16,6 +16,7 @@ rust_library(
         "@crates//:futures-util",
         "@crates//:redis",
         "@crates//:tracing",
+        "//src/server/common:server_common",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
